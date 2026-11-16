@@ -363,9 +363,26 @@ export function App(): React.ReactElement {
     setSelectedDate((current) => addCivilDays(current, amount));
   };
 
-  const topNav = (
-    <div className="jig-topbar">
-      <div className="jig-brand" aria-label="Jig">
+  const goToToday = (stayInWeek: boolean): void => {
+    setSelectedDate(todayCivilDate());
+    if (!stayInWeek) {
+      setDestination("day");
+    }
+  };
+
+  const statusControl = (
+    <Button
+      label={repositoryStatusLabel(status)}
+      variant="ghost"
+      size="sm"
+      onClick={() => setDestination("settings")}
+      className="jig-status-control"
+    />
+  );
+
+  const desktopSidebar = (
+    <aside className="jig-sidebar" aria-label="Jig navigation">
+      <div className="jig-sidebar-brand" aria-label="Jig">
         <span className="jig-brand-logo-wrap" aria-hidden="true">
           <img
             className="jig-brand-logo jig-brand-logo-light"
@@ -381,7 +398,7 @@ export function App(): React.ReactElement {
         <span className="jig-brand-tagline">Schedules attention</span>
       </div>
 
-      <nav className="jig-primary-nav" aria-label="Primary">
+      <nav className="jig-sidebar-nav" aria-label="Primary">
         {(["week", "day", "history", "settings"] as const).map(
           (item) => (
             <Button
@@ -396,45 +413,38 @@ export function App(): React.ReactElement {
         )}
       </nav>
 
-      <div className="jig-topbar-actions">
-        {destination === "week" || destination === "day" ? (
-          <>
-            <Button
-              label="Previous"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                navigateDate(destination === "week" ? -7 : -1)
-              }
-            />
-            <Button
-              label="Today"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedDate(todayCivilDate());
-                setDestination("day");
-              }}
-            />
-            <Button
-              label="Next"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                navigateDate(destination === "week" ? 7 : 1)
-              }
-            />
-          </>
-        ) : null}
-
-        <Button
-          label={repositoryStatusLabel(status)}
-          variant="ghost"
-          size="sm"
-          onClick={() => setDestination("settings")}
-        />
+      <div className="jig-sidebar-context">
+        <span>Planning data</span>
+        <small>{status?.repository_path ?? "Local repository"}</small>
       </div>
-    </div>
+    </aside>
+  );
+
+  const mobileHeader = (
+    <header className="jig-mobile-header">
+      <span className="jig-mobile-brand">Jig</span>
+      <details className="jig-mobile-destination-menu">
+        <summary>{destinationLabel(destination)}</summary>
+        <div className="jig-mobile-destination-panel">
+          {(["week", "day", "history", "settings"] as const).map(
+            (item) => (
+              <button
+                key={item}
+                type="button"
+                aria-current={destination === item ? "page" : undefined}
+                onClick={(event) => {
+                  event.currentTarget.closest("details")?.removeAttribute("open");
+                  setDestination(item);
+                }}
+              >
+                {destinationLabel(item)}
+              </button>
+            ),
+          )}
+        </div>
+      </details>
+      {statusControl}
+    </header>
   );
 
   const durableBanner = operationError !== null ? (
@@ -494,6 +504,10 @@ export function App(): React.ReactElement {
       selectedDate={selectedDate}
       isNarrow={isNarrow}
       onSelectDate={setSelectedDate}
+      onPrevious={() => navigateDate(-7)}
+      onToday={() => goToToday(true)}
+      onNext={() => navigateDate(7)}
+      statusControl={statusControl}
       onAdd={openCreate}
       onEdit={openEdit}
       onMoveToDate={openMoveToDate}
@@ -505,6 +519,10 @@ export function App(): React.ReactElement {
       tasks={tasks}
       selectedDate={selectedDate}
       onSelectDate={setSelectedDate}
+      onPrevious={() => navigateDate(-1)}
+      onToday={() => goToToday(false)}
+      onNext={() => navigateDate(1)}
+      statusControl={statusControl}
       onAdd={openCreate}
       onEdit={openEdit}
       onMoveToDate={openMoveToDate}
@@ -535,13 +553,21 @@ export function App(): React.ReactElement {
     <Theme theme={jigTheme} mode={themePreference}>
       <LayerProvider>
         <AppShell
-          topNav={topNav}
-          banner={durableBanner}
           contentPadding={0}
           height="fill"
           variant="section"
+          mobileNav={false}
         >
-          <div className="jig-content">{content}</div>
+          <div className="jig-shell">
+            {desktopSidebar}
+            <div className="jig-main">
+              {mobileHeader}
+              {durableBanner === null ? null : (
+                <div className="jig-main-banner">{durableBanner}</div>
+              )}
+              <div className="jig-content">{content}</div>
+            </div>
+          </div>
         </AppShell>
 
         <TaskEditor
