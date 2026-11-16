@@ -38,15 +38,15 @@ The original PNG bytes are **not** yet stored in the repository; their hashes an
 
 The initial desktop IA has exactly **Week**, **Day**, **History**, and **Settings** as meaningful destinations. **Today** is a shortcut that selects the current local civil date within Day, not a separate destination. A separate **Board** destination is redundant: Week already is the dated Kanban board. The original mockups' Plan/Day/Board duplicates are not required screens.
 
-- **Week** is the default productive surface: Monday–Sunday buckets, current/selected date emphasis, per-day ordered outstanding tasks, quick-add scoped to each date and cross-day drop targets. Long days scroll without losing date headings.
-- **Day** is a focused selected date with one canonical outstanding sequence for that date after daily rollover, then a compact Completed group and on-demand task detail. The Today shortcut selects the current local civil date; changing selection itself never reschedules tasks.
-- **History** is a lightweight dated list grouped by actual completion date, not a dashboard. Completed items may also be viewed under their originally scheduled date. Each completed row has an explicit open/actions affordance so the same Task can be reopened or permanently deleted after confirmation.
-- **Settings** exposes theme, configured repository path (read-only unless explicit migration), service/autosync health, remote connection, and diagnostics. Sync now/retry, diagnostics and repository migration use the shell operational endpoints defined by Technical solution §3.2; they never become Task commands or Git-conflict workflow. It does not expose Order projects, Git history/merge/conflict workflows, or developer tooling.
+- **Week** is the principal weekly planning/rearrangement surface: Monday–Sunday buckets, current/selected date emphasis, per-day ordered outstanding tasks, quick-add scoped to each date and cross-day drop targets. Long days scroll without losing date headings.
+- **Day** is the default operational entry surface, initially selecting the current local civil date. It shows one canonical outstanding sequence for that date after daily rollover, then a compact Completed group and on-demand task detail. The Today shortcut selects the current local civil date; changing selection itself never reschedules tasks.
+- **History** is a lightweight dated list grouped by actual completion date, not a dashboard. Each completed row shows the Task's canonical scheduled date at completion plus actual completion time, and has an explicit open/actions affordance so the same Task can be reopened or permanently deleted after confirmation.
+- **Settings** exposes theme, browser-notification permission/support state, configured repository path as read-only context, coarse synchronization state/action, service health, local database health, portable-data/repository-adapter health and diagnostics. It does not expose repository migration, remote-name configuration, branch/ref/worktree state, Git history/merge/conflict workflows, or developer tooling.
 - **No separately persisted boards, projects or queues.** Context is a short optional Task label and may be displayed or used as a filter, not an independent domain.
 
 ### Onboarding and installed lifecycle
 
-The app's very first interaction is the **one-script installer** described in [Technical solution §3.1](../architecture/technical-solution.md). The script selects and validates the personal Git repository and configures the `jig` command + local background service. The user then opens the existing service with `jig` and immediately reaches Week or Day. There is **no repeated onboarding wizard on every run**.
+The app's very first interaction is the **one-script installer** described in [Technical solution §3.1](../architecture/technical-solution.md). The script selects and validates the personal Git repository and configures the `jig` command + local background service. The user then opens the existing service with `jig` and immediately reaches Day on the current local civil date; Week remains one navigation action away. There is **no repeated onboarding wizard on every run**.
 
 A compact, always-available status control must truthfully distinguish:
 - **Saved locally / Synced:** latest local edits are committed to SQLite and the repository integration boundary reports the latest exported snapshot synchronized.
@@ -93,7 +93,7 @@ The original mockup's additional Board link, excessive Normal badges, green card
 
 A date strip permits switching selected days. The attention list shows the canonical outstanding sequence scheduled for the selected date after service-owned daily rollover. No derived carry-over prefix or originating-date badge is rendered. Completed is compact and separately expandable. An optional right-hand inspector shows the selected Task, title, context, priority, reminder, reference, note and actions to complete/reopen, edit, move date or Delete; Delete is destructive and requires confirmation before mutation.
 
-Day view and Week view query the **same Task**; opening the inspector does not create a second editable Task object. Preserve position changes and reload state. A due reminder may appear in an Astryx toast, not as a new work item.
+Day view and Week view query the **same Task**; opening the inspector does not create a second editable Task object. Preserve position changes and reload state. Reminder delivery uses one browser-side eligibility calculation: visible page → Astryx toast; hidden/open page with granted browser notification permission → browser Notification. A reminder never becomes a work item.
 
 ### 4.3 Mobile narrow Day
 
@@ -116,7 +116,7 @@ Use explicit Save/Cancel, persistent form errors on invalid data or server refus
 | Week/date bucket composition, Day selected-date sequence, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
 | Scheduled date, ordering, daily rollover, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
 | Task reads/writes and generic repository synchronization status | Bun service with SQLite plus isolated repository integration adapter |
-| Reminder due eligibility and toast presentation while browser is open | Browser-side timer + Astryx useToast; no background sender |
+| Reminder due eligibility and presentation while browser is open | One browser-side timer/eligibility monitor + Astryx useToast + browser Notification API; no background sender/service worker |
 
 Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the same canonical Task operation as a drag. The drag handle must not swallow checkbox clicks, link navigation or editor opening. Avoid duplicate focus stops on the ListItem's clickable layer and nested controls; verify Astryx + dnd-kit with actual Playwright browser interaction.
 
@@ -135,7 +135,7 @@ Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the sa
 | Delete | Cancelled confirmation makes no mutation; confirmed deletion removes outstanding/completed Task from all current views and remains deleted after reload/Git round trip |
 | Responsive reflow | No loss of selected date, task, open editor draft or outstanding modifications |
 | Keyboard and touch | No hover-only essential actions; non-drag alternatives and visible focus |
-| Reminder | Due while open produces dismissible toast; no claim when browser closed |
+| Reminder | Visible page => one dismissible toast; hidden/open + granted permission => one browser Notification; permission requested only by explicit user action; no claim when browser closed |
 | Local save failure | User sees specific unresolved error, not fake save success |
 | Auto-sync lifecycle | Service can save/sync with browser closed; header/settings convey local/synced/pending/local-only/sync-issue truth without Git divergence/conflict semantics |
 | Offline use | Editing remains available, Git retries later without blocking |
