@@ -82,7 +82,6 @@ export async function main(): Promise<void> {
     get_status: () => createStatus(config, sync.status()),
     get_diagnostics: () => createDiagnostics(config, sync.status()),
     trigger_sync: sync.trigger,
-    before_task_mutation: () => undefined,
     on_task_mutation: sync.notifyMutation,
   });
 
