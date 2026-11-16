@@ -4,7 +4,7 @@
 
 Jig is a standalone, local-first desktop planner with a dated weekly Kanban board, a focused day view, carried-forward unfinished work, optional priorities/reminders, confirmed deletion and completed history. Details of project work remain in their own systems.
 
-**Designed installation:** One Linux installer connects Jig to your selected personal Git repository, places the operational SQLite database and portable task data inside its Jig subdirectory, installs the `jig` launcher and configures a background user service. Edits save locally immediately; Jig automatically version-controls and synchronizes its own records through an isolated data branch of that same repository. An independent phone app and multi-writer conflict resolution are future capabilities.
+**Designed installation:** One Linux installer connects Jig to your selected personal Git repository, places the operational SQLite database and portable task data inside its Jig subdirectory, installs the `jig` launcher and configures a background user service. Edits save locally immediately; Jig automatically version-controls and synchronizes its own records through an isolated data branch of that same repository. An independent phone app is a future capability. Git history, branch, merge and conflict reconciliation remain the responsibility of the user's Git tooling rather than Jig.
 
 ## Documentation
 
