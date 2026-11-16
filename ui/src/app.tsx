@@ -15,6 +15,7 @@ import {
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
   addCivilDays,
+  completedForScheduledDate,
   outstandingForDate,
 } from "../../src/core/planning";
 import type { CanonicalState } from "../../src/shell/sqlite";
@@ -129,6 +130,7 @@ export function App(): React.ReactElement {
   const [editorDate, setEditorDate] = useState(selectedDate);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const isNarrow = useNarrowLayout();
 
   const tasks = canonical?.tasks ?? [];
@@ -140,6 +142,10 @@ export function App(): React.ReactElement {
     moveTaskId === null
       ? null
       : tasks.find((task) => task.id === moveTaskId) ?? null;
+  const selectedTask =
+    selectedTaskId === null
+      ? null
+      : tasks.find((task) => task.id === selectedTaskId) ?? null;
 
   const refreshCanonical = useCallback(async (): Promise<void> => {
     const next = await readCanonicalTasks();
@@ -173,6 +179,29 @@ export function App(): React.ReactElement {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (canonical === null || destination !== "day") {
+      return;
+    }
+
+    const candidates = [
+      ...outstandingForDate(tasks, selectedDate),
+      ...completedForScheduledDate(tasks, selectedDate),
+    ];
+    if (
+      selectedTaskId === null ||
+      !candidates.some((task) => task.id === selectedTaskId)
+    ) {
+      setSelectedTaskId(candidates[0]?.id ?? null);
+    }
+  }, [
+    canonical,
+    destination,
+    selectedDate,
+    selectedTaskId,
+    tasks,
+  ]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -479,6 +508,11 @@ export function App(): React.ReactElement {
       onToday={() => setSelectedDate(todayCivilDate())}
       onNextDay={() => navigateDate(1)}
       statusControl={isNarrow ? null : statusControl}
+      selectedTask={selectedTask}
+      onSelectTask={(task) => setSelectedTaskId(task.id)}
+      onDelete={(taskId) =>
+        runCommand({ type: "delete", task_id: taskId })
+      }
     />
   ) : destination === "history" ? (
     <HistoryView
