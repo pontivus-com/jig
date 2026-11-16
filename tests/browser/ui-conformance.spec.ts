@@ -182,12 +182,14 @@ test("History exposes canonical scheduled date and actual completion time", asyn
     .locator("xpath=ancestor::div[contains(@class,'jig-history-task-row')][1]");
   await expect(row).toBeVisible();
   await expect(row).toContainText("Scheduled");
-  await expect(row).toContainText(
-    new Intl.DateTimeFormat(undefined, {
+  const browserScheduledLabel = await page.evaluate((civilDate) => {
+    const [year, month, day] = civilDate.split("-").map(Number);
+    return new Intl.DateTimeFormat(undefined, {
       weekday: "short",
       day: "numeric",
-    }).format(new Date(`${today}T12:00:00`)),
-  );
+    }).format(new Date(year ?? 0, (month ?? 1) - 1, day ?? 1, 12));
+  }, today);
+  await expect(row).toContainText(browserScheduledLabel);
   await expect(row.locator("time")).not.toHaveText("");
 });
 
