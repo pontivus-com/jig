@@ -198,7 +198,11 @@ jobs:
             const failureEditor = page.getByRole("dialog");
             await failureEditor.getByLabel("Title").fill("Must remain unsaved");
             await failureEditor.getByRole("button", { name: "Add task", exact: true }).click();
-            await expect(failureEditor.getByRole("alert")).toBeVisible();
+            await expect(
+              failureEditor.getByText("Jig request failed with HTTP 500", {
+                exact: true,
+              }),
+            ).toBeVisible();
             await shot(page, "local-save-failure");
             await page.unroute("**/api/v1/commands");
             await failureEditor.getByRole("button", { name: "Cancel", exact: true }).click();
