@@ -1,7 +1,9 @@
 import {
+  AlertDialog,
   Button,
   List,
 } from "@astryxdesign/core";
+import { useState } from "react";
 import type { Task } from "../../src/core/task";
 import {
   completedForScheduledDate,
@@ -29,6 +31,9 @@ export interface DayViewProps {
   readonly onToday: () => void;
   readonly onNextDay: () => void;
   readonly statusControl: React.ReactNode;
+  readonly selectedTask: Task | null;
+  readonly onSelectTask: (task: Task) => void;
+  readonly onDelete: (taskId: string) => Promise<boolean>;
 }
 
 function ActiveRow({
@@ -38,6 +43,8 @@ function ActiveRow({
   onMoveToDate,
   onToggleComplete,
   onMove,
+  onSelectTask,
+  selectedTaskId,
 }: Readonly<{
   task: Task;
   tasks: readonly Task[];
@@ -45,6 +52,8 @@ function ActiveRow({
   onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
   onMove: DayViewProps["onMove"];
+  onSelectTask: (task: Task) => void;
+  selectedTaskId: string | null;
 }>): React.ReactElement {
   const sequence = outstandingForDate(tasks, task.scheduled_date);
   const position = task.position ?? 0;
@@ -54,6 +63,8 @@ function ActiveRow({
       task={task}
       index={position}
       group={task.scheduled_date}
+      isSelected={selectedTaskId === task.id}
+      onSelect={() => onSelectTask(task)}
       onToggleComplete={() => {
         void onToggleComplete(task);
       }}
@@ -92,10 +103,14 @@ export function DayTaskLists({
   onMoveToDate,
   onToggleComplete,
   onMove,
+  onSelectTask,
+  selectedTaskId,
 }: Omit<
   DayViewProps,
-  "onAdd" | "onSelectDate" | "onPreviousDay" | "onToday" | "onNextDay" | "statusControl"
->): React.ReactElement {
+  "onAdd" | "onSelectDate" | "onPreviousDay" | "onToday" | "onNextDay" | "statusControl" | "selectedTask" | "onDelete"
+> & {
+  readonly selectedTaskId: string | null;
+}): React.ReactElement {
   const active = outstandingForDate(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
 
@@ -125,6 +140,8 @@ export function DayTaskLists({
                     onMoveToDate={onMoveToDate}
                     onToggleComplete={onToggleComplete}
                     onMove={onMove}
+                    onSelectTask={onSelectTask}
+                    selectedTaskId={selectedTaskId}
                   />
                 ))}
               </List>
@@ -154,6 +171,87 @@ export function DayTaskLists({
   );
 }
 
+function TaskInspector({
+  task,
+  onEdit,
+  onMoveToDate,
+  onToggleComplete,
+  onDelete,
+}: Readonly<{
+  task: Task | null;
+  onEdit: (task: Task) => void;
+  onMoveToDate: (task: Task) => void;
+  onToggleComplete: (task: Task) => Promise<boolean>;
+  onDelete: (taskId: string) => Promise<boolean>;
+}>): React.ReactElement {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  if (task === null) {
+    return (
+      <aside className="jig-task-inspector jig-task-inspector-empty">
+        <p className="jig-secondary-copy">Select a task to inspect it.</p>
+      </aside>
+    );
+  }
+
+  return (
+    <>
+      <aside className="jig-task-inspector" aria-label={`Details for ${task.title}`}>
+        <div className="jig-task-inspector-heading">
+          <h2>{task.title}</h2>
+          <div className="jig-view-actions">
+            <Button
+              label={task.completed_at === null ? "Complete" : "Reopen"}
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void onToggleComplete(task);
+              }}
+            />
+            <Button label="Edit" variant="secondary" size="sm" onClick={() => onEdit(task)} />
+          </div>
+        </div>
+        <dl className="jig-task-inspector-details">
+          {task.context === null ? null : <><dt>Context</dt><dd>{task.context}</dd></>}
+          <dt>Priority</dt><dd>{task.priority.toLowerCase()}</dd>
+          {task.reminder_time === null ? null : <><dt>Reminder</dt><dd>{task.reminder_time}</dd></>}
+          {task.reference === null ? null : <><dt>Reference</dt><dd>{task.reference}</dd></>}
+          {task.note === null ? null : <><dt>Notes</dt><dd>{task.note}</dd></>}
+        </dl>
+        <div className="jig-task-inspector-actions">
+          <Button
+            label="Move to date…"
+            variant="ghost"
+            size="sm"
+            onClick={() => onMoveToDate(task)}
+          />
+          <Button
+            label="Delete task…"
+            variant="ghost"
+            size="sm"
+            onClick={() => setDeleteOpen(true)}
+          />
+        </div>
+      </aside>
+      <AlertDialog
+        isOpen={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete task?"
+        description="This permanently removes the task from current Jig data."
+        actionLabel="Delete task"
+        cancelLabel="Cancel"
+        actionVariant="destructive"
+        onAction={async () => {
+          const deleted = await onDelete(task.id);
+          if (deleted) {
+            setDeleteOpen(false);
+          }
+        }}
+      />
+    </>
+  );
+}
+
 export function DayView({
   tasks,
   selectedDate,
@@ -163,6 +261,9 @@ export function DayView({
   onToday,
   onNextDay,
   statusControl,
+  selectedTask,
+  onSelectTask,
+  onDelete,
   ...listProps
 }: DayViewProps): React.ReactElement {
   return (
@@ -197,11 +298,22 @@ export function DayView({
         onSelectDate={onSelectDate}
       />
 
-      <DayTaskLists
-        tasks={tasks}
-        selectedDate={selectedDate}
-        {...listProps}
-      />
+      <div className="jig-day-layout">
+        <DayTaskLists
+          tasks={tasks}
+          selectedDate={selectedDate}
+          onSelectTask={onSelectTask}
+          selectedTaskId={selectedTask?.id ?? null}
+          {...listProps}
+        />
+        <TaskInspector
+          task={selectedTask}
+          onEdit={listProps.onEdit}
+          onMoveToDate={listProps.onMoveToDate}
+          onToggleComplete={listProps.onToggleComplete}
+          onDelete={onDelete}
+        />
+      </div>
     </div>
   );
 }
