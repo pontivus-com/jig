@@ -444,7 +444,12 @@ export function App(): React.ReactElement {
                 label={destinationLabel(item)}
                 variant={destination === item ? "secondary" : "ghost"}
                 size="sm"
-                onClick={() => setDestination(item)}
+                onClick={() => {
+                  setDestination(item);
+                  document
+                    .querySelector(".jig-mobile-destination-menu")
+                    ?.removeAttribute("open");
+                }}
                 aria-current={destination === item ? "page" : undefined}
               />
             ),
