@@ -49,7 +49,7 @@ sits in the day, whether it is complete, and whether a reminder is due.**
 2. **Order the day explicitly.** Drag or use non-drag movement controls. Priority can assist initial placement but never silently reorders an established plan.
 3. **Let unfinished work stay visible.** Earlier outstanding Tasks appear as carry-over on later Day views while retaining their original scheduled date.
 4. **Save locally first.** SQLite commits the planning change immediately. Repository export/synchronization happens independently in the background.
-5. **Keep Git mechanics outside the planner.** Jig uses an isolated `jig-data` ref/worktree and reports only local/pending/synchronized/sync-issue outcomes. Git reconciliation remains ordinary Git tooling.
+5. **Keep Git mechanics outside the planner.** Jig synchronizes only Jig-owned portable data and reports coarse local/pending/synchronized/sync-issue outcomes. Repository acquisition, topology, signing, credentials and reconciliation remain ordinary Git responsibilities.
 
 ## Quick start
 
@@ -63,12 +63,7 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
   | bash -s -- --repo /absolute/path/to/your/planning-repo
 ```
 
-Enable background synchronization through an existing remote:
-
-```bash
-curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
-  | bash -s -- --repo /absolute/path/to/your/planning-repo --remote origin
-```
+Jig uses the selected repository's Git configuration for automatic background synchronization. The installer may also take a repository URL plus checkout destination and delegate the clone to Git before continuing through the same installation path. If the repository has no usable remote, Jig remains fully usable in `local-only` mode.
 
 Then:
 
@@ -76,15 +71,14 @@ Then:
 jig
 ```
 
-See [Install Jig](docs/install.md) for clone mode, pinned versions, upgrade,
-migration, foreground fallback and uninstall.
+See [Install Jig](docs/install.md) for existing-repository and repository-URL setup, pinned versions, upgrade, Git-native continuity, foreground fallback and uninstall.
 
 ## What stays where
 
 | Data/runtime | Location / owner |
 | --- | --- |
 | Live planning authority | `<selected-repo>/.jig/local/jig.sqlite` |
-| Portable logical records | isolated `jig-data` ref/worktree under the selected repository |
+| Portable logical records | deterministic Jig records synchronized through the selected repository's Git integration |
 | Installed application | `~/.local/share/jig` |
 | Launcher | `~/.local/bin/jig` |
 | Configuration | `~/.config/jig/config.json` |
@@ -101,7 +95,6 @@ jig                 # start/open Jig
 jig status          # service and repository status
 jig sync            # request repository synchronization
 jig doctor          # sanitized diagnostics
-jig configure --repo /absolute/new/repo
 jig uninstall       # remove runtime/configuration; preserve repo planning data
 ```
 

@@ -173,6 +173,38 @@ jobs:
           bash -n scripts/install.sh scripts/jig scripts/install-release.sh
           bash tests/install/installer-smoke.sh
 
+      - name: Package and smoke certified arm64 bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/install.sh scripts/jig scripts/install-release.sh
+          output="${RUNNER_TEMP}/jig-arm64-release"
+          bun scripts/package-release.ts "${output}"
+          (cd "${output}" && sha256sum -c SHA256SUMS)
+
+          smoke="${RUNNER_TEMP}/jig-arm64-release-smoke"
+          rm -rf "${smoke}"
+          mkdir -p "${smoke}/home" "${smoke}/repo" "${smoke}/bin"
+
+          cat > "${smoke}/bin/systemctl" <<'EOF'
+          #!/usr/bin/env bash
+          exit 1
+          EOF
+          chmod 0755 "${smoke}/bin/systemctl"
+
+          git -C "${smoke}/repo" init -q
+          git -C "${smoke}/repo" config user.name "Jig Release"
+          git -C "${smoke}/repo" config user.email "release@example.invalid"
+          tar -xzf "${output}/jig-linux-arm64.tar.gz" -C "${smoke}"
+
+          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home" \
+            "${smoke}/jig/scripts/install.sh" \
+            --repo "${smoke}/repo" --port 47931
+          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home" \
+            "${smoke}/home/.local/bin/jig" status
+          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home" \
+            "${smoke}/home/.local/bin/jig" uninstall
+
   release:
     needs: [prepare, arm64-certification]
     if: needs.prepare.outputs.should_release == 'true'

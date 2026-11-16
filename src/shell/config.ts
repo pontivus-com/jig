@@ -7,13 +7,10 @@ import {
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve } from "node:path";
-import { DATA_REF } from "./sqlite";
 
 export interface JigConfig {
   readonly version: 1;
   readonly repository_path: string;
-  readonly remote_name: string | null;
-  readonly data_ref: typeof DATA_REF;
   readonly http_port: number;
 }
 
@@ -41,8 +38,6 @@ export function validateConfig(value: unknown): JigConfig {
   const expectedKeys = [
     "version",
     "repository_path",
-    "remote_name",
-    "data_ref",
     "http_port",
   ].sort();
   const actualKeys = Object.keys(object).sort();
@@ -67,20 +62,6 @@ export function validateConfig(value: unknown): JigConfig {
     );
   }
   if (
-    object.remote_name !== null &&
-    (typeof object.remote_name !== "string" ||
-      object.remote_name.trim().length === 0)
-  ) {
-    throw new RuntimeConfigurationError(
-      "remote_name must be null or a nonblank Git remote name",
-    );
-  }
-  if (object.data_ref !== DATA_REF) {
-    throw new RuntimeConfigurationError(
-      `data_ref must be exactly ${DATA_REF}`,
-    );
-  }
-  if (
     typeof object.http_port !== "number" ||
     !Number.isInteger(object.http_port) ||
     object.http_port < 1024 ||
@@ -94,8 +75,6 @@ export function validateConfig(value: unknown): JigConfig {
   return {
     version: 1,
     repository_path: object.repository_path,
-    remote_name: object.remote_name,
-    data_ref: DATA_REF,
     http_port: object.http_port,
   };
 }

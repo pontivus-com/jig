@@ -26,7 +26,6 @@ import { DayView } from "./day";
 import { HistoryView } from "./history";
 import {
   isStaleRevision,
-  migrateRepository,
   readCanonicalTasks,
   readDiagnostics,
   readStatus,
@@ -296,34 +295,6 @@ export function App(): React.ReactElement {
     }
   }, [isOperating, refreshOperationalState]);
 
-  const migrate = useCallback(
-    async (repositoryPath: string): Promise<boolean> => {
-      if (isOperating) {
-        return false;
-      }
-      setIsOperating(true);
-      setOperationError(null);
-      try {
-        await migrateRepository(repositoryPath);
-        await Promise.all([
-          refreshCanonical(),
-          refreshOperationalState(),
-        ]);
-        return true;
-      } catch (error) {
-        setOperationError(errorMessage(error));
-        return false;
-      } finally {
-        setIsOperating(false);
-      }
-    },
-    [
-      isOperating,
-      refreshCanonical,
-      refreshOperationalState,
-    ],
-  );
-
   const navigateDate = (amount: number): void => {
     setSelectedDate((current) => addCivilDays(current, amount));
   };
@@ -491,7 +462,6 @@ export function App(): React.ReactElement {
       isOperating={isOperating}
       onThemePreferenceChange={changeTheme}
       onSync={syncNow}
-      onMigrate={migrate}
     />
   );
 

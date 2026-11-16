@@ -6,19 +6,20 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
-  commitSnapshot,
-  ensureJigDataWorktree,
   ensureJigLocalExclude,
+  ensurePortableData,
   GitAdapterError,
-  readSnapshotAtRef,
+  readCurrentPortableSnapshot,
+  repositorySynchronizationMode,
   runGit,
   serializeSnapshot,
+  writePortableSnapshot,
 } from "../../src/shell/git";
-import { DATA_REF } from "../../src/shell/sqlite";
+const DATA_REF = "refs/heads/jig-data";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 const roots: string[] = [];
@@ -81,21 +82,21 @@ describe("isolated jig-data adapter", () => {
 
     const config = {
       repository_path: repo,
-      worktree_path: resolve(repo, ".jig", "git"),
-      remote_name: null,
     } as const;
 
-    await ensureJigDataWorktree(config, DATASET_ID);
+    await ensurePortableData(config, DATASET_ID);
     const snapshot = serializeSnapshot([task()], DATASET_ID);
-    const head = await commitSnapshot(config, snapshot, 1);
+    const head = await writePortableSnapshot(config, snapshot, 1);
 
     expect(head).toMatch(/^[0-9a-f]{40}$/);
     expect(await git(repo, ["status", "--porcelain=v1"])).toBe(before);
     expect(
-      await readSnapshotAtRef(repo, DATA_REF, DATASET_ID),
+      await readCurrentPortableSnapshot(config, DATASET_ID),
     ).toMatchObject({
-      dataset_id: DATASET_ID,
-      tasks: [task()],
+      snapshot: {
+        dataset_id: DATASET_ID,
+        tasks: [task()],
+      },
     });
   });
 
@@ -120,13 +121,86 @@ describe("isolated jig-data adapter", () => {
 
     const config = {
       repository_path: repo,
-      worktree_path: resolve(repo, ".jig", "git"),
-      remote_name: null,
     } as const;
 
     await expect(
-      ensureJigDataWorktree(config, DATASET_ID),
+      ensurePortableData(config, DATASET_ID),
     ).rejects.toThrow(GitAdapterError);
+  });
+
+  it("creates Jig synchronization commits without inheriting user commit signing policy", async () => {
+    const repo = await fixture();
+    await ensureJigLocalExclude(repo);
+    await git(repo, ["config", "commit.gpgSign", "true"]);
+    await git(repo, ["config", "user.signingkey", "missing-jig-test-key"]);
+
+    const config = {
+      repository_path: repo,
+    } as const;
+
+    await ensurePortableData(config, DATASET_ID);
+    const head = await writePortableSnapshot(
+      config,
+      serializeSnapshot([task()], DATASET_ID),
+      1,
+    );
+
+    expect(head).toMatch(/^[0-9a-f]{40}$/);
+    expect(await git(repo, ["config", "--get", "commit.gpgSign"])).toBe(
+      "true",
+    );
+    expect(await git(repo, ["config", "--get", "user.signingkey"])).toBe(
+      "missing-jig-test-key",
+    );
+  });
+
+  it("recovers only the exact v1.0.0 empty bootstrap residue into a valid snapshot", async () => {
+    const repo = await fixture();
+    await ensureJigLocalExclude(repo);
+
+    const emptyTree = await git(repo, ["mktree"]);
+    const legacy = await runGit(
+      repo,
+      ["commit-tree", emptyTree, "-m", "Initialize Jig data"],
+      undefined,
+      {
+        GIT_AUTHOR_NAME: "Jig",
+        GIT_AUTHOR_EMAIL: "jig@local.invalid",
+        GIT_COMMITTER_NAME: "Jig",
+        GIT_COMMITTER_EMAIL: "jig@local.invalid",
+      },
+    );
+    expect(legacy.exit_code).toBe(0);
+    await git(repo, ["update-ref", DATA_REF, legacy.stdout]);
+
+    const config = {
+      repository_path: repo,
+    } as const;
+
+    await ensurePortableData(config, DATASET_ID);
+
+    const current = await readCurrentPortableSnapshot(config, DATASET_ID);
+    expect(current?.snapshot.dataset_id).toBe(DATASET_ID);
+    expect(current?.snapshot.tasks).toStrictEqual([]);
+    expect(await git(repo, ["rev-parse", `${DATA_REF}^`])).toBe(
+      legacy.stdout,
+    );
+  });
+
+  it("defers remote selection to Git configuration instead of assuming origin", async () => {
+    const repo = await fixture();
+    await git(repo, ["remote", "add", "primary", "/tmp/jig-primary.git"]);
+    await git(repo, ["remote", "add", "backup", "/tmp/jig-backup.git"]);
+
+    const config = { repository_path: repo } as const;
+    expect(await repositorySynchronizationMode(config)).toBe(
+      "local-only",
+    );
+
+    await git(repo, ["config", "remote.pushDefault", "backup"]);
+    expect(await repositorySynchronizationMode(config)).toBe(
+      "remote",
+    );
   });
 
   it("uses the Git common dir for local exclusion from linked worktrees", async () => {

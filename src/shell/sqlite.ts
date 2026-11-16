@@ -18,9 +18,8 @@ import {
   reopenTask,
 } from "../core/planning";
 
-export const SQLITE_SCHEMA_VERSION = 1;
+export const SQLITE_SCHEMA_VERSION = 2;
 export const PORTABLE_FORMAT_VERSION = 1;
-export const DATA_REF = "refs/heads/jig-data";
 
 export type RepositoryStatus =
   | "local-only"
@@ -36,7 +35,6 @@ export interface PersistenceMetadata {
   readonly last_exported_revision: number;
   readonly last_exported_head: string | null;
   readonly last_adopted_head: string | null;
-  readonly data_ref: typeof DATA_REF;
   readonly pending_sync: boolean;
 }
 
@@ -102,7 +100,6 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   last_exported_revision INTEGER NOT NULL CHECK (last_exported_revision >= 0),
   last_exported_head TEXT,
   last_adopted_head TEXT,
-  data_ref TEXT NOT NULL,
   pending_sync INTEGER NOT NULL CHECK (pending_sync IN (0, 1))
 );
 
@@ -127,6 +124,75 @@ created_at,
 updated_at
 `;
 
+function migrateMetadataSchema(db: Database): void {
+  const columns = db.query("PRAGMA table_info(app_metadata)").all() as Array<{
+    name: string;
+  }>;
+  if (!columns.some((column) => column.name === "data_ref")) {
+    return;
+  }
+
+  const row = db
+    .query("SELECT schema_version FROM app_metadata WHERE singleton = 1")
+    .get() as { schema_version: number } | null;
+  if (row === null) {
+    return;
+  }
+  if (row.schema_version !== 1) {
+    throw new PersistenceConfigurationError(
+      `Unsupported SQLite schema version ${row.schema_version}`,
+    );
+  }
+
+  try {
+    db.exec("BEGIN IMMEDIATE;");
+    db.exec("ALTER TABLE app_metadata RENAME TO app_metadata_v1;");
+    db.exec(`
+      CREATE TABLE app_metadata (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        schema_version INTEGER NOT NULL,
+        dataset_id TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision >= 0),
+        last_exported_revision INTEGER NOT NULL CHECK (last_exported_revision >= 0),
+        last_exported_head TEXT,
+        last_adopted_head TEXT,
+        pending_sync INTEGER NOT NULL CHECK (pending_sync IN (0, 1))
+      );
+    `);
+    db.exec(`
+      INSERT INTO app_metadata (
+        singleton,
+        schema_version,
+        dataset_id,
+        revision,
+        last_exported_revision,
+        last_exported_head,
+        last_adopted_head,
+        pending_sync
+      )
+      SELECT
+        singleton,
+        ${SQLITE_SCHEMA_VERSION},
+        dataset_id,
+        revision,
+        last_exported_revision,
+        last_exported_head,
+        last_adopted_head,
+        pending_sync
+      FROM app_metadata_v1;
+    `);
+    db.exec("DROP TABLE app_metadata_v1;");
+    db.exec("COMMIT;");
+  } catch (error) {
+    try {
+      db.exec("ROLLBACK;");
+    } catch {
+      // Preserve the original migration error.
+    }
+    throw error;
+  }
+}
+
 export function initializeDatabase(
   path: string,
   datasetId: string,
@@ -136,6 +202,7 @@ export function initializeDatabase(
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec(CREATE_SCHEMA_SQL);
+  migrateMetadataSchema(db);
 
   db.query(
     `INSERT OR IGNORE INTO app_metadata (
@@ -146,10 +213,9 @@ export function initializeDatabase(
       last_exported_revision,
       last_exported_head,
       last_adopted_head,
-      data_ref,
       pending_sync
-    ) VALUES (1, ?, ?, 0, 0, NULL, NULL, ?, 0)`,
-  ).run(SQLITE_SCHEMA_VERSION, datasetId, DATA_REF);
+    ) VALUES (1, ?, ?, 0, 0, NULL, NULL, 0)`,
+  ).run(SQLITE_SCHEMA_VERSION, datasetId);
 
   const metadata = readMetadata(db);
   if (metadata.schema_version !== SQLITE_SCHEMA_VERSION) {
@@ -164,13 +230,6 @@ export function initializeDatabase(
       "Configured dataset identity does not match the existing database",
     );
   }
-  if (metadata.data_ref !== DATA_REF) {
-    db.close();
-    throw new PersistenceConfigurationError(
-      `Unsupported data ref ${metadata.data_ref}`,
-    );
-  }
-
   readCanonicalState(db);
   return db;
 }
@@ -179,6 +238,7 @@ export function openDatabase(path: string): Database {
   const db = new Database(path);
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA foreign_keys = ON;");
+  migrateMetadataSchema(db);
   const metadata = readMetadata(db);
 
   if (metadata.schema_version !== SQLITE_SCHEMA_VERSION) {
@@ -187,13 +247,6 @@ export function openDatabase(path: string): Database {
       `Unsupported SQLite schema version ${metadata.schema_version}`,
     );
   }
-  if (metadata.data_ref !== DATA_REF) {
-    db.close();
-    throw new PersistenceConfigurationError(
-      `Unsupported data ref ${metadata.data_ref}`,
-    );
-  }
-
   readCanonicalState(db);
   return db;
 }
@@ -208,7 +261,6 @@ export function readMetadata(db: Database): PersistenceMetadata {
         last_exported_revision,
         last_exported_head,
         last_adopted_head,
-        data_ref,
         pending_sync
       FROM app_metadata
       WHERE singleton = 1`,
@@ -221,7 +273,6 @@ export function readMetadata(db: Database): PersistenceMetadata {
         last_exported_revision: number;
         last_exported_head: string | null;
         last_adopted_head: string | null;
-        data_ref: string;
         pending_sync: number;
       }
     | null;
@@ -233,12 +284,6 @@ export function readMetadata(db: Database): PersistenceMetadata {
   }
 
   assertUuid(row.dataset_id, "dataset_id");
-  if (row.data_ref !== DATA_REF) {
-    throw new PersistenceConfigurationError(
-      `Unsupported data ref ${row.data_ref}`,
-    );
-  }
-
   return {
     schema_version: row.schema_version,
     dataset_id: row.dataset_id,
@@ -246,7 +291,6 @@ export function readMetadata(db: Database): PersistenceMetadata {
     last_exported_revision: row.last_exported_revision,
     last_exported_head: row.last_exported_head,
     last_adopted_head: row.last_adopted_head,
-    data_ref: DATA_REF,
     pending_sync: row.pending_sync === 1,
   };
 }

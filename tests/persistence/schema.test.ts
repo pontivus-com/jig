@@ -52,6 +52,88 @@ describe("SQLite schema and metadata", () => {
     reopened.close();
   });
 
+  it("migrates v1 metadata without carrying Git topology into persistence", async () => {
+    const path = await databasePath();
+    const { Database } = await import("bun:sqlite");
+    const legacy = new Database(path, { create: true });
+    legacy.exec(`
+      CREATE TABLE task (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        scheduled_date TEXT NOT NULL,
+        position INTEGER,
+        priority TEXT NOT NULL,
+        context TEXT,
+        reference TEXT,
+        note TEXT,
+        reminder_time TEXT,
+        completed_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE app_metadata (
+        singleton INTEGER PRIMARY KEY,
+        schema_version INTEGER NOT NULL,
+        dataset_id TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        last_exported_revision INTEGER NOT NULL,
+        last_exported_head TEXT,
+        last_adopted_head TEXT,
+        data_ref TEXT NOT NULL,
+        pending_sync INTEGER NOT NULL
+      );
+      CREATE TABLE reminder_delivery (
+        delivery_key TEXT PRIMARY KEY,
+        delivered_at TEXT NOT NULL
+      );
+      INSERT INTO app_metadata VALUES (
+        1,
+        1,
+        '018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001',
+        3,
+        2,
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        'refs/heads/jig-data',
+        1
+      );
+      INSERT INTO task VALUES (
+        '018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101',
+        'Preserved task',
+        '2026-11-16',
+        0,
+        'NORMAL',
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        '2026-11-16T00:00:00.000Z',
+        '2026-11-16T00:00:00.000Z'
+      );
+    `);
+    legacy.close();
+
+    const migrated = openDatabase(path);
+    expect(readMetadata(migrated)).toMatchObject({
+      schema_version: SQLITE_SCHEMA_VERSION,
+      dataset_id: DATASET_ID,
+      revision: 3,
+      last_exported_revision: 2,
+      last_exported_head: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      last_adopted_head: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      pending_sync: true,
+    });
+    const columns = migrated
+      .query("PRAGMA table_info(app_metadata)")
+      .all() as Array<{ name: string }>;
+    expect(columns.map((column) => column.name)).not.toContain("data_ref");
+    expect(migrated.query("SELECT title FROM task").get()).toEqual({
+      title: "Preserved task",
+    });
+    migrated.close();
+  });
+
   it("rejects an incompatible schema version rather than guessing", async () => {
     const path = await databasePath();
     const db = initializeDatabase(path, DATASET_ID);

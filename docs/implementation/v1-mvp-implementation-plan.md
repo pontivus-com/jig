@@ -1,6 +1,6 @@
 # Jig — v1 MVP implementation plan
 
-**Status:** Implementation-ready execution plan, v1.2 (2026-11-16), completeness-audited against JIG-FR-01–22, Technical solution v0.6 and UI solution v0.3.
+**Status:** Historical v1.0.0 implementation plan. Superseded for corrective work by [`v1.0.1-ownership-boundary-correction-plan.md`](v1.0.1-ownership-boundary-correction-plan.md). Do not use the repository migration/provisioning or Git-topology prescriptions in this document as current authority; the corrected product/functional/technical documents and root `AGENTS.md` govern v1.0.1.
 **Target:** Build and certify the first Jig desktop MVP without reopening product, functional, technical, or UI design.
 **Required baseline:** Implement only from a repository revision that contains the current canonical product definition, JIG-FR-01–22 functional design, technical solution v0.6 or later, and UI solution v0.3 or later.
 

@@ -1,7 +1,4 @@
-import {
-  access,
-  rm,
-} from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -225,7 +222,6 @@ async function printStatus(): Promise<void> {
       [
         "service: stopped or unavailable",
         `repository: ${config.repository_path}`,
-        `remote: ${config.remote_name ?? "none"}`,
         "repository_status: unavailable while service is stopped",
         "",
       ].join("\n"),
@@ -237,7 +233,6 @@ async function printStatus(): Promise<void> {
     [
       "service: ready",
       `repository: ${String(status.repository_path ?? config.repository_path)}`,
-      `remote: ${status.remote_configured === true ? "configured" : "none"}`,
       `repository_status: ${String(status.repository_status ?? "unknown")}`,
       "",
     ].join("\n"),
@@ -261,8 +256,6 @@ async function doctor(): Promise<void> {
       [
         "service_healthy: false",
         `repository_path: ${config.repository_path}`,
-        `data_ref: ${config.data_ref}`,
-        `remote_configured: ${config.remote_name !== null}`,
         "diagnostics: service is not running",
         "",
       ].join("\n"),
@@ -282,55 +275,6 @@ async function doctor(): Promise<void> {
   for (const [key, value] of Object.entries(diagnostics)) {
     process.stdout.write(`${key}: ${String(value)}\n`);
   }
-}
-
-async function configure(argv: readonly string[]): Promise<void> {
-  if (argv.length !== 2 || argv[0] !== "--repo") {
-    throw new CliError(
-      "Usage: jig configure --repo /absolute/path/to/repository",
-    );
-  }
-
-  const config = await loadConfig();
-  await startService(config);
-  const result = await postOperation(config, "/api/v1/migrate", {
-    repository_path: argv[1],
-  });
-  if (result.migrated !== true) {
-    throw new CliError("Repository migration did not complete");
-  }
-
-  process.stdout.write(
-    "Repository migration committed. Jig is restarting on the new data root.\n",
-  );
-
-  if (await systemdAvailable()) {
-    const target = argv[1];
-    const started = performance.now();
-    while (performance.now() - started < 5_000) {
-      try {
-        const next = await loadConfig();
-        const nextStatus = await statusIfReady(next);
-        if (
-          next.repository_path === target &&
-          nextStatus?.repository_path === target
-        ) {
-          process.stdout.write(`repository: ${target}\n`);
-          return;
-        }
-      } catch {
-        // Expected while the service is intentionally restarting.
-      }
-      await Bun.sleep(100);
-    }
-    throw new CliError(
-      "Migration succeeded but the restarted service did not become ready",
-    );
-  }
-
-  process.stdout.write(
-    "systemd --user is unavailable; restart the foreground service with 'jig serve'.\n",
-  );
 }
 
 async function uninstall(): Promise<void> {
@@ -369,23 +313,6 @@ async function uninstall(): Promise<void> {
   );
 }
 
-async function ensureInstalledUnitReadable(): Promise<void> {
-  const unit = resolve(
-    homedir(),
-    ".config",
-    "systemd",
-    "user",
-    "jig.service",
-  );
-  try {
-    await access(unit);
-  } catch {
-    throw new CliError(
-      "Jig systemd user unit is not installed; use 'jig serve' for the foreground fallback",
-    );
-  }
-}
-
 async function runCli(argv: readonly string[]): Promise<void> {
   const [command, ...rest] = argv;
   switch (command) {
@@ -410,9 +337,6 @@ async function runCli(argv: readonly string[]): Promise<void> {
       }
       await doctor();
       return;
-    case "configure":
-      await configure(rest);
-      return;
     case "serve":
       if (rest.length !== 0) {
         throw new CliError("Usage: jig serve");
@@ -425,16 +349,9 @@ async function runCli(argv: readonly string[]): Promise<void> {
       }
       await uninstall();
       return;
-    case "service":
-      if (rest.length !== 1 || rest[0] !== "check") {
-        throw new CliError("Usage: jig service check");
-      }
-      await ensureInstalledUnitReadable();
-      process.stdout.write("service_unit: installed\n");
-      return;
     default:
       throw new CliError(
-        "Usage: jig [status|sync|doctor|configure --repo PATH|serve|uninstall]",
+        "Usage: jig [status|sync|doctor|serve|uninstall]",
       );
   }
 }

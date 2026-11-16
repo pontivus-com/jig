@@ -36,7 +36,6 @@ function handler() {
     get_status: () => ({
       ready: true,
       repository_path: root,
-      remote_configured: false,
       repository_status: "local-only",
     }),
     get_diagnostics: () => ({
@@ -44,14 +43,10 @@ function handler() {
       sqlite_available: true,
       sqlite_schema_version: 1,
       repository_path: root,
-      data_ref: "refs/heads/jig-data",
       portable_format_version: 1,
-      remote_configured: false,
       repository_adapter_healthy: true,
     }),
     trigger_sync: async () => "local-only",
-    migrate_repository: async () => undefined,
-    before_task_mutation: () => undefined,
     on_task_mutation: () => undefined,
   });
 }
@@ -184,26 +179,21 @@ describe("loopback HTTP admission", () => {
       get_status: () => ({
         ready: true,
         repository_path: root,
-        remote_configured: true,
-        repository_status: "pending",
+          repository_status: "pending",
       }),
       get_diagnostics: () => ({
         service_healthy: true,
         sqlite_available: true,
         sqlite_schema_version: 1,
         repository_path: root,
-        data_ref: "refs/heads/jig-data",
-        portable_format_version: 1,
-        remote_configured: true,
-        repository_adapter_healthy: true,
+          portable_format_version: 1,
+          repository_adapter_healthy: true,
       }),
       trigger_sync: async () => {
         syncCalls += 1;
         return "synchronized";
       },
-      migrate_repository: async () => undefined,
-      before_task_mutation: () => undefined,
-      on_task_mutation: () => undefined,
+          on_task_mutation: () => undefined,
     });
 
     const response = await handle(

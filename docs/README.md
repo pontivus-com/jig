@@ -12,8 +12,8 @@ Jig is a small, local-first, just-in-time daily planner. It schedules attention 
 4. [Planning and UX functional requirements](requirements/planning-workbench.md) — observable JIG-FR-01–22 behaviour, including carry-over, confirmed deletion, System/Light/Dark appearance, onboarding/installation, repository ownership, the `jig` command, background availability and automatic synchronization.
 5. [Technical solution](architecture/technical-solution.md) — selected dependencies and exact application architecture, installer/user service, canonical Task, SQLite in the selected repository, isolated repository integration boundary, background sync, canonical snapshot admission and verification.
 6. [UI solution and versioned reference mockups](design/ui-solution.md) — screen hierarchy, desktop/mobile responsive composition, Astryx/dnd-kit ownership, design corrections and browser acceptance.
-7. [v1 MVP implementation plan](implementation/v1-mvp-implementation-plan.md) — dependency-ordered execution tasks, exact implementation surfaces, safe parallelism, verification gates and the definition of implementation complete.
-8. [Installation](install.md) — supported release installation, upgrade, migration and uninstall.
+7. [v1.0.1 ownership-boundary correction plan](implementation/v1.0.1-ownership-boundary-correction-plan.md) — current corrective execution authority for restoring external-system boundaries and installer reliability. The earlier [v1 MVP plan](implementation/v1-mvp-implementation-plan.md) is historical for v1.0.0.
+8. [Installation](install.md) — supported existing-repository installation, upgrade, Git-native continuity and uninstall.
 9. [Releases](releases/README.md) — immutable release process, binary asset contract and publication channel.
 10. [v1 release-candidate evidence](evidence/v1/README.md) — permanent verification, security/installer/resource certification and representative runtime screenshots.
 
@@ -35,7 +35,7 @@ The seven versioned SVGs under `design/reference/` define the current structural
 
 ## Verification and implementation boundary
 
-The design is closed and the [v1 MVP implementation plan](implementation/v1-mvp-implementation-plan.md) has been executed through V1-25. The [v1 release-candidate evidence set](evidence/v1/README.md) records the passing runtime, browser, persistence, repository, installer, security and resource/readiness gates.
+The v1.0.0 implementation/evidence remains historical. The current corrective authority is the [v1.0.1 ownership-boundary correction plan](implementation/v1.0.1-ownership-boundary-correction-plan.md), which restores the product/functional ownership boundaries and expands installer certification around the failures observed in v1.0.0.
 
 Certified behavior includes:
 

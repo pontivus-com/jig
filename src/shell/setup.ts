@@ -7,19 +7,17 @@ import {
 import { constants as fsConstants } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import {
-  ensureJigDataWorktree,
   ensureJigLocalExclude,
+  ensurePortableData,
   GitAdapterError,
-  readSnapshotAtRef,
+  inspectPortableCandidate,
   runGit,
   serializeSnapshot,
-  commitSnapshot,
+  writePortableSnapshot,
   type GitAdapterConfig,
-  type PortableSnapshot,
 } from "./git";
 import {
   adoptCanonicalSnapshot,
-  DATA_REF,
   initializeDatabase,
   openDatabase,
   readCanonicalState,
@@ -35,8 +33,6 @@ export interface RepositoryInstallation {
   readonly config: JigConfig;
   readonly dataset_id: string;
   readonly sqlite_path: string;
-  readonly worktree_path: string;
-  readonly snapshot_head: string;
   readonly adopted_existing_snapshot: boolean;
 }
 
@@ -134,81 +130,6 @@ export async function validateSelectedRepository(
   return canonicalPath;
 }
 
-export async function selectRemote(
-  repositoryPath: string,
-  requestedRemote?: string | null,
-): Promise<string | null> {
-  const remotes = (await git(repositoryPath, ["remote"]))
-    .split("\n")
-    .filter(Boolean);
-
-  if (requestedRemote !== undefined && requestedRemote !== null) {
-    if (!remotes.includes(requestedRemote)) {
-      throw new InstallationError(
-        `Configured Git remote ${requestedRemote} does not exist`,
-      );
-    }
-    return requestedRemote;
-  }
-
-  return remotes.includes("origin") ? "origin" : null;
-}
-
-export async function inspectLocalCandidate(
-  repositoryPath: string,
-): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
-  const result = await runGit(repositoryPath, [
-    "show-ref",
-    "--verify",
-    "--hash",
-    DATA_REF,
-  ]);
-  if (result.exit_code !== 0) {
-    return null;
-  }
-  return {
-    head: result.stdout,
-    snapshot: await readSnapshotAtRef(repositoryPath, DATA_REF),
-  };
-}
-
-export async function inspectRemoteCandidate(
-  repositoryPath: string,
-  remoteName: string | null,
-): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
-  if (remoteName === null) {
-    return null;
-  }
-
-  const advertised = await runGit(repositoryPath, [
-    "ls-remote",
-    "--exit-code",
-    remoteName,
-    "refs/heads/jig-data",
-  ]);
-  if (advertised.exit_code === 2 || advertised.stdout.length === 0) {
-    return null;
-  }
-  if (advertised.exit_code !== 0) {
-    throw new InstallationError(
-      `Unable to inspect remote Jig data: ${advertised.stderr || advertised.stdout}`,
-    );
-  }
-
-  const trackingRef = `refs/remotes/${remoteName}/jig-data`;
-  await git(repositoryPath, [
-    "fetch",
-    "--no-tags",
-    remoteName,
-    `refs/heads/jig-data:${trackingRef}`,
-  ]);
-  const head = await git(repositoryPath, ["rev-parse", trackingRef]);
-  return {
-    head,
-    snapshot: await readSnapshotAtRef(repositoryPath, trackingRef),
-  };
-}
-
 function snapshotsEqual(
   left: ReadonlyMap<string, string>,
   right: ReadonlyMap<string, string>,
@@ -226,18 +147,12 @@ function snapshotsEqual(
 
 export async function initializeRepositoryInstallation(options: {
   readonly repository_path: string;
-  readonly requested_remote?: string | null;
   readonly http_port: number;
   readonly config_path?: string;
 }): Promise<RepositoryInstallation> {
   const repositoryPath = await validateSelectedRepository(
     options.repository_path,
   );
-  const remoteName = await selectRemote(
-    repositoryPath,
-    options.requested_remote,
-  );
-
   if (
     !Number.isInteger(options.http_port) ||
     options.http_port < 1024 ||
@@ -255,39 +170,17 @@ export async function initializeRepositoryInstallation(options: {
   const writerLease = await acquireWriterLease(repositoryPath);
 
   try {
-  let local: Awaited<ReturnType<typeof inspectLocalCandidate>>;
-  let remote: Awaited<ReturnType<typeof inspectRemoteCandidate>>;
+  const adapter: GitAdapterConfig = {
+    repository_path: repositoryPath,
+  };
+
+  let candidate;
   try {
-    [local, remote] = await Promise.all([
-      inspectLocalCandidate(repositoryPath),
-      inspectRemoteCandidate(repositoryPath, remoteName),
-    ]);
+    candidate = await inspectPortableCandidate(adapter);
   } catch (error) {
     throw new InstallationError(
       `Unable to validate existing Jig snapshot: ${String(error)}`,
     );
-  }
-
-  if (
-    local !== null &&
-    remote !== null &&
-    local.head !== remote.head
-  ) {
-    throw new InstallationError(
-      "Local and remote jig-data refs differ; reconcile them with ordinary Git tooling before installation",
-    );
-  }
-
-  const candidate = local ?? remote;
-  if (
-    local === null &&
-    remote !== null
-  ) {
-    await git(repositoryPath, [
-      "update-ref",
-      DATA_REF,
-      remote.head,
-    ]);
   }
 
   const sqlitePath = resolve(
@@ -331,14 +224,8 @@ export async function initializeRepositoryInstallation(options: {
     datasetId = candidate?.snapshot.dataset_id ?? crypto.randomUUID();
   }
 
-  const adapter: GitAdapterConfig = {
-    repository_path: repositoryPath,
-    worktree_path: resolve(repositoryPath, ".jig", "git"),
-    remote_name: remoteName,
-  };
-
   try {
-    await ensureJigDataWorktree(adapter, datasetId);
+    await ensurePortableData(adapter, datasetId);
   } catch (error) {
     if (error instanceof GitAdapterError) {
       throw new InstallationError(error.message);
@@ -360,7 +247,7 @@ export async function initializeRepositoryInstallation(options: {
 
     const state = readCanonicalState(db);
     const snapshot = serializeSnapshot(state.tasks, datasetId);
-    const head = await commitSnapshot(
+    await writePortableSnapshot(
       adapter,
       snapshot,
       state.revision,
@@ -369,8 +256,6 @@ export async function initializeRepositoryInstallation(options: {
     const config: JigConfig = {
       version: 1,
       repository_path: repositoryPath,
-      remote_name: remoteName,
-      data_ref: DATA_REF,
       http_port: options.http_port,
     };
     await writeConfigAtomic(config, options.config_path);
@@ -379,8 +264,6 @@ export async function initializeRepositoryInstallation(options: {
       config,
       dataset_id: datasetId,
       sqlite_path: sqlitePath,
-      worktree_path: adapter.worktree_path,
-      snapshot_head: head,
       adopted_existing_snapshot: adoptedExistingSnapshot,
     };
   } finally {
@@ -393,14 +276,12 @@ export async function initializeRepositoryInstallation(options: {
 
 interface SetupCliOptions {
   readonly repositoryPath: string;
-  readonly remoteName?: string;
   readonly port: number;
   readonly configPath?: string;
 }
 
 function parseCli(argv: readonly string[]): SetupCliOptions {
   let repositoryPath: string | null = null;
-  let remoteName: string | undefined;
   let port = 47831;
   let configPath: string | undefined;
 
@@ -409,9 +290,6 @@ function parseCli(argv: readonly string[]): SetupCliOptions {
     const next = argv[index + 1];
     if (arg === "--repo" && next !== undefined) {
       repositoryPath = next;
-      index += 1;
-    } else if (arg === "--remote" && next !== undefined) {
-      remoteName = next;
       index += 1;
     } else if (arg === "--port" && next !== undefined) {
       port = Number(next);
@@ -430,7 +308,6 @@ function parseCli(argv: readonly string[]): SetupCliOptions {
 
   return {
     repositoryPath,
-    ...(remoteName === undefined ? {} : { remoteName }),
     port,
     ...(configPath === undefined ? {} : { configPath }),
   };
@@ -441,9 +318,6 @@ if (import.meta.main) {
     const cli = parseCli(process.argv.slice(2));
     const installed = await initializeRepositoryInstallation({
       repository_path: cli.repositoryPath,
-      ...(cli.remoteName === undefined
-        ? {}
-        : { requested_remote: cli.remoteName }),
       http_port: cli.port,
       ...(cli.configPath === undefined
         ? {}

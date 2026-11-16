@@ -132,6 +132,15 @@ describe("installation repository boundary", () => {
     const replicaConfig = await mkdtemp(join(tmpdir(), "jig-replica-config-"));
     roots.push(replicaConfig);
 
+    // The clone already contains the fetched Jig tracking snapshot. Installation
+    // must adopt it even if transport is currently unavailable.
+    await git(replica, [
+      "remote",
+      "set-url",
+      "origin",
+      join(replicaParent, "missing.git"),
+    ]);
+
     const second = await initializeRepositoryInstallation({
       repository_path: replica,
       http_port: 47834,

@@ -1,20 +1,19 @@
 import type { Database } from "bun:sqlite";
 import {
-  commitSnapshot,
-  ensureJigDataWorktree,
+  ensurePortableData,
   EXPORT_DEBOUNCE_MS,
   EXPORT_MAX_FLUSH_MS,
-  readSnapshotAtRef,
+  readCurrentPortableSnapshot,
+  repositorySynchronizationMode,
   retryDelayMs,
-  runGit,
   serializeSnapshot,
   SYNC_HEALTHY_POLL_MS,
   type GitAdapterConfig,
-  pushJigDataRef,
+  synchronizePortableData,
+  writePortableSnapshot,
 } from "./git";
 import {
   adoptCanonicalSnapshot,
-  DATA_REF,
   markAdoptedHead,
   markExported,
   readCanonicalState,
@@ -24,7 +23,6 @@ import {
 
 export interface SyncConfiguration {
   readonly repository_path: string;
-  readonly remote_name: string | null;
 }
 
 export interface SyncController {
@@ -36,25 +34,19 @@ export interface SyncController {
 }
 
 export interface SyncEffects {
-  readonly ensureWorktree: (
-    config: GitAdapterConfig,
-    datasetId: string,
-  ) => Promise<void>;
-  readonly readHead: (repositoryPath: string) => Promise<string | null>;
-  readonly readSnapshot: typeof readSnapshotAtRef;
-  readonly commit: typeof commitSnapshot;
-  readonly push: typeof pushJigDataRef;
+  readonly ensurePortableData: typeof ensurePortableData;
+  readonly readCurrentSnapshot: typeof readCurrentPortableSnapshot;
+  readonly writeSnapshot: typeof writePortableSnapshot;
+  readonly synchronize: typeof synchronizePortableData;
+  readonly mode: typeof repositorySynchronizationMode;
 }
 
 const REAL_EFFECTS: SyncEffects = {
-  ensureWorktree: ensureJigDataWorktree,
-  readHead: async (repositoryPath) => {
-    const result = await runGit(repositoryPath, ["rev-parse", DATA_REF]);
-    return result.exit_code === 0 ? result.stdout : null;
-  },
-  readSnapshot: readSnapshotAtRef,
-  commit: commitSnapshot,
-  push: pushJigDataRef,
+  ensurePortableData,
+  readCurrentSnapshot: readCurrentPortableSnapshot,
+  writeSnapshot: writePortableSnapshot,
+  synchronize: synchronizePortableData,
+  mode: repositorySynchronizationMode,
 };
 
 function snapshotsEqual(
@@ -79,12 +71,9 @@ export function createSyncController(
 ): SyncController {
   const adapter: GitAdapterConfig = {
     repository_path: config.repository_path,
-    worktree_path: `${config.repository_path}/.jig/git`,
-    remote_name: config.remote_name,
   };
 
-  let currentStatus: RepositoryStatus =
-    config.remote_name === null ? "local-only" : "pending";
+  let currentStatus: RepositoryStatus = "pending";
   let running: Promise<RepositoryStatus> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let firstDirtyAt: number | null = null;
@@ -111,25 +100,15 @@ export function createSyncController(
   const reconcileConcreteLocalSnapshot = async (): Promise<void> => {
     const metadata = readMetadata(db);
     const state = readCanonicalState(db);
-    const head = await effects.readHead(config.repository_path);
-    if (head === null) {
+    const current = await effects.readCurrentSnapshot(
+      adapter,
+      metadata.dataset_id,
+    );
+    if (current === null) {
       return;
     }
 
-    let snapshot;
-    try {
-      snapshot = await effects.readSnapshot(
-        config.repository_path,
-        DATA_REF,
-        metadata.dataset_id,
-      );
-    } catch {
-      if (metadata.last_exported_head === head) {
-        return;
-      }
-      throw new Error("Concrete jig-data snapshot is invalid");
-    }
-
+    const { head, snapshot } = current;
     const expected = serializeSnapshot(state.tasks, metadata.dataset_id);
     const contentMatches = snapshotsEqual(snapshot.files, expected.files);
 
@@ -159,7 +138,7 @@ export function createSyncController(
   const runOnce = async (): Promise<RepositoryStatus> => {
     try {
       const datasetId = readMetadata(db).dataset_id;
-      await effects.ensureWorktree(adapter, datasetId);
+      await effects.ensurePortableData(adapter, datasetId);
       await reconcileConcreteLocalSnapshot();
 
       const state = readCanonicalState(db);
@@ -170,7 +149,7 @@ export function createSyncController(
           state.tasks,
           metadata.dataset_id,
         );
-        const head = await effects.commit(
+        const head = await effects.writeSnapshot(
           adapter,
           snapshot,
           state.revision,
@@ -178,7 +157,7 @@ export function createSyncController(
         markExported(db, state.revision, head);
       }
 
-      const pushed = await effects.push(adapter);
+      const pushed = await effects.synchronize(adapter);
       failureCount = pushed === "sync-issue" ? failureCount + 1 : 0;
       firstDirtyAt = null;
 
@@ -213,7 +192,7 @@ export function createSyncController(
     start: async () => {
       stopped = false;
       const datasetId = readMetadata(db).dataset_id;
-      await effects.ensureWorktree(adapter, datasetId);
+      await effects.ensurePortableData(adapter, datasetId);
       await reconcileConcreteLocalSnapshot();
 
       const metadata = readMetadata(db);
@@ -221,9 +200,14 @@ export function createSyncController(
         currentStatus = "pending";
         schedule(0);
       } else {
-        currentStatus =
-          config.remote_name === null ? "local-only" : "synchronized";
-        schedule(SYNC_HEALTHY_POLL_MS);
+        const mode = await effects.mode(adapter);
+        if (mode === "local-only") {
+          currentStatus = "local-only";
+          schedule(SYNC_HEALTHY_POLL_MS);
+        } else {
+          currentStatus = "pending";
+          schedule(0);
+        }
       }
     },
     stop: () => {

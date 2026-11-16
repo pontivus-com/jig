@@ -1,6 +1,5 @@
 import { resolve } from "node:path";
 import {
-  DATA_REF,
   openDatabase,
   PORTABLE_FORMAT_VERSION,
   SQLITE_SCHEMA_VERSION,
@@ -14,11 +13,9 @@ import {
 import { createSyncController } from "./sync";
 import {
   loadConfig,
-  RuntimeConfigurationError,
   type JigConfig,
 } from "./config";
 import { acquireWriterLease } from "./writer";
-import { migrateRepository } from "./migration";
 
 function writeToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -34,7 +31,6 @@ function createStatus(
   return {
     ready: true,
     repository_path: config.repository_path,
-    remote_configured: config.remote_name !== null,
     repository_status: repositoryStatus,
   };
 }
@@ -48,9 +44,7 @@ function createDiagnostics(
     sqlite_available: true,
     sqlite_schema_version: SQLITE_SCHEMA_VERSION,
     repository_path: config.repository_path,
-    data_ref: DATA_REF,
     portable_format_version: PORTABLE_FORMAT_VERSION,
-    remote_configured: config.remote_name !== null,
     repository_adapter_healthy: repositoryStatus !== "sync-issue",
   };
 }
@@ -62,7 +56,6 @@ export async function main(): Promise<void> {
     resolve(config.repository_path, ".jig", "local", "jig.sqlite"),
   );
   const sync = createSyncController(db, config);
-  let migrationInProgress = false;
 
   const shutdown = async (): Promise<void> => {
     sync.stop();
@@ -89,37 +82,6 @@ export async function main(): Promise<void> {
     get_status: () => createStatus(config, sync.status()),
     get_diagnostics: () => createDiagnostics(config, sync.status()),
     trigger_sync: sync.trigger,
-    before_task_mutation: () => {
-      if (migrationInProgress) {
-        throw new RuntimeConfigurationError(
-          "Task mutations are temporarily blocked during repository migration",
-        );
-      }
-    },
-    migrate_repository: async (repositoryPath) => {
-      migrationInProgress = true;
-      let committed = false;
-      try {
-        await migrateRepository({
-          source_db: db,
-          source_config: config,
-          destination_path: repositoryPath,
-          flush_source: sync.trigger,
-        });
-        committed = true;
-
-        // The active process still owns the old SQLite root. Restart only
-        // after the successful HTTP response can be returned so startup
-        // rebinds the one writer to the atomically switched configuration.
-        setTimeout(() => {
-          void shutdown().finally(() => process.exit(75));
-        }, 250);
-      } finally {
-        if (!committed) {
-          migrationInProgress = false;
-        }
-      }
-    },
     on_task_mutation: sync.notifyMutation,
   });
 

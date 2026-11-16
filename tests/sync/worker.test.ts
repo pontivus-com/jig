@@ -52,6 +52,7 @@ function fakeEffects(options: {
   readonly head?: string | null;
   readonly snapshot?: PortableSnapshot;
   readonly pushResults?: readonly ("synchronized" | "sync-issue")[];
+  readonly remoteName?: string | null;
 } = {}): {
   readonly effects: SyncEffects;
   readonly commitCalls: { count: number };
@@ -62,15 +63,18 @@ function fakeEffects(options: {
   const pushResults = [...(options.pushResults ?? ["synchronized"])];
 
   const effects: SyncEffects = {
-    ensureWorktree: async () => undefined,
-    readHead: async () => options.head ?? null,
-    readSnapshot: async () => {
+    ensurePortableData: async () => undefined,
+    readCurrentSnapshot: async () => {
+      const head = options.head ?? null;
+      if (head === null) {
+        return null;
+      }
       if (options.snapshot === undefined) {
         throw new Error("No candidate snapshot");
       }
-      return options.snapshot;
+      return { head, snapshot: options.snapshot };
     },
-    commit: async (
+    writeSnapshot: async (
       _config: GitAdapterConfig,
       _snapshot: PortableSnapshot,
       revision: number,
@@ -78,10 +82,14 @@ function fakeEffects(options: {
       commitCalls.count += 1;
       return revision.toString(16).padStart(40, "0");
     },
-    push: async () => {
+    synchronize: async () => {
       pushCalls.count += 1;
       return pushResults.shift() ?? "synchronized";
     },
+    mode: async () =>
+      (options.remoteName === undefined ? "origin" : options.remoteName) === null
+        ? "local-only"
+        : "remote",
   };
 
   return { effects, commitCalls, pushCalls };
@@ -101,11 +109,29 @@ afterEach(async () => {
 });
 
 describe("serialized synchronization worker", () => {
+  it("does not claim synchronization merely because a remote target exists", async () => {
+    const { effects, pushCalls } = fakeEffects();
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    await controller.start();
+    expect(controller.status()).toBe("pending");
+    expect(pushCalls.count).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(pushCalls.count).toBe(1);
+    expect(controller.status()).toBe("synchronized");
+    controller.stop();
+  });
+
   it("debounces a mutation for 3 seconds without blocking the SQLite save", async () => {
     const { effects, commitCalls } = fakeEffects();
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: "origin" },
+      { repository_path: root },
       effects,
     );
     await controller.start();
@@ -138,7 +164,7 @@ describe("serialized synchronization worker", () => {
     const { effects, commitCalls } = fakeEffects();
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: "origin" },
+      { repository_path: root },
       effects,
     );
     await controller.start();
@@ -179,7 +205,7 @@ describe("serialized synchronization worker", () => {
     });
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: "origin" },
+      { repository_path: root },
       effects,
     );
 
@@ -224,10 +250,11 @@ describe("serialized synchronization worker", () => {
     const { effects, commitCalls } = fakeEffects({
       head: "a".repeat(40),
       snapshot,
+      remoteName: null,
     });
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: null },
+      { repository_path: root },
       effects,
     );
 
@@ -252,7 +279,7 @@ describe("serialized synchronization worker", () => {
     });
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: "origin" },
+      { repository_path: root },
       effects,
     );
 
