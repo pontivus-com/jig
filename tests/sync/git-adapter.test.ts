@@ -15,6 +15,7 @@ import {
   ensureJigLocalExclude,
   GitAdapterError,
   readSnapshotAtRef,
+  repositorySynchronizationAvailability,
   runGit,
   serializeSnapshot,
 } from "../../src/shell/git";
@@ -181,6 +182,22 @@ describe("isolated jig-data adapter", () => {
     expect(snapshot.tasks).toStrictEqual([]);
     expect(await git(repo, ["rev-parse", `${DATA_REF}^`])).toBe(
       legacy.stdout,
+    );
+  });
+
+  it("defers remote selection to Git configuration instead of assuming origin", async () => {
+    const repo = await fixture();
+    await git(repo, ["remote", "add", "primary", "/tmp/jig-primary.git"]);
+    await git(repo, ["remote", "add", "backup", "/tmp/jig-backup.git"]);
+
+    const config = { repository_path: repo } as const;
+    expect(await repositorySynchronizationAvailability(config)).toBe(
+      "local-only",
+    );
+
+    await git(repo, ["config", "remote.pushDefault", "backup"]);
+    expect(await repositorySynchronizationAvailability(config)).toBe(
+      "synchronized",
     );
   });
 
