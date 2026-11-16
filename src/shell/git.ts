@@ -40,7 +40,6 @@ export interface PortableSnapshot {
 export interface GitAdapterConfig {
   readonly repository_path: string;
   readonly worktree_path: string;
-  readonly remote_name: string | null;
 }
 
 export interface GitCommandResult {
@@ -296,6 +295,22 @@ async function requireGit(
   return result.stdout;
 }
 
+export async function discoverSynchronizationRemote(
+  repositoryPath: string,
+): Promise<string | null> {
+  const result = await runGit(repositoryPath, ["remote"]);
+  if (result.exit_code !== 0) {
+    throw new GitAdapterError(
+      `Unable to inspect repository remotes: ${result.stderr || result.stdout}`,
+    );
+  }
+  const remotes = result.stdout.split("\n").filter(Boolean);
+  if (remotes.includes("origin")) {
+    return "origin";
+  }
+  return remotes.length === 1 ? remotes[0] ?? null : null;
+}
+
 export async function repositoryCommonDir(
   repositoryPath: string,
 ): Promise<string> {
@@ -499,6 +514,8 @@ export async function commitSnapshot(
     await requireGit(
       config.worktree_path,
       [
+        "-c",
+        "commit.gpgSign=false",
         "commit",
         "-m",
         `Jig snapshot revision ${revision}`,
@@ -554,15 +571,18 @@ export async function fetchRemoteCandidate(
   expectedDatasetId: string,
 ): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
   assertAdapterPaths(config);
-  if (config.remote_name === null) {
+  const remoteName = await discoverSynchronizationRemote(
+    config.repository_path,
+  );
+  if (remoteName === null) {
     return null;
   }
 
-  const trackingRef = `refs/remotes/${config.remote_name}/jig-data`;
+  const trackingRef = `refs/remotes/${remoteName}/jig-data`;
   const fetchResult = await runGit(config.repository_path, [
     "fetch",
     "--no-tags",
-    config.remote_name,
+    remoteName,
     `refs/heads/jig-data:${trackingRef}`,
   ]);
 
@@ -588,13 +608,16 @@ export async function pushJigDataRef(
   config: GitAdapterConfig,
 ): Promise<RepositoryStatus> {
   assertAdapterPaths(config);
-  if (config.remote_name === null) {
+  const remoteName = await discoverSynchronizationRemote(
+    config.repository_path,
+  );
+  if (remoteName === null) {
     return "local-only";
   }
 
   const result = await runGit(config.repository_path, [
     "push",
-    config.remote_name,
+    remoteName,
     `${DATA_REF}:refs/heads/jig-data`,
   ]);
 
