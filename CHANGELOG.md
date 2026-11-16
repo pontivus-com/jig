@@ -4,12 +4,6 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
-### Fixed
-
-- Preserved executable modes for release-bundle installer/launcher entrypoints and added safe pending-release retry behavior after pre-tag release-infrastructure failures.
-- Isolated the certified release-bundle smoke from the hosted runner's user systemd manager so it validates Jig's supported foreground fallback under an isolated HOME.
-- Finalized pre-tag release anchoring on the current default-branch commit so GitHub workflow-permission safeguards do not block immutable release tags.
-
 ## [1.0.0] - 2026-11-16
 
 ### Added
@@ -36,6 +30,9 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Fixed
 
+- Preserved executable modes for release-bundle installer/launcher entrypoints and added safe pending-release retry behavior after pre-tag release-infrastructure failures.
+- Isolated the certified release-bundle smoke from the hosted runner's user systemd manager so it validates Jig's supported foreground fallback under an isolated HOME.
+- Finalized pre-tag release anchoring on the current default-branch commit so GitHub workflow-permission safeguards do not block immutable release tags.
 - Contained Week-row action hit areas so task actions remain independently pointer-addressable inside narrow date columns.
 - Made single-writer lease publication atomic so concurrent service startup admits exactly one writable owner.
 - Corrected release gating so only an actual merged version bump enters certification/publication, and ensured manual pinned Bun installs expose both `bun` and `bunx` on x64/arm64 runners.
