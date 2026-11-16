@@ -38,51 +38,46 @@ async function createTask(
   });
 }
 
-test("Day carry-over is derived without date mutation and explicit Move to date reschedules", async ({
+test("unfinished prior-day cards roll into today across Day and Week", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
   const yesterday = await browserCivilDate(page, -1);
-  await createTask(page, "Carry-over contract", yesterday);
+  await createTask(page, "Rollover contract", yesterday);
   await page.reload();
 
-  await page.getByRole("button", { name: "Day", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Carried over" }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Day", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
   await expect(
-    page.getByText("Carry-over contract", { exact: true }),
+    page.getByText("Rollover contract", { exact: true }),
   ).toBeVisible();
 
-  expect(
-    (await taskByTitle(page, "Carry-over contract")).scheduled_date,
-  ).toBe(yesterday);
-
-  await page
-    .getByRole("button", {
-      name: "Move Carry-over contract to another date",
-    })
-    .click();
-
-  const dialog = page.getByRole("dialog");
-  await expect(
-    dialog.getByRole("heading", { name: "Move task to date" }),
-  ).toBeVisible();
-  await dialog.getByLabel("Destination date").fill(today);
-  await dialog
-    .getByRole("button", { name: "Move task", exact: true })
-    .click();
-
-  await expect(dialog).toBeHidden();
   await expect
     .poll(
-      async () =>
-        (await taskByTitle(page, "Carry-over contract")).scheduled_date,
+      async () => (await taskByTitle(page, "Rollover contract")).scheduled_date,
     )
     .toBe(today);
+
+  await page.getByRole("button", { name: "Week", exact: true }).click();
+  const todayColumn = page.locator(`[data-date="${today}"]`);
   await expect(
-    page.getByRole("heading", { name: "Carried over" }),
-  ).toBeHidden();
+    todayColumn.getByText("Rollover contract", { exact: true }),
+  ).toBeVisible();
+
+  const state = await apiState(page);
+  expect(
+    state.tasks.some(
+      (task) =>
+        task.title === "Rollover contract" &&
+        task.scheduled_date === yesterday,
+    ),
+  ).toBe(false);
+
+  await page.reload();
+  expect(
+    (await taskByTitle(page, "Rollover contract")).scheduled_date,
+  ).toBe(today);
 });
 
 test("non-drag movement uses the same exact index semantics", async ({
@@ -224,6 +219,7 @@ test("real pointer drag moves a Task across dated Week drop zones", async ({
 
   await createTask(page, "Pointer drag contract", today);
   await page.reload();
+  await page.getByRole("button", { name: "Week", exact: true }).click();
 
   const handle = page.getByRole("button", {
     name: "Drag Pointer drag contract",
@@ -347,6 +343,7 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   await createTask(page, "Narrow selected task", today);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Week", exact: true }).click();
 
   await expect(page.locator(".jig-week-board")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
@@ -405,6 +402,7 @@ test("long Week columns keep sticky date controls reachable while tasks scroll",
     await createTask(page, `Long list task ${index + 1}`, today);
   }
   await page.reload();
+  await page.getByRole("button", { name: "Week", exact: true }).click();
 
   const column = page.locator(`[data-date="${today}"]`);
   await expect(column).toBeVisible();
