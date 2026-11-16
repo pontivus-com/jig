@@ -52,8 +52,8 @@ function ActiveRow({
   onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
   onMove: DayViewProps["onMove"];
-  onSelectTask: (task: Task) => void;
-  selectedTaskId: string | null;
+  onSelectTask?: ((task: Task) => void) | undefined;
+  selectedTaskId?: string | null | undefined;
 }>): React.ReactElement {
   const sequence = outstandingForDate(tasks, task.scheduled_date);
   const position = task.position ?? 0;
@@ -64,7 +64,9 @@ function ActiveRow({
       index={position}
       group={task.scheduled_date}
       isSelected={selectedTaskId === task.id}
-      onSelect={() => onSelectTask(task)}
+      {...(onSelectTask === undefined
+        ? {}
+        : { onSelect: () => onSelectTask(task) })}
       onToggleComplete={() => {
         void onToggleComplete(task);
       }}
@@ -109,7 +111,7 @@ export function DayTaskLists({
   DayViewProps,
   "onAdd" | "onSelectDate" | "onPreviousDay" | "onToday" | "onNextDay" | "statusControl" | "selectedTask" | "onDelete"
 > & {
-  readonly selectedTaskId: string | null;
+  readonly selectedTaskId?: string | null | undefined;
 }): React.ReactElement {
   const active = outstandingForDate(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
@@ -130,7 +132,7 @@ export function DayTaskLists({
                 Nothing scheduled for this date.
               </p>
             ) : (
-              <List density="balanced" hasDividers edge="flush">
+              <List density="balanced" edge="flush">
                 {active.map((task) => (
                   <ActiveRow
                     key={task.id}
@@ -152,11 +154,15 @@ export function DayTaskLists({
         {completed.length === 0 ? null : (
           <details className="jig-completed-section">
             <summary>Completed ({completed.length})</summary>
-            <List density="compact" hasDividers edge="flush">
+            <List density="compact" edge="flush">
               {completed.map((task) => (
                 <TaskRow
                   key={task.id}
                   task={task}
+                  isSelected={selectedTaskId === task.id}
+                  {...(onSelectTask === undefined
+                    ? {}
+                    : { onSelect: () => onSelectTask(task) })}
                   onToggleComplete={() => {
                     void onToggleComplete(task);
                   }}
