@@ -295,6 +295,12 @@ test("references stay data-only: HTTP(S) opens and non-HTTP stays copy-only", as
   await expect(
     safeRow.getByRole("link", { name: "Open reference" }),
   ).toHaveAttribute("href", "https://example.com/legal");
+  await safeRow
+    .getByRole("button", {
+      name: "Actions for Safe web reference",
+      exact: true,
+    })
+    .click();
 
   const copyOnlyRow = await openTaskActions(page, "Copy-only reference");
   await expect(
