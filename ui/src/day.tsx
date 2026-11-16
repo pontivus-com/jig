@@ -12,6 +12,7 @@ import { DateDropZone, TaskDragProvider } from "./drag";
 import { formatCivilDate } from "./dates";
 import { DateStrip } from "./date-strip";
 import { SortableTaskRow, TaskRow } from "./task-row";
+import { TaskInspector } from "./task-inspector";
 
 export interface DayViewProps {
   readonly tasks: readonly Task[];
@@ -35,6 +36,8 @@ export interface DayViewProps {
 function ActiveRow({
   task,
   tasks,
+  isSelected,
+  onSelect,
   onEdit,
   onMoveToDate,
   onToggleComplete,
@@ -42,6 +45,8 @@ function ActiveRow({
 }: Readonly<{
   task: Task;
   tasks: readonly Task[];
+  isSelected: boolean;
+  onSelect: (task: Task) => void;
   onEdit: (task: Task) => void;
   onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
@@ -55,6 +60,8 @@ function ActiveRow({
       task={task}
       index={position}
       group={task.scheduled_date}
+      isSelected={isSelected}
+      onSelect={() => onSelect(task)}
       onToggleComplete={() => {
         void onToggleComplete(task);
       }}
@@ -89,13 +96,21 @@ function ActiveRow({
 export function DayTaskLists({
   tasks,
   selectedDate,
+  selectedTask,
+  onSelectTask,
   onEdit,
   onMoveToDate,
   onToggleComplete,
   onMove,
 }: Omit<
   DayViewProps,
-  "onAdd" | "onSelectDate" | "onPrevious" | "onToday" | "onNext" | "statusControl"
+  | "onAdd"
+  | "onSelectDate"
+  | "onPrevious"
+  | "onToday"
+  | "onNext"
+  | "statusControl"
+  | "onDelete"
 >): React.ReactElement {
   const active = outstandingForDate(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
@@ -125,6 +140,8 @@ export function DayTaskLists({
                     key={task.id}
                     task={task}
                     tasks={tasks}
+                    isSelected={selectedTask?.id === task.id}
+                    onSelect={onSelectTask}
                     onEdit={onEdit}
                     onMoveToDate={onMoveToDate}
                     onToggleComplete={onToggleComplete}
@@ -144,6 +161,8 @@ export function DayTaskLists({
                 <TaskRow
                   key={task.id}
                   task={task}
+                  isSelected={selectedTask?.id === task.id}
+                  onSelect={() => onSelectTask(task)}
                   onToggleComplete={() => {
                     void onToggleComplete(task);
                   }}
@@ -167,6 +186,9 @@ export function DayView({
   onToday,
   onNext,
   statusControl,
+  selectedTask,
+  onSelectTask,
+  onDelete,
   ...listProps
 }: DayViewProps): React.ReactElement {
   return (
@@ -201,11 +223,22 @@ export function DayView({
         onSelectDate={onSelectDate}
       />
 
-      <DayTaskLists
-        tasks={tasks}
-        selectedDate={selectedDate}
-        {...listProps}
-      />
+      <div className="jig-day-layout">
+        <DayTaskLists
+          tasks={tasks}
+          selectedDate={selectedDate}
+          selectedTask={selectedTask}
+          onSelectTask={onSelectTask}
+          {...listProps}
+        />
+        <TaskInspector
+          task={selectedTask}
+          onToggleComplete={listProps.onToggleComplete}
+          onEdit={listProps.onEdit}
+          onMoveToDate={listProps.onMoveToDate}
+          onDelete={onDelete}
+        />
+      </div>
     </div>
   );
 }
