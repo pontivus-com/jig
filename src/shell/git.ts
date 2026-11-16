@@ -13,10 +13,11 @@ import {
 } from "../core/task";
 import { assertTaskSet } from "../core/planning";
 import {
-  DATA_REF,
   PORTABLE_FORMAT_VERSION,
   type RepositoryStatus,
 } from "./sqlite";
+
+const DATA_REF = "refs/heads/jig-data";
 
 export const SYNC_HEALTHY_POLL_MS = 60_000;
 export const EXPORT_DEBOUNCE_MS = 3_000;
