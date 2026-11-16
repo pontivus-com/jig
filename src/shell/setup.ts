@@ -7,20 +7,17 @@ import {
 import { constants as fsConstants } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import {
-  discoverSynchronizationRemote,
   ensureJigDataWorktree,
   ensureJigLocalExclude,
   GitAdapterError,
-  readSnapshotAtRef,
+  inspectPortableCandidate,
   runGit,
   serializeSnapshot,
   commitSnapshot,
   type GitAdapterConfig,
-  type PortableSnapshot,
 } from "./git";
 import {
   adoptCanonicalSnapshot,
-  DATA_REF,
   initializeDatabase,
   openDatabase,
   readCanonicalState,
@@ -36,8 +33,6 @@ export interface RepositoryInstallation {
   readonly config: JigConfig;
   readonly dataset_id: string;
   readonly sqlite_path: string;
-  readonly worktree_path: string;
-  readonly snapshot_head: string;
   readonly adopted_existing_snapshot: boolean;
 }
 
@@ -135,61 +130,6 @@ export async function validateSelectedRepository(
   return canonicalPath;
 }
 
-export async function inspectLocalCandidate(
-  repositoryPath: string,
-): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
-  const result = await runGit(repositoryPath, [
-    "show-ref",
-    "--verify",
-    "--hash",
-    DATA_REF,
-  ]);
-  if (result.exit_code !== 0) {
-    return null;
-  }
-  return {
-    head: result.stdout,
-    snapshot: await readSnapshotAtRef(repositoryPath, DATA_REF),
-  };
-}
-
-export async function inspectRemoteCandidate(
-  repositoryPath: string,
-  remoteName: string | null,
-): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
-  if (remoteName === null) {
-    return null;
-  }
-
-  const advertised = await runGit(repositoryPath, [
-    "ls-remote",
-    "--exit-code",
-    remoteName,
-    "refs/heads/jig-data",
-  ]);
-  if (advertised.exit_code === 2 || advertised.stdout.length === 0) {
-    return null;
-  }
-  if (advertised.exit_code !== 0) {
-    throw new InstallationError(
-      `Unable to inspect remote Jig data: ${advertised.stderr || advertised.stdout}`,
-    );
-  }
-
-  const trackingRef = `refs/remotes/${remoteName}/jig-data`;
-  await git(repositoryPath, [
-    "fetch",
-    "--no-tags",
-    remoteName,
-    `refs/heads/jig-data:${trackingRef}`,
-  ]);
-  const head = await git(repositoryPath, ["rev-parse", trackingRef]);
-  return {
-    head,
-    snapshot: await readSnapshotAtRef(repositoryPath, trackingRef),
-  };
-}
-
 function snapshotsEqual(
   left: ReadonlyMap<string, string>,
   right: ReadonlyMap<string, string>,
@@ -213,8 +153,6 @@ export async function initializeRepositoryInstallation(options: {
   const repositoryPath = await validateSelectedRepository(
     options.repository_path,
   );
-  const remoteName = await discoverSynchronizationRemote(repositoryPath);
-
   if (
     !Number.isInteger(options.http_port) ||
     options.http_port < 1024 ||
@@ -232,39 +170,17 @@ export async function initializeRepositoryInstallation(options: {
   const writerLease = await acquireWriterLease(repositoryPath);
 
   try {
-  let local: Awaited<ReturnType<typeof inspectLocalCandidate>>;
-  let remote: Awaited<ReturnType<typeof inspectRemoteCandidate>>;
+  const adapter: GitAdapterConfig = {
+    repository_path: repositoryPath,
+  };
+
+  let candidate;
   try {
-    [local, remote] = await Promise.all([
-      inspectLocalCandidate(repositoryPath),
-      inspectRemoteCandidate(repositoryPath, remoteName),
-    ]);
+    candidate = await inspectPortableCandidate(adapter);
   } catch (error) {
     throw new InstallationError(
       `Unable to validate existing Jig snapshot: ${String(error)}`,
     );
-  }
-
-  if (
-    local !== null &&
-    remote !== null &&
-    local.head !== remote.head
-  ) {
-    throw new InstallationError(
-      "Local and remote jig-data refs differ; reconcile them with ordinary Git tooling before installation",
-    );
-  }
-
-  const candidate = local ?? remote;
-  if (
-    local === null &&
-    remote !== null
-  ) {
-    await git(repositoryPath, [
-      "update-ref",
-      DATA_REF,
-      remote.head,
-    ]);
   }
 
   const sqlitePath = resolve(
@@ -308,11 +224,6 @@ export async function initializeRepositoryInstallation(options: {
     datasetId = candidate?.snapshot.dataset_id ?? crypto.randomUUID();
   }
 
-  const adapter: GitAdapterConfig = {
-    repository_path: repositoryPath,
-    worktree_path: resolve(repositoryPath, ".jig", "git"),
-  };
-
   try {
     await ensureJigDataWorktree(adapter, datasetId);
   } catch (error) {
@@ -353,8 +264,6 @@ export async function initializeRepositoryInstallation(options: {
       config,
       dataset_id: datasetId,
       sqlite_path: sqlitePath,
-      worktree_path: adapter.worktree_path,
-      snapshot_head: head,
       adopted_existing_snapshot: adoptedExistingSnapshot,
     };
   } finally {
