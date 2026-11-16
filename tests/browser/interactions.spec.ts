@@ -242,7 +242,7 @@ test("real pointer drag moves a Task across dated Week drop zones", async ({
     .toBe(destinationDate);
 });
 
-test("references stay data-only and deletion is confirmed hard delete", async ({
+test("references stay data-only: HTTP(S) opens and non-HTTP stays copy-only", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -274,9 +274,17 @@ test("references stay data-only and deletion is confirmed hard delete", async ({
     copyOnlyRow.getByRole("button", { name: "Copy reference" }),
   ).toBeVisible();
   await expect(copyOnlyRow.getByRole("link")).toHaveCount(0);
+});
+
+test("deletion requires confirmation and removes the canonical Task", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Delete contract task", today);
+  await page.reload();
 
   await page
-    .getByRole("button", { name: "Edit Copy-only reference" })
+    .getByRole("button", { name: "Edit Delete contract task" })
     .click();
   const editor = page.getByRole("dialog");
   await editor
@@ -287,6 +295,7 @@ test("references stay data-only and deletion is confirmed hard delete", async ({
   await expect(
     confirmation.getByRole("heading", { name: "Delete task?" }),
   ).toBeVisible();
+
   const deleteAction = confirmation.getByRole("button", {
     name: "Delete task",
     exact: true,
@@ -299,7 +308,7 @@ test("references stay data-only and deletion is confirmed hard delete", async ({
     .poll(
       async () =>
         (await apiState(page)).tasks.some(
-          (task) => task.title === "Copy-only reference",
+          (task) => task.title === "Delete contract task",
         ),
       { timeout: 5_000 },
     )
