@@ -519,6 +519,9 @@ export function App(): React.ReactElement {
       tasks={tasks}
       onEdit={openEdit}
       onReopen={toggleComplete}
+      onDelete={(taskId) =>
+        runCommand({ type: "delete", task_id: taskId })
+      }
     />
   ) : (
     <SettingsView
