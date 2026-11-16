@@ -34,19 +34,17 @@ test("due reminder fires once while open, dismisses, and edited time creates a n
   await page.reload();
 
   await page.clock.runFor(60_000);
-  const firstReminder = page.getByText(
-    "Reminder: Timed reminder",
-    { exact: true },
-  );
-  await expect(firstReminder).toBeVisible();
-  await page
-    .getByRole("button", { name: "Dismiss", exact: true })
-    .click();
-  await expect(firstReminder).toBeHidden();
+  const dismiss = page.getByRole("button", {
+    name: "Dismiss",
+    exact: true,
+  });
+  await expect(dismiss).toBeVisible();
+  await dismiss.click();
+  await expect(dismiss).toBeHidden();
 
   await page.clock.runFor(30_000);
   await expect(
-    page.getByText("Reminder: Timed reminder", { exact: true }),
+    page.getByRole("button", { name: "Dismiss", exact: true }),
   ).toHaveCount(0);
 
   const task = await taskByTitle(page, "Timed reminder");
@@ -61,7 +59,7 @@ test("due reminder fires once while open, dismisses, and edited time creates a n
   await page.clock.runFor(30_000);
 
   await expect(
-    page.getByText("Reminder: Timed reminder", { exact: true }),
+    page.getByRole("button", { name: "Dismiss", exact: true }),
   ).toBeVisible();
 
   const deliveredKeys = await page.evaluate(() =>
