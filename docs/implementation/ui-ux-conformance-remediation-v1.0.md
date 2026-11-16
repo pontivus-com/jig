@@ -519,21 +519,33 @@ The user must see the same card lift and move, not a text label detach from the 
 
 ### 9.5 Drag activation
 
-Pointer users:
-- the subtle `≡` grip is always a valid drag activator;
-- when dnd-kit permits without stealing interaction from controls, the non-interactive card body should also act as a drag activator so the card can be grabbed naturally;
-- checkbox, links/reference control and `•••` menu must never start a drag.
+The **non-interactive card surface is the primary drag activator**.
+
+Pointer behavior:
+- press/drag on the card body starts the sortable drag;
+- the subtle `≡` grip is a visual cue and is also draggable, but it is not the only valid grab point;
+- the user must not have to target a tiny handle to move the Task;
+- checkbox, reference/link controls and `•••` action menu must stop propagation and must never start a drag.
+
+This is the intended Trello-like behavior: grab the Task card itself and move it.
 
 Cursor:
-- card/grip indicates `grab` where dragging is available;
-- active drag indicates `grabbing`.
+- draggable card surface uses `cursor: grab`;
+- active drag uses `cursor: grabbing`;
+- interactive child controls keep their normal pointer/focus cursor behavior.
 
 Keyboard/touch:
 - retain dnd-kit accessible keyboard drag behavior;
-- overflow retains Move to date / Move up / Move down as non-drag alternatives;
+- touch dragging must move the same whole-card object;
+- overflow retains Move to date / Move up / Move down as accessible non-drag alternatives;
 - touch targets remain at least approximately 44 CSS px even where the visual glyph is small.
 
-If the installed dnd-kit API requires one explicit activator, use the grip as the activator rather than inventing custom pointer-drag code. The requirement is that the **visual object that moves is the card**.
+Implementation requirement:
+- attach dnd-kit sortable activation to the card/root interaction surface rather than making `dragHandleRef` the sole pointer activator;
+- if interactive descendants need explicit event suppression, add it locally to those descendants;
+- do not replace dnd-kit with custom pointer-drag code.
+
+The **visual object and interaction object are the same card**.
 
 ### 9.6 Drop behavior
 
