@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import {
   commitSnapshot,
+  discoverSynchronizationRemote,
   ensureJigDataWorktree,
   EXPORT_DEBOUNCE_MS,
   EXPORT_MAX_FLUSH_MS,
@@ -24,7 +25,6 @@ import {
 
 export interface SyncConfiguration {
   readonly repository_path: string;
-  readonly remote_name: string | null;
 }
 
 export interface SyncController {
@@ -44,6 +44,7 @@ export interface SyncEffects {
   readonly readSnapshot: typeof readSnapshotAtRef;
   readonly commit: typeof commitSnapshot;
   readonly push: typeof pushJigDataRef;
+  readonly discoverRemote: typeof discoverSynchronizationRemote;
 }
 
 const REAL_EFFECTS: SyncEffects = {
@@ -55,6 +56,7 @@ const REAL_EFFECTS: SyncEffects = {
   readSnapshot: readSnapshotAtRef,
   commit: commitSnapshot,
   push: pushJigDataRef,
+  discoverRemote: discoverSynchronizationRemote,
 };
 
 function snapshotsEqual(
@@ -80,11 +82,9 @@ export function createSyncController(
   const adapter: GitAdapterConfig = {
     repository_path: config.repository_path,
     worktree_path: `${config.repository_path}/.jig/git`,
-    remote_name: config.remote_name,
   };
 
-  let currentStatus: RepositoryStatus =
-    config.remote_name === null ? "local-only" : "pending";
+  let currentStatus: RepositoryStatus = "pending";
   let running: Promise<RepositoryStatus> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let firstDirtyAt: number | null = null;
@@ -222,7 +222,9 @@ export function createSyncController(
         schedule(0);
       } else {
         currentStatus =
-          config.remote_name === null ? "local-only" : "synchronized";
+          (await effects.discoverRemote(config.repository_path)) === null
+            ? "local-only"
+            : "synchronized";
         schedule(SYNC_HEALTHY_POLL_MS);
       }
     },
