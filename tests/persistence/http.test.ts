@@ -50,7 +50,6 @@ function handler() {
       repository_adapter_healthy: true,
     }),
     trigger_sync: async () => "local-only",
-    migrate_repository: async () => undefined,
     before_task_mutation: () => undefined,
     on_task_mutation: () => undefined,
   });
@@ -201,8 +200,7 @@ describe("loopback HTTP admission", () => {
         syncCalls += 1;
         return "synchronized";
       },
-      migrate_repository: async () => undefined,
-      before_task_mutation: () => undefined,
+        before_task_mutation: () => undefined,
       on_task_mutation: () => undefined,
     });
 
