@@ -1,7 +1,7 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Proposed binding UX/UI realization v0.1, 2026-11-16. Visual references and functional screen structure are governed; final browser screenshots and usability certification are pending.
-**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–20.
+**Status:** Proposed binding UX/UI realization v0.2, 2026-11-16. Visual references and functional screen structure are governed; final browser screenshots and usability certification are pending.
+**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status.
 **Purpose:** Turn the accepted early mobile/day/week/editor mockups into a versioned interface baseline while distinguishing layout intent from noncanonical visual decoration.
 
@@ -9,14 +9,17 @@
 
 The original design exploration used the temporary product name **Day**. It established the correct interaction direction: date-first weekly calendar/board, selected-day focus, compact title-first tasks, optional context/priority/reminder, drag handles, one task editor and a small completed region. The product's name is **Jig**.
 
-The current repository includes four **versioned SVG structural reconstructions** derived from the approved screenshot layouts. These are implementation guidance, not claims that the exact original PNGs have been copied to Git. They deliberately remove conflicting green/high-shadow styling and extra navigation in favor of the verified Order/Astryx Neutral approach.
+The current repository includes seven **versioned SVG structural references**. The original four screens are corrected reconstructions of the approved Day-labelled layouts; History, Settings/Sync and save/sync failure states were added to close the Jig screen contract. Together these references govern structure, hierarchy, density and representative visual character. They are rendered in light mode for review and do not imply a light-only product or require duplicate dark-mode mockups.
 
 | Governing artifact | Screen | Structural meaning |
 |---|---|---|
-| ![Desktop week](reference/desktop-week.svg) | [Desktop weekly planner](reference/desktop-week.svg) | Primary seven-day Kanban date board and visible cross-column movement targets |
-| ![Desktop day](reference/desktop-day.svg) | [Desktop day view](reference/desktop-day.svg) | Today's ordered list, completed group and on-demand selected task details |
-| ![Mobile day](reference/mobile-day.svg) | [Mobile narrow day](reference/mobile-day.svg) | Compact date strip and single-day stack at narrow widths |
-| ![Mobile editor](reference/mobile-editor.svg) | [Mobile edit surface](reference/mobile-editor.svg) | One bounded task editor; explicit Save/Cancel and optional secondary fields |
+| ![Desktop week](reference/desktop-week.svg) | [Desktop weekly planner](reference/desktop-week.svg) | Primary seven-day scheduled-date board and visible cross-column movement targets |
+| ![Desktop day](reference/desktop-day.svg) | [Desktop day view](reference/desktop-day.svg) | Selected-date attention list with carried-over earlier work, completed group and selected task details |
+| ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history grouped by actual completion date |
+| ![Desktop settings and sync](reference/desktop-settings-sync.svg) | [Desktop settings/sync](reference/desktop-settings-sync.svg) | Repository, service, appearance and synchronization controls |
+| ![Mobile day](reference/mobile-day.svg) | [Mobile narrow day](reference/mobile-day.svg) | Compact date strip and one attention list at narrow widths |
+| ![Mobile editor](reference/mobile-editor.svg) | [Mobile edit surface](reference/mobile-editor.svg) | One bounded task editor with explicit Save/Cancel and destructive Delete for an existing Task |
+| ![Save and sync states](reference/sync-failure-states.svg) | [Save/sync states](reference/sync-failure-states.svg) | Honest local-save and Git synchronization state/failure presentation |
 
 ### Original screenshot provenance
 
@@ -33,17 +36,17 @@ The original PNG bytes are **not** yet stored in the repository; their hashes an
 
 ## 2. Information architecture
 
-The initial desktop IA has exactly **Week**, **Today** (single selected day), **History**, and **Settings** as meaningful destinations. A separate **Board** destination is redundant: Week already is the dated Kanban board. The original mockups' Plan/Day/Board duplicates are not required screens.
+The initial desktop IA has exactly **Week**, **Day**, **History**, and **Settings** as meaningful destinations. **Today** is a shortcut that selects the current local civil date within Day, not a separate destination. A separate **Board** destination is redundant: Week already is the dated Kanban board. The original mockups' Plan/Day/Board duplicates are not required screens.
 
 - **Week** is the default productive surface: Monday–Sunday buckets, current/selected date emphasis, per-day ordered outstanding tasks, quick-add scoped to each date and cross-day drop targets. Long days scroll without losing date headings.
-- **Today/Day** is a focused selected date with the same authoritative Task identity and position, a compact Completed group, and on-demand task detail. “Today” navigation selects the current local civil date; changing selection never reschedules tasks.
+- **Day** is a focused selected date with one attention sequence: carried-over earlier outstanding Tasks followed by Tasks scheduled for the selected date, then a compact Completed group and on-demand task detail. Carried-over Tasks retain their original scheduled date and receive a subtle but scan-visible originating-date treatment. The Today shortcut selects the current local civil date; changing selection never reschedules tasks.
 - **History** is a lightweight dated list grouped by actual completion date, not a dashboard. Completed items may also be viewed under their originally scheduled date.
 - **Settings** exposes theme, configured repository path (read-only unless explicit migration), service/autosync health, remote connection, and diagnostic/retry actions. It does not expose Order projects or developer tooling.
 - **No separately persisted boards, projects or queues.** Context is a short optional Task label and may be displayed or used as a filter, not an independent domain.
 
 ### Onboarding and installed lifecycle
 
-The app's very first interaction is the **one-script installer** described in [Technical solution §3.1](../architecture/technical-solution.md). The script selects and validates the personal Git repository and configures the `jig` command + local background service. The user then opens the existing service with `jig` and immediately reaches Week or Today. There is **no repeated onboarding wizard on every run**.
+The app's very first interaction is the **one-script installer** described in [Technical solution §3.1](../architecture/technical-solution.md). The script selects and validates the personal Git repository and configures the `jig` command + local background service. The user then opens the existing service with `jig` and immediately reaches Week or Day. There is **no repeated onboarding wizard on every run**.
 
 A compact, always-available status control must truthfully distinguish:
 - **Saved locally / Synced:** latest local edits committed to SQLite and Jig's Git ref has reached the configured remote.
@@ -62,9 +65,9 @@ Visual rules:
 2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
 3. **One primary action per active surface.** Quick Add is prominent at week level. A task detail editor has a single Save control. Completion uses an independently accessible checkbox/command.
 4. **Clear current date and visible focus.** Selection/current, hover, focus, and save status remain semantically distinguishable without color alone.
-5. **Theme parity.** System/Light/Dark preference may be exposed where the installed Astryx package supports it; never create a separate per-feature theme palette.
+5. **Theme parity.** System/Light/Dark are mandatory. One application theme owner uses Astryx Neutral semantic roles; System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, carry-over, completion, save and sync semantics must remain clear in both themes without relying on color alone. Do not create a separate per-feature palette or duplicate dark-mode mockup set.
 6. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, selected date or pending form draft changes as a side effect of a breakpoint.
-7. **SVGs are not final color/typography tokens.** Their wording and geometry are reviewable. Color and final measure must follow the pinned Astryx foundation and successful browser visual review.
+7. **SVGs are light-mode structural references, not a light-only palette contract.** Their wording, geometry, density and representative visual character are reviewable. Final color/typography comes from the pinned Astryx semantic foundation and must pass browser review in both Light and Dark; no parallel dark SVG set is required.
 
 ## 4. Screen specifications
 
@@ -80,13 +83,13 @@ The original mockup's additional Board link, excessive Normal badges, green card
 
 ### 4.2 Desktop Day
 
-A date strip permits switching selected days. Planned lists outstanding tasks in durable position order. Completed is compact and separately expandable. An optional right-hand inspector shows the selected Task, title, context, priority, reminder, reference, note and actions to complete/reopen, edit or move date; no Order lifecycle artifacts or project detail copies.
+A date strip permits switching selected days. The attention list begins with outstanding Tasks from earlier scheduled dates, ordered by originating date and their persisted per-date position, followed by Tasks scheduled for the selected date. Carry-over rows keep the normal task structure but add a restrained surface/edge distinction plus an explicit label such as **Carried over · Thu 19**; this must be obvious when scanning yet visually secondary to title/date and cannot rely on color alone. Completed is compact and separately expandable. An optional right-hand inspector shows the selected Task, title, context, priority, reminder, reference, note and actions to complete/reopen, edit, move date or Delete; Delete is destructive and requires confirmation before mutation.
 
 Day view and Week view query the **same Task**; opening the inspector does not create a second editable Task object. Preserve position changes and reload state. A due reminder may appear in an Astryx toast, not as a new work item.
 
 ### 4.3 Mobile narrow Day
 
-At narrow widths the week board becomes a horizontal seven-date strip plus one day's list. Preserve prominent title-first tasks, touch-sized checkbox and action targets, drag handles where touch reordering is supported and a non-drag move-to-date command. A persistent Quick Add target may move to the thumb-reachable region, but must not obscure the last item or reminder feedback.
+At narrow widths the week board becomes a horizontal seven-date strip plus one Day attention list. Preserve the same carried-over originating-date treatment, prominent title-first tasks, touch-sized checkbox and action targets, drag handles where touch reordering is supported and a non-drag move-to-date command. A persistent Quick Add target may move to the thumb-reachable region, but must not obscure the last item or reminder feedback.
 
 Desktop MVP requires responsive semantic continuity and basic mobile-sized layout validation. It does **not** require installation as a self-contained phone app, native Git commands or background push notifications.
 
@@ -94,7 +97,7 @@ Desktop MVP requires responsive semantic continuity and basic mobile-sized layou
 
 Task creation defaults to **title only** and the initiating date; no forced priority, reminder, time estimate or context. Editing uses one bounded Astryx Dialog/compatible responsive treatment with Title, Date, optional Context, optional Priority, optional Reminder Time, optional Reference and optional short Notes. Optional fields are initially subordinate; no advanced project form.
 
-Use explicit Save/Cancel, persistent form errors on invalid data or server refusal, and preserve the active draft while the screen is reflowed or while a user inspects another date unless they explicitly confirm discarding edits. Date editing applies priority-guided insertion, whereas a drag drop uses the exact drop index. Changing priority does not rearrange the task.
+Use explicit Save/Cancel, persistent form errors on invalid data or server refusal, and preserve the active draft while the screen is reflowed or while a user inspects another date unless they explicitly confirm discarding edits. For an existing Task, expose a visually subordinate destructive **Delete task…** action; activating it opens an explicit confirmation and only confirmation invokes deletion. Creation mode has no Delete action. Date editing applies priority-guided insertion, whereas a drag drop uses the exact drop index. Changing priority does not rearrange the task.
 
 ## 5. Interaction and component ownership
 
@@ -102,8 +105,8 @@ Use explicit Save/Cancel, persistent form errors on invalid data or server refus
 |---|---|
 | Shell, navigation, buttons, icon buttons, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
 | Sortable rows, drop zones, drag overlays, keyboard drag, pointer/touch gesture lifecycle | @dnd-kit/react only; do not activate Astryx List createReorderable on the same row |
-| Week/date bucket composition, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
-| Scheduled date, ordering, initial priority placement, complete/reopen, task identity | Pure Jig planning core |
+| Week/date bucket composition, Day carry-over treatment/concatenation, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
+| Scheduled date, ordering, carry-over query, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
 | Task reads/writes, Git state and remote status | Bun service with SQLite and dedicated Jig branch/worktree |
 | Reminder due eligibility and toast presentation while browser is open | Browser-side timer + Astryx useToast; no background sender |
 
@@ -120,19 +123,21 @@ Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the sa
 | Cross-day drag | Destination and position persist, source loses item, empty date works |
 | Midday edits | Metadata/priority edits preserve manual ordering |
 | Completion | Task leaves active list, keeps scheduled date and actual completion time/history |
+| Carry-over | Earlier unfinished Task remains in the Day attention list with a subtle originating-date marker; merely viewing it never changes scheduled date; explicit drag into selected-date sequence reschedules it |
+| Delete | Cancelled confirmation makes no mutation; confirmed deletion removes outstanding/completed Task from all current views and remains deleted after reload/Git round trip |
 | Responsive reflow | No loss of selected date, task, open editor draft or outstanding modifications |
 | Keyboard and touch | No hover-only essential actions; non-drag alternatives and visible focus |
 | Reminder | Due while open produces dismissible toast; no claim when browser closed |
 | Local save failure | User sees specific unresolved error, not fake save success |
 | Auto-sync lifecycle | Service can save/sync with browser closed; header/settings convey local/sync/pending/blocked truth |
 | Offline use | Editing remains available, Git retries later without blocking |
-| Theme parity | Equivalent hierarchy and contrast in system/light/dark if exposed |
+| Theme parity | System/Light/Dark are all supported; representative Week, Day, editor, Settings and error/status states retain equivalent hierarchy, contrast and non-color semantics in Light and Dark |
 | Resource discipline | Responsive reopen and low-idle service measured as part of installer certification |
 
 Use actual approved Astryx and dnd-kit versions in Playwright for final UI evidence; these SVGs alone do not certify pixel fidelity or interaction. Archive browser screenshots from these tests in the repository when implementation begins; they supersede early concept art only after review.
 
 ## 7. Design change control
 
-The versioned SVGs in `docs/design/reference/` are the current baseline for layout and content hierarchy. When an interaction changes, update this document and the relevant SVG together. If only runtime appearance changes to correct Astryx component parity, update implementation and browser evidence without inventing a second canonical visual-token contract.
+The seven versioned SVGs in `docs/design/reference/` are the current light-mode baseline for layout, interaction hierarchy, density and representative visual character. Dark mode is governed by semantic theming rules above and does not require duplicate reference SVGs. When an interaction changes, update this document and the relevant SVG together. If only runtime appearance changes to correct Astryx component parity, update implementation and browser evidence without inventing a second canonical visual-token contract.
 
 Do not refer to the previous Day branding as a current product identity. Do not use project-specific task details as content that Jig must store; they exist only as illustrative samples. An implementation plan must link to this document and to [Technical solution](../architecture/technical-solution.md).
