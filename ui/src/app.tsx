@@ -9,7 +9,6 @@ import { neutralTheme } from "@astryxdesign/theme-neutral/built";
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
@@ -483,15 +482,7 @@ export function App(): React.ReactElement {
     />
   );
 
-  const moveDestinationIndex = useMemo(() => {
-    if (moveTask === null) {
-      return 0;
-    }
-    return (destinationDate: string): number =>
-      outstandingForDate(tasks, destinationDate).filter(
-        (task) => task.id !== moveTask.id,
-      ).length;
-  }, [moveTask, tasks]);
+
 
   return (
     <Theme theme={neutralTheme} mode={themePreference}>
@@ -530,10 +521,10 @@ export function App(): React.ReactElement {
             if (moveTask === null) {
               return false;
             }
-            const destinationIndex =
-              typeof moveDestinationIndex === "function"
-                ? moveDestinationIndex(destinationDate)
-                : 0;
+            const destinationIndex = outstandingForDate(
+              tasks,
+              destinationDate,
+            ).filter((task) => task.id !== moveTask.id).length;
             return moveTaskExact(
               moveTask.id,
               destinationDate,
