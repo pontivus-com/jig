@@ -155,6 +155,73 @@ test("hidden open page uses browser Notification when permission is granted", as
   ).toHaveCount(0);
 });
 
+test("hidden reminder without permission remains eligible for visible-page catch-up", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    let visibility: DocumentVisibilityState = "hidden";
+    class NotificationStub {
+      static permission: NotificationPermission = "default";
+      static requestPermission = async (): Promise<NotificationPermission> =>
+        "default";
+    }
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: NotificationStub,
+    });
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => visibility,
+    });
+    (
+      window as typeof window & {
+        __setTestVisibility?: (next: DocumentVisibilityState) => void;
+      }
+    ).__setTestVisibility = (next) => {
+      visibility = next;
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+  });
+  await page.reload();
+
+  const today = await browserCivilDate(page);
+  await apiCommand(page, {
+    type: "create",
+    title: "Catch-up reminder",
+    scheduled_date: today,
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "09:01",
+  });
+  await page.reload();
+
+  await page.clock.runFor(60_000);
+
+  const deliveredBefore = await page.evaluate(() =>
+    Object.keys(localStorage).filter((key) =>
+      key.includes("Catch-up reminder"),
+    ),
+  );
+  expect(deliveredBefore).toHaveLength(0);
+  await expect(
+    page.getByRole("button", { name: "Dismiss", exact: true }),
+  ).toHaveCount(0);
+
+  await page.evaluate(() => {
+    (
+      window as typeof window & {
+        __setTestVisibility?: (next: DocumentVisibilityState) => void;
+      }
+    ).__setTestVisibility?.("visible");
+  });
+
+  await expect(
+    page.getByRole("button", { name: "Dismiss", exact: true }),
+  ).toBeVisible();
+});
+
 test("permission is requested only from the explicit Settings Enable action", async ({
   page,
 }) => {
