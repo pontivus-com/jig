@@ -61,4 +61,4 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
 
 A version-pinned installation replaces `releases/latest/download` with `releases/download/vX.Y.Z`.
 
-See [install.md](../install.md) for existing-repository, clone, remote, service, upgrade and uninstall behavior.
+See [install.md](../install.md) for existing-repository and repository-URL installation, Git-native continuity, service, upgrade and uninstall behavior.
