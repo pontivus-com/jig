@@ -1,1 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="414" height="860" viewBox="0 0 414 860" role="img" aria-label="Jig UX reference mockup"><style>text{font-family:Inter,Arial,Helvetica,sans-serif} .small{font-size:11px}</style><rect x="0" y="0" width="414" height="860" rx="0" fill="#f7f9fc" stroke="#edf0f4"/><rect x="15" y="15" width="384" height="828" rx="27" fill="#fff" stroke="#d9e2ee"/><text x="38" y="61" fill="#142139" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="26">Jig</text><text x="39" y="82" fill="#64738a" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="12">Plan the day</text><text x="367" y="62" fill="#64738a" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">•••</text><rect x="28" y="112" width="45" height="58" rx="9" fill="#f7f9fb" stroke="#eef1f5"/><text x="38" y="133" fill="#64738a" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="500" font-size="11">Mon</text><text x="41" y="155" fill="#26344f" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">16</text><rect x="80" y="112" width="45" height="58" rx="9" fill="#f7f9fb" stroke="#eef1f5"/><text x="90" y="133" fill="#64738a" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="500" font-size="11">Tue</text><text x="93" y="155" fill="#26344f" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">17</text><rect x="132" y="112" width="45" height="58" rx="9" fill="#f7f9fb" stroke="#eef1f5"/><text x="142" y="133" fill="#64738a" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="500" font-size="11">Wed</text><text x="145" y="155" fill="#26344f" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">18</text><rect x="184" y="112" width="45" height="58" rx="9" fill="#1e3a8a" stroke="#1e3a8a"/><text x="194" y="133" fill="#fff" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="500" font-size="11">Thu</text><text x="197" y="155" fill="#fff" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">19</text><rect x="236" y="112" width="45" height="58" rx="9" fill="#f7f9fb" stroke="#eef1f5"/><text x="246" y="133" fill="#64738a" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="500" font-size="11">Fri</text><text x="249" y="155" fill="#26344f" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">20</text><rect x="288" y="112" width="45" height="58" rx="9" fill="#f7f9fb" stroke="#eef1f5"/><text x="298" y="133" fill="#64738a" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="500" font-size="11">Sat</text><text x="301" y="155" fill="#26344f" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">21</text><rect x="340" y="112" width="45" height="58" rx="9" fill="#f7f9fb" stroke="#eef1f5"/><text x="350" y="133" fill="#64738a" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="500" font-size="11">Sun</text><text x="353" y="155" fill="#26344f" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">22</text><text x="30" y="221" fill="#142139" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="22">Thursday, 19 November</text><text x="31" y="245" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="12">Your ordered plan</text><text x="31" y="283" fill="#142139" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">Planned</text><rect x="105" y="267" width="65" height="19" rx="10" fill="#eaf1fa" stroke="#eaf1fa"/><text x="114" y="280" fill="#405d82" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="11">4 tasks</text><rect x="28" y="304" width="359" height="85" rx="7" fill="#f2f6fc" stroke="#7893c5"/><rect x="40" y="320" width="16" height="16" rx="4" fill="#fff" stroke="#7f8da0"/><text x="68" y="328" fill="#152238" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="13">Legal — TTA workflow remediation</text><text x="68" y="346" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="10">Legal App</text><rect x="68" y="353" width="46" height="19" rx="10" fill="#fde8e5" stroke="#fde8e5"/><text x="77" y="366" fill="#a72a24" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="11">High</text><text x="188" y="366" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="10">◷ 10:00</text><text x="366" y="327" fill="#8592a7" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="18">⋮</text><rect x="28" y="398" width="359" height="85" rx="7" fill="#fff" stroke="#e0e5ed"/><rect x="40" y="414" width="16" height="16" rx="4" fill="#fff" stroke="#7f8da0"/><text x="68" y="422" fill="#152238" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="13">Review Order lifecycle changes</text><text x="68" y="440" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="10">Order</text><text x="188" y="460" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="10">◷ 14:00</text><text x="366" y="421" fill="#8592a7" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="18">⋮</text><rect x="28" y="492" width="359" height="85" rx="7" fill="#fff" stroke="#e0e5ed"/><rect x="40" y="508" width="16" height="16" rx="4" fill="#fff" stroke="#7f8da0"/><text x="68" y="516" fill="#152238" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="13">SPAN docs validation</text><text x="68" y="534" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="10">SPAN</text><rect x="68" y="541" width="42" height="19" rx="10" fill="#eaf2fb" stroke="#eaf2fb"/><text x="77" y="554" fill="#326399" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="11">Low</text><text x="366" y="515" fill="#8592a7" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="18">⋮</text><rect x="28" y="586" width="359" height="85" rx="7" fill="#fff" stroke="#e0e5ed"/><rect x="40" y="602" width="16" height="16" rx="4" fill="#fff" stroke="#7f8da0"/><text x="68" y="610" fill="#152238" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="13">Plan tomorrow</text><text x="68" y="628" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="10">Planning</text><text x="188" y="648" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="10">◷ 17:00</text><text x="366" y="609" fill="#8592a7" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="18">⋮</text><text x="31" y="700" fill="#142139" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="16">Completed</text><rect x="124" y="683" width="59" height="19" rx="10" fill="#ebf6f1" stroke="#ebf6f1"/><text x="133" y="696" fill="#22684e" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="11">1 task</text><rect x="28" y="717" width="357" height="65" rx="7" fill="#f8fafc" stroke="#e0e5ed"/><rect x="40" y="733" width="16" height="16" rx="4" fill="#257e64" stroke="#257e64"/><text x="43" y="746" fill="#fff" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="700" font-size="13">✓</text><text x="68" y="741" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="600" font-size="13">Daily standup</text><text x="68" y="759" fill="#657187" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="10">Team</text><rect x="318" y="776" width="62" height="43" rx="20" fill="#1e3a8a" stroke="#1e3a8a"/><text x="336" y="806" fill="#fff" font-family="Inter,Arial,Helvetica,sans-serif" font-weight="400" font-size="30">+</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="414" height="900" viewBox="0 0 414 900" role="img" aria-label="Jig mobile Day canonical reference">
+<style>text{font-family:Inter,Arial,Helvetica,sans-serif}.t{fill:#152238}.m{fill:#657187}.muted{fill:#8a96a8}.h1{font-size:26px;font-weight:700}.h2{font-size:18px;font-weight:700}.b{font-size:13px;font-weight:600}.s{font-size:11px;font-weight:500}.xs{font-size:10px;font-weight:500}</style>
+<rect x="0" y="0" width="414" height="900" rx="0" fill="#f6f8fb" stroke="none" stroke-width="1"/>
+<rect x="12" y="12" width="390" height="876" rx="24" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<text x="30" y="52" class="h1">Jig</text>
+<rect x="294" y="31" width="88" height="30" rx="15" fill="#edf7f3" stroke="#dce3ec" stroke-width="1"/>
+<circle cx="310" cy="46" r="4" fill="#2c765f" stroke="none" stroke-width="1"/>
+<text x="320" y="50" class="xs" fill="#2c765f" font-weight="700">Synced</text>
+<text x="30" y="82" class="s" fill="#657187" font-weight="700">Day</text>
+<rect x="334" y="70" width="48" height="30" rx="7" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<text x="346" y="91" class="xs" fill="#152238" font-weight="700">Today</text>
+<rect x="26" y="108" width="44" height="56" rx="8" fill="#f9fbfd" stroke="#dce3ec" stroke-width="1"/>
+<text x="48" y="130" class="xs" fill="#657187" text-anchor="middle">Mon</text>
+<text x="48" y="153" class="b" fill="#152238" font-weight="700" text-anchor="middle">16</text>
+<rect x="78" y="108" width="44" height="56" rx="8" fill="#f9fbfd" stroke="#dce3ec" stroke-width="1"/>
+<text x="100" y="130" class="xs" fill="#657187" text-anchor="middle">Tue</text>
+<text x="100" y="153" class="b" fill="#152238" font-weight="700" text-anchor="middle">17</text>
+<rect x="130" y="108" width="44" height="56" rx="8" fill="#f9fbfd" stroke="#dce3ec" stroke-width="1"/>
+<text x="152" y="130" class="xs" fill="#657187" text-anchor="middle">Wed</text>
+<text x="152" y="153" class="b" fill="#152238" font-weight="700" text-anchor="middle">18</text>
+<rect x="182" y="108" width="44" height="56" rx="8" fill="#244b91" stroke="#244b91" stroke-width="1"/>
+<text x="204" y="130" class="xs" fill="#fff" text-anchor="middle">Thu</text>
+<text x="204" y="153" class="b" fill="#fff" font-weight="700" text-anchor="middle">19</text>
+<rect x="234" y="108" width="44" height="56" rx="8" fill="#f9fbfd" stroke="#dce3ec" stroke-width="1"/>
+<text x="256" y="130" class="xs" fill="#657187" text-anchor="middle">Fri</text>
+<text x="256" y="153" class="b" fill="#152238" font-weight="700" text-anchor="middle">20</text>
+<rect x="286" y="108" width="44" height="56" rx="8" fill="#f9fbfd" stroke="#dce3ec" stroke-width="1"/>
+<text x="308" y="130" class="xs" fill="#657187" text-anchor="middle">Sat</text>
+<text x="308" y="153" class="b" fill="#152238" font-weight="700" text-anchor="middle">21</text>
+<rect x="338" y="108" width="44" height="56" rx="8" fill="#f9fbfd" stroke="#dce3ec" stroke-width="1"/>
+<text x="360" y="130" class="xs" fill="#657187" text-anchor="middle">Sun</text>
+<text x="360" y="153" class="b" fill="#152238" font-weight="700" text-anchor="middle">22</text>
+<text x="28" y="205" class="h2">Thursday, 19 November</text>
+<text x="28" y="228" class="s" fill="#657187">Your ordered plan</text>
+<text x="28" y="266" class="b" fill="#152238" font-weight="700">Planned</text>
+<text x="92" y="266" class="xs" fill="#657187" font-weight="700">4</text>
+<rect x="26" y="282" width="362" height="88" rx="8" fill="#f3f7fd" stroke="#95acd2" stroke-width="1"/>
+<rect x="38" y="300" width="18" height="18" rx="4" fill="#ffffff" stroke="#8390a1" stroke-width="1"/>
+<text x="64" y="314" class="b" fill="#9aa6b6" font-weight="700">≡</text>
+<text x="88" y="313" class="b" fill="#152238" font-weight="650">Legal — TTA workflow</text>
+<text x="366" y="313" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
+<text x="88" y="333" class="xs" fill="#657187">Legal App</text>
+<text x="246" y="333" class="xs" fill="#657187">◷ 10:00</text>
+<rect x="88" y="342" width="42" height="16" rx="8" fill="#fff0ef" stroke="none" stroke-width="1"/>
+<text x="97" y="354" class="xs" fill="#a33a34" font-weight="700">High</text>
+<rect x="26" y="380" width="362" height="88" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<rect x="38" y="398" width="18" height="18" rx="4" fill="#ffffff" stroke="#8390a1" stroke-width="1"/>
+<text x="64" y="412" class="b" fill="#9aa6b6" font-weight="700">≡</text>
+<text x="88" y="411" class="b" fill="#152238" font-weight="650">Review Order lifecycle</text>
+<text x="366" y="411" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
+<text x="88" y="431" class="xs" fill="#657187">Order</text>
+<text x="246" y="431" class="xs" fill="#657187">◷ 14:00</text>
+<rect x="26" y="478" width="362" height="88" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<rect x="38" y="496" width="18" height="18" rx="4" fill="#ffffff" stroke="#8390a1" stroke-width="1"/>
+<text x="64" y="510" class="b" fill="#9aa6b6" font-weight="700">≡</text>
+<text x="88" y="509" class="b" fill="#152238" font-weight="650">SPAN docs validation</text>
+<text x="366" y="509" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
+<text x="88" y="529" class="xs" fill="#657187">SPAN</text>
+<rect x="88" y="538" width="38" height="16" rx="8" fill="#edf4fb" stroke="none" stroke-width="1"/>
+<text x="97" y="550" class="xs" fill="#38698e" font-weight="700">Low</text>
+<rect x="26" y="576" width="362" height="88" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<rect x="38" y="594" width="18" height="18" rx="4" fill="#ffffff" stroke="#8390a1" stroke-width="1"/>
+<text x="64" y="608" class="b" fill="#9aa6b6" font-weight="700">≡</text>
+<text x="88" y="607" class="b" fill="#152238" font-weight="650">Plan tomorrow</text>
+<text x="366" y="607" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
+<text x="88" y="627" class="xs" fill="#657187">Planning</text>
+<text x="246" y="627" class="xs" fill="#657187">◷ 17:00</text>
+<text x="28" y="700" class="b" fill="#152238" font-weight="700">Completed</text>
+<rect x="26" y="716" width="362" height="66" rx="8" fill="#f9fbfd" stroke="#dce3ec" stroke-width="1"/>
+<rect x="38" y="737" width="18" height="18" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
+<text x="42" y="751" class="xs" fill="#fff" font-weight="700">✓</text>
+<text x="70" y="746" class="b" fill="#657187" font-weight="600">Daily standup</text>
+<text x="70" y="765" class="xs" fill="#8a96a8">Team · 09:12</text>
+<rect x="318" y="803" width="62" height="52" rx="24" fill="#244b91" stroke="#244b91" stroke-width="1"/>
+<text x="349" y="837" class="h1" fill="#fff" font-weight="400" text-anchor="middle">+</text>
+<text x="28" y="846" class="xs" fill="#657187">Drag handle and action menu are separate controls.</text>
+</svg>
