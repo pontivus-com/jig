@@ -30,6 +30,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 - Contained Week-row action hit areas so task actions remain independently pointer-addressable inside narrow date columns.
 - Made single-writer lease publication atomic so concurrent service startup admits exactly one writable owner.
+- Corrected release gating so only an actual merged version bump enters certification/publication, and ensured manual pinned Bun installs expose both `bun` and `bunx` on x64/arm64 runners.
 
 ### Performance
 

@@ -20,11 +20,91 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      should_release: ${{ steps.detect.outputs.should_release }}
+      target_sha: ${{ steps.detect.outputs.target_sha }}
+      parent_sha: ${{ steps.detect.outputs.parent_sha }}
+      version: ${{ steps.detect.outputs.version }}
+    steps:
+      - name: Checkout exact candidate
+        shell: bash
+        env:
+          REQUESTED_TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit || github.sha }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --tags --force origin "+refs/heads/master:refs/remotes/origin/master"
+          target_sha="${REQUESTED_TARGET_SHA}"
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          git checkout --detach "${target_sha}"
+          test "$(git rev-parse HEAD)" = "${target_sha}"
+          git merge-base --is-ancestor "${target_sha}" refs/remotes/origin/master
+
+      - name: Detect actual release version change
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          target_sha="$(git rev-parse HEAD)"
+          parent_sha="$(git rev-parse HEAD^)"
+          current="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
+
+          echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
+          echo "parent_sha=${parent_sha}" >> "${GITHUB_OUTPUT}"
+          echo "version=${current}" >> "${GITHUB_OUTPUT}"
+
+          if ! git cat-file -e "${parent_sha}:package.json" 2>/dev/null; then
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              echo "::error::Target commit is not a release commit: its parent has no package.json."
+              exit 1
+            fi
+            echo "should_release=false" >> "${GITHUB_OUTPUT}"
+            echo "Initial implementation merge detected; no release publication requested."
+            exit 0
+          fi
+
+          previous="$(git show "${parent_sha}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+          if [[ "${current}" == "${previous}" ]]; then
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              echo "::error::Target commit is not a release commit: package version did not change."
+              exit 1
+            fi
+            echo "should_release=false" >> "${GITHUB_OUTPUT}"
+            echo "package.json changed without a version change; no release publication requested."
+            exit 0
+          fi
+
+          echo "should_release=true" >> "${GITHUB_OUTPUT}"
+          echo "Release candidate detected: ${previous} -> ${current}"
+
+      - name: Install pinned Bun
+        if: steps.detect.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLo "${RUNNER_TEMP}/bun.zip"             "https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-linux-x64.zip"
+          unzip -q "${RUNNER_TEMP}/bun.zip" -d "${RUNNER_TEMP}/bun-unpack"
+          mkdir -p "${RUNNER_TEMP}/bun-bin"
+          cp "${RUNNER_TEMP}/bun-unpack/bun-linux-x64/bun" "${RUNNER_TEMP}/bun-bin/bun"
+          ln -sf bun "${RUNNER_TEMP}/bun-bin/bunx"
+          chmod +x "${RUNNER_TEMP}/bun-bin/bun"
+          echo "${RUNNER_TEMP}/bun-bin" >> "${GITHUB_PATH}"
+
+      - name: Verify release metadata before certification
+        if: steps.detect.outputs.should_release == 'true'
+        run: bun scripts/verify-release.ts --mode release-commit --base "${{ steps.detect.outputs.parent_sha }}"
+
   arm64-certification:
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     env:
-      TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit || github.sha }}
+      TARGET_SHA: ${{ needs.prepare.outputs.target_sha }}
     steps:
       - name: Checkout exact release candidate
         shell: bash
@@ -46,6 +126,7 @@ jobs:
           unzip -q "${RUNNER_TEMP}/bun.zip" -d "${RUNNER_TEMP}/bun-unpack"
           mkdir -p "${RUNNER_TEMP}/bun-bin"
           cp "${RUNNER_TEMP}/bun-unpack/bun-linux-aarch64/bun" "${RUNNER_TEMP}/bun-bin/bun"
+          ln -sf bun "${RUNNER_TEMP}/bun-bin/bunx"
           chmod +x "${RUNNER_TEMP}/bun-bin/bun"
           echo "${RUNNER_TEMP}/bun-bin" >> "${GITHUB_PATH}"
 
@@ -62,11 +143,12 @@ jobs:
           bash tests/install/installer-smoke.sh
 
   release:
-    needs: arm64-certification
+    needs: [prepare, arm64-certification]
+    if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      REQUESTED_TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit || github.sha }}
+      REQUESTED_TARGET_SHA: ${{ needs.prepare.outputs.target_sha }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout exact release candidate
@@ -91,55 +173,32 @@ jobs:
           unzip -q "${RUNNER_TEMP}/bun.zip" -d "${RUNNER_TEMP}/bun-unpack"
           mkdir -p "${RUNNER_TEMP}/bun-bin"
           cp "${RUNNER_TEMP}/bun-unpack/bun-linux-x64/bun" "${RUNNER_TEMP}/bun-bin/bun"
+          ln -sf bun "${RUNNER_TEMP}/bun-bin/bunx"
           chmod +x "${RUNNER_TEMP}/bun-bin/bun"
           echo "${RUNNER_TEMP}/bun-bin" >> "${GITHUB_PATH}"
 
-      - name: Detect release version change
-        id: release-change
-        shell: bash
-        run: |
-          set -euo pipefail
-          current="$(bun -e 'process.stdout.write(JSON.parse(await Bun.file("package.json").text()).version)')"
-          parent="$(git rev-parse HEAD^)"
-          previous="$(git show "${parent}:package.json" | bun -e 'let s=""; const d=new TextDecoder(); for await (const c of Bun.stdin.stream()) s+=d.decode(c,{stream:true}); s+=d.decode(); process.stdout.write(JSON.parse(s).version)')"
-          if [[ "${current}" == "${previous}" && "${{ github.event_name }}" != "workflow_dispatch" ]]; then
-            echo "changed=false" >> "${GITHUB_OUTPUT}"
-          else
-            echo "changed=true" >> "${GITHUB_OUTPUT}"
-            echo "version=${current}" >> "${GITHUB_OUTPUT}"
-            echo "parent=${parent}" >> "${GITHUB_OUTPUT}"
-          fi
-
       - name: Verify release metadata
-        if: steps.release-change.outputs.changed == 'true'
-        run: bun scripts/verify-release.ts --mode release-commit --base "${{ steps.release-change.outputs.parent }}"
+        run: bun scripts/verify-release.ts --mode release-commit --base "${{ needs.prepare.outputs.parent_sha }}"
 
       - name: Install frozen dependency graph
-        if: steps.release-change.outputs.changed == 'true'
         run: bun install --frozen-lockfile
 
       - name: Typecheck
-        if: steps.release-change.outputs.changed == 'true'
         run: bun run typecheck
 
       - name: Core and integration tests
-        if: steps.release-change.outputs.changed == 'true'
         run: bun run test
 
       - name: Build production UI
-        if: steps.release-change.outputs.changed == 'true'
         run: bun run build
 
       - name: Install Chromium
-        if: steps.release-change.outputs.changed == 'true'
         run: bunx playwright install --with-deps chromium
 
       - name: Real-browser acceptance
-        if: steps.release-change.outputs.changed == 'true'
         run: bun run test:browser
 
       - name: Shell and installer certification
-        if: steps.release-change.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -147,7 +206,6 @@ jobs:
           bash tests/install/installer-smoke.sh
 
       - name: Build release assets
-        if: steps.release-change.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -156,7 +214,6 @@ jobs:
           test -s release/release-notes.md
 
       - name: Smoke certified x64 bundle
-        if: steps.release-change.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -172,11 +229,10 @@ jobs:
           HOME="${smoke}/home" "${smoke}/home/.local/bin/jig" uninstall
 
       - name: Create or verify annotated tag
-        if: steps.release-change.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          version="${{ steps.release-change.outputs.version }}"
+          version="${{ needs.prepare.outputs.version }}"
           tag="v${version}"
           if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
             test "$(git rev-list -n1 "${tag}")" = "${TARGET_SHA}"
@@ -189,11 +245,10 @@ jobs:
           fi
 
       - name: Create upload and publish GitHub Release
-        if: steps.release-change.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          version="${{ steps.release-change.outputs.version }}"
+          version="${{ needs.prepare.outputs.version }}"
           tag="v${version}"
           api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
           auth_header="Authorization: Bearer ${GH_TOKEN}"
