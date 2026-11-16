@@ -101,6 +101,38 @@ The top bar changes the product's spatial model, consumes horizontal action spac
 
 **Required correction:** separate application navigation from planning-surface controls.
 
+## 4A. Functional continuity defect — unfinished prior-day work is hidden on startup
+
+### UX-F01 — Carry-over exists in the core but fails the everyday entry workflow
+
+The planning core's `dayAttention()` correctly derives outstanding Tasks whose `scheduled_date < selectedDate` as carried-over work, and browser coverage proves that a synthetic yesterday Task appears when the user explicitly opens Day.
+
+However, `ui/src/app.tsx` initializes the application destination to `"week"`.
+
+Week deliberately renders only `outstandingForDate(tasks, date)` for each actual scheduled date. The functional contract also explicitly forbids duplicating a Task into later Week columns.
+
+The result is a product-level failure:
+
+1. leave a Task unfinished yesterday;
+2. open Jig today;
+3. Jig opens Week;
+4. the unfinished Task remains visually back on yesterday's column;
+5. today's attention surface does not immediately show it;
+6. the user must know to switch manually to Day to discover carried-over work.
+
+This contradicts the practical intent of **"unfinished earlier-day items remain in view on subsequent days"** and explains the observed failure even though the isolated Day query passes.
+
+**Classification:** P0 functional/UX defect, not data-loss and not a reason to silently mutate `scheduled_date`.
+
+**Required correction:**
+- the normal application entry point must open the current Day attention surface, or otherwise make today's derived carry-over sequence immediately visible without user discovery;
+- yesterday's Task retains its original scheduled date;
+- Week remains a true scheduled-date board and must not duplicate the Task into today's column;
+- Today shortcut continues to select the current civil date and Day;
+- browser acceptance must start from a persisted prior-day outstanding Task, open Jig from a fresh page/session, and prove that the Task is immediately visible in today's attention workflow without first navigating from Week to Day.
+
+The canonical UX authority must be updated accordingly wherever it still calls Week the default productive/entry surface.
+
 ## 5. Week view
 
 ### UI-04 — Seven-day desktop scanning is broken by column width
