@@ -29,6 +29,7 @@ import {
   writeConfigAtomic,
   type JigConfig,
 } from "./config";
+import { acquireWriterLease } from "./writer";
 
 export interface RepositoryInstallation {
   readonly config: JigConfig;
@@ -251,7 +252,9 @@ export async function initializeRepositoryInstallation(options: {
   await mkdir(resolve(repositoryPath, ".jig", "local"), {
     recursive: true,
   });
+  const writerLease = await acquireWriterLease(repositoryPath);
 
+  try {
   let local: Awaited<ReturnType<typeof inspectLocalCandidate>>;
   let remote: Awaited<ReturnType<typeof inspectRemoteCandidate>>;
   try {
@@ -382,6 +385,9 @@ export async function initializeRepositoryInstallation(options: {
     };
   } finally {
     db.close();
+  }
+  } finally {
+    await writerLease.release();
   }
 }
 
