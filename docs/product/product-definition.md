@@ -1,6 +1,6 @@
 # Jig — product definition
 
-**Status:** Candidate initial product baseline, v0.1 (2026-11-16). Proposed for adoption in the Jig repository.  
+**Status:** Candidate initial product baseline, v0.2 (2026-11-16). Proposed for adoption in the Jig repository.  
 **Concern:** Product purpose, value, boundaries and MVP target.  
 **Product identity:** Jig / Pontivus Jig. Product descriptor: just-in-time daily planner. The name evokes a brief nudge that helps the user get on track.
 
@@ -14,7 +14,7 @@ The day is often planned the preceding evening or early morning. Circumstances c
 
 **Jig schedules attention, not project execution.**
 
-Jig gives one person an ordered calendar of lightweight work intentions, optional priority and reminders, immediate rearrangement, and a reliable view of what remains and what was completed.
+Jig gives one person an ordered calendar of lightweight work intentions, optional priority and reminders, immediate rearrangement, and a reliable view of what remains and what was completed. Unfinished earlier-day items remain in view on subsequent days until the user completes, explicitly reschedules, or deletes them; Jig does not silently rewrite the date the user originally intended.
 
 A Jig task represents *something to attend to on a date*, not a complete project requirement, issue, work package or implementation plan. It may point to the authoritative work in another project or system. The details and execution lifecycle continue to live there.
 
@@ -33,11 +33,11 @@ Illustrative item: **Thursday — Legal app: TTA workflow remediation**. Jig own
 An operator must be able to:
 
 1. plan tomorrow, today, or any selected date by adding lightweight items;
-2. review an entire week and the selected day's planned order;
+2. review an entire week and the selected day's attention list, including unfinished earlier-day items carried forward without changing their original scheduled date;
 3. change the order of items at any point using drag-and-drop;
 4. move work to another date without losing it;
 5. optionally mark importance and set a reminder, without estimating duration;
-6. complete or reopen work and review completed versus unfinished items;
+6. complete, reopen or permanently delete work and review completed versus unfinished items;
 7. follow an optional reference to the actual project or work system;
 8. retain all planning state under the selected personal Git repository and synchronize portable task data automatically when a Git remote is available;
 9. install and configure Jig in a single guided script, including repository selection and a background service;
@@ -50,7 +50,8 @@ An operator must be able to:
 - **Minimal input:** task title and date are sufficient to create a task. Everything else is optional/defaulted.
 - **Unrestricted adaptation:** no approvals, fixed WIP rules, forced focus states, or automatic reordering of an established plan.
 - **No duplicated authority:** the planning card refers outward; it does not try to reproduce Order, SPAN, Legal or other project artifacts.
-- **History without ceremony:** completed work remains inspectable; unfinished work never silently disappears.
+- **History without ceremony:** completed work remains inspectable; unfinished work carries forward visibly until completed, explicitly rescheduled or deleted.
+- **Simple deletion:** confirmed deletion removes the task from Jig rather than creating another lifecycle state. Recovery of previously exported states is delegated to Git history instead of an application trash, soft-delete or undo subsystem.
 - **Portable ownership:** a user-selected Git repository contains Jig's local database and Git-tracked logical task records in an isolated Jig area; the software's source repository contains no personal task data.
 - **Low-friction lifecycle:** one installer configures the repository, local executable and Linux user service; saves and normal Git synchronization are automatic rather than a repeated user chore.
 - **Non-invasive coexistence:** Jig does not stage, commit, overwrite, merge or publish unrelated content in the selected repository.
@@ -63,7 +64,7 @@ A calendar *date* and optional reminder time are not a time-blocked calendar app
 
 ## 7. Product acceptance criteria
 
-A typical day must be managed through fast, low-friction actions: capture, arrange, reschedule, finish, reopen and review. The visible plan must always correspond to the saved plan. Reopening the app must preserve work order and completion. Missing external project details must never block creating or completing a Jig item.
+A typical day must be managed through fast, low-friction actions: capture, arrange, carry forward unfinished work visibly, reschedule, finish, reopen, delete and review. The visible plan must always correspond to the saved plan. Reopening the app must preserve work order and completion. Missing external project details must never block creating or completing a Jig item.
 
 No quantitative productivity/time-saving claim is established by this design baseline.
 
