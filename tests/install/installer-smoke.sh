@@ -27,6 +27,8 @@ git -C "$DATA_REPO" config user.email "jig-installer@local.invalid"
 printf 'preserve me\n' > "$DATA_REPO/user.txt"
 git -C "$DATA_REPO" add user.txt
 git -C "$DATA_REPO" commit -m "User data" >/dev/null
+git -C "$DATA_REPO" config commit.gpgSign true
+git -C "$DATA_REPO" config user.signingkey missing-jig-installer-key
 
 bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
 
@@ -38,6 +40,8 @@ bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/nu
 git -C "$DATA_REPO" show-ref --verify --quiet refs/heads/jig-data
 [[ "$(cat "$DATA_REPO/user.txt")" == "preserve me" ]]
 [[ -z "$(git -C "$DATA_REPO" status --porcelain=v1)" ]]
+[[ "$(git -C "$DATA_REPO" config --get commit.gpgSign)" == "true" ]]
+[[ "$(git -C "$DATA_REPO" config --get user.signingkey)" == "missing-jig-installer-key" ]]
 
 "$HOME/.local/bin/jig" status | grep -q '^repository: '
 "$HOME/.local/bin/jig" doctor | grep -q '^service_healthy: false$'
