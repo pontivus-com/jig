@@ -105,20 +105,19 @@ jig configure --repo /absolute/new/repo
 jig uninstall       # remove runtime/configuration; preserve repo planning data
 ```
 
-## Release candidate status
+## Release status
 
-The v1 implementation is complete and certified against JIG-FR-01–22. Archived
-evidence covers core/persistence/repository behavior, real-browser interaction,
+Jig **1.0.0** is the first stable release. The v1 implementation is complete
+and certified against JIG-FR-01–22. Archived evidence covers
+core/persistence/repository behavior, real-browser interaction,
 installer/service lifecycle, trust boundaries and resource/readiness limits.
 
-The first stable publication target is **v1.0.0**. Release publication is
-PR-bound: the dedicated release PR freezes the changelog/version, then the
-permanent release workflow verifies the exact merged commit before creating the
-immutable tag and Linux x64/arm64 assets.
+Release publication remains PR-bound and immutable: the merged release commit is
+re-verified before the `v1.0.0` tag and Linux x64/arm64 assets are published.
 
-- [v1 release-candidate evidence](docs/evidence/v1/README.md)
+- [v1 certification evidence](docs/evidence/v1/README.md)
 - [release process and asset contract](docs/releases/README.md)
-- [v1.0.0 release notes draft](docs/releases/v1.0.0.md)
+- [v1.0.0 release notes](docs/releases/v1.0.0.md)
 - [changelog](CHANGELOG.md)
 
 ## Documentation
