@@ -10,15 +10,15 @@ import { formatCivilDate, formatReminderTime } from "./dates";
 
 export interface TaskRowProps {
   readonly task: Task;
-  readonly isSelected?: boolean;
-  readonly carriedOverFrom?: string;
-  readonly rowRef?: Ref<HTMLLIElement>;
-  readonly dragHandleRef?: Ref<HTMLButtonElement>;
+  readonly isSelected?: boolean | undefined;
+  readonly carriedOverFrom?: string | undefined;
+  readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLButtonElement> | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
-  readonly onMoveUp?: () => void;
-  readonly onMoveDown?: () => void;
-  readonly onMoveToDate?: () => void;
+  readonly onMoveUp?: (() => void) | undefined;
+  readonly onMoveDown?: (() => void) | undefined;
+  readonly onMoveToDate?: (() => void) | undefined;
 }
 
 function isSafeWebReference(value: string): boolean {
