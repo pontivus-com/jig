@@ -29,6 +29,6 @@ jobs:
       - name: Real-browser acceptance
         run: bun run test:browser
       - name: Shell syntax
-        run: bash -n scripts/install.sh scripts/jig tests/install/installer-smoke.sh
+        run: bash -n scripts/install.sh scripts/jig tests/install/installer-smoke.sh tests/certification/resource-gate.sh tests/certification/installed-readiness-gate.sh
       - name: Installer and lifecycle smoke
         run: bash tests/install/installer-smoke.sh
