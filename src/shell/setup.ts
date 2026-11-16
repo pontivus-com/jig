@@ -247,7 +247,7 @@ export async function initializeRepositoryInstallation(options: {
 
     const state = readCanonicalState(db);
     const snapshot = serializeSnapshot(state.tasks, datasetId);
-    const head = await commitSnapshot(
+    await commitSnapshot(
       adapter,
       snapshot,
       state.revision,
