@@ -41,7 +41,10 @@ import {
   MoveTaskDialog,
   TaskEditor,
 } from "./task-editor";
-import { todayCivilDate } from "./dates";
+import {
+  millisecondsUntilNextCivilDay,
+  todayCivilDate,
+} from "./dates";
 import { WeekView } from "./week";
 import { jigTheme } from "./theme";
 
@@ -110,8 +113,9 @@ function destinationLabel(destination: Destination): string {
 }
 
 export function App(): React.ReactElement {
-  const [destination, setDestination] = useState<Destination>("week");
+  const [destination, setDestination] = useState<Destination>("day");
   const [selectedDate, setSelectedDate] = useState(todayCivilDate);
+  const [observedToday, setObservedToday] = useState(todayCivilDate);
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
@@ -178,6 +182,55 @@ export function App(): React.ReactElement {
     }, 15_000);
     return () => window.clearInterval(interval);
   }, []);
+
+
+  useEffect(() => {
+    let boundaryTimer: number | null = null;
+
+    const scheduleBoundaryCheck = (): void => {
+      if (boundaryTimer !== null) {
+        window.clearTimeout(boundaryTimer);
+      }
+      boundaryTimer = window.setTimeout(
+        checkCivilDay,
+        millisecondsUntilNextCivilDay(),
+      );
+    };
+
+    const checkCivilDay = (): void => {
+      const nextToday = todayCivilDate();
+      if (nextToday !== observedToday) {
+        const previousToday = observedToday;
+        setObservedToday(nextToday);
+        setSelectedDate((current) =>
+          current === previousToday ? nextToday : current,
+        );
+        void refreshCanonical().catch((error) => {
+          setOperationError(
+            `Jig could not refresh after the local day changed: ${errorMessage(error)}`,
+          );
+        });
+      }
+      scheduleBoundaryCheck();
+    };
+
+    const onVisibility = (): void => {
+      if (document.visibilityState === "visible") {
+        checkCivilDay();
+      }
+    };
+
+    scheduleBoundaryCheck();
+    window.addEventListener("focus", checkCivilDay);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      if (boundaryTimer !== null) {
+        window.clearTimeout(boundaryTimer);
+      }
+      window.removeEventListener("focus", checkCivilDay);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [observedToday, refreshCanonical]);
 
   const runCommand = useCallback(
     async (command: TaskCommand): Promise<boolean> => {
