@@ -568,6 +568,7 @@ export function App(): React.ReactElement {
       tasks={tasks}
       onEdit={openEdit}
       onReopen={toggleComplete}
+      onDelete={(task) => setDeleteTaskId(task.id)}
     />
   ) : (
     <SettingsView
