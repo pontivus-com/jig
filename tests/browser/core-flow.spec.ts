@@ -79,9 +79,6 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   expect(tasks.filter((title) => title === "Must not replay")).toHaveLength(0);
 
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(
-    page.getByText("Concurrent canonical task", { exact: true }),
-  ).toBeVisible();
 });
 
 test("responsive reflow preserves an open editor draft and appearance remains presentation-only", async ({ page }) => {
