@@ -10,6 +10,7 @@ import {
 } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
 import { formatCivilDate } from "./dates";
+import { DateStrip } from "./date-strip";
 import { SortableTaskRow, TaskRow } from "./task-row";
 
 export interface DayViewProps {
@@ -210,6 +211,11 @@ export function DayView({
           onClick={() => onAdd(selectedDate)}
         />
       </div>
+
+      <DateStrip
+        selectedDate={selectedDate}
+        onSelectDate={() => undefined}
+      />
 
       <DayTaskLists
         tasks={tasks}
