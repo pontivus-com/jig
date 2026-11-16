@@ -300,7 +300,7 @@ function createSyncController(
 
   const runOnce = async (): Promise<RepositoryStatus> => {
     try {
-      await ensureJigDataWorktree(adapter);
+      await ensureJigDataWorktree(adapter, readMetadata(db).dataset_id);
       await reconcileCommittedExport();
 
       const state = readCanonicalState(db);
@@ -353,7 +353,7 @@ function createSyncController(
   return {
     start: async () => {
       stopped = false;
-      await ensureJigDataWorktree(adapter);
+      await ensureJigDataWorktree(adapter, readMetadata(db).dataset_id);
       await reconcileCommittedExport();
       const metadata = readMetadata(db);
       if (metadata.pending_sync) {
