@@ -352,80 +352,6 @@ export function App(): React.ReactElement {
     setSelectedDate((current) => addCivilDays(current, amount));
   };
 
-  const topNav = (
-    <div className="jig-topbar">
-      <div className="jig-brand" aria-label="Jig">
-        <span className="jig-brand-logo-wrap" aria-hidden="true">
-          <img
-            className="jig-brand-logo jig-brand-logo-light"
-            src={jigLogoLightUrl}
-            alt=""
-          />
-          <img
-            className="jig-brand-logo jig-brand-logo-dark"
-            src={jigLogoDarkUrl}
-            alt=""
-          />
-        </span>
-        <span className="jig-brand-tagline">Schedules attention</span>
-      </div>
-
-      <nav className="jig-primary-nav" aria-label="Primary">
-        {(["week", "day", "history", "settings"] as const).map(
-          (item) => (
-            <Button
-              key={item}
-              label={destinationLabel(item)}
-              variant={destination === item ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setDestination(item)}
-              aria-current={destination === item ? "page" : undefined}
-            />
-          ),
-        )}
-      </nav>
-
-      <div className="jig-topbar-actions">
-        {destination === "week" || destination === "day" ? (
-          <>
-            <Button
-              label="Previous"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                navigateDate(destination === "week" ? -7 : -1)
-              }
-            />
-            <Button
-              label="Today"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedDate(todayCivilDate());
-                setDestination("day");
-              }}
-            />
-            <Button
-              label="Next"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                navigateDate(destination === "week" ? 7 : 1)
-              }
-            />
-          </>
-        ) : null}
-
-        <Button
-          label={repositoryStatusLabel(status)}
-          variant="ghost"
-          size="sm"
-          onClick={() => setDestination("settings")}
-        />
-      </div>
-    </div>
-  );
-
   const durableBanner = operationError !== null ? (
     <Banner
       status="error"
@@ -453,6 +379,52 @@ export function App(): React.ReactElement {
       }
     />
   ) : null;
+
+  const statusControl = (
+    <Button
+      label={repositoryStatusLabel(status)}
+      variant="ghost"
+      size="sm"
+      onClick={() => setDestination("settings")}
+    />
+  );
+
+  const mobileTopNav = (
+    <div className="jig-mobile-header">
+      <div className="jig-brand" aria-label="Jig">
+        <span className="jig-brand-logo-wrap" aria-hidden="true">
+          <img
+            className="jig-brand-logo jig-brand-logo-light"
+            src={jigLogoLightUrl}
+            alt=""
+          />
+          <img
+            className="jig-brand-logo jig-brand-logo-dark"
+            src={jigLogoDarkUrl}
+            alt=""
+          />
+        </span>
+      </div>
+      <details className="jig-mobile-destination-menu">
+        <summary>{destinationLabel(destination)}</summary>
+        <div className="jig-mobile-destination-panel">
+          {(["week", "day", "history", "settings"] as const).map(
+            (item) => (
+              <Button
+                key={item}
+                label={destinationLabel(item)}
+                variant={destination === item ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setDestination(item)}
+                aria-current={destination === item ? "page" : undefined}
+              />
+            ),
+          )}
+        </div>
+      </details>
+      {statusControl}
+    </div>
+  );
 
   const content = canonical === null ? (
     <div className="jig-loading">
@@ -488,6 +460,10 @@ export function App(): React.ReactElement {
       onMoveToDate={openMoveToDate}
       onToggleComplete={toggleComplete}
       onMove={moveTaskExact}
+      onPreviousWeek={() => navigateDate(-7)}
+      onToday={() => setSelectedDate(todayCivilDate())}
+      onNextWeek={() => navigateDate(7)}
+      statusControl={isNarrow ? null : statusControl}
     />
   ) : destination === "day" ? (
     <DayView
@@ -499,6 +475,10 @@ export function App(): React.ReactElement {
       onMoveToDate={openMoveToDate}
       onToggleComplete={toggleComplete}
       onMove={moveTaskExact}
+      onPreviousDay={() => navigateDate(-1)}
+      onToday={() => setSelectedDate(todayCivilDate())}
+      onNextDay={() => navigateDate(1)}
+      statusControl={isNarrow ? null : statusControl}
     />
   ) : destination === "history" ? (
     <HistoryView
@@ -524,13 +504,54 @@ export function App(): React.ReactElement {
     <Theme theme={jigTheme} mode={themePreference}>
       <LayerProvider>
         <AppShell
-          topNav={topNav}
-          banner={durableBanner}
+          topNav={isNarrow ? mobileTopNav : null}
           contentPadding={0}
           height="fill"
           variant="section"
         >
-          <div className="jig-content">{content}</div>
+          <div className="jig-shell">
+            {isNarrow ? null : (
+              <aside className="jig-sidebar">
+                <div className="jig-sidebar-brand" aria-label="Jig">
+                  <span className="jig-brand-logo-wrap" aria-hidden="true">
+                    <img
+                      className="jig-brand-logo jig-brand-logo-light"
+                      src={jigLogoLightUrl}
+                      alt=""
+                    />
+                    <img
+                      className="jig-brand-logo jig-brand-logo-dark"
+                      src={jigLogoDarkUrl}
+                      alt=""
+                    />
+                  </span>
+                  <span className="jig-brand-tagline">Schedules attention</span>
+                </div>
+                <nav className="jig-sidebar-nav" aria-label="Primary">
+                  {(["week", "day", "history", "settings"] as const).map(
+                    (item) => (
+                      <Button
+                        key={item}
+                        label={destinationLabel(item)}
+                        variant={destination === item ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setDestination(item)}
+                        aria-current={destination === item ? "page" : undefined}
+                      />
+                    ),
+                  )}
+                </nav>
+                <div className="jig-sidebar-context">
+                  <span className="jig-secondary-copy">Planning data</span>
+                  <span>{status?.repository_path ?? "Local repository"}</span>
+                </div>
+              </aside>
+            )}
+            <main className="jig-main">
+              {durableBanner}
+              <div className="jig-content">{content}</div>
+            </main>
+          </div>
         </AppShell>
 
         <TaskEditor
