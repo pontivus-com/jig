@@ -42,7 +42,6 @@ export interface HttpDependencies {
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
   readonly trigger_sync: () => Promise<RepositoryStatus>;
-  readonly migrate_repository: (repositoryPath: string) => Promise<void>;
   readonly before_task_mutation: () => void;
   readonly on_task_mutation: () => void;
 }
@@ -404,7 +403,7 @@ export function createHttpHandler(
 
     if (
       request.method === "POST" &&
-      ["/api/v1/commands", "/api/v1/sync", "/api/v1/migrate"].includes(
+      ["/api/v1/commands", "/api/v1/sync"].includes(
         pathname,
       )
     ) {
@@ -459,20 +458,7 @@ export function createHttpHandler(
           );
         }
 
-        const body = asObject(
-          await parseJsonRequest(request),
-          "migration request must be an object",
-        );
-        exactKeys(
-          body,
-          ["repository_path"],
-          ["repository_path"],
-          "migration request",
-        );
-        await dependencies.migrate_repository(
-          requiredString(body, "repository_path"),
-        );
-        return json({ migrated: true });
+
       } catch (error) {
         return errorResponse(error);
       }
