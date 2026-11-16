@@ -92,7 +92,7 @@ function repositoryStatusLabel(status: ServiceStatus | null): string {
     case "retrying":
       return "Sync retrying";
     case "synchronized":
-      return "Saved · Synced";
+      return "Synced";
     case "sync-issue":
       return "Sync issue";
     default:
@@ -410,12 +410,23 @@ export function App(): React.ReactElement {
   ) : null;
 
   const statusControl = (
-    <Button
-      label={repositoryStatusLabel(status)}
-      variant="ghost"
-      size="sm"
-      onClick={() => setDestination("settings")}
-    />
+    <span
+      className={[
+        "jig-status-control",
+        status?.repository_status === "sync-issue"
+          ? "jig-status-control-issue"
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <Button
+        label={repositoryStatusLabel(status)}
+        variant="ghost"
+        size="sm"
+        onClick={() => setDestination("settings")}
+      />
+    </span>
   );
 
   const mobileTopNav = (
@@ -546,7 +557,7 @@ export function App(): React.ReactElement {
     <Theme theme={jigTheme} mode={themePreference}>
       <LayerProvider>
         <AppShell
-          topNav={isNarrow ? mobileTopNav : null}
+          {...(isNarrow ? { topNav: mobileTopNav } : {})}
           contentPadding={0}
           height="fill"
           variant="section"
