@@ -1,23 +1,21 @@
 # Jig
 
-**Just in time daily planner.**
+**Just in time daily planner.** A small nudge to get you on track: plan each day, put lightweight intentions in order, and freely reorganize them as work changes.
 
-A small nudge to get you on track. Plan the day, arrange lightweight tasks in the order that suits you, and adapt the plan freely as circumstances change.
+Jig is a standalone, local-first desktop planner with a dated weekly Kanban board, a focused day view, optional priorities/reminders and completed history. Details of project work remain in their own systems.
 
-Jig is a local-first personal planner with a date-based week/day view, Kanban-style drag-and-drop, optional priorities and reminders, and completion history. Task details stay with the project or system where the actual work belongs.
-
-Desktop use is the initial MVP target, with mobile-first responsive UX designed from the outset. Local data is held in SQLite, with an explicit Git snapshot/fast-forward exchange design; simultaneous offline multi-device merges remain outside the desktop MVP.
+**Designed installation:** One Linux installer connects Jig to your selected personal Git repository, places the operational SQLite database and portable task data inside its Jig subdirectory, installs the `jig` launcher and configures a background user service. Edits save locally immediately; Jig automatically version-controls and synchronizes its own records through an isolated data branch of that same repository. An independent phone app and multi-writer conflict resolution are future capabilities.
 
 ## Documentation
 
-Start at the [documentation index](docs/README.md), then read:
-
+- [Documentation index and ownership](docs/README.md)
 - [Product definition](docs/product/product-definition.md)
-- [Planning and UX functional design](docs/requirements/planning-workbench.md)
-- [Technical solution design](docs/architecture/technical-solution.md)
+- [Functional requirements — JIG-FR-01–20](docs/requirements/planning-workbench.md)
+- [Complete technical solution](docs/architecture/technical-solution.md)
+- [UI solution and visual mockups](docs/design/ui-solution.md)
 
-These are the initial product and decision-complete desktop technical design documents. Implementation and runtime verification remain outstanding.
+**Status:** Proposed design baseline. The application, installer and service have not been implemented or runtime-certified.
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+Apache-2.0; see [LICENSE](LICENSE).
