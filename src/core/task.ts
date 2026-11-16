@@ -1,6 +1,42 @@
 export const PRIORITIES = ["HIGH", "NORMAL", "LOW"] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
+export interface TaskEditChanges {
+  readonly title?: string;
+  readonly scheduled_date?: string;
+  readonly priority?: Priority;
+  readonly context?: string | null;
+  readonly reference?: string | null;
+  readonly note?: string | null;
+  readonly reminder_time?: string | null;
+}
+
+export type TaskCommand =
+  | {
+      readonly type: "create";
+      readonly title: string;
+      readonly scheduled_date: string;
+      readonly priority?: Priority;
+      readonly context?: string | null;
+      readonly reference?: string | null;
+      readonly note?: string | null;
+      readonly reminder_time?: string | null;
+    }
+  | {
+      readonly type: "edit";
+      readonly task_id: string;
+      readonly changes: TaskEditChanges;
+    }
+  | {
+      readonly type: "move";
+      readonly task_id: string;
+      readonly destination_date: string;
+      readonly destination_index: number;
+    }
+  | { readonly type: "complete"; readonly task_id: string }
+  | { readonly type: "reopen"; readonly task_id: string }
+  | { readonly type: "delete"; readonly task_id: string };
+
 export interface Task {
   readonly id: string;
   readonly title: string;
