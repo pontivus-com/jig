@@ -41,7 +41,10 @@ import {
   MoveTaskDialog,
   TaskEditor,
 } from "./task-editor";
-import { todayCivilDate } from "./dates";
+import {
+  millisecondsUntilNextLocalDay,
+  todayCivilDate,
+} from "./dates";
 import { WeekView } from "./week";
 import { jigTheme } from "./theme";
 
@@ -110,8 +113,9 @@ function destinationLabel(destination: Destination): string {
 }
 
 export function App(): React.ReactElement {
-  const [destination, setDestination] = useState<Destination>("week");
+  const [destination, setDestination] = useState<Destination>("day");
   const [selectedDate, setSelectedDate] = useState(todayCivilDate);
+  const [observedToday, setObservedToday] = useState(todayCivilDate);
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
@@ -178,6 +182,66 @@ export function App(): React.ReactElement {
     }, 15_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let boundaryTimer: number | null = null;
+
+    const checkLocalDay = async (): Promise<boolean> => {
+      const nextToday = todayCivilDate();
+      if (nextToday === observedToday) {
+        return false;
+      }
+
+      setSelectedDate((current) =>
+        current === observedToday ? nextToday : current,
+      );
+      setObservedToday(nextToday);
+
+      try {
+        await refreshCanonical();
+      } catch (error) {
+        if (!cancelled) {
+          setOperationError(
+            `Jig could not refresh after the local day changed: ${errorMessage(error)}. Reload the application.`,
+          );
+        }
+      }
+      return true;
+    };
+
+    const scheduleBoundary = (): void => {
+      boundaryTimer = window.setTimeout(() => {
+        void checkLocalDay().then((changed) => {
+          if (!cancelled && !changed) {
+            scheduleBoundary();
+          }
+        });
+      }, millisecondsUntilNextLocalDay() + 50);
+    };
+
+    const onFocus = (): void => {
+      void checkLocalDay();
+    };
+    const onVisibility = (): void => {
+      if (document.visibilityState === "visible") {
+        void checkLocalDay();
+      }
+    };
+
+    scheduleBoundary();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      if (boundaryTimer !== null) {
+        window.clearTimeout(boundaryTimer);
+      }
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [observedToday, refreshCanonical]);
 
   const runCommand = useCallback(
     async (command: TaskCommand): Promise<boolean> => {
