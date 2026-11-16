@@ -22,7 +22,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "bunx --bun vitest run",
     "build": "vite build",
     "test:browser": "playwright test",
     "verify": "bun run typecheck && bun run test && bun run build && bun run test:browser"
