@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Candidate v0.4, updated 2026-11-16 with carry-over, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual mockups are an accepted starting point, not a signed component/theme specification.  
+**Status:** Candidate v0.5, updated 2026-11-17 with persisted daily rollover, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual mockups are an accepted starting point, not a signed component/theme specification.  
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -30,7 +30,7 @@ Jig supports evening planning of the next day, morning planning, and unrestricte
 
 **Completion:** explicit transition to done with a completion timestamp. Completion is distinct from scheduled date. Reopening makes the same task outstanding again.
 
-**Carry-over:** derived presentation state for an outstanding task whose scheduled date is earlier than the selected date. Carry-over never changes the task's scheduled date and is not a separate persisted status or ordering authority.
+**Rollover:** persisted daily movement of an outstanding task whose scheduled date is earlier than the current local civil date. Rollover changes the task's `scheduled_date` to the current local civil date and places the card into that day's persisted outstanding order. It is not a separate status flag.
 
 **Deletion:** confirmed permanent removal of a Task from Jig. Deletion creates no soft-delete state, trash record, tombstone, or application-level undo history. If an earlier exported version exists, repository Git history is the recovery mechanism.
 
@@ -46,8 +46,8 @@ Jig supports evening planning of the next day, morning planning, and unrestricte
 | JIG-FR-06 | Preserve manual intent | Changing a task's priority after creation changes its indicator only. It does not reorder an existing day. Manual drag order remains authoritative. |
 | JIG-FR-07 | Flexible modifications | Title, date, priority, context, reference, note and reminder can be edited without an approval or workflow gate. |
 | JIG-FR-08 | Complete and reopen | Completion removes the task from the outstanding sequence, records when it completed, and makes it visible in completed/history. Reopen restores the same task identity and schedule. |
-| JIG-FR-09 | Carry forward unfinished past work | An outstanding Task whose scheduled date precedes the selected Day remains visible on subsequent Day views until completed, explicitly rescheduled or deleted. It retains its original scheduled date and is marked with a subtle but scan-visible carry-over treatment including that originating date; no silent auto-rollover occurs. |
-| JIG-FR-10 | In-app reminders | While Jig is open, a due task reminder displays an unobtrusive toast; a system/browser notification is optional when supported and permitted. There is no background notification delivery contract. |
+| JIG-FR-09 | Roll unfinished work into the current day | When Jig observes that the local civil date has advanced, every outstanding Task whose `scheduled_date` is earlier than the current local civil date is persistently moved into the current day's bucket by changing its `scheduled_date`. The same moved card must therefore appear in the current-day bucket in Week, Day and every other view. Completed Tasks are never rolled forward. |
+| JIG-FR-10 | Reminder delivery while Jig is open | While Jig is open, a due Task reminder displays an unobtrusive in-app toast when the page is visible. When the page is open but not visible and browser notification permission has been explicitly granted, Jig delivers the reminder through the browser Notification API. Permission is requested only from an explicit user action. There is no service-worker/background notification contract when Jig is closed. |
 | JIG-FR-11 | Access original context | Open/copy a provided reference without duplicating project execution or source content into Jig. |
 | JIG-FR-12 | Report honest outcomes | On persistence failure, the UI does not claim that the change was saved; the operator can understand and recover from the failure. |
 | JIG-FR-13 | Preserve common meaning across devices | Desktop and eventual mobile use the same tasks, dates, priority semantics, completion meaning and actions. Responsive change alone must not mutate or discard work. |
@@ -71,19 +71,33 @@ This keeps priority useful on capture without introducing a hidden automatic sch
 
 The selected date's completed area shows items scheduled for that date which are now done. The history view can group items by actual completion date. These are different queries over the same underlying completion fact. Reopening places the task back into the outstanding list on its scheduled date; any needed ordering adjustment is explicit.
 
-### Carry-over presentation and ordering
+### Daily rollover and ordering
 
-The Day attention sequence is a derived concatenation, not a second persisted order. Outstanding tasks from dates earlier than the selected date appear first, ordered by original scheduled date from oldest to newest and then by each date's persisted position. Tasks scheduled for the selected date follow in their persisted position order. Week remains an actual scheduled-date view and does not duplicate one Task into later date columns.
+Rollover is a persisted planning mutation, not a view-only projection.
 
-Every carried-over row keeps its normal task structure but receives a subtle, readily scannable treatment such as a restrained surface/edge difference plus text equivalent to **Carried over · Thu 19**. Color alone cannot carry this meaning. The originating date is always the Task's actual scheduled date, not merely “yesterday.” Carry-over is derived from `completed = false` and `scheduled date < selected date`; it is never stored as a status or flag.
+When Jig starts, resumes, or otherwise detects that the local civil date is later than a Task's scheduled date, every outstanding overdue Task is moved to the current local civil date. This updates the canonical Task itself, so Week, Day, narrow/mobile views, restart and synchronization all observe the same bucket.
 
-Merely viewing a carried-over Task on a later Day does not reschedule it. Its reminder remains tied to the original scheduled date and is not re-armed or shifted forward by carry-over. Dragging a carried-over Task into the selected-date sequence is an explicit reschedule to that selected date and exact drop position. Using a date action/editor is also an explicit reschedule and uses the normal priority-assisted insertion rule.
+Rollover ordering is deterministic:
+
+1. overdue Tasks are collected oldest scheduled date first;
+2. within each source date, preserve persisted position;
+3. place that rolled-forward sequence at the beginning of the current day's outstanding sequence;
+4. preserve the existing relative order of Tasks already scheduled for the current day after the rolled-forward sequence;
+5. rewrite positions contiguously from zero.
+
+If Jig was not running for multiple days, one catch-up mutation moves every still-outstanding Task with `scheduled_date < current_local_date` directly to `current_local_date`. Do not create intermediate historical day mutations.
+
+Because the scheduled date physically changes, Week must show the card in the new current-day column and must no longer show it in the old column.
+
+A reminder is part of the scheduled Task. When rollover changes the Task's scheduled date, its existing reminder time remains the same time-of-day and therefore applies to the new rolled-forward date. Do not preserve or display an obsolete originating reminder date unless a separate future product requirement introduces explicit schedule history.
+
+Completed Tasks are never rolled forward. Manually moving a Task to another date remains explicit and uses the existing move/edit semantics.
 
 ## 4. Desktop spatial UX — MVP
 
 **Week:** one calendar week of date buckets, with previous/next week controls, jump to today, quick-add scoped to a bucket, compact title-first task rows/cards, clear drag affordances, priority/context/reminder metadata only when it adds value, and an obvious drop target for cross-day movement. Dates with substantial lists must remain navigable without making the entire page unusable. No additional generic “Board” view is needed: the week planner already uses Kanban interaction.
 
-**Day:** selected date and one attention list composed of carried-over earlier outstanding tasks followed by tasks scheduled for the selected date, plus a compact completed section and an on-demand task inspector/editor. Carried-over rows are subtly but immediately distinguishable and show their originating date without changing it. A task's detail surface shows its own minimal fields, optional reference, completion, rescheduling and deletion controls; it does not display the owning project's workflow.
+**Day:** selected date and one attention list composed of the canonical outstanding Tasks scheduled for that date after daily rollover, plus a compact completed section and an on-demand task inspector/editor. A task's detail surface shows its own minimal fields, optional reference, completion, rescheduling and deletion controls; it does not display the owning project's workflow.
 
 **History:** simple dated access to completed items, not a productivity dashboard. Filter by context/project only if useful; metrics are secondary and not MVP acceptance requirements.
 
@@ -91,15 +105,15 @@ Merely viewing a carried-over Task on a later Day does not reschedule it. Its re
 
 **Actions:** desktop pointer drag-and-drop is the primary ordering mechanism. Provide keyboard-accessible alternatives (move before/after or move to date) and visible focus. Completion uses one explicit control. Delete is a destructive action available for outstanding and completed Tasks and always requires explicit confirmation before mutation. Small touch targets or hover-only essential actions are not acceptable even in the desktop-first MVP.
 
-**Visual hierarchy:** dates and work-item titles dominate; the current/selected date is clear; carried-over work has a subtle but scan-visible treatment with its originating date; priority is visually modest, with high priority exceptional rather than every Normal value becoming a strong badge; reminder *time* must be recognizable as an alert and not a time block.
+**Visual hierarchy:** dates and work-item titles dominate; the current/selected date is clear; priority is visually modest, with high priority exceptional rather than every Normal value becoming a strong badge; reminder *time* must be recognizable as an alert and not a time block.
 
-**Appearance:** System, Light and Dark are mandatory presentation modes. They use the same semantic hierarchy, component structure and interaction model; theme is local presentation preference rather than Task or Git-synchronized planning state. All focus, selection, priority, carry-over, completion, save and sync states remain distinguishable in both Light and Dark without relying on color alone.
+**Appearance:** System, Light and Dark are mandatory presentation modes. They use the same semantic hierarchy, component structure and interaction model; theme is local presentation preference rather than Task or Git-synchronized planning state. All focus, selection, priority, completion, save and sync states remain distinguishable in both Light and Dark without relying on color alone.
 
 ## 5. Mobile-first responsive design — later delivery
 
 Define narrow layout and input behavior now, without requiring an independently installable mobile app in desktop v1.
 
-- Day-oriented narrow layout: compact horizontal week strip + one day's attention list, including the same carry-over treatment and originating-date semantics as desktop, rather than seven unreadable columns.
+- Day-oriented narrow layout: compact horizontal week strip + one day's canonical attention list after rollover, rather than seven unreadable columns.
 - Touch-sized controls; drag-and-drop ordering can be implemented later, with move-to-date as a reliable non-drag fallback.
 - Task editor uses a bounded mobile sheet or full-screen treatment with explicit Save/Cancel and preserved edits when navigation changes.
 - The same work item does not become a separate mobile data or lifecycle shape.
@@ -121,13 +135,13 @@ The earlier mockups used the working name Day and were made to validate relation
 2. **New high priority:** add a High priority task to a day with an existing manually arranged list; the new task is inserted at a suitable high-priority position and all existing items retain their relative order.
 3. **Midday replanning:** drag an item from Thursday's third position to first, then drag another to Friday; the saved state survives reload and no other task moves unexpectedly.
 4. **Changing priority:** change an existing third-position task to High; its position does not change.
-5. **Interrupted work:** a Thursday task left unfinished remains identifiable on Friday, and can be rescheduled without losing its original identity or external link.
-6. **Completion history:** complete a task scheduled for Thursday on Friday; history shows the Friday completion timestamp while the original Thursday scheduling fact remains discernible.
-7. **Reminder:** while Jig is open and reminder time arrives, a toast appears. No success claim is made about notifications while Jig is closed.
+5. **Interrupted work:** a Thursday Task left unfinished is automatically rolled into Friday by changing its canonical scheduled date; the same Task identity, title, reminder and external reference are preserved.
+6. **Completion history:** complete a Task on Friday after rollover; History shows the canonical Friday scheduled date together with the actual completion timestamp. No separate pre-rollover schedule-history field is required in v1.
+7. **Reminder:** while Jig is open and visible, a due reminder produces one in-app toast. If Jig remains open but hidden and browser notification permission is granted, the same due reminder produces one browser Notification instead. No success claim is made while Jig/browser is closed.
 8. **Responsive continuity:** narrow and wide layouts represent the same selected task and values, without duplicate project detail or loss of edits.
-9. **Carry-forward:** leave a Thursday Task outstanding. On Friday, Saturday and later selected Days it remains visible with its original Thursday date and carry-over treatment until it is completed, explicitly rescheduled or deleted; simply viewing it never changes `scheduled date`.
+9. **Daily rollover:** leave a Thursday Task outstanding and advance the local day to Friday. Jig changes the Task's canonical `scheduled_date` to Friday, moves the same card into Friday's bucket, and removes it from Thursday. Day and Week show the same moved Task. If Jig is inactive across multiple days, the outstanding Task catches up directly to the current local date. Existing reminder time-of-day is preserved.
 10. **Deletion:** choose Delete on an outstanding or completed Task, cancel the confirmation once with no change, then confirm; the Task is removed from Jig and the next portable Git snapshot records its absence. No in-app trash or restore is offered.
-11. **Theme parity:** switch among System, Light and Dark. Layout, task meaning, carry-over, focus, selection, priority, save and synchronization states remain equivalent and readable; changing theme makes no Task mutation.
+11. **Theme parity:** switch among System, Light and Dark. Layout, task meaning, focus, selection, priority, save and synchronization states remain equivalent and readable; changing theme makes no Task mutation.
 
 ## 8. Installation, everyday operation and data lifecycle
 
@@ -141,7 +155,7 @@ The initial experience starts **before** the user sees the planner:
 6. The app keeps working offline. Repository synchronization failures never block Task use or roll back successful local saves. Jig exposes a generic durable **Sync issue — local data safe** outcome and does not inspect, classify or repair Git topology/history. Repository structure, credentials, signing policy and reconciliation remain Git responsibilities; when the selected repository again exposes valid Jig portable data and synchronization succeeds, normal operation resumes.
 7. Reboot/log-in and service restarts preserve task data and resume pending Git synchronization. Uninstallation removes application/service artifacts only; personal planning data remains in the configured repository unless explicitly and separately removed.
 
-The SQLite database **lives in the target repository's Jig area** but is not itself committed as a binary Git merge source. Textual task records are versioned in a dedicated Jig-managed Git branch/ref within the same selected repository. The product must disclose this layout; the normal document branch and user staging area remain untouched by Jig's Git automation. A Git remote is optional for local use but **required for remote synchronization**; Jig shows an unambiguous `local-only` state when none is configured.
+The SQLite database **lives in the target repository's Jig area** but is not itself committed as a binary Git merge source. Portable textual Task records are synchronized through the repository adapter using an adapter-private isolation mechanism; branch/ref/worktree details are not part of Jig's user workflow or configuration. Unrelated repository content and the user's normal staging area remain untouched. Repository transport is optional for local use; when no synchronization target is available Jig shows an unambiguous `local-only` state.
 
 A responsive visual structure and touch-accessible controls are required at initial desktop delivery, while an independently installed mobile runtime remains future work. The UI screenshots are governed by the [Jig UI solution design](../design/ui-solution.md); they are visual references, not separate domain authority.
 
