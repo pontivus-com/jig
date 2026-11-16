@@ -1,6 +1,5 @@
 import { resolve } from "node:path";
 import {
-  DATA_REF,
   openDatabase,
   PORTABLE_FORMAT_VERSION,
   SQLITE_SCHEMA_VERSION,
@@ -32,7 +31,6 @@ function createStatus(
   return {
     ready: true,
     repository_path: config.repository_path,
-    remote_configured: config.remote_name !== null,
     repository_status: repositoryStatus,
   };
 }
@@ -46,9 +44,7 @@ function createDiagnostics(
     sqlite_available: true,
     sqlite_schema_version: SQLITE_SCHEMA_VERSION,
     repository_path: config.repository_path,
-    data_ref: DATA_REF,
     portable_format_version: PORTABLE_FORMAT_VERSION,
-    remote_configured: config.remote_name !== null,
     repository_adapter_healthy: repositoryStatus !== "sync-issue",
   };
 }
