@@ -114,11 +114,13 @@ export function WeekView({
             <p className="jig-eyebrow">Week</p>
             <h1>Plan the week</h1>
           </div>
-          <Button
-            label="Add task"
-            variant="primary"
-            onClick={() => onAdd(selectedDate)}
-          />
+          <span className="jig-header-add">
+            <Button
+              label="Add task"
+              variant="primary"
+              onClick={() => onAdd(selectedDate)}
+            />
+          </span>
         </div>
         <DateStrip
           selectedDate={selectedDate}
@@ -132,6 +134,14 @@ export function WeekView({
           onToggleComplete={onToggleComplete}
           onMove={onMove}
         />
+        <div className="jig-mobile-quick-add">
+          <Button
+            label="+"
+            aria-label="Add task"
+            variant="primary"
+            onClick={() => onAdd(selectedDate)}
+          />
+        </div>
       </div>
     );
   }
@@ -159,11 +169,13 @@ export function WeekView({
           <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
           <Button label="Next" variant="ghost" size="sm" onClick={onNextWeek} />
           {statusControl}
-          <Button
-            label="Add task"
-            variant="primary"
-            onClick={() => onAdd(selectedDate)}
-          />
+          <span className="jig-header-add">
+            <Button
+              label="Add task"
+              variant="primary"
+              onClick={() => onAdd(selectedDate)}
+            />
+          </span>
         </div>
       </div>
 
