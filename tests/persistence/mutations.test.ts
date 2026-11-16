@@ -8,6 +8,7 @@ import {
   initializeDatabase,
   openDatabase,
   readCanonicalState,
+  rollForwardOutstandingInDatabase,
   StaleRevisionError,
 } from "../../src/shell/sqlite";
 
@@ -144,6 +145,83 @@ describe("transactional canonical persistence", () => {
     ).toThrow(/injected move failure/);
 
     expect(readCanonicalState(db)).toStrictEqual(before);
+  });
+
+  it("persists rollover atomically with one revision and pending sync", () => {
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Old one",
+        scheduled_date: "2026-11-14",
+        reminder_time: "10:00",
+      },
+      0,
+      TIMES[0],
+      () => IDS[0],
+    );
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Today one",
+        scheduled_date: "2026-11-16",
+      },
+      1,
+      TIMES[1],
+      () => IDS[1],
+    );
+
+    const result = rollForwardOutstandingInDatabase(
+      db,
+      "2026-11-16",
+      TIMES[2],
+    );
+
+    expect(result).toStrictEqual({
+      revision: 3,
+      moved_task_ids: [IDS[0]],
+    });
+    const state = readCanonicalState(db);
+    expect(
+      state.tasks
+        .filter((task) => task.scheduled_date === "2026-11-16")
+        .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
+        .map((task) => ({
+          title: task.title,
+          position: task.position,
+          reminder: task.reminder_time,
+        })),
+    ).toStrictEqual([
+      { title: "Old one", position: 0, reminder: "10:00" },
+      { title: "Today one", position: 1, reminder: null },
+    ]);
+  });
+
+  it("does not increment revision when rollover has nothing to move", () => {
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Today",
+        scheduled_date: "2026-11-16",
+      },
+      0,
+      TIMES[0],
+      () => IDS[0],
+    );
+
+    expect(
+      rollForwardOutstandingInDatabase(
+        db,
+        "2026-11-16",
+        TIMES[1],
+      ),
+    ).toStrictEqual({
+      revision: 1,
+      moved_task_ids: [],
+    });
+    expect(readCanonicalState(db).revision).toBe(1);
   });
 
   it("restarts from the exact committed canonical state", () => {
