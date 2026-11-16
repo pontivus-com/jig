@@ -17,7 +17,6 @@ import {
 export interface ServiceStatus {
   readonly ready: true;
   readonly repository_path: string;
-  readonly remote_configured: boolean;
   readonly repository_status: RepositoryStatus;
 }
 
@@ -26,9 +25,7 @@ export interface Diagnostics {
   readonly sqlite_available: boolean;
   readonly sqlite_schema_version: number;
   readonly repository_path: string;
-  readonly data_ref: string;
   readonly portable_format_version: number;
-  readonly remote_configured: boolean;
   readonly repository_adapter_healthy: boolean;
 }
 
