@@ -109,6 +109,24 @@ afterEach(async () => {
 });
 
 describe("serialized synchronization worker", () => {
+  it("does not claim synchronization merely because a remote target exists", async () => {
+    const { effects, pushCalls } = fakeEffects();
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    await controller.start();
+    expect(controller.status()).toBe("pending");
+    expect(pushCalls.count).toBe(0);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(pushCalls.count).toBe(1);
+    expect(controller.status()).toBe("synchronized");
+    controller.stop();
+  });
+
   it("debounces a mutation for 3 seconds without blocking the SQLite save", async () => {
     const { effects, commitCalls } = fakeEffects();
     const controller = createSyncController(
