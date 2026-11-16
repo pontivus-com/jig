@@ -93,6 +93,7 @@ export function TaskRow({
   return (
     <ListItem
       {...(rowRef === undefined ? {} : { ref: rowRef })}
+      className="jig-task-row"
       itemKey={task.id}
       isSelected={isSelected}
       align="first-line"
