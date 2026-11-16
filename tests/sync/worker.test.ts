@@ -52,6 +52,7 @@ function fakeEffects(options: {
   readonly head?: string | null;
   readonly snapshot?: PortableSnapshot;
   readonly pushResults?: readonly ("synchronized" | "sync-issue")[];
+  readonly remoteName?: string | null;
 } = {}): {
   readonly effects: SyncEffects;
   readonly commitCalls: { count: number };
@@ -82,6 +83,8 @@ function fakeEffects(options: {
       pushCalls.count += 1;
       return pushResults.shift() ?? "synchronized";
     },
+    discoverRemote: async () =>
+      options.remoteName === undefined ? "origin" : options.remoteName,
   };
 
   return { effects, commitCalls, pushCalls };
@@ -105,7 +108,7 @@ describe("serialized synchronization worker", () => {
     const { effects, commitCalls } = fakeEffects();
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: "origin" },
+      { repository_path: root },
       effects,
     );
     await controller.start();
@@ -138,7 +141,7 @@ describe("serialized synchronization worker", () => {
     const { effects, commitCalls } = fakeEffects();
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: "origin" },
+      { repository_path: root },
       effects,
     );
     await controller.start();
@@ -179,7 +182,7 @@ describe("serialized synchronization worker", () => {
     });
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: "origin" },
+      { repository_path: root },
       effects,
     );
 
@@ -224,10 +227,11 @@ describe("serialized synchronization worker", () => {
     const { effects, commitCalls } = fakeEffects({
       head: "a".repeat(40),
       snapshot,
+      remoteName: null,
     });
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: null },
+      { repository_path: root },
       effects,
     );
 
@@ -252,7 +256,7 @@ describe("serialized synchronization worker", () => {
     });
     const controller = createSyncController(
       db,
-      { repository_path: root, remote_name: "origin" },
+      { repository_path: root },
       effects,
     );
 
