@@ -18,6 +18,7 @@ import {
   type JigConfig,
 } from "./config";
 import { acquireWriterLease } from "./writer";
+import { migrateRepository } from "./migration";
 
 function writeToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -95,14 +96,28 @@ export async function main(): Promise<void> {
         );
       }
     },
-    migrate_repository: async () => {
+    migrate_repository: async (repositoryPath) => {
       migrationInProgress = true;
+      let committed = false;
       try {
-        throw new RuntimeConfigurationError(
-          "Repository migration requires the installed lifecycle command",
-        );
+        await migrateRepository({
+          source_db: db,
+          source_config: config,
+          destination_path: repositoryPath,
+          flush_source: sync.trigger,
+        });
+        committed = true;
+
+        // The active process still owns the old SQLite root. Restart only
+        // after the successful HTTP response can be returned so startup
+        // rebinds the one writer to the atomically switched configuration.
+        setTimeout(() => {
+          void shutdown().finally(() => process.exit(75));
+        }, 250);
       } finally {
-        migrationInProgress = false;
+        if (!committed) {
+          migrationInProgress = false;
+        }
       }
     },
     on_task_mutation: sync.notifyMutation,
