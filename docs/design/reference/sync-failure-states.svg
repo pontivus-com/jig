@@ -39,9 +39,9 @@
 <rect x="240" y="468" width="1170" height="92" rx="9" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
 <rect x="260" y="488" width="230" height="32" rx="16" fill="#fff0ef" stroke="none" stroke-width="1"/>
 <circle cx="278" cy="504" r="5" fill="#a33a34" stroke="none" stroke-width="1"/>
-<text x="292" y="509" class="s" fill="#a33a34" font-weight="700">Sync blocked</text>
-<text x="520" y="507" class="s" fill="#152238">Divergence, credentials or invalid imported data requires explicit recovery.</text>
-<text x="520" y="529" class="xs" fill="#657187">The planner remains truthful about what is safe locally and what has reached Git remote.</text>
+<text x="292" y="509" class="s" fill="#a33a34" font-weight="700">Sync issue</text>
+<text x="520" y="507" class="s" fill="#152238">Repository synchronization cannot complete; local planning data remains safe.</text>
+<text x="520" y="529" class="xs" fill="#657187">Jig does not classify or repair Git history; resolve repository state with Git tooling.</text>
 <text x="240" y="602" class="h2">Local save failure</text>
 <rect x="240" y="626" width="900" height="94" rx="8" fill="#ffffff" stroke="#a33a34" stroke-width="2"/>
 <rect x="254" y="642" width="16" height="16" rx="4" fill="#ffffff" stroke="#8390a1" stroke-width="1"/>
@@ -53,8 +53,8 @@
 <text x="1192" y="677" class="s" fill="#a33a34">Do not hide this state</text>
 <text x="1192" y="698" class="s" fill="#a33a34">behind a transient toast.</text>
 <rect x="240" y="752" width="1170" height="84" rx="8" fill="#fff8f7" stroke="#a33a34" stroke-width="1"/>
-<text x="262" y="782" class="b" fill="#a33a34" font-weight="700">Sync blocked</text>
-<text x="262" y="805" class="s" fill="#152238">Preserve local work and remote history; provide a durable explanation and a supported recovery action.</text>
+<text x="262" y="782" class="b" fill="#a33a34" font-weight="700">Sync issue</text>
+<text x="262" y="805" class="s" fill="#152238">Local work stays available. Repository reconciliation happens outside Jig; synchronization resumes when the boundary is healthy.</text>
 <rect x="1200" y="771" width="182" height="38" rx="7" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<text x="1232" y="796" class="b" fill="#152238">Open diagnostics</text>
+<text x="1230" y="796" class="b" fill="#152238">Copy diagnostics</text>
 </svg>
