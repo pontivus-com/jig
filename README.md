@@ -14,8 +14,9 @@ Jig is a standalone, local-first desktop planner with a dated weekly Kanban boar
 - [Complete technical solution](docs/architecture/technical-solution.md)
 - [UI solution and visual mockups](docs/design/ui-solution.md)
 - [v1 MVP implementation plan](docs/implementation/v1-mvp-implementation-plan.md)
+- [v1 release-candidate evidence](docs/evidence/v1/README.md)
 
-**Status:** Proposed design baseline. The application, installer and service have not been implemented or runtime-certified.
+**Status:** v1 MVP release candidate. The application, installer, user service, browser interactions, repository boundary, security controls and resource/readiness limits have been implemented and certified against the v1 plan.
 
 ## License
 
