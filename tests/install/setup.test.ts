@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   initializeRepositoryInstallation,
-  InstallationError,
   validateSelectedRepository,
 } from "../../src/shell/setup";
 import { runGit } from "../../src/shell/git";
