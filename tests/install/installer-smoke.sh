@@ -27,6 +27,11 @@ git -C "$DATA_REPO" config user.email "jig-installer@local.invalid"
 printf 'preserve me\n' > "$DATA_REPO/user.txt"
 git -C "$DATA_REPO" add user.txt
 git -C "$DATA_REPO" commit -m "User data" >/dev/null
+printf 'staged user change\n' > "$DATA_REPO/user.txt"
+git -C "$DATA_REPO" add user.txt
+printf 'working user change\n' > "$DATA_REPO/user.txt"
+printf 'untracked user file\n' > "$DATA_REPO/untracked.txt"
+BEFORE_USER_STATUS="$(git -C "$DATA_REPO" status --porcelain=v1)"
 git -C "$DATA_REPO" config commit.gpgSign true
 git -C "$DATA_REPO" config gpg.format ssh
 git -C "$DATA_REPO" config user.signingkey missing-jig-installer-key
@@ -37,8 +42,9 @@ bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/nu
 [[ -x "$HOME/.local/share/jig/runtime/bun" ]]
 [[ -f "$HOME/.config/jig/config.json" ]]
 [[ -f "$DATA_REPO/.jig/local/jig.sqlite" ]]
-[[ "$(cat "$DATA_REPO/user.txt")" == "preserve me" ]]
-[[ -z "$(git -C "$DATA_REPO" status --porcelain=v1)" ]]
+[[ "$(cat "$DATA_REPO/user.txt")" == "working user change" ]]
+[[ "$(cat "$DATA_REPO/untracked.txt")" == "untracked user file" ]]
+[[ "$(git -C "$DATA_REPO" status --porcelain=v1)" == "$BEFORE_USER_STATUS" ]]
 [[ "$(git -C "$DATA_REPO" config --get commit.gpgSign)" == "true" ]]
 [[ "$(git -C "$DATA_REPO" config --get gpg.format)" == "ssh" ]]
 [[ "$(git -C "$DATA_REPO" config --get user.signingkey)" == "missing-jig-installer-key" ]]
@@ -91,32 +97,57 @@ bash "$SOURCE_ROOT/scripts/install.sh" --repo "$LEGACY_REPO" --port 47935 >/dev/
 [[ -f "$LEGACY_REPO/.jig/local/jig.sqlite" ]]
 [[ "$(cat "$LEGACY_REPO/legacy.txt")" == "legacy" ]]
 
-# Clone mode refuses to overwrite and successfully configures a new checkout.
-SEED="$TMP_ROOT/seed"
+# Clone mode adopts existing Jig data and refuses to overwrite a non-empty target.
 REMOTE="$TMP_ROOT/remote.git"
 CLONE="$TMP_ROOT/cloned-data"
-mkdir -p "$SEED"
-git -C "$SEED" init >/dev/null
-git -C "$SEED" config user.name "Jig Installer Test"
-git -C "$SEED" config user.email "jig-installer@local.invalid"
-printf 'remote seed\n' > "$SEED/seed.txt"
-git -C "$SEED" add seed.txt
-git -C "$SEED" commit -m "Seed" >/dev/null
 git init --bare "$REMOTE" >/dev/null
-git -C "$SEED" remote add origin "$REMOTE"
-git -C "$SEED" push origin HEAD:master >/dev/null
+git -C "$DATA_REPO" remote add installer-smoke "$REMOTE"
+git -C "$DATA_REPO" push installer-smoke HEAD:master >/dev/null
+git -C "$DATA_REPO" push installer-smoke refs/heads/jig-data:refs/heads/jig-data >/dev/null
 git --git-dir="$REMOTE" symbolic-ref HEAD refs/heads/master
 
-bash "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$CLONE"   --port 47932   >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" \
+  --repo-url "$REMOTE" \
+  --checkout "$CLONE" \
+  --port 47932 \
+  >/dev/null
 
-[[ -f "$CLONE/seed.txt" ]]
+[[ -f "$CLONE/user.txt" ]]
 [[ -f "$CLONE/.jig/local/jig.sqlite" ]]
+CLONE_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e "const db=new (await import('bun:sqlite')).Database('$CLONE/.jig/local/jig.sqlite'); console.log(db.query('select dataset_id from app_metadata where singleton=1').get().dataset_id); db.close();")"
+[[ "$CLONE_DATASET" == "$FIRST_DATASET" ]]
 
 printf 'do not overwrite\n' > "$TMP_ROOT/nonempty"
 if bash "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$TMP_ROOT"   --port 47933   >/dev/null 2>&1; then
   printf 'installer unexpectedly accepted a non-empty checkout destination\n' >&2
   exit 1
 fi
+
+# Unknown malformed Jig data must fail without rewriting the repository state.
+MALFORMED_REPO="$TMP_ROOT/malformed"
+mkdir -p "$MALFORMED_REPO"
+git -C "$MALFORMED_REPO" init >/dev/null
+git -C "$MALFORMED_REPO" config user.name "Jig Installer Test"
+git -C "$MALFORMED_REPO" config user.email "jig-installer@local.invalid"
+printf 'malformed baseline\n' > "$MALFORMED_REPO/user.txt"
+git -C "$MALFORMED_REPO" add user.txt
+git -C "$MALFORMED_REPO" commit -m "Malformed baseline" >/dev/null
+BAD_TREE="$(git -C "$MALFORMED_REPO" mktree </dev/null)"
+BAD_HEAD="$(
+  GIT_AUTHOR_NAME=Someone \
+  GIT_AUTHOR_EMAIL=someone@example.invalid \
+  GIT_COMMITTER_NAME=Someone \
+  GIT_COMMITTER_EMAIL=someone@example.invalid \
+  git -C "$MALFORMED_REPO" commit-tree "$BAD_TREE" -m "Not Jig data"
+)"
+git -C "$MALFORMED_REPO" update-ref refs/heads/jig-data "$BAD_HEAD"
+
+if bash "$SOURCE_ROOT/scripts/install.sh" --repo "$MALFORMED_REPO" --port 47936 >/dev/null 2>&1; then
+  printf 'installer unexpectedly accepted malformed Jig portable data\n' >&2
+  exit 1
+fi
+[[ "$(git -C "$MALFORMED_REPO" rev-parse refs/heads/jig-data)" == "$BAD_HEAD" ]]
+[[ "$(cat "$MALFORMED_REPO/user.txt")" == "malformed baseline" ]]
 
 "$HOME/.local/bin/jig" uninstall >/dev/null
 [[ ! -e "$HOME/.local/share/jig" ]]
