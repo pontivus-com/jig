@@ -138,6 +138,9 @@ try {
       copyInto(source, jigRoot);
     }
 
+    chmodSync(join(jigRoot, "scripts/install.sh"), 0o755);
+    chmodSync(join(jigRoot, "scripts/jig"), 0o755);
+
     const bunZip = join(staging, arch.bunArchive);
     const bunUrl =
       `https://github.com/oven-sh/bun/releases/download/bun-v${bunVersion}/${arch.bunArchive}`;

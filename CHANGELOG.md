@@ -4,6 +4,10 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Fixed
+
+- Preserved executable modes for release-bundle installer/launcher entrypoints and added safe pending-release retry behavior after pre-tag release-infrastructure failures.
+
 ## [1.0.0] - 2026-11-16
 
 ### Added
