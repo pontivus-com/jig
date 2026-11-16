@@ -341,12 +341,7 @@ body {
   }
 
   .jig-task-card-sortable {
-    cursor: grab;
     touch-action: manipulation;
-  }
-
-  .jig-task-card-sortable:active {
-    cursor: grabbing;
   }
 
   .jig-task-card-selected {
@@ -360,10 +355,26 @@ body {
 
   .jig-task-card-row {
     display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: start;
     gap: var(--spacing-1);
     min-width: 0;
+  }
+
+  .jig-task-drag-surface {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: var(--spacing-1);
+    min-width: 0;
+  }
+
+  .jig-task-drag-surface-sortable {
+    cursor: grab;
+  }
+
+  .jig-task-drag-surface-sortable:active {
+    cursor: grabbing;
   }
 
   .jig-task-card-content {
