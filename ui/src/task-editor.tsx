@@ -170,7 +170,7 @@ export function TaskEditor({
                 ? "Start with a title. Everything else is optional."
                 : "Update only what changed."
             }
-            onOpenChange={isSaving ? undefined : onOpenChange}
+            {...(isSaving ? {} : { onOpenChange })}
           />
 
           <form
@@ -355,7 +355,7 @@ export function MoveTaskDialog({
         <DialogHeader
           title="Move task to date"
           subtitle={task.title}
-          onOpenChange={isSaving ? undefined : onOpenChange}
+          {...(isSaving ? {} : { onOpenChange })}
         />
         {error === null ? null : (
           <div className="jig-form-error" role="alert">
