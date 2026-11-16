@@ -92,7 +92,7 @@ export function TaskRow({
 
   return (
     <ListItem
-      ref={rowRef}
+      {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
       isSelected={isSelected}
       align="first-line"
@@ -110,7 +110,12 @@ export function TaskRow({
           {task.title}
         </span>
       }
-      description={<TaskDescription task={task} carriedOverFrom={carriedOverFrom} />}
+      description={
+        <TaskDescription
+          task={task}
+          {...(carriedOverFrom === undefined ? {} : { carriedOverFrom })}
+        />
+      }
       endContent={
         <div className="jig-task-actions">
           {completed || dragHandleRef === undefined ? null : (
