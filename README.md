@@ -126,6 +126,7 @@ immutable tag and Linux x64/arm64 assets.
 - [Documentation index and ownership](docs/README.md)
 - [Product definition](docs/product/product-definition.md)
 - [Product identity](docs/product/product-identity.md)
+- [Brand and theme system](docs/design/brand-and-theme.md)
 - [Functional requirements — JIG-FR-01–22](docs/requirements/planning-workbench.md)
 - [Technical solution](docs/architecture/technical-solution.md)
 - [UI solution and visual references](docs/design/ui-solution.md)
