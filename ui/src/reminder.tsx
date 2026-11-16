@@ -2,6 +2,7 @@ import { Button } from "@astryxdesign/core";
 import { useToast } from "@astryxdesign/core/Toast";
 import { useEffect, useRef } from "react";
 import type { Task } from "../../src/core/task";
+import { browserNotificationState } from "./browser-notifications";
 import { todayCivilDate } from "./dates";
 
 const REMINDER_INTERVAL_MS = 30_000;
@@ -80,10 +81,6 @@ export function ReminderMonitor({
     pruneOldReminderKeys(todayCivilDate());
 
     const check = (): void => {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-
       const now = new Date();
       const today = todayCivilDate(now);
       for (const task of tasks) {
@@ -107,23 +104,40 @@ export function ReminderMonitor({
           continue;
         }
 
-        markDelivered(key);
-        showToast({
-          body: `Reminder: ${task.title}`,
-          uniqueID: key,
-          collisionBehavior: "ignore",
-          renderContent: ({ body, dismiss }) => (
-            <div className="jig-reminder-toast-content">
-              <span>{body}</span>
-              <Button
-                label="Dismiss"
-                variant="ghost"
-                size="sm"
-                onClick={dismiss}
-              />
-            </div>
-          ),
-        });
+        if (document.visibilityState === "visible") {
+          showToast({
+            body: `Reminder: ${task.title}`,
+            uniqueID: key,
+            collisionBehavior: "ignore",
+            renderContent: ({ body, dismiss }) => (
+              <div className="jig-reminder-toast-content">
+                <span>{body}</span>
+                <Button
+                  label="Dismiss"
+                  variant="ghost"
+                  size="sm"
+                  onClick={dismiss}
+                />
+              </div>
+            ),
+          });
+          markDelivered(key);
+          continue;
+        }
+
+        if (browserNotificationState() !== "granted") {
+          continue;
+        }
+
+        try {
+          new Notification("Jig reminder", {
+            body: task.title,
+            tag: key,
+          });
+          markDelivered(key);
+        } catch {
+          // Leave the key undelivered so a visible/focus catch-up can toast it.
+        }
       }
     };
 
