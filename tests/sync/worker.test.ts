@@ -64,12 +64,15 @@ function fakeEffects(options: {
 
   const effects: SyncEffects = {
     ensureWorktree: async () => undefined,
-    readHead: async () => options.head ?? null,
-    readSnapshot: async () => {
+    readCurrentSnapshot: async () => {
+      const head = options.head ?? null;
+      if (head === null) {
+        return null;
+      }
       if (options.snapshot === undefined) {
         throw new Error("No candidate snapshot");
       }
-      return options.snapshot;
+      return { head, snapshot: options.snapshot };
     },
     commit: async (
       _config: GitAdapterConfig,
@@ -83,8 +86,10 @@ function fakeEffects(options: {
       pushCalls.count += 1;
       return pushResults.shift() ?? "synchronized";
     },
-    discoverRemote: async () =>
-      options.remoteName === undefined ? "origin" : options.remoteName,
+    availability: async () =>
+      (options.remoteName === undefined ? "origin" : options.remoteName) === null
+        ? "local-only"
+        : "synchronized",
   };
 
   return { effects, commitCalls, pushCalls };
