@@ -371,7 +371,15 @@ export async function inspectPortableCandidate(
 ): Promise<PortableSnapshotCandidate | null> {
   assertAdapterPaths(config);
 
-  const local = await readCurrentPortableSnapshot(config);
+  let local: PortableSnapshotCandidate | null;
+  try {
+    local = await readCurrentPortableSnapshot(config);
+  } catch (error) {
+    if ((await isLegacyEmptyBootstrap(config.repository_path)) === null) {
+      throw error;
+    }
+    local = null;
+  }
   if (local !== null) {
     return local;
   }
@@ -571,7 +579,7 @@ async function isLegacyEmptyBootstrap(
     : null;
 }
 
-export async function ensureJigDataWorktree(
+async function ensureJigDataWorktree(
   config: GitAdapterConfig,
   expectedDatasetId?: string,
 ): Promise<void> {
@@ -696,7 +704,7 @@ export async function writeSnapshotToWorktree(
   }
 }
 
-export async function commitSnapshot(
+async function commitSnapshot(
   config: GitAdapterConfig,
   snapshot: PortableSnapshot,
   revision: number,
@@ -786,7 +794,7 @@ export async function readSnapshotAtRef(
   return validateSnapshot(files, expectedDatasetId);
 }
 
-export async function pushJigDataRef(
+async function pushJigDataRef(
   config: GitAdapterConfig,
 ): Promise<RepositoryStatus> {
   assertAdapterPaths(config);
@@ -804,6 +812,28 @@ export async function pushJigDataRef(
   ]);
 
   return result.exit_code === 0 ? "synchronized" : "sync-issue";
+}
+
+export async function ensurePortableData(
+  config: GitAdapterConfig,
+  datasetId: string,
+): Promise<void> {
+  await ensureJigDataWorktree(config, datasetId);
+}
+
+export async function writePortableSnapshot(
+  config: GitAdapterConfig,
+  snapshot: PortableSnapshot,
+  revision: number,
+): Promise<string> {
+  await ensureJigDataWorktree(config, snapshot.dataset_id);
+  return commitSnapshot(config, snapshot, revision);
+}
+
+export async function synchronizePortableData(
+  config: GitAdapterConfig,
+): Promise<RepositoryStatus> {
+  return pushJigDataRef(config);
 }
 
 export function retryDelayMs(failureCount: number): number {
