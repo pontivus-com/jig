@@ -5,6 +5,8 @@ on:
     branches: [master]
     paths:
       - package.json
+      - .github/workflows/release.yml
+      - scripts/package-release.ts
   workflow_dispatch:
     inputs:
       commit:
@@ -44,42 +46,85 @@ jobs:
           test "$(git rev-parse HEAD)" = "${target_sha}"
           git merge-base --is-ancestor "${target_sha}" refs/remotes/origin/master
 
-      - name: Detect actual release version change
+      - name: Detect release target
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-          target_sha="$(git rev-parse HEAD)"
-          parent_sha="$(git rev-parse HEAD^)"
+          trigger_sha="$(git rev-parse HEAD)"
+          trigger_parent="$(git rev-parse HEAD^)"
           current="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
 
+          target_sha=""
+          parent_sha=""
+
+          if git cat-file -e "${trigger_parent}:package.json" 2>/dev/null; then
+            previous="$(git show "${trigger_parent}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+          else
+            previous=""
+          fi
+
+          if [[ "${current}" != "${previous}" ]]; then
+            target_sha="${trigger_sha}"
+            parent_sha="${trigger_parent}"
+            echo "Release candidate detected: ${previous:-<none>} -> ${current}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "::error::Target commit is not a release commit: package version did not change."
+            exit 1
+          else
+            tag="v${current}"
+            if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+              echo "should_release=false" >> "${GITHUB_OUTPUT}"
+              echo "Release ${tag} is already tagged; no publication retry is needed."
+              exit 0
+            fi
+
+            while IFS= read -r candidate; do
+              if ! git cat-file -e "${candidate}:package.json" 2>/dev/null; then
+                continue
+              fi
+
+              candidate_version="$(git show "${candidate}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+              if [[ "${candidate_version}" != "${current}" ]]; then
+                break
+              fi
+
+              candidate_parent="$(git rev-parse "${candidate}^" 2>/dev/null || true)"
+              [[ -n "${candidate_parent}" ]] || continue
+              if ! git cat-file -e "${candidate_parent}:package.json" 2>/dev/null; then
+                continue
+              fi
+
+              candidate_previous="$(git show "${candidate_parent}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+              if [[ "${candidate_version}" != "${candidate_previous}" ]]; then
+                target_sha="${candidate}"
+                parent_sha="${candidate_parent}"
+                break
+              fi
+            done < <(git rev-list --first-parent HEAD)
+
+            if [[ -z "${target_sha}" || -z "${parent_sha}" ]]; then
+              echo "should_release=false" >> "${GITHUB_OUTPUT}"
+              echo "No pending release transition found."
+              exit 0
+            fi
+
+            echo "Pending release retry detected for v${current} at ${target_sha}."
+          fi
+
+          echo "should_release=true" >> "${GITHUB_OUTPUT}"
           echo "target_sha=${target_sha}" >> "${GITHUB_OUTPUT}"
           echo "parent_sha=${parent_sha}" >> "${GITHUB_OUTPUT}"
           echo "version=${current}" >> "${GITHUB_OUTPUT}"
 
-          if ! git cat-file -e "${parent_sha}:package.json" 2>/dev/null; then
-            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-              echo "::error::Target commit is not a release commit: its parent has no package.json."
-              exit 1
-            fi
-            echo "should_release=false" >> "${GITHUB_OUTPUT}"
-            echo "Initial implementation merge detected; no release publication requested."
-            exit 0
-          fi
-
-          previous="$(git show "${parent_sha}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
-          if [[ "${current}" == "${previous}" ]]; then
-            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-              echo "::error::Target commit is not a release commit: package version did not change."
-              exit 1
-            fi
-            echo "should_release=false" >> "${GITHUB_OUTPUT}"
-            echo "package.json changed without a version change; no release publication requested."
-            exit 0
-          fi
-
-          echo "should_release=true" >> "${GITHUB_OUTPUT}"
-          echo "Release candidate detected: ${previous} -> ${current}"
+      - name: Checkout prepared release target
+        if: steps.detect.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "${{ steps.detect.outputs.target_sha }}"
+          test "$(git rev-parse HEAD)" = "${{ steps.detect.outputs.target_sha }}"
+          git merge-base --is-ancestor "${{ steps.detect.outputs.target_sha }}" refs/remotes/origin/master
 
       - name: Install pinned Bun
         if: steps.detect.outputs.should_release == 'true'
@@ -209,6 +254,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Release candidates created through the contents API may not carry
+          # executable Git mode bits. Normalize the runtime entrypoints before
+          # packaging; package-release.ts also owns this permanently for future
+          # release commits.
+          chmod +x scripts/install.sh scripts/jig scripts/install-release.sh
           bun scripts/package-release.ts
           (cd release && sha256sum -c SHA256SUMS)
           test -s release/release-notes.md
