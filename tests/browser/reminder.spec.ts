@@ -92,8 +92,8 @@ test("hidden open page uses browser Notification when permission is granted", as
       constructor(title: string, options?: NotificationOptions) {
         calls.push({
           title,
-          body: options?.body,
-          tag: options?.tag,
+          ...(options?.body === undefined ? {} : { body: options.body }),
+          ...(options?.tag === undefined ? {} : { tag: options.tag }),
         });
       }
     }
