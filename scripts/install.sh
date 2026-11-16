@@ -172,6 +172,7 @@ else
   cp "$SOURCE_ROOT/index.html" "$BUILD_APP/"
   cp -R "$SOURCE_ROOT/src" "$BUILD_APP/"
   cp -R "$SOURCE_ROOT/ui" "$BUILD_APP/"
+  cp -R "$SOURCE_ROOT/assets" "$BUILD_APP/"
 
   printf 'Installing frozen dependencies and building Jig assets\n'
   (
