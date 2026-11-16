@@ -101,7 +101,7 @@ test("responsive reflow preserves an open editor draft and appearance remains pr
 test("System, Light and Dark use the canonical Jig theme and remain presentation-only", async ({
   page,
 }) => {
-  await expect(page.locator(".jig-brand-mark")).toBeVisible();
+  await expect(page.locator(".jig-brand-logo:visible")).toHaveCount(1);
   await expect
     .poll(() =>
       page.evaluate(() =>
