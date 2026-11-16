@@ -40,6 +40,7 @@ export interface HttpDependencies {
   readonly get_diagnostics: () => Diagnostics;
   readonly trigger_sync: () => Promise<RepositoryStatus>;
   readonly on_task_mutation: () => void;
+  readonly ensure_current_day_rollover: () => void | Promise<void>;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -385,6 +386,7 @@ export function createHttpHandler(
     const { pathname } = url;
 
     if (request.method === "GET" && pathname === "/api/v1/tasks") {
+      await dependencies.ensure_current_day_rollover();
       return json(readCanonicalState(dependencies.db));
     }
     if (request.method === "GET" && pathname === "/api/v1/status") {
@@ -433,6 +435,7 @@ export function createHttpHandler(
             );
           }
 
+          await dependencies.ensure_current_day_rollover();
           const result = applyTaskCommand(
             dependencies.db,
             parseCommand(body.command),
