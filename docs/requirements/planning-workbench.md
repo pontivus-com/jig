@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Candidate v0.1, prepared 2026-11-16; UX mockups accepted as a functional starting point, not a signed visual specification.  
+**Status:** Candidate v0.2, updated 2026-11-16 with full installation, configured-repository, background-sync and usage lifecycle. Visual mockups are an accepted starting point, not a signed component/theme specification.  
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -47,7 +47,13 @@ Jig supports evening planning of the next day, morning planning, and unrestricte
 | JIG-FR-11 | Access original context | Open/copy a provided reference without duplicating project execution or source content into Jig. |
 | JIG-FR-12 | Report honest outcomes | On persistence failure, the UI does not claim that the change was saved; the operator can understand and recover from the failure. |
 | JIG-FR-13 | Preserve common meaning across devices | Desktop and eventual mobile use the same tasks, dates, priority semantics, completion meaning and actions. Responsive change alone must not mutate or discard work. |
-| JIG-FR-14 | Retain local data | App restart retains tasks, their date/order, reminders and completion history; backup/sync requirements are detailed at technical design time. |
+| JIG-FR-14 | Retain local data | App restart retains tasks, their date/order, reminders and completion history within the selected personal Git repository. |
+| JIG-FR-15 | Single-command installation and configuration | A single installer configures runtime/build, an existing Git target repository, Jig's data directories, `jig` launcher, and Linux user service, with explicit failure if prerequisites are unmet. |
+| JIG-FR-16 | Repository-contained planning data | The selected repository, not the public Jig source repository, contains Jig's operational SQLite database and the Git-versioned portable task data; the configured target is inspectable and changeable through deliberate migration. |
+| JIG-FR-17 | Convenient desktop availability | After installation, `jig` opens the locally running UI or starts its service; an enabled Linux user service keeps Jig available without a foreground terminal. |
+| JIG-FR-18 | Automatic save and Git synchronization | Each successful task edit is durable locally without a Save-to-Git action; Jig automatically serializes, commits and synchronizes its own portable data when a remote is configured, with bounded batching and retry. |
+| JIG-FR-19 | Safe cohabitation and sync honesty | Jig must not stage, commit or rewrite unrelated repository content; absent remote, failed transport, divergence, or blocked sync remains visible and never loses locally committed work. |
+| JIG-FR-20 | Low-friction idle operation | The desktop service starts predictably, stays lightweight and idle-efficient, and offers quick day/week access throughout the working day without requiring repeated initialization. |
 
 ### Initial placement rule
 
@@ -103,6 +109,31 @@ The earlier mockups used the working name Day and were made to validate relation
 6. **Completion history:** complete a task scheduled for Thursday on Friday; history shows the Friday completion timestamp while the original Thursday scheduling fact remains discernible.
 7. **Reminder:** while Jig is open and reminder time arrives, a toast appears. No success claim is made about notifications while Jig is closed.
 8. **Responsive continuity:** narrow and wide layouts represent the same selected task and values, without duplicate project detail or loss of edits.
+
+## 7. Installation, everyday operation and data lifecycle
+
+The initial experience starts **before** the user sees the planner:
+
+1. User runs one installer script from the Jig application distribution. It checks Linux prerequisites, installs the pinned application/runtime in the user's application directory, and asks for or accepts the absolute path to an existing personal/organization Git repository.
+2. The installer verifies that the target is a Git worktree, that its Jig subdirectory can be used safely, and whether a remote exists. It configures a repository-contained Jig data area, durable SQLite state, and a dedicated internal Git worktree/branch to keep Jig's commits separate from unrelated project/documentation edits. It refuses unsafe target selection rather than adopting the public Jig source repo.
+3. The installer creates a `jig` launcher and installs/enables a Linux **user** service. It reports the exact repository path, local UI address, data location, and sync state. No elevated/root install is required for the ordinary path.
+4. The user runs `jig` or visits the local UI. The service may already be running. It opens today's/day or week plan without an installer or terminal wizard on every visit.
+5. Create/edit/reorder/complete operations save to local SQLite at commit time. On successful save, the interface reflects the saved task. In the background, the service batches changes into deterministic Git records and automatically commits, fetches and pushes when a configured Git remote is reachable.
+6. The app keeps working offline. Normal Git transport errors retry without blocking task use. If the remote has diverged and cannot be safely reconciled, Jig retains local work and presents an explicit, durable sync-blocked state rather than overwriting either copy.
+7. Reboot/log-in and service restarts preserve task data and resume pending Git synchronization. Uninstallation removes application/service artifacts only; personal planning data remains in the configured repository unless explicitly and separately removed.
+
+The SQLite database **lives in the target repository's Jig area** but is not itself committed as a binary Git merge source. Textual task records are versioned in a dedicated Jig-managed Git branch/ref within the same selected repository. The product must disclose this layout; the normal document branch and user staging area remain untouched by Jig's Git automation. A Git remote is optional for local use but **required for remote synchronization**; Jig shows an unambiguous `local-only` state when none is configured.
+
+A responsive visual structure and touch-accessible controls are required at initial desktop delivery, while an independently installed mobile runtime remains future work. The UI screenshots are governed by the [Jig UI solution design](../design/ui-solution.md); they are visual references, not separate domain authority.
+
+### Everyday acceptance scenarios
+
+9. **Fresh installation:** Install Jig once, select an existing personal Git repository, start the user service, run `jig`, and create a task; the database and portable record are under the selected repository, not the public source checkout.
+10. **No manual Git routine:** Reorder two tasks and close the browser; the background service saves/commits automatically, retries an unavailable remote, and synchronizes when transport returns, without losing the task order.
+11. **Repository coexistence:** Place unrelated staged and unstaged documents in the selected repository. Jig synchronization must not stage, commit, rewrite or push those changes as part of Jig's own branch/ref.
+12. **Restart:** Restart the Linux user service or log out and back in. The current plan is immediately usable and unsynchronized changes resume transfer; a missing remote is displayed as local-only.
+13. **Divergence:** Make independent edits from two replicas. The system must preserve both copies and surface a blocked conflict state rather than silently pick one or discard a task.
+14. **Idle lifecycle:** Leave the service running without the browser for a working day. It remains responsive when reopened and does not continuously poll at an unnecessarily expensive cadence.
 
 ## 8. Non-decisions
 
