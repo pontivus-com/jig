@@ -471,6 +471,10 @@ body {
     font-weight: 500;
   }
 
+  .jig-mobile-quick-add {
+    display: none;
+  }
+
   .jig-week-strip {
     display: grid;
     grid-template-columns: repeat(7, minmax(4rem, 1fr));
@@ -746,6 +750,27 @@ body {
 
     .jig-content {
       padding: var(--spacing-3);
+      padding-block-end: calc(var(--spacing-6) + 3.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .jig-header-add {
+      display: none;
+    }
+
+    .jig-mobile-quick-add {
+      position: fixed;
+      z-index: 40;
+      inset-inline-end: max(var(--spacing-4), env(safe-area-inset-right, 0px));
+      inset-block-end: max(var(--spacing-4), env(safe-area-inset-bottom, 0px));
+      display: block;
+    }
+
+    .jig-mobile-quick-add button {
+      min-width: 3rem;
+      min-height: 3rem;
+      border-radius: 999px;
+      font-size: 1.35rem;
+      line-height: 1;
     }
 
     .jig-brand-logo-wrap {
