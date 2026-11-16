@@ -4,9 +4,11 @@ The canonical visual specification is [`docs/design/brand-and-theme.md`](../docs
 
 ## Geometry authority
 
-All mark variants use the same 64×64 J-guide geometry and alignment-pin position. All horizontal lockups use the same outlined wordmark geometry. Released SVGs contain no live font dependency.
+All icon variants use the same 64×64 J-guide geometry and alignment-pin position.
 
-Do not redraw either geometry from memory.
+Every horizontal wordmark uses that J as the **first letter of Jig** and adds only the outlined **ig** suffix. A J icon beside a second full “Jig” word is invalid.
+
+Released SVGs contain no live font dependency. Do not redraw the J or the ig suffix from memory.
 
 ## Asset matrix
 
@@ -19,28 +21,29 @@ Do not redraw either geometry from memory.
 | `jig-symbol-mono-light.svg` | 64×64 | one-color light symbol |
 | `jig-app-icon.svg` | 512×512, 64×64 viewBox | app/product icon master |
 | `jig-favicon.svg` | 32×32, 64×64 viewBox | browser favicon |
-| `jig-logo.svg` | 144×76 | transparent horizontal lockup for light surfaces |
-| `jig-logo-on-dark.svg` | 144×76 | transparent horizontal lockup for dark surfaces |
-| `jig-logo-mono-dark.svg` | 144×76 | one-color horizontal dark |
-| `jig-logo-mono-light.svg` | 144×76 | one-color horizontal light |
-| `jig-logo-light.svg` | 168×96 | fixed Paper light plate |
-| `jig-logo-dark.svg` | 168×96 | fixed Ink dark plate |
-| `jig-logo-plate-dark.svg` | 224×104 | README/theme-independent plate |
+| `jig-logo.svg` | 112×68 | transparent horizontal lockup for light surfaces |
+| `jig-logo-on-dark.svg` | 112×68 | transparent horizontal lockup for dark surfaces |
+| `jig-logo-mono-dark.svg` | 112×68 | one-color horizontal dark |
+| `jig-logo-mono-light.svg` | 112×68 | one-color horizontal light |
+| `jig-logo-light.svg` | 136×88 | fixed Paper light plate |
+| `jig-logo-dark.svg` | 136×88 | fixed Ink dark plate |
+| `jig-logo-plate-dark.svg` | 192×96 | README/theme-independent plate |
 
 ## Crop and alignment
 
-The transparent 144×76 horizontal lockup is the optical crop. Do not preserve a larger authoring canvas.
+The transparent 112×68 wordmark is the optical crop of **[J mark] + ig**. It contains no duplicate J.
 
-The 168×96 plates add exactly 12 units of horizontal and 10 units of vertical clear space around that lockup.
+The 136×88 plates add exactly 12 units of horizontal and 10 units of vertical clear space around that wordmark.
 
-The README plate adds exactly 40 units horizontal and 14 units vertical clear space and is centered by visible artwork.
+The 192×96 README plate adds exactly 40 units horizontal and 14 units vertical clear space and is centered by visible artwork.
 
 The square mark is optically centered rather than mathematically forcing the curved J into a symmetric bounding box.
 
 ## Application use
 
-- Compact application chrome: `jig-app-icon.svg` plus live product text.
-- Browser favicon: `jig-favicon.svg`.
+- Application header: complete `jig-logo.svg` / `jig-logo-on-dark.svg` wordmark according to active theme.
+- App-icon contexts: standalone J-only `jig-app-icon.svg`.
+- Browser favicon: standalone J-only `jig-favicon.svg`.
 - README: `jig-logo-plate-dark.svg`.
 - Light branded surface: `jig-logo.svg` or `jig-logo-light.svg`.
 - Dark branded surface: `jig-logo-on-dark.svg` or `jig-logo-dark.svg`.
