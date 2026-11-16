@@ -2,7 +2,7 @@
 
 **Status:** Implementation-ready execution plan, v1.2 (2026-11-16), completeness-audited against JIG-FR-01–22, Technical solution v0.6 and UI solution v0.3.
 **Target:** Build and certify the first Jig desktop MVP without reopening product, functional, technical, or UI design.
-**Required baseline:** Implement only from a repository revision that contains the current canonical product definition, JIG-FR-01–22 functional design, technical solution v0.5 or later, and UI solution v0.3 or later.
+**Required baseline:** Implement only from a repository revision that contains the current canonical product definition, JIG-FR-01–22 functional design, technical solution v0.6 or later, and UI solution v0.3 or later.
 
 ## 1. Authority and execution rule
 
@@ -334,7 +334,7 @@ Use the single 48rem / 768 CSS px application breakpoint. Below it, Week becomes
 
 ### V1-21 — Implement installer and configuration
 
-**Files:** `scripts/install.sh`, configuration handling in shell startup.
+**Files:** `scripts/install.sh`, configuration handling in shell startup, `tests/install/**`.
 
 Implement Technical solution §3.1 and §3.2 exactly: `--repo`, mutually exclusive `--repo-url` + `--checkout`, optional `--remote`, optional `--port`; validation of Linux/Git/writable paths; exact Bun/dependency build; `.jig/local` and isolated worktree/ref setup; `~/.config/jig/config.json`; existing snapshot hydration; idempotent rerun; safe failure. On first initialization create one UUID `dataset_id` and persist it in both local metadata and `format.json`; replicas adopt that identity rather than generating another. Add only the narrow local `.jig/` exclusion through repository-local Git exclude handling, including `.git`-as-file linked-worktree cases.
 
@@ -344,7 +344,7 @@ Never `git init` an arbitrary nonrepository path, overwrite an existing checkout
 
 ### V1-22 — Implement launcher, systemd user service and diagnostics
 
-**Files:** `scripts/jig`, installer-generated user-service unit, shell status hooks.
+**Files:** `scripts/jig`, installer-generated user-service unit, shell status hooks, `tests/install/**`.
 
 `jig` opens the ready local UI or starts the service then opens it. Implement `jig status`, diagnostic/retry `jig sync`, `jig doctor`, and `jig configure --repo <path>` deliberate repository migration behavior required by the technical solution. The CLI and HTTP operational endpoints must call the same shell-owned status/diagnostic, sync-trigger and migration functions; do not implement parallel operational paths. Migration must briefly block writers, flush/export the latest local state, validate destination ownership/identity, rehydrate/copy safely, and atomically switch configuration only on success; failure leaves the original repository active. Enforce one active writable service per configured data root before SQLite is opened for mutation.
 
