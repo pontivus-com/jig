@@ -1,0 +1,293 @@
+# Jig brand and theme system
+
+**Status:** Canonical v1 brand and application-theme contract.  
+**Selected identity:** Option A — precise J guide + alignment pin.  
+**Scope:** Logo geometry, brand palette, Light/Dark semantic theming, application integration, asset dimensions and change control.  
+**Governing product identity:** [Product identity](../product/product-identity.md).  
+**Governing UI:** [UI solution](ui-solution.md).
+
+This document is the single human-readable authority for Jig branding and theming. The executable authorities are:
+
+- `ui/src/theme.css` — canonical raw Jig palette primitives;
+- `ui/src/theme.ts` — the only mapping from those primitives into Astryx semantic roles;
+- `ui/src/styles.css` — layout/composition only; it must consume semantic Astryx tokens and must not introduce a second color system;
+- `ui/src/app.tsx` — the single application `<Theme theme={jigTheme}>` owner.
+
+No feature component owns a private palette.
+
+## 1. Identity
+
+### Product name
+
+**Jig**
+
+### Primary proposition
+
+**Plan the day. Stay on track.**
+
+### Supporting line
+
+**Jig schedules attention, not project execution.**
+
+### Mark
+
+The canonical mark is a precise **J-shaped guide** with one **amber alignment pin**.
+
+The metaphor is functional: a jig guides something into the right position without becoming the work itself. Jig guides attention into the day without becoming the project-management system that owns the underlying work.
+
+The mark must not be redrawn per surface. All variants use the same geometry.
+
+## 2. Canonical brand foundations
+
+The identity uses three related tonal scales:
+
+1. **Ink** — structure, typography, dark surfaces and the cool complement to Amber.
+2. **Amber** — identity, interaction emphasis, selection and focus.
+3. **Paper** — warm Light-mode layering.
+
+White remains an explicit utility color.
+
+### Ink
+
+| Stop | Hex |
+| ---: | --- |
+| 50 | `#F9FAFD` |
+| 100 | `#EFF2F7` |
+| 200 | `#DCE1EB` |
+| 300 | `#C0C8D6` |
+| 400 | `#9BA5B8` |
+| 500 | `#788499` |
+| 600 | `#5A667E` |
+| 700 | `#3E4A62` |
+| 800 | `#253046` |
+| 900 | `#162034` |
+| 950 | **`#0B1426`** |
+
+### Amber
+
+| Stop | Hex |
+| ---: | --- |
+| 50 | `#FEF3E7` |
+| 100 | `#FEE3C5` |
+| 200 | `#FBCA93` |
+| 300 | `#FAB45F` |
+| 400 | `#F9A733` |
+| 500 | **`#F59E0B`** |
+| 600 | `#D28412` |
+| 700 | `#B86C00` |
+| 800 | `#8E5200` |
+| 900 | `#683B01` |
+| 950 | `#442603` |
+
+### Paper
+
+| Stop | Hex |
+| ---: | --- |
+| 50 | `#FDFCF9` |
+| 100 | **`#F7F4EF`** |
+| 200 | `#EBE7E1` |
+| 300 | `#D8D3CC` |
+| 400 | `#BCB7AE` |
+| 500 | `#9A948A` |
+| 600 | `#7A7469` |
+| 700 | `#5B544A` |
+| 800 | `#3D372E` |
+| 900 | `#25211A` |
+| 950 | `#14110C` |
+
+### Brand anchors
+
+- Ink Navy: **`#0B1426`**
+- Brand Amber: **`#F59E0B`**
+- Warm Paper: **`#F7F4EF`**
+- White: **`#FFFFFF`**
+
+Ink and Amber are already near-complementary in hue. Do not add another decorative brand hue merely to make the interface more colorful.
+
+## 3. Accessibility and functional Amber
+
+Brand Amber `#F59E0B` is the logo pin and the preferred Dark-mode accent. It is intentionally **not** the universal Light-mode interactive fill because it has insufficient separation from white for several UI roles.
+
+Required reference contrasts:
+
+| Pair | Contrast |
+| --- | ---: |
+| Ink 950 on Paper 100 | 16.76:1 |
+| Ink 600 on Paper 100 | 5.26:1 |
+| Amber 700 on white | 4.05:1 |
+| Amber 700 on Paper 100 | 3.69:1 |
+| Ink 950 on Amber 700 | 4.54:1 |
+| Brand Amber 500 on Ink 950 | 8.56:1 |
+| Ink 300 on Ink 950 | 10.92:1 |
+
+Therefore:
+
+- Light-mode functional accent/focus: **Amber 700 `#B86C00`**
+- Light-mode accent text: **Amber 800 `#8E5200`**
+- Dark-mode functional accent/focus: **Amber 500 `#F59E0B`**
+- Dark-mode accent text: **Amber 300 `#FAB45F`**
+- Text on an Amber fill: **Ink 950 `#0B1426`**
+
+Color never replaces labels, icons, focus geometry or state text.
+
+## 4. Light-mode semantic map
+
+| Semantic role | Jig value |
+| --- | --- |
+| Page/body | Paper 100 |
+| Surface/card/popover | White |
+| Muted surface | Paper 200 |
+| Primary text/icon | Ink 950 |
+| Secondary text/icon | Ink 600 |
+| Disabled text/icon | Ink 400 |
+| Border | low-alpha Ink 950 |
+| Emphasized border | Ink 200 |
+| Primary accent | Amber 700 |
+| Accent text | Amber 800 |
+| Accent-muted/selection | Amber 100 |
+| Content on accent | Ink 950 |
+| Focus ring | Amber 700 |
+
+Light mode should read as warm, quiet and high-clarity. Amber is selective emphasis, not a page fill.
+
+## 5. Dark-mode semantic map
+
+| Semantic role | Jig value |
+| --- | --- |
+| Page/body | Ink 950 |
+| Surface/card | Ink 900 |
+| Raised/popover | Ink 800 |
+| Primary text/icon | Ink 50 |
+| Secondary text/icon | Ink 300 |
+| Disabled text/icon | Ink 600 |
+| Border | low-alpha White |
+| Emphasized border | Ink 700 |
+| Primary accent | Amber 500 |
+| Accent text | Amber 300 |
+| Accent-muted/selection | Amber 500 mixed into Ink 900 |
+| Content on accent | Ink 950 |
+| Focus ring | Amber 500 |
+
+Dark mode is not a mechanical inversion of Light mode. Layer elevation moves upward through the Ink scale while Amber becomes brighter.
+
+## 6. Status colors
+
+Brand color and semantic status color are separate systems.
+
+Jig inherits Astryx Neutral 0.7.13 status families for:
+
+- info;
+- success;
+- warning;
+- error.
+
+Do not remap warning to brand Amber. A sync warning, save error or success state must remain semantically distinct from ordinary Jig selection/focus.
+
+## 7. Theme implementation contract
+
+### Palette ownership
+
+`ui/src/theme.css` owns every raw `--jig-ink-*`, `--jig-amber-*`, `--jig-paper-*` and `--jig-white` value.
+
+No other application stylesheet may hard-code Jig brand colors.
+
+### Semantic mapping
+
+`ui/src/theme.ts` defines `jigTheme` by extending the published Astryx Neutral theme and maps Jig primitives only into public semantic roles such as:
+
+- `--color-background-*`;
+- `--color-text-*`;
+- `--color-icon-*`;
+- `--color-accent`;
+- `--color-accent-muted`;
+- `--color-on-accent`;
+- `--color-border*`;
+- `--focus-outline-color`.
+
+Astryx continues to own spacing, sizing, typography mechanics, component structure, status families and interaction semantics.
+
+### CSS composition
+
+`ui/src/styles.css` imports:
+
+1. Astryx reset;
+2. Astryx core;
+3. Jig palette primitives.
+
+All Jig layout rules then use semantic tokens. There is no per-screen color palette and no Light/Dark duplication in feature CSS.
+
+### Theme owner
+
+`ui/src/app.tsx` mounts exactly one root:
+
+```tsx
+<Theme theme={jigTheme} mode={themePreference}>
+```
+
+System, Light and Dark remain presentation-only Settings choices.
+
+## 8. Logo and icon asset contract
+
+The master mark uses a 64×64 coordinate system. Its visible geometry is optically centered with approximately 7.5 units of horizontal clear space and 5.5 units of vertical clear space.
+
+The horizontal lockup uses an outlined Inter Display Bold wordmark. **No released logo depends on a locally installed font.**
+
+| Asset | Canvas / viewBox | Background | Intended use |
+| --- | --- | --- | --- |
+| `jig-symbol.svg` | 64×64 | transparent | full-color mark on light surfaces |
+| `jig-symbol-on-dark.svg` | 64×64 | transparent | full-color mark on dark surfaces |
+| `jig-icon.svg` | 64×64 | transparent | canonical icon alias |
+| `jig-symbol-mono-dark.svg` | 64×64 | transparent | one-color dark mark |
+| `jig-symbol-mono-light.svg` | 64×64 | transparent | one-color light mark |
+| `jig-app-icon.svg` | 512×512, viewBox 64×64 | Ink 950 tile | app/product icon master |
+| `jig-favicon.svg` | 32×32, viewBox 64×64 | Ink 950 tile | browser favicon |
+| `jig-logo.svg` | 144×76 | transparent | horizontal lockup on light surfaces |
+| `jig-logo-on-dark.svg` | 144×76 | transparent | horizontal lockup on dark surfaces |
+| `jig-logo-mono-dark.svg` | 144×76 | transparent | one-color horizontal dark |
+| `jig-logo-mono-light.svg` | 144×76 | transparent | one-color horizontal light |
+| `jig-logo-light.svg` | 168×96 | Paper 100 | fixed light plate |
+| `jig-logo-dark.svg` | 168×96 | Ink 950 | fixed dark plate |
+| `jig-logo-plate-dark.svg` | 224×104 | Ink 950 | README/theme-independent plate |
+
+### Optical cropping
+
+Transparent lockups must retain the 144×76 viewBox. Do not restore a wider authoring canvas around the wordmark.
+
+Fixed 168×96 plates add 12 units horizontal and 10 units vertical clear space around the transparent lockup.
+
+The README plate is intentionally wider, with 40 units horizontal and 14 units vertical clear space. It is centered by visible artwork, not by an oversized source artboard.
+
+### Application integration
+
+- Header/app shell: use `jig-app-icon.svg` plus live product text. This works identically in Light and Dark without theme-dependent image swapping.
+- Browser: use `jig-favicon.svg`.
+- README / unknown viewer theme: use `jig-logo-plate-dark.svg`.
+- Light branded surfaces: use `jig-logo.svg` or `jig-logo-light.svg`.
+- Dark branded surfaces: use `jig-logo-on-dark.svg` or `jig-logo-dark.svg`.
+
+Do not use the large horizontal lockup inside compact application chrome.
+
+## 9. Usage constraints
+
+Do not:
+
+- recolor the alignment pin with semantic status colors;
+- substitute a calendar, clock, checkmark, Kanban or AI-sparkle icon;
+- add gradients, metallic effects or shadows to the canonical flat logo;
+- create screen-specific brand palettes;
+- use Brand Amber for warning merely because warning is also yellow/orange;
+- add a second theme owner or CSS override layer that bypasses `jigTheme`;
+- copy raw palette values into feature styles.
+
+## 10. Verification and change control
+
+Any change to the brand anchors, palette stops, semantic mapping or mark geometry requires the same change set to update:
+
+1. this document;
+2. `ui/src/theme.css` when palette primitives change;
+3. `ui/src/theme.ts` when semantic role mapping changes;
+4. affected assets under `assets/`;
+5. representative Light and Dark browser evidence;
+6. browser acceptance proving the root theme remains `jig` and that Light/Dark accents resolve to the intended functional stops.
+
+Layout-only UI changes do not redefine this brand contract.
