@@ -29,7 +29,7 @@ The normal experience is: run one installer; assign repository; installer config
 
 The selected repository's ordinary working state, staged files and unrelated content are **never** touched by Jig's automatic synchronization. The adapter must provide this isolation using the smallest Git mechanism that satisfies the requirement; the application must not model or manage that mechanism outside the adapter.
 
-This is an architecture contract; actual interaction, installation, Git branch/worktree lifecycle and resource use still need verification against the exact pinned environment. No unresolved technology choice may be delegated casually to implementers.
+This is an architecture contract; actual interaction, installation, repository-adapter behavior and resource use still need verification against the exact pinned environment. No unresolved technology choice may be delegated casually to implementers.
 
 ## 2. Dependency contract and provenance
 
@@ -76,7 +76,7 @@ When the source map and this document differ, **this document wins for Jig seman
 ~~~text
 Jig application source/distribution  (separate from personal planning repo)
     install.sh --> ~/.local/share/jig/      binaries + built static UI
-               --> ~/.config/jig/config     selected target path + remote/ref
+               --> ~/.config/jig/config     selected repository path + local HTTP port
                --> ~/.local/bin/jig         desktop launcher
                --> systemd --user jig       persistent low-idle Bun process
                                 |
@@ -86,12 +86,13 @@ Jig application source/distribution  (separate from personal planning repo)
                                 selected PERSONAL Git repository
                                 <repo>/.jig/
                                    local/jig.sqlite      operational authority
-                                   git/.git              linked-worktree pointer
-                                   git/format.json
-                                   git/tasks/<uuid>.json
-                                  [jig-data ref belongs to this same repo]
+                                   portable/              conceptual Jig-owned portable records
+                                     format.json
+                                     tasks/<uuid>.json
                                          |
-                                       optional configured Git remote
+                                   thin Git repository adapter
+                                         |
+                                   repository's normal Git configuration
 ~~~
 
 The application binary and runtime may be installed under normal user application directories; **all task data and recoverable canonical planning records must be inside the configured Git repository**. The local service keeps only its own noncanonical logs and launch configuration outside that repository. Do not install the program into or modify the public source checkout when it is not the selected personal target.
@@ -248,7 +249,7 @@ CREATE UNIQUE INDEX task_active_position
 CREATE INDEX task_completed_at ON task(completed_at);
 ~~~
 
-Technical input validation must also enforce canonical date/time formats, nonblank titles and valid IDs before SQL insertion; CHECK constraints alone do not validate those strings. One app metadata table records schema version, dataset identity, monotonically increasing SQLite state revision, last exported revision and Git head, last safely imported Git head, configured data-ref identity and durable pending-sync state. A separate local reminder-delivery key set can suppress duplicate toasts; it is non-authoritative presentation bookkeeping and is **not included in Git exports**. SQLite lives under the selected personal repository's .jig/local/ path and is excluded from version control; JSON records under the dedicated Jig worktree are the portable Git-authoritative snapshot of each successful export.
+Technical input validation must also enforce canonical date/time formats, nonblank titles and valid IDs before SQL insertion; CHECK constraints alone do not validate those strings. One app metadata table records schema version, dataset identity, monotonically increasing SQLite state revision, last exported revision, last safely adopted portable snapshot identity and durable pending-sync state. A separate local reminder-delivery key set can suppress duplicate toasts; it is non-authoritative presentation bookkeeping and is **not included in Git exports**. SQLite lives under the selected personal repository's `.jig/local/` path and is excluded from version control; deterministic JSON records are the portable snapshot synchronized through the repository adapter.
 
 Apply reordering in one SQLite transaction. To satisfy the active-position uniqueness constraint while changing multiple indices, first move affected positions to distinct temporary nonconflicting values within that same transaction, then write final 0..N-1 positions. No intermediate ordering can be observed outside the transaction. If the transaction fails, the whole operation rolls back.
 
@@ -349,10 +350,10 @@ When a complete candidate Jig snapshot is presented, validate the entire snapsho
 | Bun/service restarts mid-operation | SQLite rollback plus persisted dirty revision | Resume interrupted export or import idempotently |
 | Repository adapter write/commit fails | SQLite remains authority | Saved locally; synchronization retrying or sync issue |
 | Git commit succeeds but metadata update fails | Exported data recoverable from Git head | Reconcile snapshot/revision at restart |
-| No remote | Local database and local Jig branch persist | Local-only badge/status |
+| No usable repository transport | Local database and portable Jig data remain intact | Local-only badge/status |
 | Repository transport/push failure | SQLite and local exported records intact | Automatic retry with backoff; persistent failure becomes generic sync issue |
 | Candidate canonical snapshot invalid | Previous SQLite state intact | Refuse adoption and report generic sync issue; repository correction remains external |
-| Selected personal repo has unrelated staged/dirty files | No impact on those files | Jig auto-sync continues on isolated worktree |
+| Selected personal repo has unrelated staged/dirty files | No impact on those files | Jig auto-sync continues through the isolated repository adapter |
 | Installer fails during setup | Existing user data/branch remains | Clear failure and idempotent safe rerun |
 | Uninstall | Personal repo data preserved | Service/binary removed, data retained by default |
 
