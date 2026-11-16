@@ -47,7 +47,6 @@ function handler() {
       repository_adapter_healthy: true,
     }),
     trigger_sync: async () => "local-only",
-    before_task_mutation: () => undefined,
     on_task_mutation: () => undefined,
   });
 }
@@ -194,8 +193,7 @@ describe("loopback HTTP admission", () => {
         syncCalls += 1;
         return "synchronized";
       },
-        before_task_mutation: () => undefined,
-      on_task_mutation: () => undefined,
+          on_task_mutation: () => undefined,
     });
 
     const response = await handle(
