@@ -89,7 +89,7 @@ Day view and Week view query the **same Task**; opening the inspector does not c
 
 ### 4.3 Mobile narrow Day
 
-At narrow widths the week board becomes a horizontal seven-date strip plus one Day attention list. Preserve the same carried-over originating-date treatment, prominent title-first tasks, touch-sized checkbox and action targets, drag handles where touch reordering is supported and a non-drag move-to-date command. A persistent Quick Add target may move to the thumb-reachable region, but must not obscure the last item or reminder feedback.
+Below the single application-owned **48rem / 768 CSS px** breakpoint, the week board becomes a horizontal seven-date strip plus one Day attention list. Preserve the same carried-over originating-date treatment, prominent title-first tasks, touch-sized checkbox and action targets, drag handles where touch reordering is supported and a non-drag move-to-date command. A persistent Quick Add target may move to the thumb-reachable region, but must not obscure the last item or reminder feedback.
 
 Desktop MVP requires responsive semantic continuity and basic mobile-sized layout validation. It does **not** require installation as a self-contained phone app, native Git commands or background push notifications.
 
