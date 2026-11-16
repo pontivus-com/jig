@@ -476,15 +476,26 @@ export async function commitSnapshot(
     "tasks",
   ]);
 
-  const status = await requireGit(config.worktree_path, [
-    "status",
-    "--porcelain",
-    "--",
-    "format.json",
-    "tasks",
+  const staged = await requireGit(config.worktree_path, [
+    "diff",
+    "--cached",
+    "--name-only",
+    "--diff-filter=ACDMRTUXB",
   ]);
+  const stagedPaths = staged.split("\n").filter(Boolean);
 
-  if (status.length !== 0) {
+  for (const path of stagedPaths) {
+    if (
+      path !== "format.json" &&
+      !/^tasks\/[0-9a-f-]+\.json$/i.test(path)
+    ) {
+      throw new GitAdapterError(
+        `Refusing to commit non-Jig staged path ${path}`,
+      );
+    }
+  }
+
+  if (stagedPaths.length !== 0) {
     await requireGit(
       config.worktree_path,
       [
