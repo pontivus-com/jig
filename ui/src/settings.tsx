@@ -90,10 +90,6 @@ export function SettingsView({
             <dd>{status?.repository_path ?? "Unavailable"}</dd>
           </div>
           <div>
-            <dt>Remote</dt>
-            <dd>{status?.remote_configured ? "Configured" : "Not configured"}</dd>
-          </div>
-          <div>
             <dt>Local database</dt>
             <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
           </div>
