@@ -18,6 +18,10 @@ export interface DayViewProps {
   readonly selectedDate: string;
   readonly onAdd: (date: string) => void;
   readonly onSelectDate: (date: string) => void;
+  readonly onPrevious: () => void;
+  readonly onToday: () => void;
+  readonly onNext: () => void;
+  readonly statusControl: ReactNode;
   readonly onEdit: (task: Task) => void;
   readonly onMoveToDate: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
