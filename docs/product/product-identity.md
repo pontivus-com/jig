@@ -39,7 +39,7 @@ The canonical visual metaphor is **guide / alignment**.
 
 A physical jig briefly guides something into the right position without becoming the work itself. Jig does the same for attention: it helps place the next intention in the day while the underlying project work remains in its authoritative system.
 
-The approved Option A mark is a precise **J-shaped guide with one amber alignment pin**. Do not derive alternate marks or palettes from this description; use the exact assets and rules in the governing brand/theme document.
+The approved Option A identity uses the **J-shaped guide with one amber alignment pin as the actual first letter of the Jig wordmark**, followed only by **ig**. The standalone icon is the J mark alone. Do not compose a J icon beside a second complete “Jig” word; use the exact assets and rules in the governing brand/theme document.
 
 ## Family relationship
 
