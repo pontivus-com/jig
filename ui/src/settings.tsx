@@ -24,7 +24,7 @@ export interface SettingsViewProps {
 function statusMessage(status: ServiceStatus | null): string {
   switch (status?.repository_status) {
     case "local-only":
-      return "Saved locally. No repository remote is configured.";
+      return "Saved locally. Repository synchronization is not currently available.";
     case "pending":
       return "Saved locally. Repository synchronization is pending.";
     case "retrying":
