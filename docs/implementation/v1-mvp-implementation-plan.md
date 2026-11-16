@@ -392,6 +392,8 @@ Measure Technical solution §7.6 exactly: ≤128 MiB RSS and ≤1.0% one-core CP
 
 ### V1-25 — Create the v1 release-candidate evidence set
 
+**Files:** `docs/README.md`, `README.md`, `docs/evidence/v1/README.md`, representative browser screenshot/evidence files under `docs/evidence/v1/`.
+
 Update `docs/README.md` status from unimplemented only after V1-23/V1-24 pass. Archive representative browser screenshots for Week, Day carry-over, History, Settings, mobile-sized Day/editor, local-save failure, sync issue, Light and Dark. The running implementation becomes evidence for the existing design; do not rewrite the canonical product model to match accidental implementation differences.
 
 Also verify:
