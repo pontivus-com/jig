@@ -82,7 +82,6 @@ describe("isolated jig-data adapter", () => {
     const config = {
       repository_path: repo,
       worktree_path: resolve(repo, ".jig", "git"),
-      remote_name: null,
     } as const;
 
     await ensureJigDataWorktree(config, DATASET_ID);
@@ -121,7 +120,6 @@ describe("isolated jig-data adapter", () => {
     const config = {
       repository_path: repo,
       worktree_path: resolve(repo, ".jig", "git"),
-      remote_name: null,
     } as const;
 
     await expect(
