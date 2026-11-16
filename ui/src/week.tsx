@@ -206,7 +206,7 @@ export function WeekView({
                   {dateTasks.length === 0 ? (
                     <p className="jig-empty-column">Drop or add a task</p>
                   ) : (
-                    <List density="compact" hasDividers edge="flush">
+                    <List density="compact" edge="flush">
                       {dateTasks.map((task) => (
                         <WeekTaskRow
                           key={task.id}
