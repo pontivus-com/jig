@@ -97,7 +97,7 @@ Jig application source/distribution  (separate from personal planning repo)
 
 The application binary and runtime may be installed under normal user application directories; **all task data and recoverable canonical planning records must be inside the configured Git repository**. The local service keeps only its own noncanonical logs and launch configuration outside that repository. Do not install the program into or modify the public source checkout when it is not the selected personal target.
 
-**Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser toast callback. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
+**Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, daily rollover, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser toast callback. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
 
 Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to selected date/task, modal draft, transient drag preview and local appearance preference. Theme preference is presentation state and never part of canonical Task or Git-synchronized planning data. Date/week/history views are queries over the same canonical Task set.
 
@@ -197,7 +197,7 @@ Task references are treated as data: safe http(s) links may open with normal bro
 3. The user-selected sequence is authoritative; priority updates never reorder it.
 4. Date moves preserve all task metadata and identity except scheduled_date and position; reminder_time stays the same and is interpreted on the new date.
 5. Completion records an instant and removes the item from its outstanding sequence; reopening appends it, rather than guessing its former position.
-6. No automatic rollover changes yesterday's tasks. Carry-over is a derived read/presentation rule over unchanged scheduled dates.
+6. Daily rollover is an automatic canonical mutation. Every outstanding Task with `scheduled_date < current_local_date` is moved to `current_local_date`; completed Tasks are unchanged.
 7. A confirmed deletion removes the Task row entirely. If the deleted Task was outstanding, the remaining positions on its scheduled date are compacted transactionally; completed deletion requires no active-order compaction.
 8. Deletion creates no tombstone, deleted status, trash record or application-level undo history.
 9. A failed mutation leaves all affected dates unchanged; UI reports failure without implying a save.
@@ -217,7 +217,7 @@ Task references are treated as data: safe http(s) links may open with normal bro
 
 **Delete:** Only after explicit UI confirmation, delete the Task in one SQLite transaction. For an outstanding Task, remove it and compact the remaining positions on its scheduled date to 0..N-1; for a completed Task, delete it without active-order compaction. Increment the normal durable revision. Do not write deleted_at, a tombstone, trash row or delete-event log. Git history, if an earlier export exists, is the only recovery mechanism.
 
-**Read:** Week is seven consecutive local civil dates beginning Monday and shows Tasks on their actual scheduled dates only. Day is the selected date plus a derived carry-over prefix of outstanding Tasks whose scheduled_date is earlier than the selected date; order those earlier Tasks by scheduled_date ascending and then by their persisted position, followed by selected-date Tasks in persisted position order. Carry-over never mutates scheduled_date. Completed by scheduled date remains distinct from History grouped by local completion date. Date navigation does not modify tasks.
+**Read:** Week is seven consecutive local civil dates beginning Monday and shows Tasks on their canonical scheduled dates. Day is the selected date's canonical outstanding sequence plus completed-by-scheduled-date query. Before normal planning reads/commands, the service ensures daily rollover is current, so overdue outstanding Tasks have already been moved into the current local date and are therefore visible in the same bucket in Week and Day. Completed by scheduled date remains distinct from History grouped by local completion date. Date navigation itself does not modify tasks.
 
 ### 4.3 Persistence representation
 
@@ -263,7 +263,7 @@ Consume the public Astryx components directly; do not import Order's internal Wo
 |---|---|---|
 | App frame | AppShell, Layout, Grid/Stack | Minimal Week / Day / History navigation |
 | Week planner | Grid/Stack, List/ListItem, Button/IconButton | Seven dated columns; visible droppable column areas |
-| Day planner | List/ListItem, section heading, Button | Derived carry-over prefix + selected-date outstanding sequence + completed query |
+| Day planner | Task cards, section heading, Button | Current selected-date outstanding sequence + completed query after daily rollover |
 | Capture/editor | TextInput, TextArea, Selector or SegmentedControl, DateInput, TimeInput, Dialog/FormLayout; destructive confirmation uses Astryx's destructive/alert-dialog primitive | Task field rules, save/admission and confirmed deletion |
 | Inspector/compact editor | Drawer, Dialog, responsive composition | Show only task details and external reference |
 | Status/feedback | Banner, Toast/useToast/LayerProvider | Persistence error and reminder messages |
@@ -276,7 +276,7 @@ Use **a single drag owner**: DragDropProvider around the week, useSortable per o
 
 Keyboard alternative: expose Move up, Move down and Move to date actions with descriptive accessible labels, even if library sensors also support keyboard dragging. These commands call the **same move operation**; no second order representation. Completion, task editing and reference opening must not accidentally start dragging.
 
-Desktop: week is the default with seven dated columns; maintain a usable minimum column width and allow horizontal board scrolling when necessary rather than compressing task text below readability. A column with a long list scrolls without hiding its date heading or preventing other dates from being reached. Week shows Tasks only on their actual scheduled dates. Day detail is one selected date whose attention sequence is the deterministic carry-over prefix defined in §4.2 followed by the selected-date sequence; carried-over rows use a subtle semantic treatment and originating-date label but no persisted carry-over state. Dragging a carried-over Task into the selected-date sequence is an explicit cross-date move to that selected date and exact position. The completed section is compact. Do **not** add a duplicate generic Board destination: Week is the Kanban surface.
+Desktop: Day/current date is the default operational entry surface; Week remains the principal seven-day planning/rearrangement surface. Week shows Tasks only on their canonical scheduled dates after rollover, so an unfinished yesterday card physically appears in today's Week bucket once rollover commits. Day detail is one selected date's outstanding sequence plus compact completed section. Do **not** add a duplicate generic Board destination: Week is the Kanban surface.
 
 Mobile-first composition uses one application-owned breakpoint at **48rem / 768 CSS px**. Below it, present a compact horizontal week strip and one date's list rather than seven tiny columns; at or above it, use the desktop Week/Day compositions. Preserve the exact selected Task and in-progress editor across the breakpoint. Use touch-sized targets and a move-to-date alternative. Standalone phone installation, native filesystem and on-device Git are future implementation work, not promises of this desktop runtime. Components consume this one shell-level layout mode and must not invent independent semantic breakpoints.
 
@@ -311,6 +311,46 @@ Existing valid Jig portable data in the selected repository is continuity author
 `format.json` includes a version discriminator and a UUID **dataset_id**, created once at first initialization and stable on every replica. Every task is `tasks/<uuid>.json` using exactly the canonical Task fields in §4, sorted key order, UTF-8, normalized newlines and strict date/instant formats. No SQLite binary, Git credentials, device-local toast receipts, secrets, private system paths, temporary files or browser state enter commits. Completed and unfinished tasks are both included.
 
 The portable tree is a **complete snapshot**; every file path ID matches its embedded ID; duplicate task IDs or missing/duplicate active positions invalidate the entire import. Once the repository integration boundary presents a complete candidate snapshot, Jig validates it before adoption. Its Task membership is then exact: a Task present in the previously adopted dataset but absent from the newly adopted snapshot is deleted locally in the same transactional import. A missing file in an arbitrary, incomplete or unvalidated worktree is **not** a deletion signal. User deletion is therefore represented naturally by absence of `tasks/<uuid>.json` in a later complete snapshot; no tombstone file or deleted-state record is introduced. Jig never interprets partial Git merge state or repository topology as planning data.
+
+### 4.3 Daily rollover lifecycle
+
+Daily rollover is owned by the planning core + service shell, not the browser.
+
+Core operation:
+
+```ts
+rollForwardOutstanding(
+  tasks,
+  currentLocalDate,
+  updatedAt,
+): { tasks, moved_task_ids }
+```
+
+Rules:
+- select outstanding Tasks with `scheduled_date < currentLocalDate`;
+- sort selected Tasks by source `scheduled_date` ascending, then source `position`;
+- move all selected Tasks directly to `currentLocalDate`;
+- place them before Tasks already scheduled for `currentLocalDate`;
+- preserve relative order within both groups;
+- rewrite destination positions contiguously from zero;
+- compact each affected source date;
+- preserve Task id/title/context/priority/reference/note/reminder time;
+- update `scheduled_date` and `updated_at` for moved Tasks;
+- do not mutate completed Tasks;
+- no intermediate per-day history is created when catching up after multiple missed days.
+
+Shell lifecycle:
+1. run rollover once during service startup before normal planning state is served;
+2. maintain one timer for the next local civil-day boundary;
+3. at the boundary, execute one SQLite transaction applying the pure core result;
+4. increment SQLite revision once when at least one Task moved;
+5. mark portable state dirty so the existing sync worker exports/synchronizes it;
+6. reschedule the next day-boundary timer;
+7. before serving canonical planning state or accepting a Task mutation, perform an idempotent catch-up check so suspend/sleep/timer delays cannot leave stale dates visible.
+
+If rollover makes the browser's `expected_revision` stale, normal HTTP 409/refetch behavior applies. Do not create a special rollover transport protocol.
+
+A Task's reminder time remains the same local clock time while its scheduled date changes, so the reminder naturally applies to the new rolled-forward date.
 
 ### 7.3 Write and automatic synchronization loop
 
@@ -414,7 +454,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-06 priority change | Edit operation | Only priority changes; position unchanged |
 | JIG-FR-07 unrestricted edit | Astryx edit surface + core update | All optional fields and date edited without workflow gate |
 | JIG-FR-08 completion/reopen | Core transition + timestamp + DB | Date-scheduled completion, history query, reopen same ID |
-| JIG-FR-09 carry-over | Derived Day query over unchanged scheduled dates | Earlier outstanding remains visible and marked until completed, explicitly moved or deleted; Week never duplicates it |
+| JIG-FR-09 daily rollover | Pure core rollover + one SQLite transaction + service day-boundary/catch-up trigger | Earlier outstanding Tasks physically move to the current date; Week and Day show the same moved card in the current bucket; completed Tasks never move |
 | JIG-FR-10 in-app reminder | Browser clock + Astryx Toast | Due while open => one dismissible toast; no closed-app guarantee |
 | JIG-FR-11 external context | Reference open/copy UI | Link/path accessible; no source-content import |
 | JIG-FR-12 honest outcome | HTTP/SQLite/repository-boundary outcome and UI | Failed local save or repository sync never rendered as success |
@@ -431,13 +471,13 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 ### 10.1 Test boundaries
 
-**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, carry-over query ordering without date mutation, completed-task rescheduling, reopening, outstanding/completed deletion and edge dates including month/year boundaries.
+**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, completed-task rescheduling, reopening, outstanding/completed deletion and edge dates including month/year boundaries.
 
 **SQLite integration:** One failed transaction rolls back every affected position/date; uniqueness and completeness checks; restart with WAL; task query by scheduled and completion dates; migration from a fresh empty database; corrupted input rejected before persistence.
 
 **Repository/Git integration:** Use existing-repository fixtures with unrelated dirty/staged files and normal developer Git configurations, including commit signing enabled with no Jig key. Verify automatic export/synchronization touches only Jig-owned portable data; user Git configuration is unchanged; installation/retry survives synchronization failure; existing valid Jig data is adopted; the exact v1.0.0 empty-bootstrap residue recovers safely; unknown malformed states are non-destructive; ordinary repository content remains untouched.
 
-**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, carried-over earlier work with originating-date treatment, carry-over drag that explicitly reschedules, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, confirmed/cancelled deletion, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, System/Light/Dark parity, in-app due toast, and durable save-error visibility.
+**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, persisted daily rollover visible in both Day and Week, full-card drag overlay, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, confirmed/cancelled deletion, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, System/Light/Dark parity, in-app due toast, and durable save-error visibility.
 
 **Installer/service:** Non-root one-script setup in both supported target modes: an existing local repository via `--repo`, and a repository URL cloned by Git into a new/empty checkout via `--repo-url` + `--checkout`. Verify both modes converge on the same repository-validation/setup path, plus exact target selection, idempotent rerun, invalid target refusal, existing-data adoption, failed-install retry, launcher/service restart and auto-sync while the browser is closed. Repository migration/reorganization remains outside Jig.
 
