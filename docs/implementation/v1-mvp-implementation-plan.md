@@ -307,19 +307,19 @@ Repository migration remains deliberate and must call the explicit migration pat
 
 Use one DragDropProvider, sortable Task IDs, per-date droppables including empty dates, and transient overlay/preview. Convert a valid drop to exactly `(task_id, destination_date, destination_index)` and send the canonical move command. Escape/cancel makes no command.
 
-Dragging a carried-over Task into the selected Day is an explicit reschedule. Provide Move up, Move down and Move to date keyboard/non-drag alternatives that invoke the same canonical semantics.
+Dragging a carried-over Task into the selected Day is an explicit reschedule. Provide Move up, Move down and Move to date keyboard/non-drag alternatives that invoke the same canonical semantics. Respect reduced-motion preference: motion may be suppressed but drop position, focus, announcements and all movement semantics must remain available.
 
-**Gate:** same-day, cross-day, empty-date, carry-over-to-selected-date, cancel, checkbox/menu/link non-interference and keyboard movement all pass Playwright.
+**Gate:** same-day, cross-day, empty-date, carry-over-to-selected-date, cancel, checkbox/menu/link non-interference, keyboard movement and reduced-motion behavior all pass Playwright.
 
 ### V1-19 — Implement reminders and honest persistence feedback
 
 **Files:** `ui/src/reminder.tsx`, `ui/src/app.tsx`, relevant surfaces.
 
-Check due reminders every 30 seconds while active and on focus/visibility. Show Astryx dismissible toast once per local delivery key. Do not replay stale prior-session reminders or claim delivery while Jig is closed.
+Check due reminders every 30 seconds while active and on focus/visibility. Persist the device-local suppression key `(task_id, scheduled_date, reminder_time)` so reloads do not repeat the same reminder. Record the app-session start and catch up only reminders that became due during that session. A date/time edit creates a new eligible key; completion makes the Task ineligible. Do not replay stale prior-session/past-date reminders or claim delivery while Jig is closed.
 
 Local save failure is durable/actionable near the affected operation and never shown as Saved. Repository sync issue is separate and never blocks editing.
 
-**Gate:** reminder, retry, stale reminder and save/sync separation tests pass.
+**Gate:** reminder, reload suppression, date/time edit re-eligibility, completion suppression, session-bounded catch-up, stale reminder and save/sync separation tests pass.
 
 ### V1-20 — Implement responsive composition
 
@@ -335,21 +335,23 @@ Use the single 48rem / 768 CSS px application breakpoint. Below it, Week becomes
 
 **Files:** `scripts/install.sh`, configuration handling in shell startup.
 
-Implement Technical solution §3.1 and §3.2 exactly: `--repo`, mutually exclusive `--repo-url` + `--checkout`, optional `--remote`, optional `--port`; validation of Linux/Git/writable paths; exact Bun/dependency build; `.jig/local` and isolated worktree/ref setup; `~/.config/jig/config.json`; existing snapshot hydration; idempotent rerun; safe failure.
+Implement Technical solution §3.1 and §3.2 exactly: `--repo`, mutually exclusive `--repo-url` + `--checkout`, optional `--remote`, optional `--port`; validation of Linux/Git/writable paths; exact Bun/dependency build; `.jig/local` and isolated worktree/ref setup; `~/.config/jig/config.json`; existing snapshot hydration; idempotent rerun; safe failure. On first initialization create one UUID `dataset_id` and persist it in both local metadata and `format.json`; replicas adopt that identity rather than generating another. Add only the narrow local `.jig/` exclusion through repository-local Git exclude handling, including `.git`-as-file linked-worktree cases.
 
-Never `git init` an arbitrary nonrepository path, overwrite an existing checkout, modify tracked `.gitignore`, use the public Jig source checkout as implicit data home, or destroy an existing DB without explicit recoverable handling.
+Never `git init` an arbitrary nonrepository path, overwrite an existing checkout, modify tracked `.gitignore`, use the public Jig source checkout as a data target, or destroy an existing DB without explicit recoverable handling.
 
-**Gate:** disposable fixture tests cover existing repo, clone mode, invalid target, rerun, existing compatible Jig data, incompatible existing data/ref, and failure preserving preexisting user content.
+**Gate:** disposable fixture tests cover existing repo, clone mode, public Jig source checkout refusal, invalid target, rerun, new dataset identity, existing compatible Jig data, remote existing compatible snapshot adoption, incompatible existing data/ref, linked-worktree Git-common-dir handling, and failure preserving preexisting user content.
 
 ### V1-22 — Implement launcher, systemd user service and diagnostics
 
 **Files:** `scripts/jig`, installer-generated user-service unit, shell status hooks.
 
-`jig` opens the ready local UI or starts the service then opens it. Implement `jig status`, diagnostic/retry `jig sync`, `jig doctor`, and deliberate repository migration/configure behavior required by the technical solution. These commands report operational facts; they do not become another domain API.
+`jig` opens the ready local UI or starts the service then opens it. Implement `jig status`, diagnostic/retry `jig sync`, `jig doctor`, and `jig configure --repo <path>` deliberate repository migration behavior required by the technical solution. Migration must briefly block writers, flush/export the latest local state, validate destination ownership/identity, rehydrate/copy safely, and atomically switch configuration only on success; failure leaves the original repository active. Enforce one active writable service per configured data root before SQLite is opened for mutation.
 
-Use `systemd --user` when available; otherwise provide the documented foreground fallback and truthfully mark background-service capability unavailable.
+Implement uninstall through the existing launcher/installer lifecycle rather than another daemon/tool: stop/remove Jig service/application configuration and binaries while preserving the selected repository's `.jig/` planning data by default. Do not silently enable systemd linger or alter administrator policy.
 
-**Gate:** install -> stop/start -> `jig` -> browser readiness -> restart works with no terminal-resident process required in the normal supported environment.
+Use `systemd --user` when available; otherwise provide the documented foreground fallback and truthfully mark background-service capability unavailable. These commands report operational facts; they do not become another domain API.
+
+**Gate:** install -> stop/start -> `jig` -> browser readiness -> restart works with no terminal-resident process required in the normal supported environment; a second writer for the same data root is refused; repository migration succeeds atomically and rolls back on injected failure; uninstall removes runtime/service artifacts while preserving planning data.
 
 ## 11. Wave F — end-to-end certification
 
@@ -357,7 +359,7 @@ Use `systemd --user` when available; otherwise provide the documented foreground
 
 **Files:** `tests/browser/**`, repository fixtures under `tests/sync/**`.
 
-Implement the complete browser matrix in UI solution §6 and the FR-01–22 traceability matrix in Technical solution §10. Use actual pinned Astryx and dnd-kit versions. Do not substitute unit tests for interactions that depend on focus, pointer/touch, drag geometry, responsive reflow or visual theme state.
+Implement the complete browser matrix in UI solution §6, the browser interaction boundary in Technical solution §10.1, and the FR-01–22 traceability matrix in Technical solution §10. Use actual pinned Astryx and dnd-kit versions. Do not substitute unit tests for interactions that depend on focus, pointer/touch, drag geometry, responsive reflow or visual theme state.
 
 Minimum integrated scenario:
 
@@ -371,7 +373,9 @@ Minimum integrated scenario:
 8. verify local save while repository transport is unavailable and later synchronization recovery;
 9. restart service/browser and verify exact canonical state;
 10. verify Light, Dark and System representative surfaces;
-11. verify narrow layout and keyboard/non-drag movement.
+11. verify narrow layout, long-list scrolling/sticky date reachability, reduced-motion behavior and keyboard/non-drag movement;
+12. force a stale `expected_revision` and verify canonical refetch/no blind mutation retry;
+13. verify safe HTTP(S) reference opening and copy-only behavior for non-HTTP locators.
 
 **Gate:** every FR row has a passing automated or explicitly documented environment-bound acceptance case.
 
@@ -379,7 +383,7 @@ Minimum integrated scenario:
 
 **Files:** acceptance scripts/tests; no new production architecture.
 
-Prove loopback-only binding, same-origin/token mutation protection, path containment, safe Git argument invocation, no arbitrary Task-reference execution, and no personal Task data in the public source checkout.
+Prove loopback-only binding, same-origin/token mutation protection, path containment, safe Git argument invocation, single-writer enforcement, no arbitrary Task-reference execution, no credentials/secrets or personal Task titles/notes/references in ordinary logs, and no personal Task data in the public source checkout.
 
 Measure Technical solution §7.6 exactly: ≤128 MiB RSS and ≤1.0% one-core CPU average over five idle minutes after warm-up; running-service launcher handoff ≤500 ms p95/20; stopped-service HTTP readiness ≤2 s p95/20 on the reference Linux host.
 
@@ -397,7 +401,9 @@ Also verify:
 - no second Task/command/persistence model was introduced;
 - no Order private implementation was copied into Jig;
 - no user-facing Git conflict/reconciliation workflow exists;
-- installation/uninstall preserves user planning data by default.
+- installation/uninstall preserves user planning data by default;
+- configuration migration cannot leave two active writers or switch to a partially initialized destination;
+- crash recovery covers both import interruption and Git-commit-success/metadata-update-failure windows.
 
 **Gate:** `bun run verify` plus installer/repository/resource certification are green and the documentation index accurately reflects implementation status.
 
@@ -407,7 +413,7 @@ Parallel work is allowed only after its authority boundary is stable:
 
 - After V1-02, V1-03/V1-04 may proceed in parallel with V1-05 schema setup because all consume the same frozen Task contract.
 - After V1-07, V1-12 UI foundation may proceed while V1-08–V1-11 repository work continues; UI uses the canonical HTTP contract and must not mock a different data model.
-- After V1-13, Week/Day/History can be implemented by separate workers if they all reuse `task-row.tsx`, the same HTTP client code and the same canonical Task values.
+- After V1-13, Week/Day/History can be implemented by separate workers if they all reuse `task-row.tsx`, `ui/src/http.ts`, and the same canonical Task values.
 - V1-18 drag integration is one ownership lane. Do not let Week and Day workers invent separate movement adapters.
 - V1-21/V1-22 installer/service work may overlap late UI work after the local service and repository contracts are stable.
 
