@@ -268,23 +268,6 @@ export async function triggerSync(): Promise<RepositoryStatus> {
   return payload.repository_status;
 }
 
-export async function migrateRepository(
-  repositoryPath: string,
-): Promise<void> {
-  const payload = objectValue(
-    await postJson("/api/v1/migrate", {
-      repository_path: repositoryPath,
-    }),
-  );
-  if (payload.migrated !== true) {
-    throw new JigHttpError(
-      500,
-      payload,
-      "Jig service returned invalid migration result",
-    );
-  }
-}
-
 export function isStaleRevision(error: unknown): boolean {
   return error instanceof JigHttpError && error.status === 409;
 }
