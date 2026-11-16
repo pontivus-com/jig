@@ -4,8 +4,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { homedir } from "node:os";
-import { isAbsolute, resolve } from "node:path";
+import { resolve } from "node:path";
 import {
   DATA_REF,
   openDatabase,
@@ -19,108 +18,11 @@ import {
   type ServiceStatus,
 } from "./http";
 import { createSyncController } from "./sync";
-
-export interface JigConfig {
-  readonly version: 1;
-  readonly repository_path: string;
-  readonly remote_name: string | null;
-  readonly data_ref: typeof DATA_REF;
-  readonly http_port: number;
-}
-
-export class RuntimeConfigurationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RuntimeConfigurationError";
-  }
-}
-
-export function defaultConfigPath(): string {
-  return resolve(homedir(), ".config", "jig", "config.json");
-}
-
-export async function loadConfig(
-  path = defaultConfigPath(),
-): Promise<JigConfig> {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
-  } catch (error) {
-    throw new RuntimeConfigurationError(
-      `Unable to read Jig configuration at ${path}: ${String(error)}`,
-    );
-  }
-
-  if (
-    parsed === null ||
-    typeof parsed !== "object" ||
-    Array.isArray(parsed)
-  ) {
-    throw new RuntimeConfigurationError("Jig configuration must be an object");
-  }
-
-  const object = parsed as Record<string, unknown>;
-  const expectedKeys = [
-    "version",
-    "repository_path",
-    "remote_name",
-    "data_ref",
-    "http_port",
-  ];
-  const actualKeys = Object.keys(object).sort();
-  if (
-    actualKeys.length !== expectedKeys.length ||
-    actualKeys.some((key) => !expectedKeys.includes(key))
-  ) {
-    throw new RuntimeConfigurationError(
-      "Jig configuration has missing or unknown keys",
-    );
-  }
-
-  if (object.version !== 1) {
-    throw new RuntimeConfigurationError("Unsupported Jig configuration version");
-  }
-  if (
-    typeof object.repository_path !== "string" ||
-    !isAbsolute(object.repository_path)
-  ) {
-    throw new RuntimeConfigurationError(
-      "repository_path must be an absolute path",
-    );
-  }
-  if (
-    object.remote_name !== null &&
-    (typeof object.remote_name !== "string" ||
-      object.remote_name.trim().length === 0)
-  ) {
-    throw new RuntimeConfigurationError(
-      "remote_name must be null or a nonblank Git remote name",
-    );
-  }
-  if (object.data_ref !== DATA_REF) {
-    throw new RuntimeConfigurationError(
-      `data_ref must be exactly ${DATA_REF}`,
-    );
-  }
-  if (
-    typeof object.http_port !== "number" ||
-    !Number.isInteger(object.http_port) ||
-    object.http_port < 1024 ||
-    object.http_port > 65535
-  ) {
-    throw new RuntimeConfigurationError(
-      "http_port must be an integer from 1024 through 65535",
-    );
-  }
-
-  return {
-    version: 1,
-    repository_path: object.repository_path,
-    remote_name: object.remote_name,
-    data_ref: DATA_REF,
-    http_port: object.http_port,
-  };
-}
+import {
+  loadConfig,
+  RuntimeConfigurationError,
+  type JigConfig,
+} from "./config";
 
 function writeToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -189,21 +91,6 @@ export async function acquireWriterLease(
   throw new RuntimeConfigurationError(
     "Unable to acquire the Jig writer lease",
   );
-}
-
-function snapshotsEqual(
-  left: ReadonlyMap<string, string>,
-  right: ReadonlyMap<string, string>,
-): boolean {
-  if (left.size !== right.size) {
-    return false;
-  }
-  for (const [path, content] of left) {
-    if (right.get(path) !== content) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function createStatus(
