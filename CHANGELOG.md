@@ -8,6 +8,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 - Preserved executable modes for release-bundle installer/launcher entrypoints and added safe pending-release retry behavior after pre-tag release-infrastructure failures.
 - Isolated the certified release-bundle smoke from the hosted runner's user systemd manager so it validates Jig's supported foreground fallback under an isolated HOME.
+- Finalized pre-tag release anchoring on the current default-branch commit so GitHub workflow-permission safeguards do not block immutable release tags.
 
 ## [1.0.0] - 2026-11-16
 
