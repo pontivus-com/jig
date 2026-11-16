@@ -36,6 +36,7 @@ function HistoryTaskRow({
   onDelete: (taskId: string) => Promise<boolean>;
 }>): React.ReactElement {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   return (
     <>
@@ -54,31 +55,48 @@ function HistoryTaskRow({
         <time dateTime={task.completed_at ?? undefined}>
           {completionTime(task)}
         </time>
-        <details className="jig-task-menu">
-          <summary aria-label={`Actions for ${task.title}`}>•••</summary>
-          <div className="jig-task-menu-panel">
-            <Button
-              label="Reopen"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                void onReopen(task);
-              }}
-            />
-            <Button
-              label="Edit"
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(task)}
-            />
-            <Button
-              label="Delete task…"
-              variant="ghost"
-              size="sm"
-              onClick={() => setDeleteOpen(true)}
-            />
-          </div>
-        </details>
+        <div className="jig-task-menu">
+          <button
+            type="button"
+            className="jig-task-menu-trigger"
+            aria-label={`Actions for ${task.title}`}
+            aria-expanded={actionsOpen}
+            onClick={() => setActionsOpen((value) => !value)}
+          >
+            •••
+          </button>
+          {actionsOpen ? (
+            <div className="jig-task-menu-panel">
+              <Button
+                label="Reopen"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setActionsOpen(false);
+                  void onReopen(task);
+                }}
+              />
+              <Button
+                label="Edit"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setActionsOpen(false);
+                  onEdit(task);
+                }}
+              />
+              <Button
+                label="Delete task…"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setActionsOpen(false);
+                  setDeleteOpen(true);
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
       </div>
       <AlertDialog
         isOpen={deleteOpen}
