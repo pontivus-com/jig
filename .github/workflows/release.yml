@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - package.json
+      - CHANGELOG.md
       - .github/workflows/release.yml
       - scripts/package-release.ts
   workflow_dispatch:
@@ -55,61 +56,46 @@ jobs:
           trigger_parent="$(git rev-parse HEAD^)"
           current="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
 
-          target_sha=""
-          parent_sha=""
-
           if git cat-file -e "${trigger_parent}:package.json" 2>/dev/null; then
             previous="$(git show "${trigger_parent}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
           else
             previous=""
           fi
 
+          target_sha=""
+          parent_sha=""
+
           if [[ "${current}" != "${previous}" ]]; then
             target_sha="${trigger_sha}"
             parent_sha="${trigger_parent}"
-            echo "Release candidate detected: ${previous:-<none>} -> ${current}"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "::error::Target commit is not a release commit: package version did not change."
-            exit 1
+            echo "Release version transition detected: ${previous:-<none>} -> ${current}"
           else
             tag="v${current}"
             if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
               echo "should_release=false" >> "${GITHUB_OUTPUT}"
-              echo "Release ${tag} is already tagged; no publication retry is needed."
+              echo "Release ${tag} is already tagged; no publication is needed."
               exit 0
             fi
 
-            while IFS= read -r candidate; do
-              if ! git cat-file -e "${candidate}:package.json" 2>/dev/null; then
-                continue
-              fi
+            current_unreleased="$(python3 -c 'from pathlib import Path; t=Path("CHANGELOG.md").read_text(); print(t.split("## [Unreleased]\n",1)[1].split("\n## [",1)[0].strip())')"
+            if git cat-file -e "${trigger_parent}:CHANGELOG.md" 2>/dev/null; then
+              base_unreleased="$(git show "${trigger_parent}:CHANGELOG.md" | python3 -c 'import sys; t=sys.stdin.read(); print(t.split("## [Unreleased]\n",1)[1].split("\n## [",1)[0].strip())')"
+            else
+              base_unreleased=""
+            fi
 
-              candidate_version="$(git show "${candidate}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
-              if [[ "${candidate_version}" != "${current}" ]]; then
-                break
-              fi
-
-              candidate_parent="$(git rev-parse "${candidate}^" 2>/dev/null || true)"
-              [[ -n "${candidate_parent}" ]] || continue
-              if ! git cat-file -e "${candidate_parent}:package.json" 2>/dev/null; then
-                continue
-              fi
-
-              candidate_previous="$(git show "${candidate_parent}:package.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
-              if [[ "${candidate_version}" != "${candidate_previous}" ]]; then
-                target_sha="${candidate}"
-                parent_sha="${candidate_parent}"
-                break
-              fi
-            done < <(git rev-list --first-parent HEAD)
-
-            if [[ -z "${target_sha}" || -z "${parent_sha}" ]]; then
+            if [[ -z "${current_unreleased}" && -n "${base_unreleased}" ]] && grep -Fq "## [${current}] - " CHANGELOG.md; then
+              target_sha="${trigger_sha}"
+              parent_sha="${trigger_parent}"
+              echo "Same-version pre-tag release finalization detected for v${current}."
+            elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              echo "::error::Target commit is neither a version transition nor a release finalization."
+              exit 1
+            else
               echo "should_release=false" >> "${GITHUB_OUTPUT}"
-              echo "No pending release transition found."
+              echo "No release transition/finalization detected."
               exit 0
             fi
-
-            echo "Pending release retry detected for v${current} at ${target_sha}."
           fi
 
           echo "should_release=true" >> "${GITHUB_OUTPUT}"
