@@ -123,6 +123,7 @@ export function WeekView({
             <Button
               label="Add task"
               variant="primary"
+              className="jig-header-add"
               onClick={() => onAdd(selectedDate)}
             />
           </div>
@@ -138,6 +139,13 @@ export function WeekView({
           onMoveToDate={onMoveToDate}
           onToggleComplete={onToggleComplete}
           onMove={onMove}
+        />
+        <Button
+          label="+"
+          aria-label="Add task"
+          variant="primary"
+          className="jig-mobile-quick-add"
+          onClick={() => onAdd(selectedDate)}
         />
       </div>
     );
