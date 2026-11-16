@@ -29,19 +29,19 @@
 <text x="258" y="238" class="xs" fill="#fff" font-weight="700">✓</text>
 <text x="286" y="233" class="b" fill="#152238" font-weight="650">Legal — TTA workflow remediation</text>
 <text x="286" y="253" class="xs" fill="#657187">Legal App · Scheduled Thu 19</text>
-<text x="1380" y="235" class="s" fill="#657187" text-anchor="end">10:42</text>
+<text x="1340" y="235" class="s" fill="#657187" text-anchor="end">10:42</text>\n<text x="1380" y="235" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
 <rect x="240" y="287" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
 <rect x="255" y="307" width="16" height="16" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
 <text x="258" y="320" class="xs" fill="#fff" font-weight="700">✓</text>
 <text x="286" y="315" class="b" fill="#152238" font-weight="650">Review outstanding fixes</text>
 <text x="286" y="335" class="xs" fill="#657187">Legal · Scheduled Fri 20</text>
-<text x="1380" y="317" class="s" fill="#657187" text-anchor="end">13:18</text>
+<text x="1340" y="317" class="s" fill="#657187" text-anchor="end">13:18</text>\n<text x="1380" y="317" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
 <rect x="240" y="369" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
 <rect x="255" y="389" width="16" height="16" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
 <text x="258" y="402" class="xs" fill="#fff" font-weight="700">✓</text>
 <text x="286" y="397" class="b" fill="#152238" font-weight="650">Prepare next week</text>
 <text x="286" y="417" class="xs" fill="#657187">Order · Scheduled Fri 20</text>
-<text x="1380" y="399" class="s" fill="#657187" text-anchor="end">16:06</text>
+<text x="1340" y="399" class="s" fill="#657187" text-anchor="end">16:06</text>\n<text x="1380" y="399" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
 <text x="240" y="469" class="h2">Thursday, 19 November</text>
 <text x="240" y="492" class="s" fill="#657187">2 completed</text>
 <rect x="240" y="513" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
@@ -49,12 +49,12 @@
 <text x="258" y="546" class="xs" fill="#fff" font-weight="700">✓</text>
 <text x="286" y="541" class="b" fill="#152238" font-weight="650">Daily standup</text>
 <text x="286" y="561" class="xs" fill="#657187">Team · Scheduled Thu 19</text>
-<text x="1380" y="543" class="s" fill="#657187" text-anchor="end">09:12</text>
+<text x="1340" y="543" class="s" fill="#657187" text-anchor="end">09:12</text>\n<text x="1380" y="543" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
 <rect x="240" y="595" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
 <rect x="255" y="615" width="16" height="16" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
 <text x="258" y="628" class="xs" fill="#fff" font-weight="700">✓</text>
 <text x="286" y="623" class="b" fill="#152238" font-weight="650">Update release notes</text>
 <text x="286" y="643" class="xs" fill="#657187">Order · Scheduled Thu 19</text>
-<text x="1380" y="625" class="s" fill="#657187" text-anchor="end">17:31</text>
+<text x="1340" y="625" class="s" fill="#657187" text-anchor="end">17:31</text>\n<text x="1380" y="625" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
 <text x="240" y="820" class="s" fill="#657187">History is a record of completion, not a productivity dashboard.</text>
 </svg>
