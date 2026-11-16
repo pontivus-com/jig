@@ -63,7 +63,7 @@ function fakeEffects(options: {
   const pushResults = [...(options.pushResults ?? ["synchronized"])];
 
   const effects: SyncEffects = {
-    ensureWorktree: async () => undefined,
+    ensurePortableData: async () => undefined,
     readCurrentSnapshot: async () => {
       const head = options.head ?? null;
       if (head === null) {
@@ -74,7 +74,7 @@ function fakeEffects(options: {
       }
       return { head, snapshot: options.snapshot };
     },
-    commit: async (
+    writeSnapshot: async (
       _config: GitAdapterConfig,
       _snapshot: PortableSnapshot,
       revision: number,
@@ -82,7 +82,7 @@ function fakeEffects(options: {
       commitCalls.count += 1;
       return revision.toString(16).padStart(40, "0");
     },
-    push: async () => {
+    synchronize: async () => {
       pushCalls.count += 1;
       return pushResults.shift() ?? "synchronized";
     },
