@@ -1,6 +1,6 @@
 # V1-25 browser evidence
 
-**Captured from revision:**   
+**Captured from revision:** `68272d81c21c384c00f61c3a04874c74b7c8ec17`  
 **Runner:** Ubuntu 26.04 / pinned Bun 1.4.4 / pinned Playwright Chromium  
 **Captured:** 2026-11-16
 
