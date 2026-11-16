@@ -1,44 +1,48 @@
 # Jig brand assets
 
-The canonical Jig mark is the approved **J-shaped guide with one alignment pin**.
-
-It expresses the product metaphor: a jig briefly guides something into the right position without becoming the work itself. Jig guides attention into the day while underlying project work remains in its authoritative system.
-
-## Canonical assets
-
-- `jig-symbol.svg` — canonical full-colour mark.
-- `jig-icon.svg` — canonical icon alias using identical geometry.
-- `jig-symbol-mono-dark.svg` — one-colour dark mark.
-- `jig-symbol-mono-light.svg` — one-colour light mark.
-- `jig-logo.svg` — transparent horizontal symbol + wordmark.
-- `jig-logo-light.svg` — fixed light-background horizontal lockup.
-- `jig-logo-dark.svg` — fixed dark-background horizontal lockup.
-- `jig-logo-plate-dark.svg` — fixed dark README plate.
+The canonical visual specification is [`docs/design/brand-and-theme.md`](../docs/design/brand-and-theme.md). This directory contains its approved Option A assets only.
 
 ## Geometry authority
 
-All variants use the same geometric J guide and alignment-pin coordinates from `jig-symbol.svg`. Do not redraw the mark from memory or substitute a generic list/calendar/checkmark icon.
+All mark variants use the same 64×64 J-guide geometry and alignment-pin position. All horizontal lockups use the same outlined wordmark geometry. Released SVGs contain no live font dependency.
 
-## Colour
+Do not redraw either geometry from memory.
 
-- Ink: `#14202B`
-- Dark surface: `#101820`
-- Jig amber: `#F5A623`
-- Warm highlight: `#FFD166`
-- White: `#FFFFFF`
+## Asset matrix
 
-## Primary copy
+| Asset | Dimensions | Use |
+| --- | ---: | --- |
+| `jig-symbol.svg` | 64×64 | full-color mark on light surfaces |
+| `jig-symbol-on-dark.svg` | 64×64 | full-color mark on dark surfaces |
+| `jig-icon.svg` | 64×64 | canonical symbol alias |
+| `jig-symbol-mono-dark.svg` | 64×64 | one-color dark symbol |
+| `jig-symbol-mono-light.svg` | 64×64 | one-color light symbol |
+| `jig-app-icon.svg` | 512×512, 64×64 viewBox | app/product icon master |
+| `jig-favicon.svg` | 32×32, 64×64 viewBox | browser favicon |
+| `jig-logo.svg` | 144×76 | transparent horizontal lockup for light surfaces |
+| `jig-logo-on-dark.svg` | 144×76 | transparent horizontal lockup for dark surfaces |
+| `jig-logo-mono-dark.svg` | 144×76 | one-color horizontal dark |
+| `jig-logo-mono-light.svg` | 144×76 | one-color horizontal light |
+| `jig-logo-light.svg` | 168×96 | fixed Paper light plate |
+| `jig-logo-dark.svg` | 168×96 | fixed Ink dark plate |
+| `jig-logo-plate-dark.svg` | 224×104 | README/theme-independent plate |
 
-**Plan the day. Stay on track.**
+## Crop and alignment
 
-**Jig schedules attention, not project execution.**
+The transparent 144×76 horizontal lockup is the optical crop. Do not preserve a larger authoring canvas.
 
-The messaging remains README/product copy and is not embedded in the canonical symbol.
+The 168×96 plates add exactly 12 units of horizontal and 10 units of vertical clear space around that lockup.
 
-## Usage
+The README plate adds exactly 40 units horizontal and 14 units vertical clear space and is centered by visible artwork.
 
-For GitHub README use, prefer `jig-logo-plate-dark.svg` because its fixed background renders consistently across GitHub themes.
+The square mark is optically centered rather than mathematically forcing the curved J into a symmetric bounding box.
 
-Keep at least one alignment-pin diameter of clear space around the symbol.
+## Application use
 
-Do not add shadows, gradients, checkmarks, calendar pages, clocks, Git graphs, robots or workflow-node motifs to the primary mark.
+- Compact application chrome: `jig-app-icon.svg` plus live product text.
+- Browser favicon: `jig-favicon.svg`.
+- README: `jig-logo-plate-dark.svg`.
+- Light branded surface: `jig-logo.svg` or `jig-logo-light.svg`.
+- Dark branded surface: `jig-logo-on-dark.svg` or `jig-logo-dark.svg`.
+
+See the governing brand/theme document for palette, semantic theming and prohibited uses.
