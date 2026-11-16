@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Jig mark</title>
+  <desc id="desc">A precise J-shaped guide with an amber alignment pin.</desc>
+  <g transform="translate(3 0)">
+    <path d="M48 10v25c0 11-7 18-18 18h-4c-9 0-15-5-16-14" fill="none" stroke="#FFFFFF" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="28" cy="34" r="5.5" fill="#F59E0B"/>
+  </g>
+</svg>
