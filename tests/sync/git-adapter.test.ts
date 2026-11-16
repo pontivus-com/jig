@@ -14,7 +14,7 @@ import {
   ensurePortableData,
   GitAdapterError,
   readCurrentPortableSnapshot,
-  repositorySynchronizationAvailability,
+  repositorySynchronizationMode,
   runGit,
   serializeSnapshot,
   writePortableSnapshot,
@@ -193,13 +193,13 @@ describe("isolated jig-data adapter", () => {
     await git(repo, ["remote", "add", "backup", "/tmp/jig-backup.git"]);
 
     const config = { repository_path: repo } as const;
-    expect(await repositorySynchronizationAvailability(config)).toBe(
+    expect(await repositorySynchronizationMode(config)).toBe(
       "local-only",
     );
 
     await git(repo, ["config", "remote.pushDefault", "backup"]);
-    expect(await repositorySynchronizationAvailability(config)).toBe(
-      "synchronized",
+    expect(await repositorySynchronizationMode(config)).toBe(
+      "remote",
     );
   });
 
