@@ -1,7 +1,4 @@
-import {
-  access,
-  rm,
-} from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import {
@@ -316,23 +313,6 @@ async function uninstall(): Promise<void> {
   );
 }
 
-async function ensureInstalledUnitReadable(): Promise<void> {
-  const unit = resolve(
-    homedir(),
-    ".config",
-    "systemd",
-    "user",
-    "jig.service",
-  );
-  try {
-    await access(unit);
-  } catch {
-    throw new CliError(
-      "Jig systemd user unit is not installed; use 'jig serve' for the foreground fallback",
-    );
-  }
-}
-
 async function runCli(argv: readonly string[]): Promise<void> {
   const [command, ...rest] = argv;
   switch (command) {
@@ -368,13 +348,6 @@ async function runCli(argv: readonly string[]): Promise<void> {
         throw new CliError("Usage: jig uninstall");
       }
       await uninstall();
-      return;
-    case "service":
-      if (rest.length !== 1 || rest[0] !== "check") {
-        throw new CliError("Usage: jig service check");
-      }
-      await ensureInstalledUnitReadable();
-      process.stdout.write("service_unit: installed\n");
       return;
     default:
       throw new CliError(
