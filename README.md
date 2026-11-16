@@ -63,7 +63,7 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
   | bash -s -- --repo /absolute/path/to/your/planning-repo
 ```
 
-Jig uses the selected repository's existing Git configuration for automatic background synchronization. If the repository has no usable remote, Jig remains fully usable in `local-only` mode.
+Jig uses the selected repository's Git configuration for automatic background synchronization. The installer may also take a repository URL plus checkout destination and delegate the clone to Git before continuing through the same installation path. If the repository has no usable remote, Jig remains fully usable in `local-only` mode.
 
 Then:
 
@@ -71,7 +71,7 @@ Then:
 jig
 ```
 
-See [Install Jig](docs/install.md) for existing-repository setup, pinned versions, upgrade, Git-native continuity, foreground fallback and uninstall.
+See [Install Jig](docs/install.md) for existing-repository and repository-URL setup, pinned versions, upgrade, Git-native continuity, foreground fallback and uninstall.
 
 ## What stays where
 
