@@ -24,7 +24,7 @@ The normal experience is: run one installer; assign repository; installer config
 | Live data | One Bun SQLite database at `<selected-repo>/.jig/local/jig.sqlite`; immediate transactional writes |
 | Versioned data | Deterministic Task JSON and manifest synchronized through Git inside the selected repository. The adapter may use an isolated Git namespace internally, but branch/ref/worktree lifecycle is an implementation detail confined to that adapter rather than Jig application state or user configuration. |
 | Repository sync boundary | Daemon automatically debounces Jig-record export and invokes a thin Git adapter. The adapter is responsible only for synchronizing Jig-owned portable data without touching unrelated repository content and returns coarse synchronization outcomes plus validated Jig snapshots; Git topology, policy, credentials and reconciliation remain external. |
-| Notifications | Astryx Toast while browser is open; no background push or notification delivery promise |
+| Notifications | One browser-side reminder monitor: Astryx Toast while visible; browser Notification while hidden/open and permission-granted; no closed-app/background push guarantee |
 | Mobile | Narrow mobile-first layout and touch accessibility in desktop web UI; standalone phone installation deferred |
 
 The selected repository's ordinary working state, staged files and unrelated content are **never** touched by Jig's automatic synchronization. The adapter must provide this isolation using the smallest Git mechanism that satisfies the requirement; the application must not model or manage that mechanism outside the adapter.
@@ -82,7 +82,7 @@ Jig application source/distribution  (separate from personal planning repo)
                                 |
  Browser (loopback)  <-----------+------->  Bun HTTP + functional core
  React / Astryx / dnd-kit                         |
- Browser-only reminder toasts                     v
+ Browser reminder monitor (toast / Notification)  v
                                 selected PERSONAL Git repository
                                 <repo>/.jig/
                                    local/jig.sqlite      operational authority
@@ -97,7 +97,7 @@ Jig application source/distribution  (separate from personal planning repo)
 
 The application binary and runtime may be installed under normal user application directories; **all task data and recoverable canonical planning records must be inside the configured Git repository**. The local service keeps only its own noncanonical logs and launch configuration outside that repository. Do not install the program into or modify the public source checkout when it is not the selected personal target.
 
-**Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, daily rollover, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser toast callback. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
+**Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, daily rollover, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser reminder presentation. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
 
 Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to selected date/task, modal draft, transient drag preview and local appearance preference. Theme preference is presentation state and never part of canonical Task or Git-synchronized planning data. Date/week/history views are queries over the same canonical Task set.
 
@@ -159,7 +159,7 @@ delete   { task_id }
 
 `create` generates ID and timestamps in the shell before invoking the pure core. `edit` with a changed scheduled date uses the priority-assisted insertion rule; `move` is the exact-position drag/keyboard move rule. `complete` supplies the shell's current instant. `delete` is emitted only after UI confirmation; the core does not model the confirmation dialog.
 
-Every Task command requires the revision read by the caller as `expected_revision`. If it does not equal the current SQLite revision, return HTTP **409** with the current revision and make no mutation; the browser refetches canonical state before retrying. Validation errors are **400**, a missing Task is **404**, and an unexpected persistence failure is **500** with no claimed save. Successful create/edit/move/complete/reopen returns `{ revision, task }`; successful delete returns `{ revision, deleted_task_id }`. These are thin HTTP envelopes around canonical values, not independent domain models.
+Every Task command first executes the idempotent daily-rollover catch-up against the service's current local civil date, then reads the resulting current SQLite revision, and only then compares the caller's `expected_revision`. If rollover changed the revision, a client still holding yesterday's revision receives HTTP **409** with the new current revision and no requested Task mutation is admitted. If `expected_revision` does not equal the post-rollover current revision, return HTTP **409** with the current revision and make no mutation; the browser refetches canonical state before retrying. Validation errors are **400**, a missing Task is **404**, and an unexpected persistence failure is **500** with no claimed save. Successful create/edit/move/complete/reopen returns `{ revision, task }`; successful delete returns `{ revision, deleted_task_id }`. These are thin HTTP envelopes around canonical values, not independent domain models.
 
 The operational endpoints are shell admission only, not a second domain command model. `/sync` calls the one existing sync-worker trigger. Do not duplicate synchronization implementation in the HTTP layer.
 
@@ -356,6 +356,23 @@ Shell lifecycle:
 6. reschedule the next day-boundary timer;
 7. before serving canonical planning state or accepting a Task mutation, perform an idempotent catch-up check so suspend/sleep/timer delays cannot leave stale dates visible.
 
+HTTP command admission order is strict:
+1. `ensureCurrentDayRollover()`;
+2. read post-rollover current revision;
+3. compare `expected_revision`;
+4. return 409/refetch if stale;
+5. only then execute the requested Task mutation.
+
+Do not validate `expected_revision` first and perform rollover afterward.
+
+The already-open browser must also revalidate canonical state across a local-day transition. The UI keeps the last observed local civil date and:
+- schedules a recheck for the next local day boundary;
+- rechecks on `focus` and `visibilitychange`;
+- when the observed civil date changes, calls the existing canonical-state refresh path;
+- if the selected date represented the previous "today", advances that selection to the new current date;
+- preserves an explicitly selected historical/future date;
+- refreshes the Task array used by Week, Day and the reminder monitor without a manual user action.
+
 If rollover makes the browser's `expected_revision` stale, normal HTTP 409/refetch behavior applies. Do not create a special rollover transport protocol.
 
 A Task's reminder time remains the same local clock time while its scheduled date changes, so the reminder naturally applies to the new rolled-forward date.
@@ -438,7 +455,7 @@ ui/
     week.tsx                dated columns and cross-day drag composition
     day.tsx                 day and completed composition
     task-editor.tsx         title-first quick add and bounded edit
-    reminder.tsx            browser due check + Astryx toast
+    reminder.tsx            browser due check + toast/Notification delivery
     theme.css               Jig-specific board/layout roles only
 tests/
   core/
@@ -463,7 +480,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-07 unrestricted edit | Astryx edit surface + core update | All optional fields and date edited without workflow gate |
 | JIG-FR-08 completion/reopen | Core transition + timestamp + DB | Date-scheduled completion, history query, reopen same ID |
 | JIG-FR-09 daily rollover | Pure core rollover + one SQLite transaction + service day-boundary/catch-up trigger | Earlier outstanding Tasks physically move to the current date; Week and Day show the same moved card in the current bucket; completed Tasks never move |
-| JIG-FR-10 in-app reminder | Browser clock + Astryx Toast | Due while open => one dismissible toast; no closed-app guarantee |
+| JIG-FR-10 reminder delivery | One browser reminder monitor + Astryx Toast + browser Notification API | Visible page => one toast; hidden/open + granted permission => one browser Notification; one shared delivery key prevents duplicates; no closed-app guarantee |
 | JIG-FR-11 external context | Reference open/copy UI | Link/path accessible; no source-content import |
 | JIG-FR-12 honest outcome | HTTP/SQLite/repository-boundary outcome and UI | Failed local save or repository sync never rendered as success |
 | JIG-FR-13 responsive continuity | Same Task + Astryx responsive composition | Narrow/wide navigation preserves selection and draft |
@@ -485,7 +502,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 **Repository/Git integration:** Use existing-repository fixtures with unrelated dirty/staged files and normal developer Git configurations, including commit signing enabled with no Jig key. Verify automatic export/synchronization touches only Jig-owned portable data; user Git configuration is unchanged; installation/retry survives synchronization failure; existing valid Jig data is adopted; the exact v1.0.0 empty-bootstrap residue recovers safely; unknown malformed states are non-destructive; ordinary repository content remains untouched.
 
-**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, persisted daily rollover visible in both Day and Week, full-card drag overlay, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, confirmed/cancelled deletion, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, System/Light/Dark parity, in-app due toast, and durable save-error visibility.
+**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, persisted daily rollover visible in both Day and Week, open-browser local-midnight revalidation, full-card drag overlay, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, confirmed/cancelled deletion, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, System/Light/Dark parity, visible-page reminder toast, hidden-page browser Notification with granted permission, permission fallback/catch-up, and durable save-error visibility.
 
 **Installer/service:** Non-root one-script setup in both supported target modes: an existing local repository via `--repo`, and a repository URL cloned by Git into a new/empty checkout via `--repo-url` + `--checkout`. Verify both modes converge on the same repository-validation/setup path, plus exact target selection, idempotent rerun, invalid target refusal, existing-data adoption, failed-install retry, launcher/service restart and auto-sync while the browser is closed. Repository migration/reorganization remains outside Jig.
 
@@ -510,7 +527,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **Repository boundary instead of a Jig Git state machine:** Jig exports/validates portable snapshots and receives only operational synchronization outcomes. Git acquisition, topology, policy, credentials, history and reconciliation stay with Git tooling and never become Jig domain/configuration/state.
 - **Astryx directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows.
 - **dnd-kit instead of Astryx same-list reordering plus custom cross-day dragging:** One coordinated drag system across all seven date columns with a single canonical move command.
-- **Browser-side toasts instead of background infrastructure:** Exact compliance with open-app reminder requirements.
+- **Browser-side reminder monitor instead of background infrastructure:** Toast while visible and browser Notification while hidden/open with granted permission, with no closed-app delivery guarantee.
 - **One Task and derived views instead of multiple planning objects:** Satisfies all 22 functional requirements without building a project manager.
 
 **Implementation planning can now be derived from this document and [the UI solution](../design/ui-solution.md).** The plan must preserve the boundaries above, prove the specified acceptance gates, and must not interpret non-goals as implied features.
