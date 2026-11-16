@@ -292,7 +292,7 @@ async function requireGit(
   return result.stdout;
 }
 
-export async function discoverSynchronizationRemote(
+async function discoverSynchronizationRemote(
   repositoryPath: string,
 ): Promise<string | null> {
   const result = await runGit(repositoryPath, ["remote"]);
@@ -737,44 +737,6 @@ export async function readSnapshotAtRef(
   }
 
   return validateSnapshot(files, expectedDatasetId);
-}
-
-export async function fetchRemoteCandidate(
-  config: GitAdapterConfig,
-  expectedDatasetId: string,
-): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
-  assertAdapterPaths(config);
-  const remoteName = await discoverSynchronizationRemote(
-    config.repository_path,
-  );
-  if (remoteName === null) {
-    return null;
-  }
-
-  const trackingRef = `refs/remotes/${remoteName}/jig-data`;
-  const fetchResult = await runGit(config.repository_path, [
-    "fetch",
-    "--no-tags",
-    remoteName,
-    `refs/heads/jig-data:${trackingRef}`,
-  ]);
-
-  if (fetchResult.exit_code !== 0) {
-    throw new GitAdapterError(
-      `Repository synchronization failed: ${fetchResult.stderr || fetchResult.stdout}`,
-    );
-  }
-
-  const head = await requireGit(config.repository_path, [
-    "rev-parse",
-    trackingRef,
-  ]);
-  const snapshot = await readSnapshotAtRef(
-    config.repository_path,
-    trackingRef,
-    expectedDatasetId,
-  );
-  return { head, snapshot };
 }
 
 export async function pushJigDataRef(
