@@ -35,3 +35,18 @@ export function formatReminderTime(value: string): string {
     minute: "2-digit",
   }).format(date);
 }
+
+export function millisecondsUntilNextCivilDay(
+  now = new Date(),
+): number {
+  const next = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+    0,
+    0,
+    0,
+    50,
+  );
+  return Math.max(1, next.getTime() - now.getTime());
+}
