@@ -7,14 +7,15 @@ Jig is a small, local-first, just-in-time daily planner. It schedules attention 
 ## Canonical reading order
 
 1. [Product definition](product/product-definition.md) — intent, product boundary and MVP outcomes.
-2. [Product identity](product/product-identity.md) — public naming, message hierarchy and visual identity.
-3. [Planning and UX functional requirements](requirements/planning-workbench.md) — observable JIG-FR-01–22 behaviour, including carry-over, confirmed deletion, System/Light/Dark appearance, onboarding/installation, repository ownership, the `jig` command, background availability and automatic synchronization.
-4. [Technical solution](architecture/technical-solution.md) — selected dependencies and exact application architecture, installer/user service, canonical Task, SQLite in the selected repository, isolated repository integration boundary, background sync, canonical snapshot admission and verification.
-5. [UI solution and versioned reference mockups](design/ui-solution.md) — screen hierarchy, desktop/mobile responsive composition, Astryx/dnd-kit ownership, design corrections and browser acceptance.
-6. [v1 MVP implementation plan](implementation/v1-mvp-implementation-plan.md) — dependency-ordered execution tasks, exact implementation surfaces, safe parallelism, verification gates and the definition of implementation complete.
-7. [Installation](install.md) — supported release installation, upgrade, migration and uninstall.
-8. [Releases](releases/README.md) — immutable release process, binary asset contract and publication channel.
-9. [v1 release-candidate evidence](evidence/v1/README.md) — permanent verification, security/installer/resource certification and representative runtime screenshots.
+2. [Product identity](product/product-identity.md) — public naming and message hierarchy.
+3. [Brand and theme system](design/brand-and-theme.md) — Option A mark, palette, Light/Dark semantic mapping, asset geometry and application integration.
+4. [Planning and UX functional requirements](requirements/planning-workbench.md) — observable JIG-FR-01–22 behaviour, including carry-over, confirmed deletion, System/Light/Dark appearance, onboarding/installation, repository ownership, the `jig` command, background availability and automatic synchronization.
+5. [Technical solution](architecture/technical-solution.md) — selected dependencies and exact application architecture, installer/user service, canonical Task, SQLite in the selected repository, isolated repository integration boundary, background sync, canonical snapshot admission and verification.
+6. [UI solution and versioned reference mockups](design/ui-solution.md) — screen hierarchy, desktop/mobile responsive composition, Astryx/dnd-kit ownership, design corrections and browser acceptance.
+7. [v1 MVP implementation plan](implementation/v1-mvp-implementation-plan.md) — dependency-ordered execution tasks, exact implementation surfaces, safe parallelism, verification gates and the definition of implementation complete.
+8. [Installation](install.md) — supported release installation, upgrade, migration and uninstall.
+9. [Releases](releases/README.md) — immutable release process, binary asset contract and publication channel.
+10. [v1 release-candidate evidence](evidence/v1/README.md) — permanent verification, security/installer/resource certification and representative runtime screenshots.
 
 Functional requirements define *what* users can observe. Technical solution owns *how* data and runtime behave. UI solution owns *how* users see and manipulate those functions. No part of the design inherits Order's workflow/lifecycle domain, creates DTO hierarchies, or introduces duplicate task authority.
 
