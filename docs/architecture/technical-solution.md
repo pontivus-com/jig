@@ -29,7 +29,7 @@ The original Day-labelled concept imagery is layout exploration, not an authorit
 
 The initial dependency set is exact-pinned; no wholesale Order package manifest is copied.
 
-**Production:** react 19.3.1; react-dom 19.3.1; @astryxdesign/core 0.7.13; @astryxdesign/theme-neutral 0.7.13; @stylexjs/stylex 0.19.1 (Astyx peer); @dnd-kit/react 0.5.3.
+**Production:** react 19.3.1; react-dom 19.3.1; @astryxdesign/core 0.7.13; @astryxdesign/theme-neutral 0.7.13; @stylexjs/stylex 0.19.1 (Astryx peer); @dnd-kit/react 0.5.3.
 
 **Development:** typescript 7.0.2; vite 8.3.5; @types/react 19.3.0; @types/react-dom 19.3.0; @types/bun 1.4.4; vitest 5.0.5; @playwright/test 1.64.1. Use Bun 1.4.4 as the installed runtime; pin it in repository runtime metadata. The exact baseline is a reproducibility selection, not a claim that later packages are incompatible.
 
@@ -187,9 +187,9 @@ Presentation rules: consistent spacing and density, one primary action, accessib
 
 ## 6. Browser reminders
 
-A reminder is optional HH:mm on a scheduled date. The browser UI evaluates due outstanding tasks only while Jig is open and visible; it uses the device's local civil date/time, periodically checks active reminders (at least once per minute), and rechecks on tab visibility/focus. An eligible reminder produces an Astryx dismissible toast; an OS/browser notification is an optional permitted enhancement, not an acceptance dependency.
+A reminder is optional HH:mm on a scheduled date. The browser UI evaluates due outstanding tasks while Jig is open; it uses the device's local civil date/time, periodically checks active reminders (at least once per minute when scheduling is permitted), and rechecks on tab visibility/focus. Browser timer throttling may delay delivery in hidden tabs; resume checks handle reminders that became due since this app session started. An eligible reminder produces an Astryx dismissible toast; an OS/browser notification is an optional permitted enhancement, not an acceptance dependency.
 
-Keep the implementation bounded: no push sender, persistent scheduler, service worker notification daemon, background queue, or alert guarantee when Jig is closed or the machine sleeps. Delivery is best effort while the UI is running. A locally stored key (task ID + scheduled date + reminder time) suppresses repeated display on each timer tick and reload. On changing date/time, the new key becomes eligible; on completion it is no longer eligible. Suppression state remains device-local and cannot change Task completion or scheduled order. Do not replay stale reminders from past dates as a flood on application launch.
+Keep the implementation bounded: no push sender, persistent scheduler, service worker notification daemon, background queue, or alert guarantee when Jig is closed or the machine sleeps. Delivery is best effort while the UI is running. A locally stored key (task ID + scheduled date + reminder time) suppresses repeated display on each timer tick and reload. On changing date/time, the new key becomes eligible; on completion it is no longer eligible. Suppression state remains device-local and cannot change Task completion or scheduled order. Only reminders due since the current app session began are eligible for catch-up on resume; do not replay stale reminders from earlier sessions or past dates as a flood on launch.
 
 Failure to use system notifications must not suppress the in-app toast. Reminder messages are transient; failed persistence/synchronization messages require durable visible feedback instead of only a toast.
 
@@ -218,7 +218,7 @@ On a normal install, use the OS application-data directory; an explicit JIG_DATA
 
 The Git repository stores one UTF-8 JSON file per Task, keyed by its UUID, and a small format.json specifying a recognized format version. The task JSON contains exactly the canonical Task fields from §4, in fixed key order, UTF-8, with stable ISO date/time representation, normalized newline and deterministic serialization. No local SQLite row IDs, database file paths, browser state, per-device toast receipts, credentials, local timezone/locale or cache content enter the portable snapshot.
 
-The snapshot invariant is: each path ID equals its Task ID, every imported Task passes validation, and all scheduled dates contain a valid contiguous active sequence. A snapshot includes completed tasks as well as unfinished tasks. Missing records during a **full snapshot restore** mean those records are absent; such a replace operation requires explicit operator confirmation because data may otherwise be lost. Task deletion is not an MVP UI capability; v1 neither invents a hidden delete command nor treats a missing file as a request to delete one task during incremental sync.
+The snapshot invariant is: each path ID equals its Task ID, every imported Task passes validation, and all scheduled dates contain a valid contiguous active sequence. A snapshot includes completed tasks as well as unfinished tasks. Missing records during a **full snapshot restore** mean those records are absent; such a replace operation requires explicit operator confirmation because data may otherwise be lost. During ordinary fast-forward synchronization, a remote snapshot missing existing local Task IDs must be rejected rather than interpreted as silent deletion. Task deletion is not an MVP UI capability; v1 neither invents a hidden delete command nor treats a missing file as a request to delete one task during incremental sync.
 
 ### 7.3 Minimum desktop operations
 
@@ -233,7 +233,7 @@ The snapshot invariant is: each path ID equals its Task ID, every imported Task 
 
 **Remote fast-forward sync:** The default contract is one active editing device at a time. Remote configuration uses existing Git mechanisms; no service is hosted by Jig.
 - Fetch remote first and determine common ancestry and whether SQLite has unexported edits.
-- If remote is ahead and local has no unpublished changes, fast-forward the private Git checkout, validate and atomically import remote state.
+- If remote is ahead and local has no unpublished changes, validate the fetched snapshot (including non-deletion of existing Task IDs) before making it the effective local Git checkout; fast-forward and atomically import remote state. If adopting the Git commit succeeds but the SQLite import fails, retain the last accepted commit marker and retry/recover without changing Task state or reporting sync success.
 - If local is ahead and remote has not changed, export locally and push; treat push rejection as **not synchronized**, while keeping local data.
 - If remote and local are equal, export any new SQLite edits, commit and push.
 - If both sides advanced or remote advanced while SQLite contains unsynchronized edits, stop with an actionable divergence result; **do not use git pull --rebase, silent last-writer-wins or automatic merge**.
@@ -252,7 +252,7 @@ This limited model provides truthful versioned backup and transport, including a
 | Git commit succeeds; marker update fails | Git commit is recoverable; SQLite remains authority | Reconcile by checking snapshot equality; no duplicate user item |
 | Fetch/push fails | Local tasks unchanged | Clearly display unsynchronized state |
 | Remote diverges | Both Git histories retained, no auto-import | Conflict requiring explicit resolution |
-| Imported file invalid | No SQLite replacement | Import refused with exact reason |
+| Imported file invalid | No SQLite replacement; last accepted Git snapshot remains recoverable | Import refused with exact reason |
 | User selects older restore snapshot | Original DB remains until confirmation and successful transaction | Explicit destructive restore confirmation and recoverable pre-restore backup |
 
 No Git failure can retroactively negate a successfully committed local SQLite task edit.
@@ -341,7 +341,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **SQLite primary instead of Git text primary:** Operational date queries, atomic multi-item reordering, and crash recovery are simpler with one SQLite writer. Git receives deterministic logical exports and never the live SQLite database.
 - **One exporter and one importer instead of two live authorities:** SQLite owns local edits; Git versions validated snapshots at explicit synchronization boundaries.
 - **Fast-forward/single-writer synchronization instead of premature merging:** Prevents silent data loss; truthful limitations for the desktop MVP. Concurrent mobile editing requires a separate domain-aware policy before it can be claimed.
-- **Astry​x directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows. (The name in this sentence refers to Astryx.)
+- **Astryx directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows.
 - **dnd-kit instead of Astryx same-list reordering plus custom cross-day dragging:** One coordinated drag system across all seven date columns with a single canonical move command.
 - **Browser-side toasts instead of background infrastructure:** Exact compliance with open-app reminder requirements.
 - **One Task and derived views instead of multiple planning objects:** Satisfies all 14 functional requirements without building a project manager.
