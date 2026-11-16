@@ -1,0 +1,143 @@
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import type { Task } from "../../src/core/task";
+import {
+  commitSnapshot,
+  ensureJigDataWorktree,
+  ensureJigLocalExclude,
+  GitAdapterError,
+  readSnapshotAtRef,
+  runGit,
+  serializeSnapshot,
+} from "../../src/shell/git";
+import { DATA_REF } from "../../src/shell/sqlite";
+
+const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
+const roots: string[] = [];
+
+async function git(repo: string, args: readonly string[]): Promise<string> {
+  const result = await runGit(repo, args);
+  if (result.exit_code !== 0) {
+    throw new Error(result.stderr || result.stdout);
+  }
+  return result.stdout;
+}
+
+async function fixture(): Promise<string> {
+  const repo = await mkdtemp(join(tmpdir(), "jig-git-"));
+  roots.push(repo);
+  await git(repo, ["init"]);
+  await git(repo, ["config", "user.name", "Jig Test"]);
+  await git(repo, ["config", "user.email", "jig-test@local.invalid"]);
+  await writeFile(join(repo, "document.txt"), "original\n", "utf8");
+  await git(repo, ["add", "document.txt"]);
+  await git(repo, ["commit", "-m", "Initial user content"]);
+  return repo;
+}
+
+function task(): Task {
+  return {
+    id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
+    title: "Jig-only task",
+    scheduled_date: "2026-11-16",
+    position: 0,
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: null,
+    completed_at: null,
+    created_at: "2026-11-16T01:00:00.000Z",
+    updated_at: "2026-11-16T01:00:00.000Z",
+  };
+}
+
+afterEach(async () => {
+  await Promise.all(
+    roots.splice(0).map((root) =>
+      rm(root, { recursive: true, force: true }),
+    ),
+  );
+});
+
+describe("isolated jig-data adapter", () => {
+  it("leaves unrelated staged and unstaged user state unchanged", async () => {
+    const repo = await fixture();
+    await ensureJigLocalExclude(repo);
+
+    await writeFile(join(repo, "document.txt"), "staged\n", "utf8");
+    await git(repo, ["add", "document.txt"]);
+    await writeFile(join(repo, "document.txt"), "working\n", "utf8");
+    await writeFile(join(repo, "untracked.txt"), "mine\n", "utf8");
+    const before = await git(repo, ["status", "--porcelain=v1"]);
+
+    const config = {
+      repository_path: repo,
+      worktree_path: resolve(repo, ".jig", "git"),
+      remote_name: null,
+    } as const;
+
+    await ensureJigDataWorktree(config, DATASET_ID);
+    const snapshot = serializeSnapshot([task()], DATASET_ID);
+    const head = await commitSnapshot(config, snapshot, 1);
+
+    expect(head).toMatch(/^[0-9a-f]{40}$/);
+    expect(await git(repo, ["status", "--porcelain=v1"])).toBe(before);
+    expect(
+      await readSnapshotAtRef(repo, DATA_REF, DATASET_ID),
+    ).toMatchObject({
+      dataset_id: DATASET_ID,
+      tasks: [task()],
+    });
+  });
+
+  it("refuses an existing incompatible jig-data ref", async () => {
+    const repo = await fixture();
+    await ensureJigLocalExclude(repo);
+
+    const emptyTree = await git(repo, ["mktree"]);
+    const badCommitResult = await runGit(
+      repo,
+      ["commit-tree", emptyTree, "-m", "Unrelated branch"],
+      undefined,
+      {
+        GIT_AUTHOR_NAME: "Test",
+        GIT_AUTHOR_EMAIL: "test@local.invalid",
+        GIT_COMMITTER_NAME: "Test",
+        GIT_COMMITTER_EMAIL: "test@local.invalid",
+      },
+    );
+    expect(badCommitResult.exit_code).toBe(0);
+    await git(repo, ["update-ref", DATA_REF, badCommitResult.stdout]);
+
+    const config = {
+      repository_path: repo,
+      worktree_path: resolve(repo, ".jig", "git"),
+      remote_name: null,
+    } as const;
+
+    await expect(
+      ensureJigDataWorktree(config, DATASET_ID),
+    ).rejects.toThrow(GitAdapterError);
+  });
+
+  it("uses the Git common dir for local exclusion from linked worktrees", async () => {
+    const repo = await fixture();
+    const linked = join(repo, "..", `${repo.split("/").at(-1)}-linked`);
+    roots.push(linked);
+    await git(repo, ["worktree", "add", linked, "-b", "linked-test"]);
+
+    const excludePath = await ensureJigLocalExclude(linked);
+    expect(await readFile(excludePath, "utf8")).toContain("/.jig/");
+    await mkdir(join(linked, ".jig"), { recursive: true });
+    expect(await git(linked, ["status", "--porcelain=v1"])).toBe("");
+  });
+});
