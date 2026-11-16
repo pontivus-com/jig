@@ -524,6 +524,8 @@ async function createInitialSnapshotRef(
     `100644 blob ${blob}\tformat.json\n`,
   );
   const commitArgs = [
+    "-c",
+    "commit.gpgSign=false",
     "commit-tree",
     tree,
     ...(parentHead === undefined ? [] : ["-p", parentHead]),
