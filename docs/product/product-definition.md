@@ -25,7 +25,7 @@ Illustrative item: **Thursday — Legal app: TTA workflow remediation**. Jig own
 - Initial user: one person managing granular commitments across several work contexts and personal activities.
 - Initial installation and main use: Linux desktop browser backed by a minimal local user service, launched with `jig` or kept running by the user's service manager.
 - Design from the beginning: responsive, mobile-first information hierarchy and touch-aware interaction model.
-- Independent phone installation and Git synchronization are future delivery needs. Desktop MVP must not make the canonical data or interaction design incompatible with them.
+- Independent phone installation and phone-side repository synchronization are future delivery needs. Desktop MVP includes automatic desktop repository synchronization and must not make the canonical data or interaction design incompatible with a later phone runtime.
 - Local/offline work is fundamental; no third-party online service is needed for ordinary planning. The user explicitly chooses an existing personal/organization Git repository as Jig's planning-data home. Its canonical records and operational SQLite database live under a dedicated Jig directory inside that repository, never in Jig's public source repository.
 
 ## 4. MVP outcomes
