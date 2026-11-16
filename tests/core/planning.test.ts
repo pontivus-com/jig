@@ -8,6 +8,7 @@ import {
   editTask,
   moveTask,
   reopenTask,
+  rollForwardOutstanding,
 } from "../../src/core/planning";
 
 const NOW = "2026-11-16T01:00:00.000Z";
@@ -47,6 +48,104 @@ function positions(tasks: readonly Task[], date: string): readonly string[] {
     .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
     .map((candidate) => candidate.title);
 }
+
+describe("daily rollover", () => {
+  it("moves overdue outstanding Tasks into today before existing today Tasks", () => {
+    const existing = [
+      task(1, "2026-11-14", 0),
+      task(2, "2026-11-15", 0),
+      task(3, "2026-11-15", 1),
+      task(4, "2026-11-16", 0),
+    ];
+
+    const result = rollForwardOutstanding(
+      existing,
+      "2026-11-16",
+      LATER,
+    );
+
+    expect(result.moved_task_ids).toEqual([
+      existing[0]!.id,
+      existing[1]!.id,
+      existing[2]!.id,
+    ]);
+    expect(positions(result.tasks, "2026-11-14")).toEqual([]);
+    expect(positions(result.tasks, "2026-11-15")).toEqual([]);
+    expect(positions(result.tasks, "2026-11-16")).toEqual([
+      "Task 1",
+      "Task 2",
+      "Task 3",
+      "Task 4",
+    ]);
+    expect(
+      result.tasks.find((candidate) => candidate.id === existing[0]!.id)
+        ?.scheduled_date,
+    ).toBe("2026-11-16");
+    assertTaskSet(result.tasks);
+  });
+
+  it("preserves reminder time while changing the scheduled date", () => {
+    const overdue: Task = {
+      ...task(1, "2026-11-15", 0),
+      reminder_time: "10:00",
+    };
+
+    const result = rollForwardOutstanding(
+      [overdue],
+      "2026-11-16",
+      LATER,
+    );
+    const moved = result.tasks[0]!;
+
+    expect(moved.scheduled_date).toBe("2026-11-16");
+    expect(moved.reminder_time).toBe("10:00");
+    expect(moved.updated_at).toBe(LATER);
+  });
+
+  it("does not roll completed Tasks", () => {
+    const completed = completeTask(
+      [task(1, "2026-11-15", 0)],
+      task(1, "2026-11-15", 0).id,
+      LATER,
+    ).task;
+
+    const result = rollForwardOutstanding(
+      [completed],
+      "2026-11-16",
+      "2026-11-16T03:00:00.000Z",
+    );
+
+    expect(result.moved_task_ids).toEqual([]);
+    expect(result.tasks).toEqual([completed]);
+  });
+
+  it("catches up multiple missed days directly to the current date", () => {
+    const existing = [task(1, "2026-10-31", 0)];
+
+    const result = rollForwardOutstanding(
+      existing,
+      "2026-11-03",
+      LATER,
+    );
+
+    expect(positions(result.tasks, "2026-11-01")).toEqual([]);
+    expect(positions(result.tasks, "2026-11-02")).toEqual([]);
+    expect(positions(result.tasks, "2026-11-03")).toEqual(["Task 1"]);
+  });
+
+  it("is a no-op when no overdue outstanding Task exists", () => {
+    const existing = [task(1, "2026-11-16", 0)];
+
+    const result = rollForwardOutstanding(
+      existing,
+      "2026-11-16",
+      LATER,
+    );
+
+    expect(result.moved_task_ids).toEqual([]);
+    expect(result.tasks).toBe(existing);
+  });
+});
 
 describe("planning mutations", () => {
   it("uses priority only to place a new Task in a manually mixed list", () => {
