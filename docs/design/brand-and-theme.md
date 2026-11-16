@@ -29,13 +29,21 @@ No feature component owns a private palette.
 
 **Jig schedules attention, not project execution.**
 
-### Mark
+### Wordmark and icon
 
-The canonical mark is a precise **J-shaped guide** with one **amber alignment pin**.
+The canonical **wordmark is one complete word: Jig**.
+
+Its first letter is the branded **J-shaped guide** with one **amber alignment pin**. The wordmark then adds only the outlined suffix **ig**. The construction is therefore:
+
+**[branded J] + ig = Jig**
+
+Never place the J icon next to a second complete “Jig” word. That duplicates the first letter and is not a valid Jig logo.
+
+The standalone **icon is the J-shaped guide only**, retaining the amber alignment pin in full-colour variants.
 
 The metaphor is functional: a jig guides something into the right position without becoming the work itself. Jig guides attention into the day without becoming the project-management system that owns the underlying work.
 
-The mark must not be redrawn per surface. All variants use the same geometry.
+The J geometry and the outlined **ig** suffix must not be redrawn per surface. All variants use the same geometry.
 
 ## 2. Canonical brand foundations
 
@@ -230,7 +238,7 @@ System, Light and Dark remain presentation-only Settings choices.
 
 The master mark uses a 64×64 coordinate system. Its visible geometry is optically centered with approximately 7.5 units of horizontal clear space and 5.5 units of vertical clear space.
 
-The horizontal lockup uses an outlined Inter Display Bold wordmark. **No released logo depends on a locally installed font.**
+The horizontal wordmark uses the canonical J mark as the actual first letter and an outlined **ig** suffix. **No released logo repeats the J, and no released logo depends on a locally installed font.**
 
 | Asset | Canvas / viewBox | Background | Intended use |
 | --- | --- | --- | --- |
@@ -241,26 +249,26 @@ The horizontal lockup uses an outlined Inter Display Bold wordmark. **No release
 | `jig-symbol-mono-light.svg` | 64×64 | transparent | one-color light mark |
 | `jig-app-icon.svg` | 512×512, viewBox 64×64 | Ink 950 tile | app/product icon master |
 | `jig-favicon.svg` | 32×32, viewBox 64×64 | Ink 950 tile | browser favicon |
-| `jig-logo.svg` | 144×76 | transparent | horizontal lockup on light surfaces |
-| `jig-logo-on-dark.svg` | 144×76 | transparent | horizontal lockup on dark surfaces |
-| `jig-logo-mono-dark.svg` | 144×76 | transparent | one-color horizontal dark |
-| `jig-logo-mono-light.svg` | 144×76 | transparent | one-color horizontal light |
-| `jig-logo-light.svg` | 168×96 | Paper 100 | fixed light plate |
-| `jig-logo-dark.svg` | 168×96 | Ink 950 | fixed dark plate |
-| `jig-logo-plate-dark.svg` | 224×104 | Ink 950 | README/theme-independent plate |
+| `jig-logo.svg` | 112×68 | transparent | horizontal lockup on light surfaces |
+| `jig-logo-on-dark.svg` | 112×68 | transparent | horizontal lockup on dark surfaces |
+| `jig-logo-mono-dark.svg` | 112×68 | transparent | one-color horizontal dark |
+| `jig-logo-mono-light.svg` | 112×68 | transparent | one-color horizontal light |
+| `jig-logo-light.svg` | 136×88 | Paper 100 | fixed light plate |
+| `jig-logo-dark.svg` | 136×88 | Ink 950 | fixed dark plate |
+| `jig-logo-plate-dark.svg` | 192×96 | Ink 950 | README/theme-independent plate |
 
 ### Optical cropping
 
-Transparent lockups must retain the 144×76 viewBox. Do not restore a wider authoring canvas around the wordmark.
+Transparent wordmarks retain the optically cropped 112×68 viewBox. This crop contains the branded J and the outlined **ig** suffix only.
 
-Fixed 168×96 plates add 12 units horizontal and 10 units vertical clear space around the transparent lockup.
+Fixed 136×88 plates add exactly 12 units horizontal and 10 units vertical clear space around that wordmark.
 
-The README plate is intentionally wider, with 40 units horizontal and 14 units vertical clear space. It is centered by visible artwork, not by an oversized source artboard.
+The README plate is 192×96, adding exactly 40 units horizontal and 14 units vertical clear space. It is centered by visible artwork, not by an oversized authoring canvas.
 
 ### Application integration
 
-- Header/app shell: use `jig-app-icon.svg` plus live product text. This works identically in Light and Dark without theme-dependent image swapping.
-- Browser: use `jig-favicon.svg`.
+- Header/app shell: use the complete horizontal wordmark, switching between `jig-logo.svg` and `jig-logo-on-dark.svg` with the active theme. Do not compose the standalone J icon beside live “Jig” text.
+- Browser/app icon contexts: use the standalone J-only `jig-app-icon.svg` / `jig-favicon.svg`.
 - README / unknown viewer theme: use `jig-logo-plate-dark.svg`.
 - Light branded surfaces: use `jig-logo.svg` or `jig-logo-light.svg`.
 - Dark branded surfaces: use `jig-logo-on-dark.svg` or `jig-logo-dark.svg`.
