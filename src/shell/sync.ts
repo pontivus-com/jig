@@ -4,7 +4,7 @@ import {
   EXPORT_DEBOUNCE_MS,
   EXPORT_MAX_FLUSH_MS,
   readCurrentPortableSnapshot,
-  repositorySynchronizationAvailability,
+  repositorySynchronizationMode,
   retryDelayMs,
   serializeSnapshot,
   SYNC_HEALTHY_POLL_MS,
@@ -38,7 +38,7 @@ export interface SyncEffects {
   readonly readCurrentSnapshot: typeof readCurrentPortableSnapshot;
   readonly writeSnapshot: typeof writePortableSnapshot;
   readonly synchronize: typeof synchronizePortableData;
-  readonly availability: typeof repositorySynchronizationAvailability;
+  readonly mode: typeof repositorySynchronizationMode;
 }
 
 const REAL_EFFECTS: SyncEffects = {
@@ -46,7 +46,7 @@ const REAL_EFFECTS: SyncEffects = {
   readCurrentSnapshot: readCurrentPortableSnapshot,
   writeSnapshot: writePortableSnapshot,
   synchronize: synchronizePortableData,
-  availability: repositorySynchronizationAvailability,
+  mode: repositorySynchronizationMode,
 };
 
 function snapshotsEqual(
@@ -200,8 +200,14 @@ export function createSyncController(
         currentStatus = "pending";
         schedule(0);
       } else {
-        currentStatus = await effects.availability(adapter);
-        schedule(SYNC_HEALTHY_POLL_MS);
+        const mode = await effects.mode(adapter);
+        if (mode === "local-only") {
+          currentStatus = "local-only";
+          schedule(SYNC_HEALTHY_POLL_MS);
+        } else {
+          currentStatus = "pending";
+          schedule(0);
+        }
       }
     },
     stop: () => {
