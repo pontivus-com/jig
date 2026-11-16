@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Proposed binding UX/UI realization v0.2, 2026-11-16. Visual references and functional screen structure are governed; final browser screenshots and usability certification are pending.
+**Status:** Proposed binding UX/UI realization v0.3, 2026-11-16. Visual references and functional screen structure are governed; final browser screenshots and usability certification are pending.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status.
 **Purpose:** Turn the accepted early mobile/day/week/editor mockups into a versioned interface baseline while distinguishing layout intent from noncanonical visual decoration.
@@ -41,7 +41,7 @@ The initial desktop IA has exactly **Week**, **Day**, **History**, and **Setting
 - **Week** is the default productive surface: Monday–Sunday buckets, current/selected date emphasis, per-day ordered outstanding tasks, quick-add scoped to each date and cross-day drop targets. Long days scroll without losing date headings.
 - **Day** is a focused selected date with one attention sequence: carried-over earlier outstanding Tasks followed by Tasks scheduled for the selected date, then a compact Completed group and on-demand task detail. Carried-over Tasks retain their original scheduled date and receive a subtle but scan-visible originating-date treatment. The Today shortcut selects the current local civil date; changing selection never reschedules tasks.
 - **History** is a lightweight dated list grouped by actual completion date, not a dashboard. Completed items may also be viewed under their originally scheduled date.
-- **Settings** exposes theme, configured repository path (read-only unless explicit migration), service/autosync health, remote connection, and diagnostic/retry actions. It does not expose Order projects or developer tooling.
+- **Settings** exposes theme, configured repository path (read-only unless explicit migration), service/autosync health, remote connection, and diagnostics. It does not expose Order projects, Git history/merge/conflict workflows, or developer tooling.
 - **No separately persisted boards, projects or queues.** Context is a short optional Task label and may be displayed or used as a filter, not an independent domain.
 
 ### Onboarding and installed lifecycle
@@ -49,12 +49,12 @@ The initial desktop IA has exactly **Week**, **Day**, **History**, and **Setting
 The app's very first interaction is the **one-script installer** described in [Technical solution §3.1](../architecture/technical-solution.md). The script selects and validates the personal Git repository and configures the `jig` command + local background service. The user then opens the existing service with `jig` and immediately reaches Week or Day. There is **no repeated onboarding wizard on every run**.
 
 A compact, always-available status control must truthfully distinguish:
-- **Saved locally / Synced:** latest local edits committed to SQLite and Jig's Git ref has reached the configured remote.
-- **Sync pending / Retrying:** local data safe, export or network transfer outstanding.
-- **Local only:** no Git remote assigned; local DB and local Jig Git commits work.
-- **Sync blocked:** divergence, invalid imported data, credentials or unsafe branch state. This is durable and actionable, not toast-only.
+- **Saved locally / Synced:** latest local edits are committed to SQLite and the repository integration boundary reports the latest exported snapshot synchronized.
+- **Sync pending / Retrying:** local data is safe; export or repository synchronization is still outstanding.
+- **Local only:** no remote is configured; local DB and local Jig repository records continue normally.
+- **Sync issue:** repository synchronization cannot currently complete, but successful local Task saves remain safe.
 
-The UI must not present an ordinary local edit as remote-synchronized until remote push/adoption has actually succeeded. A failed local save is a different, workflow-critical state and is displayed near the edited task.
+The UI does **not** classify the cause as divergence, merge conflict, branch state or another Git-topology concept, and it provides no Jig conflict-resolution workflow. Diagnostics may expose the underlying repository-adapter error for troubleshooting, but repository reconciliation happens with external Git tooling. The UI must not present an ordinary local edit as synchronized until the repository boundary reports success. A failed local save is a different, workflow-critical state and is displayed near the edited Task.
 
 ## 3. Visual language
 
@@ -107,7 +107,7 @@ Use explicit Save/Cancel, persistent form errors on invalid data or server refus
 | Sortable rows, drop zones, drag overlays, keyboard drag, pointer/touch gesture lifecycle | @dnd-kit/react only; do not activate Astryx List createReorderable on the same row |
 | Week/date bucket composition, Day carry-over treatment/concatenation, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
 | Scheduled date, ordering, carry-over query, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
-| Task reads/writes, Git state and remote status | Bun service with SQLite and dedicated Jig branch/worktree |
+| Task reads/writes and generic repository synchronization status | Bun service with SQLite plus isolated repository integration adapter |
 | Reminder due eligibility and toast presentation while browser is open | Browser-side timer + Astryx useToast; no background sender |
 
 Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the same canonical Task operation as a drag. The drag handle must not swallow checkbox clicks, link navigation or editor opening. Avoid duplicate focus stops on the ListItem's clickable layer and nested controls; verify Astryx + dnd-kit with actual Playwright browser interaction.
@@ -129,7 +129,7 @@ Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the sa
 | Keyboard and touch | No hover-only essential actions; non-drag alternatives and visible focus |
 | Reminder | Due while open produces dismissible toast; no claim when browser closed |
 | Local save failure | User sees specific unresolved error, not fake save success |
-| Auto-sync lifecycle | Service can save/sync with browser closed; header/settings convey local/sync/pending/blocked truth |
+| Auto-sync lifecycle | Service can save/sync with browser closed; header/settings convey local/synced/pending/local-only/sync-issue truth without Git divergence/conflict semantics |
 | Offline use | Editing remains available, Git retries later without blocking |
 | Theme parity | System/Light/Dark are all supported; representative Week, Day, editor, Settings and error/status states retain equivalent hierarchy, contrast and non-color semantics in Light and Dark |
 | Resource discipline | Responsive reopen and low-idle service measured as part of installer certification |
