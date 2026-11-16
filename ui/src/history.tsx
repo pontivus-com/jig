@@ -64,7 +64,7 @@ function HistoryTaskRow({
             className="jig-task-menu"
             onClick={(event) => event.stopPropagation()}
           >
-            <summary aria-label={\`Actions for \${task.title}\`}>•••</summary>
+            <summary aria-label={`Actions for ${task.title}`}>•••</summary>
             <div className="jig-task-menu-panel">
               <Button
                 label="Reopen"
@@ -123,11 +123,11 @@ export function HistoryView({
           {groups.map((group) => (
             <section
               key={group.completion_date}
-              aria-labelledby={\`history-\${group.completion_date}\`}
+              aria-labelledby={`history-${group.completion_date}`}
               className="jig-history-group"
             >
               <div className="jig-section-heading">
-                <h2 id={\`history-\${group.completion_date}\`}>
+                <h2 id={`history-${group.completion_date}`}>
                   {formatCivilDate(group.completion_date, {
                     weekday: "long",
                     month: "long",
