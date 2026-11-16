@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Proposed binding desktop MVP technical solution, v0.5 (2026-11-16), reflecting JIG-FR-01–22, explicit repository-boundary ownership, and closed implementation contracts. Not yet implemented, performance-tested or runtime-certified.
+**Status:** Proposed binding desktop MVP technical solution, v0.6 (2026-11-16), reflecting JIG-FR-01–22, explicit repository-boundary ownership, closed implementation contracts, and explicit Settings operational endpoints. Not yet implemented, performance-tested or runtime-certified.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -138,7 +138,10 @@ The browser API is deliberately small and serializes the canonical core types di
 
 - `GET /api/v1/tasks` → `{ revision, tasks }`, where `tasks` is the complete canonical Task set. Week, Day, carry-over and History are derived from these canonical values.
 - `GET /api/v1/status` → service readiness, configured repository path, whether a remote is configured, and one repository status from `local-only | pending | retrying | synchronized | sync-issue`.
-- `POST /api/v1/commands` accepts one canonical discriminated command plus `expected_revision`.
+- `GET /api/v1/diagnostics` → sanitized operational facts required by Settings/`jig doctor`: service health, SQLite availability/schema version, configured repository path/data ref, portable-format version, remote configured/not-configured and repository-adapter health. It contains no Task title/note/reference content, credentials or raw secret/token values.
+- `POST /api/v1/commands` accepts one canonical discriminated Task command plus `expected_revision`.
+- `POST /api/v1/sync` requests an immediate export/synchronization attempt through the existing serialized repository worker and returns HTTP **202** with the current repository status. It does not make Task state durable and does not bypass the worker/adapter.
+- `POST /api/v1/migrate` accepts only `{ repository_path }`, invokes the same shell-owned migration operation as `jig configure --repo <path>`, and returns success only after destination validation/rehydration and atomic configuration switch. Failure leaves the original data root active. The browser reloads canonical Tasks/status after success.
 
 The command union is exactly:
 
@@ -153,9 +156,11 @@ delete   { task_id }
 
 `create` generates ID and timestamps in the shell before invoking the pure core. `edit` with a changed scheduled date uses the priority-assisted insertion rule; `move` is the exact-position drag/keyboard move rule. `complete` supplies the shell's current instant. `delete` is emitted only after UI confirmation; the core does not model the confirmation dialog.
 
-Every command requires the revision read by the caller as `expected_revision`. If it does not equal the current SQLite revision, return HTTP **409** with the current revision and make no mutation; the browser refetches canonical state before retrying. Validation errors are **400**, a missing Task is **404**, and an unexpected persistence failure is **500** with no claimed save. Successful create/edit/move/complete/reopen returns `{ revision, task }`; successful delete returns `{ revision, deleted_task_id }`. These are thin HTTP envelopes around canonical values, not independent domain models.
+Every Task command requires the revision read by the caller as `expected_revision`. If it does not equal the current SQLite revision, return HTTP **409** with the current revision and make no mutation; the browser refetches canonical state before retrying. Validation errors are **400**, a missing Task is **404**, and an unexpected persistence failure is **500** with no claimed save. Successful create/edit/move/complete/reopen returns `{ revision, task }`; successful delete returns `{ revision, deleted_task_id }`. These are thin HTTP envelopes around canonical values, not independent domain models.
 
-At service start generate a fresh **256-bit random write token**. Inject it into the same-origin served application bootstrap and require it as `X-Jig-Write-Token` on every `POST /api/v1/commands` request together with `Content-Type: application/json`. Reject missing/incorrect token, cross-origin mutation requests and all permissive CORS. The token lives only for that service process, is never written to configuration, logs, SQLite or Git, and is regenerated on restart.
+The operational endpoints are shell admission only, not a second domain command model. `/sync` calls the one existing sync-worker trigger. `/migrate` calls the one existing repository-migration function also used by the launcher. Do not duplicate their implementation in the HTTP layer.
+
+At service start generate a fresh **256-bit random write token**. Inject it into the same-origin served application bootstrap and require it as `X-Jig-Write-Token` on **every state-changing POST endpoint** (`/commands`, `/sync`, `/migrate`) together with `Content-Type: application/json`. Reject missing/incorrect token, cross-origin mutation requests and all permissive CORS. The token lives only for that service process, is never written to configuration, logs, SQLite or Git, and is regenerated on restart.
 
 ## 4. Canonical Task model
 
