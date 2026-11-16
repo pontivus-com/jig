@@ -77,7 +77,7 @@ The Day attention sequence is a derived concatenation, not a second persisted or
 
 Every carried-over row keeps its normal task structure but receives a subtle, readily scannable treatment such as a restrained surface/edge difference plus text equivalent to **Carried over · Thu 19**. Color alone cannot carry this meaning. The originating date is always the Task's actual scheduled date, not merely “yesterday.” Carry-over is derived from `completed = false` and `scheduled date < selected date`; it is never stored as a status or flag.
 
-Merely viewing a carried-over Task on a later Day does not reschedule it. Dragging a carried-over Task into the selected-date sequence is an explicit reschedule to that selected date and exact drop position. Using a date action/editor is also an explicit reschedule and uses the normal priority-assisted insertion rule.
+Merely viewing a carried-over Task on a later Day does not reschedule it. Its reminder remains tied to the original scheduled date and is not re-armed or shifted forward by carry-over. Dragging a carried-over Task into the selected-date sequence is an explicit reschedule to that selected date and exact drop position. Using a date action/editor is also an explicit reschedule and uses the normal priority-assisted insertion rule.
 
 ## 4. Desktop spatial UX — MVP
 
