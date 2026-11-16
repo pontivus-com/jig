@@ -184,7 +184,7 @@ fi
 STAGED_CONFIG="$BUILD_ROOT/config.json"
 SETUP_ARGS=(--repo "$TARGET_REPO" --port "$PORT" --config "$STAGED_CONFIG")
 
-printf 'Preparing isolated Jig data boundary in %s\n' "$TARGET_REPO"
+printf 'Preparing Jig planning data in %s\n' "$TARGET_REPO"
 (
   cd "$BUILD_APP"
   "$BUN_BIN" src/shell/setup.ts "${SETUP_ARGS[@]}"
