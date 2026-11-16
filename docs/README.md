@@ -8,7 +8,7 @@ Jig is a small, local-first, just-in-time daily planner. It schedules attention 
 
 1. [Product definition](product/product-definition.md) — intent, product boundary and MVP outcomes.
 2. [Planning and UX functional requirements](requirements/planning-workbench.md) — observable JIG-FR-01–22 behaviour, including carry-over, confirmed deletion, System/Light/Dark appearance, onboarding/installation, repository ownership, the `jig` command, background availability and automatic synchronization.
-3. [Technical solution](architecture/technical-solution.md) — selected dependencies and exact application architecture, installer/user service, canonical Task, SQLite in the selected repository, isolated Jig Git branch/worktree, background sync, failure/recovery and verification.
+3. [Technical solution](architecture/technical-solution.md) — selected dependencies and exact application architecture, installer/user service, canonical Task, SQLite in the selected repository, isolated repository integration boundary, background sync, canonical snapshot admission and verification.
 4. [UI solution and versioned reference mockups](design/ui-solution.md) — screen hierarchy, desktop/mobile responsive composition, Astryx/dnd-kit ownership, design corrections and browser acceptance.
 
 Functional requirements define *what* users can observe. Technical solution owns *how* data and runtime behave. UI solution owns *how* users see and manipulate those functions. No part of the design inherits Order's workflow/lifecycle domain, creates DTO hierarchies, or introduces duplicate task authority.
@@ -25,7 +25,7 @@ The design is sufficiently specified to derive an implementation plan, but it is
 - SQLite database and versioned Task records contained in the selected personal repo, never the public Jig source repo.
 - No automatic changes to unrelated documents, branches or staging in the selected repository.
 - Immediate local SQLite saves plus automatic background export/commit/fetch/push/retry, including when the browser is closed.
-- Explicit local-only, pending, synchronized and blocked status; no silent data loss or divergent-history overwrite.
+- Explicit local-only, pending, synchronized and generic sync-issue status; repository failures never invalidate a successful local Task save and Jig does not model Git divergence or reconciliation.
 - All 22 functional requirements, pinned Astryx/dnd-kit cross-date gestures, responsive UI behavior, Light/Dark theme parity and measured lightweight idle operation.
 
-Independent phone installation and safe simultaneous offline merge remain deferred. Do not claim they work solely because the mobile layout and data format are designed.
+Independent phone installation remains deferred. Git history, branch, merge and conflict reconciliation are outside Jig's product/domain scope and remain owned by the user's Git tooling; do not turn them into Jig workflow or UI state.
