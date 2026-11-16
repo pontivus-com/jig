@@ -7,6 +7,7 @@ import {
 import { constants as fsConstants } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import {
+  discoverSynchronizationRemote,
   ensureJigDataWorktree,
   ensureJigLocalExclude,
   GitAdapterError,
@@ -134,26 +135,6 @@ export async function validateSelectedRepository(
   return canonicalPath;
 }
 
-export async function selectRemote(
-  repositoryPath: string,
-  requestedRemote?: string | null,
-): Promise<string | null> {
-  const remotes = (await git(repositoryPath, ["remote"]))
-    .split("\n")
-    .filter(Boolean);
-
-  if (requestedRemote !== undefined && requestedRemote !== null) {
-    if (!remotes.includes(requestedRemote)) {
-      throw new InstallationError(
-        `Configured Git remote ${requestedRemote} does not exist`,
-      );
-    }
-    return requestedRemote;
-  }
-
-  return remotes.includes("origin") ? "origin" : null;
-}
-
 export async function inspectLocalCandidate(
   repositoryPath: string,
 ): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
@@ -226,17 +207,13 @@ function snapshotsEqual(
 
 export async function initializeRepositoryInstallation(options: {
   readonly repository_path: string;
-  readonly requested_remote?: string | null;
   readonly http_port: number;
   readonly config_path?: string;
 }): Promise<RepositoryInstallation> {
   const repositoryPath = await validateSelectedRepository(
     options.repository_path,
   );
-  const remoteName = await selectRemote(
-    repositoryPath,
-    options.requested_remote,
-  );
+  const remoteName = await discoverSynchronizationRemote(repositoryPath);
 
   if (
     !Number.isInteger(options.http_port) ||
@@ -334,7 +311,6 @@ export async function initializeRepositoryInstallation(options: {
   const adapter: GitAdapterConfig = {
     repository_path: repositoryPath,
     worktree_path: resolve(repositoryPath, ".jig", "git"),
-    remote_name: remoteName,
   };
 
   try {
@@ -369,8 +345,6 @@ export async function initializeRepositoryInstallation(options: {
     const config: JigConfig = {
       version: 1,
       repository_path: repositoryPath,
-      remote_name: remoteName,
-      data_ref: DATA_REF,
       http_port: options.http_port,
     };
     await writeConfigAtomic(config, options.config_path);
@@ -393,14 +367,12 @@ export async function initializeRepositoryInstallation(options: {
 
 interface SetupCliOptions {
   readonly repositoryPath: string;
-  readonly remoteName?: string;
   readonly port: number;
   readonly configPath?: string;
 }
 
 function parseCli(argv: readonly string[]): SetupCliOptions {
   let repositoryPath: string | null = null;
-  let remoteName: string | undefined;
   let port = 47831;
   let configPath: string | undefined;
 
@@ -409,9 +381,6 @@ function parseCli(argv: readonly string[]): SetupCliOptions {
     const next = argv[index + 1];
     if (arg === "--repo" && next !== undefined) {
       repositoryPath = next;
-      index += 1;
-    } else if (arg === "--remote" && next !== undefined) {
-      remoteName = next;
       index += 1;
     } else if (arg === "--port" && next !== undefined) {
       port = Number(next);
@@ -430,7 +399,6 @@ function parseCli(argv: readonly string[]): SetupCliOptions {
 
   return {
     repositoryPath,
-    ...(remoteName === undefined ? {} : { remoteName }),
     port,
     ...(configPath === undefined ? {} : { configPath }),
   };
@@ -441,9 +409,6 @@ if (import.meta.main) {
     const cli = parseCli(process.argv.slice(2));
     const installed = await initializeRepositoryInstallation({
       repository_path: cli.repositoryPath,
-      ...(cli.remoteName === undefined
-        ? {}
-        : { requested_remote: cli.remoteName }),
       http_port: cli.port,
       ...(cli.configPath === undefined
         ? {}
