@@ -13,6 +13,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - Completion, reopen, confirmed permanent deletion and completion history.
 - Session-bounded in-app reminders with durable local suppression.
 - System, Light and Dark presentation modes with responsive narrow-screen composition.
+- Canonical Option A Jig identity with Ink/Amber/Paper palette, centralized Light/Dark Astryx theme, outlined logo lockups, app icon and favicon.
 - Immediate local SQLite authority with revision-checked commands and crash-safe transactional mutation.
 - Deterministic portable Task records synchronized through an isolated `jig-data` ref/worktree without touching unrelated repository content.
 - Linux installer, `jig` launcher, `systemd --user` service, diagnostics, manual synchronization, repository migration and uninstall lifecycle.
