@@ -491,9 +491,6 @@ export async function commitSnapshot(
         "commit",
         "-m",
         `Jig snapshot revision ${revision}`,
-        "--",
-        "format.json",
-        "tasks",
       ],
       undefined,
       {
