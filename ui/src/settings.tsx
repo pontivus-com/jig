@@ -175,7 +175,7 @@ export function SettingsView({
             </dd>
           </div>
         </dl>
-      </section>>
+      </section>
 
     </div>
   );
