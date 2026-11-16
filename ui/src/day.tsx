@@ -213,6 +213,7 @@ export function DayView({
           <Button
             label="Add task"
             variant="primary"
+            className="jig-header-add"
             onClick={() => onAdd(selectedDate)}
           />
         </div>
@@ -239,6 +240,13 @@ export function DayView({
           onDelete={onDelete}
         />
       </div>
+      <Button
+        label="+"
+        aria-label="Add task"
+        variant="primary"
+        className="jig-mobile-quick-add"
+        onClick={() => onAdd(selectedDate)}
+      />
     </div>
   );
 }
