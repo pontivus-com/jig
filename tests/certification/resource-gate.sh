@@ -4,6 +4,7 @@ set -euo pipefail
 SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/jig-resource-cert.XXXXXX")"
 PORT="${JIG_CERT_PORT:-47941}"
+WARMUP_SECONDS="${JIG_CERT_WARMUP_SECONDS:-60}"
 IDLE_SECONDS="${JIG_CERT_IDLE_SECONDS:-300}"
 SAMPLE_SECONDS=1
 RSS_LIMIT_KIB=$((128 * 1024))
@@ -70,10 +71,11 @@ wait_ready || {
   exit 1
 }
 
-# Warm the HTTP and static application paths before measuring idle behavior.
+# Warm the HTTP and static application paths, then honor the canonical
+# 60-second service warm-up before the five-minute idle measurement.
 curl -fsS "http://127.0.0.1:$PORT/api/v1/status" >/dev/null
 curl -fsS "http://127.0.0.1:$PORT/" >/dev/null
-sleep 2
+sleep "$WARMUP_SECONDS"
 
 clk_tck="$(getconf CLK_TCK)"
 read -r _ _ _ _ _ _ _ _ _ _ _ _ _ cpu_start_utime cpu_start_stime _ < "/proc/$service_pid/stat"
@@ -138,6 +140,7 @@ git_version="$(git --version)"
 printf 'host: %s\n' "$host"
 printf 'bun: %s\n' "$bun_version"
 printf 'git: %s\n' "$git_version"
+printf 'warmup_seconds: %s\n' "$WARMUP_SECONDS"
 printf 'idle_window_seconds: %s\n' "$IDLE_SECONDS"
 printf 'idle_samples: %s\n' "$samples"
 printf 'max_rss_kib: %s\n' "$max_rss_kib"
