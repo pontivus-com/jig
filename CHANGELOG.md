@@ -4,6 +4,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-16
+
 ### Changed
 
 - Restored the external-system ownership boundary: Jig keeps automatic synchronization of Jig-owned planning data while Git retains repository topology, signing, credentials, history and reconciliation responsibilities.
