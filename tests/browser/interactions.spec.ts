@@ -134,6 +134,61 @@ test("non-drag movement uses the same exact index semantics", async ({
     .toEqual(["First exact task", "Second exact task"]);
 });
 
+test("priority and optional metadata edits preserve established manual order", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Priority anchor", today);
+  await createTask(page, "Editable metadata task", today);
+  await page.reload();
+
+  const beforeOrder = (await apiState(page)).tasks
+    .filter(
+      (task) =>
+        task.completed_at === null &&
+        task.scheduled_date === today,
+    )
+    .sort(
+      (left, right) =>
+        (left.position ?? 0) - (right.position ?? 0),
+    )
+    .map((task) => task.id);
+
+  await page
+    .getByRole("button", { name: "Edit Editable metadata task" })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByText("High", { exact: true }).click();
+  await dialog.getByLabel("Context").fill("Client Alpha");
+  await dialog
+    .getByLabel("Reference")
+    .fill("../matters/client-alpha");
+  await dialog.getByLabel("Notes").fill("Prepare clause comments.");
+  await dialog
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+
+  const edited = await taskByTitle(page, "Editable metadata task");
+  expect(edited.priority).toBe("HIGH");
+  expect(edited.context).toBe("Client Alpha");
+  expect(edited.reference).toBe("../matters/client-alpha");
+  expect(edited.note).toBe("Prepare clause comments.");
+
+  const afterOrder = (await apiState(page)).tasks
+    .filter(
+      (task) =>
+        task.completed_at === null &&
+        task.scheduled_date === today,
+    )
+    .sort(
+      (left, right) =>
+        (left.position ?? 0) - (right.position ?? 0),
+    )
+    .map((task) => task.id);
+  expect(afterOrder).toEqual(beforeOrder);
+});
+
 test("real pointer drag moves a Task across dated Week drop zones", async ({
   page,
 }) => {
