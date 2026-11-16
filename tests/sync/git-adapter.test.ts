@@ -127,6 +127,67 @@ describe("isolated jig-data adapter", () => {
     ).rejects.toThrow(GitAdapterError);
   });
 
+  it("creates Jig synchronization commits without inheriting user commit signing policy", async () => {
+    const repo = await fixture();
+    await ensureJigLocalExclude(repo);
+    await git(repo, ["config", "commit.gpgSign", "true"]);
+    await git(repo, ["config", "user.signingkey", "missing-jig-test-key"]);
+
+    const config = {
+      repository_path: repo,
+      worktree_path: resolve(repo, ".jig", "git"),
+    } as const;
+
+    await ensureJigDataWorktree(config, DATASET_ID);
+    const head = await commitSnapshot(
+      config,
+      serializeSnapshot([task()], DATASET_ID),
+      1,
+    );
+
+    expect(head).toMatch(/^[0-9a-f]{40}$/);
+    expect(await git(repo, ["config", "--get", "commit.gpgSign"])).toBe(
+      "true",
+    );
+    expect(await git(repo, ["config", "--get", "user.signingkey"])).toBe(
+      "missing-jig-test-key",
+    );
+  });
+
+  it("recovers only the exact v1.0.0 empty bootstrap residue into a valid snapshot", async () => {
+    const repo = await fixture();
+    await ensureJigLocalExclude(repo);
+
+    const emptyTree = await git(repo, ["mktree"]);
+    const legacy = await runGit(
+      repo,
+      ["commit-tree", emptyTree, "-m", "Initialize Jig data"],
+      undefined,
+      {
+        GIT_AUTHOR_NAME: "Jig",
+        GIT_AUTHOR_EMAIL: "jig@local.invalid",
+        GIT_COMMITTER_NAME: "Jig",
+        GIT_COMMITTER_EMAIL: "jig@local.invalid",
+      },
+    );
+    expect(legacy.exit_code).toBe(0);
+    await git(repo, ["update-ref", DATA_REF, legacy.stdout]);
+
+    const config = {
+      repository_path: repo,
+      worktree_path: resolve(repo, ".jig", "git"),
+    } as const;
+
+    await ensureJigDataWorktree(config, DATASET_ID);
+
+    const snapshot = await readSnapshotAtRef(repo, DATA_REF, DATASET_ID);
+    expect(snapshot.dataset_id).toBe(DATASET_ID);
+    expect(snapshot.tasks).toStrictEqual([]);
+    expect(await git(repo, ["rev-parse", `${DATA_REF}^`])).toBe(
+      legacy.stdout,
+    );
+  });
+
   it("uses the Git common dir for local exclusion from linked worktrees", async () => {
     const repo = await fixture();
     const linked = join(repo, "..", `${repo.split("/").at(-1)}-linked`);
