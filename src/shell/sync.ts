@@ -1,7 +1,6 @@
 import type { Database } from "bun:sqlite";
 import {
-  commitSnapshot,
-  ensureJigDataWorktree,
+  ensurePortableData,
   EXPORT_DEBOUNCE_MS,
   EXPORT_MAX_FLUSH_MS,
   readCurrentPortableSnapshot,
@@ -10,7 +9,8 @@ import {
   serializeSnapshot,
   SYNC_HEALTHY_POLL_MS,
   type GitAdapterConfig,
-  pushJigDataRef,
+  synchronizePortableData,
+  writePortableSnapshot,
 } from "./git";
 import {
   adoptCanonicalSnapshot,
@@ -34,21 +34,18 @@ export interface SyncController {
 }
 
 export interface SyncEffects {
-  readonly ensureWorktree: (
-    config: GitAdapterConfig,
-    datasetId: string,
-  ) => Promise<void>;
+  readonly ensurePortableData: typeof ensurePortableData;
   readonly readCurrentSnapshot: typeof readCurrentPortableSnapshot;
-  readonly commit: typeof commitSnapshot;
-  readonly push: typeof pushJigDataRef;
+  readonly writeSnapshot: typeof writePortableSnapshot;
+  readonly synchronize: typeof synchronizePortableData;
   readonly availability: typeof repositorySynchronizationAvailability;
 }
 
 const REAL_EFFECTS: SyncEffects = {
-  ensureWorktree: ensureJigDataWorktree,
+  ensurePortableData,
   readCurrentSnapshot: readCurrentPortableSnapshot,
-  commit: commitSnapshot,
-  push: pushJigDataRef,
+  writeSnapshot: writePortableSnapshot,
+  synchronize: synchronizePortableData,
   availability: repositorySynchronizationAvailability,
 };
 
@@ -141,7 +138,7 @@ export function createSyncController(
   const runOnce = async (): Promise<RepositoryStatus> => {
     try {
       const datasetId = readMetadata(db).dataset_id;
-      await effects.ensureWorktree(adapter, datasetId);
+      await effects.ensurePortableData(adapter, datasetId);
       await reconcileConcreteLocalSnapshot();
 
       const state = readCanonicalState(db);
@@ -152,7 +149,7 @@ export function createSyncController(
           state.tasks,
           metadata.dataset_id,
         );
-        const head = await effects.commit(
+        const head = await effects.writeSnapshot(
           adapter,
           snapshot,
           state.revision,
@@ -160,7 +157,7 @@ export function createSyncController(
         markExported(db, state.revision, head);
       }
 
-      const pushed = await effects.push(adapter);
+      const pushed = await effects.synchronize(adapter);
       failureCount = pushed === "sync-issue" ? failureCount + 1 : 0;
       firstDirtyAt = null;
 
@@ -195,7 +192,7 @@ export function createSyncController(
     start: async () => {
       stopped = false;
       const datasetId = readMetadata(db).dataset_id;
-      await effects.ensureWorktree(adapter, datasetId);
+      await effects.ensurePortableData(adapter, datasetId);
       await reconcileConcreteLocalSnapshot();
 
       const metadata = readMetadata(db);
