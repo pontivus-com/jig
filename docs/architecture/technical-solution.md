@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Proposed binding desktop MVP technical solution, v0.4 (2026-11-16), reflecting JIG-FR-01–22 and explicit repository-boundary ownership. Not yet implemented, performance-tested or runtime-certified.
+**Status:** Proposed binding desktop MVP technical solution, v0.5 (2026-11-16), reflecting JIG-FR-01–22, explicit repository-boundary ownership, and closed implementation contracts. Not yet implemented, performance-tested or runtime-certified.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -70,11 +70,11 @@ Jig application source/distribution  (separate from personal planning repo)
 
 The application binary and runtime may be installed under normal user application directories; **all task data and recoverable canonical planning records must be inside the configured Git repository**. The local service keeps only its own noncanonical logs and launch configuration outside that repository. Do not install the program into or modify the public source checkout when it is not the selected personal target.
 
-**Functional core:** Typed pure operations for task creation, date and ordering rules, move, completion and reopening; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one Git sync owner, one HTTP admission boundary, startup/installer orchestration and browser toast callback. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
+**Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser toast callback. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
 
 Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to selected date/task, modal draft, transient drag preview and local appearance preference. Theme preference is presentation state and never part of canonical Task or Git-synchronized planning data. Date/week/history views are queries over the same canonical Task set.
 
-**Local HTTP:** bind `127.0.0.1` only by default; one fixed or user-configured loopback port, HTTP same-origin UI, versioned canonical task commands. Read operations return canonical tasks plus revision. Mutations return success only after SQLite commit; the sync status is separately presented as local-only, pending, synchronized, retrying or blocked. The user can continue editing regardless of transport status.
+**Local HTTP:** bind only to `127.0.0.1`. The default port is **47831**; `install.sh --port <1024..65535>` is the only supported override and persists the chosen value in local configuration. The HTTP API is `/api/v1`; reads return canonical Task values plus the current SQLite revision, and mutations return success only after the SQLite transaction commits. Repository status is exactly `local-only | pending | retrying | synchronized | sync-issue`. The user can continue editing regardless of repository synchronization status.
 
 **Idle behavior:** One service, no worker farm, no browser needed for task storage/sync, no polling-heavy UI while closed. Coalesce edits into short Git bursts, use a timer/backoff instead of permanent busy loops, and never wake a job per drag animation frame. Resource limits are verified in a real idle/workload test rather than inferred from technology choice.
 
@@ -93,6 +93,45 @@ A **single installer script** `scripts/install.sh` is the canonical entry point 
 `jig` opens the local UI in the default browser, starting the service on demand if it is not up. `jig status` reports service, configured repository, local save state and Git sync health. `jig sync` is an optional diagnostic/retry command, not the normal way to make data durable. `jig doctor` diagnoses repo/worktree/service problems; `jig configure --repo <path>` changes target only via explicit migration/validation and never silently starts a second empty plan. Uninstall removes app/service configuration but preserves all `.jig/` data by default.
 
 User-session service availability is guaranteed only while the user's user-service manager is active. Login persistence beyond that (e.g. linger policy) is an explicit administrator/OS configuration, not silently enabled by Jig.
+
+### 3.2 Local configuration and HTTP contract
+
+The local configuration file is **`~/.config/jig/config.json`** and has one versioned schema:
+
+~~~json
+{
+  "version": 1,
+  "repository_path": "/absolute/path/to/selected-repository",
+  "remote_name": "origin",
+  "data_ref": "refs/heads/jig-data",
+  "http_port": 47831
+}
+~~~
+
+`remote_name` is either a non-empty Git remote name or `null`. `data_ref` is fixed to `refs/heads/jig-data` in v1 and is recorded so future migrations can verify identity; it is not an ordinary UI setting. `repository_path` must be absolute and resolve to the validated selected repository. `http_port` is the installer-selected loopback port. Invalid version, missing required keys, an invalid port, a nonabsolute repository path, or an incompatible data ref fails startup with a specific configuration error; Jig never guesses a replacement repository. Theme preference is **not** stored here: the browser stores exactly `system | light | dark` under local presentation storage and it never enters Task data or Git exports.
+
+The browser API is deliberately small and serializes the canonical core types directly; do not create transport DTO classes or a second Task/command schema.
+
+- `GET /api/v1/tasks` → `{ revision, tasks }`, where `tasks` is the complete canonical Task set. Week, Day, carry-over and History are derived from these canonical values.
+- `GET /api/v1/status` → service readiness, configured repository path, whether a remote is configured, and one repository status from `local-only | pending | retrying | synchronized | sync-issue`.
+- `POST /api/v1/commands` accepts one canonical discriminated command plus `expected_revision`.
+
+The command union is exactly:
+
+~~~text
+create { title, scheduled_date, priority?, context?, reference?, note?, reminder_time? }
+edit   { task_id, changes: { title?, scheduled_date?, priority?, context?, reference?, note?, reminder_time? } }
+move   { task_id, destination_date, destination_index }
+complete { task_id }
+reopen   { task_id }
+delete   { task_id }
+~~~
+
+`create` generates ID and timestamps in the shell before invoking the pure core. `edit` with a changed scheduled date uses the priority-assisted insertion rule; `move` is the exact-position drag/keyboard move rule. `complete` supplies the shell's current instant. `delete` is emitted only after UI confirmation; the core does not model the confirmation dialog.
+
+Every command requires the revision read by the caller as `expected_revision`. If it does not equal the current SQLite revision, return HTTP **409** with the current revision and make no mutation; the browser refetches canonical state before retrying. Validation errors are **400**, a missing Task is **404**, and an unexpected persistence failure is **500** with no claimed save. Successful create/edit/move/complete/reopen returns `{ revision, task }`; successful delete returns `{ revision, deleted_task_id }`. These are thin HTTP envelopes around canonical values, not independent domain models.
+
+At service start generate a fresh **256-bit random write token**. Inject it into the same-origin served application bootstrap and require it as `X-Jig-Write-Token` on every `POST /api/v1/commands` request together with `Content-Type: application/json`. Reject missing/incorrect token, cross-origin mutation requests and all permissive CORS. The token lives only for that service process, is never written to configuration, logs, SQLite or Git, and is regenerated on restart.
 
 ## 4. Canonical Task model
 
@@ -207,13 +246,13 @@ Keyboard alternative: expose Move up, Move down and Move to date actions with de
 
 Desktop: week is the default with seven dated columns; maintain a usable minimum column width and allow horizontal board scrolling when necessary rather than compressing task text below readability. A column with a long list scrolls without hiding its date heading or preventing other dates from being reached. Week shows Tasks only on their actual scheduled dates. Day detail is one selected date whose attention sequence is the deterministic carry-over prefix defined in §4.2 followed by the selected-date sequence; carried-over rows use a subtle semantic treatment and originating-date label but no persisted carry-over state. Dragging a carried-over Task into the selected-date sequence is an explicit cross-date move to that selected date and exact position. The completed section is compact. Do **not** add a duplicate generic Board destination: Week is the Kanban surface.
 
-Mobile-first composition: at narrow widths present a compact horizontal week strip and one date's list, not seven tiny columns; preserve the exact selected task and in-progress editor on responsive change. Use touch-sized targets and a move-to-date alternative. Standalone phone installation, native filesystem and on-device Git are future implementation work, not promises of this desktop runtime. Choose one responsive breakpoint owner in Jig UI; do not replicate independent layout breakpoints in each component.
+Mobile-first composition uses one application-owned breakpoint at **48rem / 768 CSS px**. Below it, present a compact horizontal week strip and one date's list rather than seven tiny columns; at or above it, use the desktop Week/Day compositions. Preserve the exact selected Task and in-progress editor across the breakpoint. Use touch-sized targets and a move-to-date alternative. Standalone phone installation, native filesystem and on-device Git are future implementation work, not promises of this desktop runtime. Components consume this one shell-level layout mode and must not invent independent semantic breakpoints.
 
 Presentation rules: consistent spacing and density, one primary action, accessible focus distinct from selection, restrained priority signaling, text labels with semantic status, no hover-only essential action, and reduced-motion compliance. Any custom CSS exists only for Jig-specific calendar columns, drag indicators and responsive composition and consumes verified public Astryx tokens.
 
 ## 6. Browser reminders
 
-A reminder is optional HH:mm on a scheduled date. The browser UI evaluates due outstanding tasks while Jig is open; it uses the device's local civil date/time, periodically checks active reminders (at least once per minute when scheduling is permitted), and rechecks on tab visibility/focus. Browser timer throttling may delay delivery in hidden tabs; resume checks handle reminders that became due since this app session started. An eligible reminder produces an Astryx dismissible toast; an OS/browser notification is an optional permitted enhancement, not an acceptance dependency.
+A reminder is optional HH:mm on a scheduled date. The browser UI evaluates due outstanding tasks while Jig is open; it uses the device's local civil date/time, checks active reminders every **30 seconds** while the document is active, and rechecks immediately on tab visibility/focus. Browser timer throttling may delay delivery in hidden tabs; resume checks handle reminders that became due since this app session started. An eligible reminder produces an Astryx dismissible toast; an OS/browser notification is an optional permitted enhancement, not an acceptance dependency.
 
 Keep the implementation bounded: no push sender, persistent scheduler, service worker notification daemon, background queue, or alert guarantee when Jig is closed or the machine sleeps. Delivery is best effort while the UI is running. A locally stored key (task ID + scheduled date + reminder time) suppresses repeated display on each timer tick and reload. On changing date/time, the new key becomes eligible; on completion it is no longer eligible. Suppression state remains device-local and cannot change Task completion or scheduled order. Only reminders due since the current app session began are eligible for catch-up on resume; do not replay stale reminders from earlier sessions or past dates as a flood on launch.
 
@@ -257,9 +296,9 @@ The portable tree is a **complete snapshot**; every file path ID matches its emb
 
 **On each UI mutation:** validate the canonical command; in one SQLite transaction apply Task state and increment the durable local revision/dirty marker. Return saved state to the UI immediately on commit. Do not wait for network or Git. Task operations never write SQLite and Git simultaneously as a pseudo-two-phase transaction.
 
-**Export worker:** when the durable revision differs from last exported revision, coalesce rapid edits over a short quiet interval (suggest 3–5 seconds, configurable). Read a consistent database snapshot, deterministically regenerate app-owned JSON/manifest in the isolated worktree, remove stale app-owned Task files that are no longer present in that database snapshot, stage only those paths and create a local commit if content changed. Commit only within the `jig-data` worktree and update the exported revision/head metadata afterward. If newer SQLite changes arrived during export, leave them pending for the next pass. At startup, compare the existing Git snapshot and SQLite revision to reconcile a commit that succeeded immediately before a crash/metadata update. A failed export is retried with backoff and does not roll back a successful local task save.
+**Export worker:** when the durable revision differs from last exported revision, coalesce rapid edits for **3 seconds after the latest committed Task mutation**, with a **15-second maximum flush interval** while edits continue. Read a consistent database snapshot, deterministically regenerate app-owned JSON/manifest in the isolated worktree, remove stale app-owned Task files that are no longer present in that database snapshot, stage only those paths and create a local commit if content changed. Commit only within the `jig-data` worktree and update the exported revision/head metadata afterward. If newer SQLite changes arrived during export, leave them pending for the next pass. At startup, compare the existing Git snapshot and SQLite revision to reconcile a commit that succeeded immediately before a crash/metadata update. A failed export is retried with backoff and does not roll back a successful local task save.
 
-**Repository sync adapter:** after local export/commit, the isolated Git adapter attempts the configured repository synchronization without waiting for a user click; when idle it may poll at a bounded cadence (e.g. once a minute while reachable, exponentially backed off after failure). It stages only Jig-owned paths and targets only the dedicated Jig ref. It must never force push, reset, rebase, merge arbitrary histories, or modify the user's ordinary working branch.
+**Repository sync adapter:** after local export/commit, the isolated Git adapter attempts the configured repository synchronization without waiting for a user click. While synchronized and a remote is configured, poll every **60 seconds**. After failure, retry after **5, 10, 20, 40, 80, 160, then 300 seconds**, and remain capped at 300 seconds until one attempt succeeds; success resets the cadence to 60 seconds. It stages only Jig-owned paths and targets only the dedicated Jig ref. It must never force push, reset, rebase, merge arbitrary histories, or modify the user's ordinary working branch.
 
 The planning/domain layers do not inspect branch ancestry, ahead/behind counts, merge bases, conflict markers or Git error categories. The adapter exposes only these operational outcomes:
 
@@ -300,11 +339,11 @@ Moving Jig to another selected repository is a deliberate operation: block write
 
 ### 7.6 Resource/resource-ownership contract
 
-Use one serialized export/sync loop in the Bun service with a durable dirty marker, bounded timers and exponential network backoff. Never launch a separate perpetual Git daemon, background browser tab, job-queue server, or per-task worker. Idle resource acceptance measures RSS, CPU activity and wake frequency in the installed service; no numeric maximum is asserted without host measurements.
+Use one serialized export/sync loop in the Bun service with a durable dirty marker and the fixed timers/backoff in §7.3. Never launch a separate perpetual Git daemon, background browser tab, job-queue server, or per-task worker. On the project reference Linux test host, after 60 seconds of warm-up with no browser connected, the service must remain at **≤128 MiB RSS** and **≤1.0% of one CPU core averaged over 5 minutes**. With the service already running, `jig` must hand off a ready local UI URL within **500 ms p95 over 20 runs** excluding external browser startup; from a stopped service, loopback HTTP readiness must occur within **2 seconds p95 over 20 runs**. A platform-specific exception requires measured evidence and design review rather than silently weakening these thresholds.
 
 ## 8. Security and trust boundaries
 
-Run HTTP on 127.0.0.1 only by default; no publicly bound listener and no external login. Require same-origin requests and reject cross-origin mutation attempts. Use a per-install or per-session unpredictable write token supplied to the same-origin UI for state-changing requests, with no permissive CORS. Do not assume “localhost” alone prevents cross-site request abuse.
+Run HTTP only on `127.0.0.1` at the configured port; no publicly bound listener and no external login. Require same-origin requests and reject cross-origin mutation attempts. Use the per-service-start 256-bit write token defined in §3.2 for state-changing requests, with no permissive CORS. Do not assume “localhost” alone prevents cross-site request abuse.
 
 All external input (HTTP, imported JSON, Git configuration, user-selected repository path and installer arguments) is untrusted. Check canonical Task formats and commands at the admission boundary. Use prepared SQL; invoke Git with an argument-array subprocess, never interpolated shell commands. Validate app-managed paths stay inside the configured data root. Never execute Task reference strings, clone arbitrary task references, or expose local filesystem contents through a task URL. Avoid logging personal titles, notes and references. Keep Git credentials in the user's normal Git/SSH mechanism, never in portable JSON.
 
@@ -320,7 +359,7 @@ src/
   shell/
     http.ts                 same-origin admission and command dispatch
     sqlite.ts               schema, query, transactional mutation
-    git.ts                  isolated worktree, auto export, validated import, fast-forward sync
+    git.ts                  isolated repository adapter, export/synchronization, validated snapshot admission
     main.ts                 daemon startup, sync loop and static UI serving
 scripts/
   install.sh                 single non-root installation and configuration
@@ -380,7 +419,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 **Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, carried-over earlier work with originating-date treatment, carry-over drag that explicitly reschedules, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, confirmed/cancelled deletion, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, System/Light/Dark parity, in-app due toast, and durable save-error visibility.
 
-**Installer/service:** Non-root one-script setup in existing-local and remote-URL clone modes, exact target selection, idempotent rerun, invalid Git target refusal, existing-branch identity checks, two-repo rehydration, launcher/service restart and auto-sync while browser closed. Measure idle CPU/RSS and reopen responsiveness against an explicit acceptance threshold chosen before performance testing.
+**Installer/service:** Non-root one-script setup in existing-local and remote-URL clone modes, exact target selection, idempotent rerun, invalid Git target refusal, existing-branch identity checks, two-repo rehydration, launcher/service restart and auto-sync while browser closed. Enforce the exact resource/readiness thresholds in §7.6.
 
 **Security:** Loopback-only listener, same-origin/token checks, no arbitrary task-reference execution, no shell invocation via Git parameters, path containment and no task data in public source.
 
