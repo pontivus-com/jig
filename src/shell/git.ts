@@ -457,12 +457,12 @@ export async function inspectPortableCandidate(
   return remote;
 }
 
-export async function repositorySynchronizationAvailability(
+export async function repositorySynchronizationMode(
   config: GitAdapterConfig,
-): Promise<"local-only" | "synchronized"> {
+): Promise<"local-only" | "remote"> {
   return (await discoverSynchronizationRemote(config.repository_path)) === null
     ? "local-only"
-    : "synchronized";
+    : "remote";
 }
 
 export async function repositoryCommonDir(
