@@ -28,7 +28,7 @@ printf 'preserve me\n' > "$DATA_REPO/user.txt"
 git -C "$DATA_REPO" add user.txt
 git -C "$DATA_REPO" commit -m "User data" >/dev/null
 
-"$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
 
 [[ -x "$HOME/.local/bin/jig" ]]
 [[ -x "$HOME/.local/share/jig/runtime/bun" ]]
@@ -44,7 +44,7 @@ git -C "$DATA_REPO" show-ref --verify --quiet refs/heads/jig-data
 
 # Reinstallation is idempotent and must preserve the same dataset.
 FIRST_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e   "const c=JSON.parse(await Bun.file('$HOME/.config/jig/config.json').text()); const db=new (await import('bun:sqlite')).Database(c.repository_path+'/.jig/local/jig.sqlite'); console.log(db.query('select dataset_id from app_metadata where singleton=1').get().dataset_id); db.close();")"
-"$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
 SECOND_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e   "const c=JSON.parse(await Bun.file('$HOME/.config/jig/config.json').text()); const db=new (await import('bun:sqlite')).Database(c.repository_path+'/.jig/local/jig.sqlite'); console.log(db.query('select dataset_id from app_metadata where singleton=1').get().dataset_id); db.close();")"
 [[ "$FIRST_DATASET" == "$SECOND_DATASET" ]]
 
@@ -64,14 +64,14 @@ git -C "$SEED" remote add origin "$REMOTE"
 git -C "$SEED" push origin HEAD:master >/dev/null
 git --git-dir="$REMOTE" symbolic-ref HEAD refs/heads/master
 
-"$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$CLONE"   --port 47932   >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$CLONE"   --port 47932   >/dev/null
 
 [[ -f "$CLONE/seed.txt" ]]
 [[ -f "$CLONE/.jig/local/jig.sqlite" ]]
 git -C "$CLONE" show-ref --verify --quiet refs/heads/jig-data
 
 printf 'do not overwrite\n' > "$TMP_ROOT/nonempty"
-if "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$TMP_ROOT"   --port 47933   >/dev/null 2>&1; then
+if bash "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$TMP_ROOT"   --port 47933   >/dev/null 2>&1; then
   printf 'installer unexpectedly accepted a non-empty checkout destination\n' >&2
   exit 1
 fi
