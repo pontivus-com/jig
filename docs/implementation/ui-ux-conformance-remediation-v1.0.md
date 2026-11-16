@@ -1771,7 +1771,7 @@ Do not defer structural failures to polish.
 21. Existing drag/edit/complete/delete/reminder/sync tests stay green.
 22. New conformance tests stay green.
 23. New 1.0.2 screenshot evidence is reviewed against corrected SVGs.
-24. No Task/persistence/Git architecture change is introduced.
+24. No Task schema, persistence-ownership, or Git architecture change is introduced beyond the explicitly planned persisted daily-rollover mutation.
 
 ---
 
