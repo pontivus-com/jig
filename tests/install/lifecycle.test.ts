@@ -220,4 +220,30 @@ describe("installed lifecycle boundaries", () => {
     const second = await acquireWriterLease(data);
     await second.release();
   });
+
+  it("atomically admits exactly one concurrent writer", async () => {
+    const data = await repository("writer-race");
+
+    const contenders = await Promise.allSettled([
+      acquireWriterLease(data),
+      acquireWriterLease(data),
+    ]);
+    const admitted = contenders.filter(
+      (result): result is PromiseFulfilledResult<
+        Awaited<ReturnType<typeof acquireWriterLease>>
+      > => result.status === "fulfilled",
+    );
+    const rejected = contenders.filter(
+      (result): result is PromiseRejectedResult =>
+        result.status === "rejected",
+    );
+
+    expect(admitted).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(String(rejected[0]?.reason)).toMatch(
+      /Another Jig writer is already active/,
+    );
+
+    await admitted[0]?.value.release();
+  });
 });
