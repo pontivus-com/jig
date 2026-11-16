@@ -122,68 +122,164 @@ function assertOptionalText(value: string | null, field: string): void {
   }
 }
 
-export function validateTask(task: Task): Task {
-  assertUuid(task.id);
+export function validateTask(value: unknown): Task {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new TaskValidationError("Task must be an object");
+  }
 
-  if (task.title.trim().length === 0) {
+  const task = value as Record<string, unknown>;
+  const expectedKeys = [
+    "id",
+    "title",
+    "scheduled_date",
+    "position",
+    "priority",
+    "context",
+    "reference",
+    "note",
+    "reminder_time",
+    "completed_at",
+    "created_at",
+    "updated_at",
+  ] as const;
+
+  const actualKeys = Object.keys(task).sort();
+  const sortedExpectedKeys = [...expectedKeys].sort();
+  if (
+    actualKeys.length !== sortedExpectedKeys.length ||
+    actualKeys.some((key, index) => key !== sortedExpectedKeys[index])
+  ) {
+    throw new TaskValidationError(
+      "Task must contain exactly the canonical Task fields",
+    );
+  }
+
+  const id = task.id;
+  const title = task.title;
+  const scheduledDate = task.scheduled_date;
+  const position = task.position;
+  const priority = task.priority;
+  const context = task.context;
+  const reference = task.reference;
+  const note = task.note;
+  const reminderTime = task.reminder_time;
+  const completedAt = task.completed_at;
+  const createdAt = task.created_at;
+  const updatedAt = task.updated_at;
+
+  if (typeof id !== "string") {
+    throw new TaskValidationError("id must be a string");
+  }
+  assertUuid(id);
+
+  if (typeof title !== "string") {
+    throw new TaskValidationError("title must be a string");
+  }
+  if (title.trim().length === 0) {
     throw new TaskValidationError("title must be nonblank");
   }
-  if (task.title !== task.title.trim()) {
+  if (title !== title.trim()) {
     throw new TaskValidationError("title must be trimmed");
   }
 
-  assertCivilDate(task.scheduled_date);
+  if (typeof scheduledDate !== "string") {
+    throw new TaskValidationError("scheduled_date must be a string");
+  }
+  assertCivilDate(scheduledDate);
 
-  if (!isPriority(task.priority)) {
+  if (!isPriority(priority)) {
     throw new TaskValidationError("priority is invalid");
   }
 
-  assertOptionalText(task.context, "context");
-  assertOptionalText(task.reference, "reference");
-  assertOptionalText(task.note, "note");
-
-  if (task.reminder_time !== null) {
-    assertLocalTime(task.reminder_time);
+  for (const [field, fieldValue] of [
+    ["context", context],
+    ["reference", reference],
+    ["note", note],
+  ] as const) {
+    if (fieldValue !== null && typeof fieldValue !== "string") {
+      throw new TaskValidationError(`${field} must be null or a string`);
+    }
+    assertOptionalText(fieldValue, field);
   }
 
-  if (task.completed_at === null) {
+  if (
+    reminderTime !== null &&
+    typeof reminderTime !== "string"
+  ) {
+    throw new TaskValidationError(
+      "reminder_time must be null or a string",
+    );
+  }
+  if (reminderTime !== null) {
+    assertLocalTime(reminderTime);
+  }
+
+  if (
+    completedAt !== null &&
+    typeof completedAt !== "string"
+  ) {
+    throw new TaskValidationError(
+      "completed_at must be null or a string",
+    );
+  }
+
+  if (completedAt === null) {
     if (
-      task.position === null ||
-      !Number.isInteger(task.position) ||
-      task.position < 0
+      typeof position !== "number" ||
+      !Number.isInteger(position) ||
+      position < 0
     ) {
       throw new TaskValidationError(
         "outstanding task position must be a nonnegative integer",
       );
     }
   } else {
-    assertUtcInstant(task.completed_at, "completed_at");
-    if (task.position !== null) {
+    assertUtcInstant(completedAt, "completed_at");
+    if (position !== null) {
       throw new TaskValidationError(
         "completed task position must be null",
       );
     }
   }
 
-  assertUtcInstant(task.created_at, "created_at");
-  assertUtcInstant(task.updated_at, "updated_at");
+  if (typeof createdAt !== "string") {
+    throw new TaskValidationError("created_at must be a string");
+  }
+  if (typeof updatedAt !== "string") {
+    throw new TaskValidationError("updated_at must be a string");
+  }
+  assertUtcInstant(createdAt, "created_at");
+  assertUtcInstant(updatedAt, "updated_at");
 
-  if (Date.parse(task.updated_at) < Date.parse(task.created_at)) {
+  if (Date.parse(updatedAt) < Date.parse(createdAt)) {
     throw new TaskValidationError(
       "updated_at must not precede created_at",
     );
   }
 
   if (
-    task.completed_at !== null &&
-    Date.parse(task.completed_at) < Date.parse(task.created_at)
+    completedAt !== null &&
+    Date.parse(completedAt) < Date.parse(createdAt)
   ) {
     throw new TaskValidationError(
       "completed_at must not precede created_at",
     );
   }
 
-  return task;
+  return {
+    id,
+    title,
+    scheduled_date: scheduledDate,
+    position: position as number | null,
+    priority,
+    context: context as string | null,
+    reference: reference as string | null,
+    note: note as string | null,
+    reminder_time: reminderTime,
+    completed_at: completedAt,
+    created_at: createdAt,
+    updated_at: updatedAt,
+  };
 }
 
 export function normalizeOptionalText(
