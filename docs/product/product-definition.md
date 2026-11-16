@@ -53,12 +53,13 @@ An operator must be able to:
 - **History without ceremony:** completed work remains inspectable; unfinished work carries forward visibly until completed, explicitly rescheduled or deleted.
 - **Simple deletion:** confirmed deletion removes the task from Jig rather than creating another lifecycle state. Recovery of previously exported states is delegated to Git history instead of an application trash, soft-delete or undo subsystem.
 - **Portable ownership:** a user-selected Git repository contains Jig's local database and Git-tracked logical task records in an isolated Jig area; the software's source repository contains no personal task data.
+- **Repository boundary:** Jig owns planning information and canonical snapshots, not Git topology. Repository history, branches, merges, conflicts and reconciliation are handled by Git tooling outside the Jig domain; Jig only reports whether repository synchronization succeeded, is pending, is unavailable, or has an operational issue.
 - **Low-friction lifecycle:** one installer configures the repository, local executable and Linux user service; saves and normal Git synchronization are automatic rather than a repeated user chore.
 - **Non-invasive coexistence:** Jig does not stage, commit, overwrite, merge or publish unrelated content in the selected repository.
 
 ## 6. Deliberate exclusions
 
-Jig v1 is not a project manager, issue tracker, team board, time tracker, Pomodoro timer, task-execution agent, autonomous prioritizer, collaboration platform, or Order lifecycle client. It does not need Gantt charts, task dependencies, nested subtasks, mandatory time allocations, a full unscheduled backlog, a custom workflow builder, background/mobile push delivery, or direct Order integration.
+Jig v1 is not a project manager, issue tracker, team board, time tracker, Pomodoro timer, task-execution agent, autonomous prioritizer, collaboration platform, Order lifecycle client, or Git history/conflict manager. It does not need Gantt charts, task dependencies, nested subtasks, mandatory time allocations, a full unscheduled backlog, a custom workflow builder, background/mobile push delivery, or direct Order integration.
 
 A calendar *date* and optional reminder time are not a time-blocked calendar appointment.
 
