@@ -1,8 +1,8 @@
 # Jig — technical solution design
 
-**Status:** Proposed binding desktop MVP technical solution, v0.2 (2026-11-16), reflecting JIG-FR-01–20. Not yet implemented, performance-tested or runtime-certified.
+**Status:** Proposed binding desktop MVP technical solution, v0.3 (2026-11-16), reflecting JIG-FR-01–22. Not yet implemented, performance-tested or runtime-certified.
 **Concern owner:** Jig architecture, canonical task representation, persistence, Git exchange, UI realization, operation admission, and verification.
-**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01 through JIG-FR-14.
+**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
 
 ## 1. Decisions, baseline and user experience
@@ -11,7 +11,7 @@ Jig is a date-based personal planner, not a project manager or an Order lifecycl
 
 The normal experience is: run one installer; assign repository; installer configures local application/runtime, a Git-managed data area, the `jig` command and a Linux user service; thereafter `jig` opens the planner or starts its service, saves happen immediately in SQLite, and background Git commits/fetches/pushes happen without interaction in the normal case. User task operations are never blocked on the network. Git auto-sync failures must retain local work and show a truthful state.
 
-**Authoritative product requirements:** [JIG-FR-01–20](../requirements/planning-workbench.md). This document makes the following technical selections:
+**Authoritative product requirements:** [JIG-FR-01–22](../requirements/planning-workbench.md). This document makes the following technical selections:
 
 | Area | Chosen solution |
 |---|---|
@@ -72,7 +72,7 @@ The application binary and runtime may be installed under normal user applicatio
 
 **Functional core:** Typed pure operations for task creation, date and ordering rules, move, completion and reopening; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one Git sync owner, one HTTP admission boundary, startup/installer orchestration and browser toast callback. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
 
-Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to selected date/task, modal draft and transient drag preview. Date/week/history views are queries over the same canonical Task set.
+Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to selected date/task, modal draft, transient drag preview and local appearance preference. Theme preference is presentation state and never part of canonical Task or Git-synchronized planning data. Date/week/history views are queries over the same canonical Task set.
 
 **Local HTTP:** bind `127.0.0.1` only by default; one fixed or user-configured loopback port, HTTP same-origin UI, versioned canonical task commands. Read operations return canonical tasks plus revision. Mutations return success only after SQLite commit; the sync status is separately presented as local-only, pending, synchronized, retrying or blocked. The user can continue editing regardless of transport status.
 
@@ -113,7 +113,7 @@ One Task is the sole durable representation of an intended item. Week, day, comp
 | created_at | UTC ISO instant | Historical creation time |
 | updated_at | UTC ISO instant | Last committed change time |
 
-There is **no persisted WorkItem, Day, Week, Board, project workflow, task status enum, scheduled duration, time estimate, completion-history duplicate, or separate ordering authority**. An outstanding task is precisely one with completed_at = null. Its position is non-null. A completed task has completed_at non-null and position null. Reopening preserves id and scheduled_date but clears completed_at and assigns the end position for that date.
+There is **no persisted WorkItem, Day, Week, Board, project workflow, task status enum, scheduled duration, time estimate, completion-history duplicate, carry-over flag, deletion tombstone, or separate ordering authority**. A deleted Task ceases to exist in the current dataset rather than entering another lifecycle state. An outstanding task is precisely one with completed_at = null. Its position is non-null. A completed task has completed_at non-null and position null. Reopening preserves id and scheduled_date but clears completed_at and assigns the end position for that date.
 
 A task's scheduled civil date is stable across devices and must not be recalculated from UTC. The browser's current local calendar determines “today.” A reminder is a local clock indication for the device using Jig, not a guaranteed cross-timezone event at one globally fixed instant. Actual completion instants remain UTC; the history groups those instants by the viewing device's local calendar date.
 
@@ -126,9 +126,11 @@ Task references are treated as data: safe http(s) links may open with normal bro
 3. The user-selected sequence is authoritative; priority updates never reorder it.
 4. Date moves preserve all task metadata and identity except scheduled_date and position; reminder_time stays the same and is interpreted on the new date.
 5. Completion records an instant and removes the item from its outstanding sequence; reopening appends it, rather than guessing its former position.
-6. No automatic rollover changes yesterday's tasks.
-7. A failed mutation leaves all affected dates unchanged; UI reports failure without implying a save.
-8. Every imported snapshot passes the same invariants before it can replace local state.
+6. No automatic rollover changes yesterday's tasks. Carry-over is a derived read/presentation rule over unchanged scheduled dates.
+7. A confirmed deletion removes the Task row entirely. If the deleted Task was outstanding, the remaining positions on its scheduled date are compacted transactionally; completed deletion requires no active-order compaction.
+8. Deletion creates no tombstone, deleted status, trash record or application-level undo history.
+9. A failed mutation leaves all affected dates unchanged; UI reports failure without implying a save.
+10. Every imported complete snapshot passes the same invariants before it can replace local state; after validation, its Task membership is authoritative for that adopted snapshot.
 
 ### 4.2 Operation algorithms
 
@@ -142,7 +144,9 @@ Task references are treated as data: safe http(s) links may open with normal bro
 
 **Reopen:** Clear completed_at; keep scheduled_date, priority and reference; append at the end of the outstanding sequence. No completion history event log is required in v1.
 
-**Read:** Week is seven consecutive local civil dates beginning Monday; day is the selected date; past unfinished work is the same outstanding query for dates earlier than today; completed by scheduled date is distinct from history grouped by local completion date. Date navigation does not modify tasks.
+**Delete:** Only after explicit UI confirmation, delete the Task in one SQLite transaction. For an outstanding Task, remove it and compact the remaining positions on its scheduled date to 0..N-1; for a completed Task, delete it without active-order compaction. Increment the normal durable revision. Do not write deleted_at, a tombstone, trash row or delete-event log. Git history, if an earlier export exists, is the only recovery mechanism.
+
+**Read:** Week is seven consecutive local civil dates beginning Monday and shows Tasks on their actual scheduled dates only. Day is the selected date plus a derived carry-over prefix of outstanding Tasks whose scheduled_date is earlier than the selected date; order those earlier Tasks by scheduled_date ascending and then by their persisted position, followed by selected-date Tasks in persisted position order. Carry-over never mutates scheduled_date. Completed by scheduled date remains distinct from History grouped by local completion date. Date navigation does not modify tasks.
 
 ### 4.3 Persistence representation
 
@@ -182,13 +186,13 @@ Use prepared statements and explicit transactions. WAL may be enabled for local 
 
 ## 5. Astryx UI composition and responsive behavior
 
-Consume the public Astryx components directly; do not import Order's internal Workbench* modules or duplicate their lifecycle semantics. Use the Neutral theme and public semantic roles, not the original green decorative screenshot palette. One application theme owner supports System/Light/Dark; browser visual preference is not task state.
+Consume the public Astryx components directly; do not import Order's internal Workbench* modules or duplicate their lifecycle semantics. Use the Neutral theme and public semantic roles, not the original green decorative screenshot palette. One application theme owner **must** support System/Light/Dark. System follows the browser/platform color preference; an explicit Light or Dark choice overrides it locally. Browser visual preference is presentation state, not Task state, and is not exported to Git. The same semantic roles, structure and interaction hierarchy must remain valid in both themes; no parallel dark-mode component tree or hard-coded per-feature palette is permitted.
 
 | Jig region | Astryx foundation | Jig-specific part |
 |---|---|---|
 | App frame | AppShell, Layout, Grid/Stack | Minimal Week / Day / History navigation |
 | Week planner | Grid/Stack, List/ListItem, Button/IconButton | Seven dated columns; visible droppable column areas |
-| Day planner | List/ListItem, section heading, Button | Selected date, outstanding and completed query |
+| Day planner | List/ListItem, section heading, Button | Derived carry-over prefix + selected-date outstanding sequence + completed query |
 | Capture/editor | TextInput, TextArea, Selector or SegmentedControl, DateInput, TimeInput, Dialog/FormLayout | Task field rules and save/admission |
 | Inspector/compact editor | Drawer, Dialog, responsive composition | Show only task details and external reference |
 | Status/feedback | Banner, Toast/useToast/LayerProvider | Persistence error and reminder messages |
@@ -201,7 +205,7 @@ Use **a single drag owner**: DragDropProvider around the week, useSortable per o
 
 Keyboard alternative: expose Move up, Move down and Move to date actions with descriptive accessible labels, even if library sensors also support keyboard dragging. These commands call the **same move operation**; no second order representation. Completion, task editing and reference opening must not accidentally start dragging.
 
-Desktop: week is the default with seven dated columns; maintain a usable minimum column width and allow horizontal board scrolling when necessary rather than compressing task text below readability. A column with a long list scrolls without hiding its date heading or preventing other dates from being reached. Day detail is one selected date; completed section is compact. Do **not** add a duplicate generic Board destination: Week is the Kanban surface.
+Desktop: week is the default with seven dated columns; maintain a usable minimum column width and allow horizontal board scrolling when necessary rather than compressing task text below readability. A column with a long list scrolls without hiding its date heading or preventing other dates from being reached. Week shows Tasks only on their actual scheduled dates. Day detail is one selected date whose attention sequence is the deterministic carry-over prefix defined in §4.2 followed by the selected-date sequence; carried-over rows use a subtle semantic treatment and originating-date label but no persisted carry-over state. Dragging a carried-over Task into the selected-date sequence is an explicit cross-date move to that selected date and exact position. The completed section is compact. Do **not** add a duplicate generic Board destination: Week is the Kanban surface.
 
 Mobile-first composition: at narrow widths present a compact horizontal week strip and one date's list, not seven tiny columns; preserve the exact selected task and in-progress editor on responsive change. Use touch-sized targets and a move-to-date alternative. Standalone phone installation, native filesystem and on-device Git are future implementation work, not promises of this desktop runtime. Choose one responsive breakpoint owner in Jig UI; do not replicate independent layout breakpoints in each component.
 
@@ -247,19 +251,19 @@ An unconfigured Git remote is allowed: Jig remains a fully usable, automatically
 
 `format.json` includes a version discriminator and a UUID **dataset_id**, created once at first initialization and stable on every replica. Every task is `tasks/<uuid>.json` using exactly the canonical Task fields in §4, sorted key order, UTF-8, normalized newlines and strict date/instant formats. No SQLite binary, Git credentials, device-local toast receipts, secrets, private system paths, temporary files or browser state enter commits. Completed and unfinished tasks are both included.
 
-The portable tree is a **complete snapshot**; every file path ID matches its embedded ID; duplicate task IDs or missing/duplicate active positions invalidate the entire import. An absent record on *full explicit restore* is treated as absent only after warning/confirmation; normal incremental sync does not infer a deletion from an unverified missing file. v1 contains no user-facing task deletion operation. Do not use plain Git text auto-merges as valid domain reconciliation.
+The portable tree is a **complete snapshot**; every file path ID matches its embedded ID; duplicate task IDs or missing/duplicate active positions invalidate the entire import. Once a complete snapshot has been fetched, validated and safely adopted at a known Git commit, its Task membership is exact: a Task present in the previously adopted dataset but absent from the newly adopted snapshot is deleted locally in the same transactional import. A missing file in an arbitrary, incomplete or unvalidated worktree is **not** a deletion signal. User deletion is therefore represented naturally by absence of `tasks/<uuid>.json` in a later complete snapshot; no tombstone file or deleted-state record is introduced. Do not use plain Git text auto-merges as valid domain reconciliation.
 
 ### 7.3 Write and automatic synchronization loop
 
 **On each UI mutation:** validate the canonical command; in one SQLite transaction apply Task state and increment the durable local revision/dirty marker. Return saved state to the UI immediately on commit. Do not wait for network or Git. Task operations never write SQLite and Git simultaneously as a pseudo-two-phase transaction.
 
-**Export worker:** when the durable revision differs from last exported revision, coalesce rapid edits over a short quiet interval (suggest 3–5 seconds, configurable). Read a consistent database snapshot, deterministically regenerate app-owned JSON/manifest in the isolated worktree, stage only those paths and create a local commit if content changed. Commit only within the `jig-data` worktree and update the exported revision/head metadata afterward. If newer SQLite changes arrived during export, leave them pending for the next pass. At startup, compare the existing Git snapshot and SQLite revision to reconcile a commit that succeeded immediately before a crash/metadata update. A failed export is retried with backoff and does not roll back a successful local task save.
+**Export worker:** when the durable revision differs from last exported revision, coalesce rapid edits over a short quiet interval (suggest 3–5 seconds, configurable). Read a consistent database snapshot, deterministically regenerate app-owned JSON/manifest in the isolated worktree, remove stale app-owned Task files that are no longer present in that database snapshot, stage only those paths and create a local commit if content changed. Commit only within the `jig-data` worktree and update the exported revision/head metadata afterward. If newer SQLite changes arrived during export, leave them pending for the next pass. At startup, compare the existing Git snapshot and SQLite revision to reconcile a commit that succeeded immediately before a crash/metadata update. A failed export is retried with backoff and does not roll back a successful local task save.
 
 **Git sync worker:** after local export/commit, attempt fetch/push without waiting for a user click; when idle, poll the configured Git remote at a bounded cadence (e.g. once a minute while reachable, exponentially backed off after failure). Fetch only the dedicated Jig branch/ref; never run unbounded pull, force reset, force push, or merge operations against the user's working branch.
 
 - **Remote absent:** local-only, all Task mutations and local Git commits continue.
 - **Local ahead, remote unchanged:** push only the dedicated Jig branch. On push failure retain local commits and retry.
-- **Remote ahead, no unsaved/unexported local edits or local commits:** fast-forward the isolated worktree, validate every Task and format, import a consistent snapshot into SQLite transactionally, then mark the remote head adopted.
+- **Remote ahead, no unsaved/unexported local edits or local commits:** fast-forward the isolated worktree, validate every Task and format, import the complete snapshot into SQLite transactionally—including removal of local Tasks absent from the adopted snapshot—then mark the remote head adopted.
 - **Both advanced independently / local dirty plus remote ahead:** preserve local data, local/remote Git commits and enter a durable `sync blocked: divergent histories` state. Do not silently select last writer, merge arbitrary text, or overwrite a user's local edits. Display an actionable reconciliation explanation; optional `jig doctor`/support workflow may assist. This is an explicit exception to otherwise hands-off operation, not a claim that concurrent conflict-free sync is implemented.
 - **Equal:** mark synchronized after all local revisions have been exported and the target remote confirms the pushed ref.
 
@@ -271,7 +275,7 @@ Startup resumes pending export/fetch/push from durable local metadata. Incoming 
 
 On a fresh installation with an existing valid remote `jig-data` ref, the installer automatically fetches and validates the full snapshot before populating a fresh SQLite DB. It does not overwrite an existing database without explicit confirmation and a recoverable local backup.
 
-For normal remote fast-forward sync, import a validated full snapshot by one SQLite transaction **only when the local dataset is clean relative to its known Git head**, then update the imported-head marker. On validation error or transaction failure, keep the prior DB intact and mark sync blocked. If a crash occurs after ref fast-forward but before DB adoption, the imported-head metadata reveals the unfinished step and startup resumes import.
+For normal remote fast-forward sync, import a validated full snapshot by one SQLite transaction **only when the local dataset is clean relative to its known Git head**. Reconcile the entire Task membership in that transaction, including deletion of Tasks absent from the adopted complete snapshot, then update the imported-head marker. On validation error or transaction failure, keep the prior DB intact and mark sync blocked. If a crash occurs after ref fast-forward but before DB adoption, the imported-head metadata reveals the unfinished step and startup resumes import.
 
 Moving Jig to another selected repository is a deliberate operation: block writers briefly, export the latest local state, validate the destination Git root and branch ownership, copy/rehydrate the database/records without touching unrelated files, and switch the active config atomically only on success. On failure remain attached to the original repository. Never leave two independent active installation writers for one Task dataset.
 
@@ -349,7 +353,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-06 priority change | Edit operation | Only priority changes; position unchanged |
 | JIG-FR-07 unrestricted edit | Astryx edit surface + core update | All optional fields and date edited without workflow gate |
 | JIG-FR-08 completion/reopen | Core transition + timestamp + DB | Date-scheduled completion, history query, reopen same ID |
-| JIG-FR-09 past outstanding | Date queries | Yesterday remains outstanding until explicitly moved/done |
+| JIG-FR-09 carry-over | Derived Day query over unchanged scheduled dates | Earlier outstanding remains visible and marked until completed, explicitly moved or deleted; Week never duplicates it |
 | JIG-FR-10 in-app reminder | Browser clock + Astryx Toast | Due while open => one dismissible toast; no closed-app guarantee |
 | JIG-FR-11 external context | Reference open/copy UI | Link/path accessible; no source-content import |
 | JIG-FR-12 honest outcome | HTTP/SQLite/Git outcome and UI | Failed save or sync never rendered as persisted success |
@@ -361,16 +365,18 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-18 automatic Git sync | durable dirty revision + one Git worktree worker | Local save immediately, background commit/fetch/push without user action |
 | JIG-FR-19 safe coexistence | dedicated jig-data branch/worktree; no main-branch writes | Unrelated staged/unstaged user docs unchanged; truthful blocked state |
 | JIG-FR-20 low-friction idle | one Bun service, bounded timers/backoff | Measured low idle CPU/RSS and responsive reopen |
+| JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
+| JIG-FR-22 appearance | One Astryx Neutral theme owner + local preference | System/Light/Dark render equivalent hierarchy and state semantics without Task/Git mutation |
 
 ### 10.1 Test boundaries
 
-**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, completed-task rescheduling, reopening, and edge dates including month/year boundaries.
+**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, carry-over query ordering without date mutation, completed-task rescheduling, reopening, outstanding/completed deletion and edge dates including month/year boundaries.
 
 **SQLite integration:** One failed transaction rolls back every affected position/date; uniqueness and completeness checks; restart with WAL; task query by scheduled and completion dates; migration from a fresh empty database; corrupted input rejected before persistence.
 
-**Git integration:** An existing personal-repo fixture with deliberately dirty/staged unrelated files, an isolated jig-data linked worktree and a local bare remote. Verify the installer creates/adopts only the Jig branch; deterministic auto export; JSON round trip; commit/metadata crash recovery; schema/order rejection; fast-forward import; push failure/retry; divergence retains both heads; clean separation from ordinary repo branch and index.
+**Git integration:** An existing personal-repo fixture with deliberately dirty/staged unrelated files, an isolated jig-data linked worktree and a local bare remote. Verify the installer creates/adopts only the Jig branch; deterministic auto export; JSON round trip; deletion removes the Task file and survives fast-forward import without a tombstone; commit/metadata crash recovery; schema/order rejection; push failure/retry; divergence retains both heads; clean separation from ordinary repo branch and index.
 
-**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, in-app due toast, and durable save-error visibility.
+**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, carried-over earlier work with originating-date treatment, carry-over drag that explicitly reschedules, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, confirmed/cancelled deletion, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, System/Light/Dark parity, in-app due toast, and durable save-error visibility.
 
 **Installer/service:** Non-root one-script setup in existing-local and remote-URL clone modes, exact target selection, idempotent rerun, invalid Git target refusal, existing-branch identity checks, two-repo rehydration, launcher/service restart and auto-sync while browser closed. Measure idle CPU/RSS and reopen responsiveness against an explicit acceptance threshold chosen before performance testing.
 
@@ -384,7 +390,7 @@ If the Astryx ListItem/dnd-kit integration fails in the browser, fix the smalles
 
 ## 11. Explicitly deferred capabilities
 
-Independent phone installation, native mobile Git/process/filesystem integration, concurrent offline multi-device merge, domain-level conflict-resolution UI, background/push notifications, Order WorkItem creation, automatic project-task synchronization, metrics/dashboard, team collaboration, repeated scheduling, subtasks, duration estimation and general workflow constraints are excluded. The canonical Task format and Git record identity intentionally leave room for later extension, but none of these capabilities is represented as implemented by this design.
+Independent phone installation, native mobile Git/process/filesystem integration, concurrent offline multi-device merge, domain-level conflict-resolution UI, application-level trash/soft-delete/undo/restore, background/push notifications, Order WorkItem creation, automatic project-task synchronization, metrics/dashboard, team collaboration, repeated scheduling, subtasks, duration estimation and general workflow constraints are excluded. The canonical Task format and Git record identity intentionally leave room for later extension, but none of these capabilities is represented as implemented by this design.
 
 ## 12. Decision history and minimality rationale
 
@@ -396,6 +402,6 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **Astryx directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows.
 - **dnd-kit instead of Astryx same-list reordering plus custom cross-day dragging:** One coordinated drag system across all seven date columns with a single canonical move command.
 - **Browser-side toasts instead of background infrastructure:** Exact compliance with open-app reminder requirements.
-- **One Task and derived views instead of multiple planning objects:** Satisfies all 14 functional requirements without building a project manager.
+- **One Task and derived views instead of multiple planning objects:** Satisfies all 22 functional requirements without building a project manager.
 
 **Implementation planning can now be derived from this document and [the UI solution](../design/ui-solution.md).** The plan must preserve the boundaries above, prove the specified acceptance gates, and must not interpret non-goals as implied features.
