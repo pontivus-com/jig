@@ -3,9 +3,7 @@ import {
   Button,
   SegmentedControl,
   SegmentedControlItem,
-  TextInput,
 } from "@astryxdesign/core";
-import { useEffect, useState } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
@@ -21,7 +19,6 @@ export interface SettingsViewProps {
   readonly isOperating: boolean;
   readonly onThemePreferenceChange: (value: ThemePreference) => void;
   readonly onSync: () => Promise<void>;
-  readonly onMigrate: (repositoryPath: string) => Promise<boolean>;
 }
 
 function statusMessage(status: ServiceStatus | null): string {
@@ -49,18 +46,7 @@ export function SettingsView({
   isOperating,
   onThemePreferenceChange,
   onSync,
-  onMigrate,
 }: SettingsViewProps): React.ReactElement {
-  const [repositoryPath, setRepositoryPath] = useState(
-    status?.repository_path ?? "",
-  );
-
-  useEffect(() => {
-    if (status !== null) {
-      setRepositoryPath(status.repository_path);
-    }
-  }, [status?.repository_path]);
-
   return (
     <div className="jig-settings-view">
       <div className="jig-view-heading">
@@ -130,26 +116,6 @@ export function SettingsView({
         />
       </section>
 
-      <section className="jig-settings-section" aria-labelledby="repository-heading">
-        <h2 id="repository-heading">Planning-data repository</h2>
-        <p className="jig-secondary-copy">
-          Changing this location is a deliberate migration. The current repository remains active if migration fails.
-        </p>
-        <TextInput
-          label="Repository path"
-          value={repositoryPath}
-          onChange={setRepositoryPath}
-          width="100%"
-        />
-        <Button
-          label="Migrate repository"
-          variant="secondary"
-          isLoading={isOperating}
-          onClick={() => {
-            void onMigrate(repositoryPath);
-          }}
-        />
-      </section>
     </div>
   );
 }
