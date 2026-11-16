@@ -22,7 +22,7 @@ const BASE: Task = {
 
 describe("canonical Task validation", () => {
   it("accepts the exact canonical outstanding shape", () => {
-    expect(validateTask(BASE)).toBe(BASE);
+    expect(validateTask(BASE)).toStrictEqual(BASE);
   });
 
   it.each([
