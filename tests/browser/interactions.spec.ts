@@ -232,15 +232,21 @@ test("references stay data-only and deletion is confirmed hard delete", async ({
   await expect(
     confirmation.getByRole("heading", { name: "Delete task?" }),
   ).toBeVisible();
-  await confirmation
-    .getByRole("button", { name: "Delete task", exact: true })
-    .click();
+  const deleteAction = confirmation.getByRole("button", {
+    name: "Delete task",
+    exact: true,
+  });
+  await expect(deleteAction).toBeEnabled();
+  await deleteAction.click({ timeout: 5_000 });
+  await expect(confirmation).toBeHidden({ timeout: 5_000 });
 
   await expect
-    .poll(async () =>
-      (await apiState(page)).tasks.some(
-        (task) => task.title === "Copy-only reference",
-      ),
+    .poll(
+      async () =>
+        (await apiState(page)).tasks.some(
+          (task) => task.title === "Copy-only reference",
+        ),
+      { timeout: 5_000 },
     )
     .toBe(false);
 });
