@@ -10,6 +10,7 @@ import {
 import { DateDropZone, TaskDragProvider } from "./drag";
 import { DayTaskLists } from "./day";
 import { formatCivilDate, todayCivilDate } from "./dates";
+import { DateStrip } from "./date-strip";
 import { SortableTaskRow } from "./task-row";
 
 export interface WeekViewProps {
@@ -82,39 +83,6 @@ function WeekTaskRow({
   );
 }
 
-function WeekStrip({
-  dates,
-  selectedDate,
-  onSelectDate,
-}: Readonly<{
-  dates: readonly string[];
-  selectedDate: string;
-  onSelectDate: (date: string) => void;
-}>): React.ReactElement {
-  const today = todayCivilDate();
-  return (
-    <nav className="jig-week-strip" aria-label="Week dates">
-      {dates.map((date) => (
-        <button
-          key={date}
-          type="button"
-          className={[
-            "jig-week-strip-date",
-            date === selectedDate ? "jig-date-selected" : "",
-            date === today ? "jig-date-today" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          aria-current={date === selectedDate ? "date" : undefined}
-          onClick={() => onSelectDate(date)}
-        >
-          <span>{formatCivilDate(date, { weekday: "short" })}</span>
-          <strong>{formatCivilDate(date, { day: "numeric" })}</strong>
-        </button>
-      ))}
-    </nav>
-  );
-}
 
 export function WeekView({
   tasks,
@@ -144,8 +112,7 @@ export function WeekView({
             onClick={() => onAdd(selectedDate)}
           />
         </div>
-        <WeekStrip
-          dates={dates}
+        <DateStrip
           selectedDate={selectedDate}
           onSelectDate={onSelectDate}
         />
