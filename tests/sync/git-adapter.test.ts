@@ -10,14 +10,14 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
-  commitSnapshot,
-  ensureJigDataWorktree,
   ensureJigLocalExclude,
+  ensurePortableData,
   GitAdapterError,
-  readSnapshotAtRef,
+  readCurrentPortableSnapshot,
   repositorySynchronizationAvailability,
   runGit,
   serializeSnapshot,
+  writePortableSnapshot,
 } from "../../src/shell/git";
 import { DATA_REF } from "../../src/shell/sqlite";
 
@@ -84,17 +84,19 @@ describe("isolated jig-data adapter", () => {
       repository_path: repo,
     } as const;
 
-    await ensureJigDataWorktree(config, DATASET_ID);
+    await ensurePortableData(config, DATASET_ID);
     const snapshot = serializeSnapshot([task()], DATASET_ID);
-    const head = await commitSnapshot(config, snapshot, 1);
+    const head = await writePortableSnapshot(config, snapshot, 1);
 
     expect(head).toMatch(/^[0-9a-f]{40}$/);
     expect(await git(repo, ["status", "--porcelain=v1"])).toBe(before);
     expect(
-      await readSnapshotAtRef(repo, DATA_REF, DATASET_ID),
+      await readCurrentPortableSnapshot(config, DATASET_ID),
     ).toMatchObject({
-      dataset_id: DATASET_ID,
-      tasks: [task()],
+      snapshot: {
+        dataset_id: DATASET_ID,
+        tasks: [task()],
+      },
     });
   });
 
@@ -122,7 +124,7 @@ describe("isolated jig-data adapter", () => {
     } as const;
 
     await expect(
-      ensureJigDataWorktree(config, DATASET_ID),
+      ensurePortableData(config, DATASET_ID),
     ).rejects.toThrow(GitAdapterError);
   });
 
@@ -136,8 +138,8 @@ describe("isolated jig-data adapter", () => {
       repository_path: repo,
     } as const;
 
-    await ensureJigDataWorktree(config, DATASET_ID);
-    const head = await commitSnapshot(
+    await ensurePortableData(config, DATASET_ID);
+    const head = await writePortableSnapshot(
       config,
       serializeSnapshot([task()], DATASET_ID),
       1,
@@ -175,11 +177,11 @@ describe("isolated jig-data adapter", () => {
       repository_path: repo,
     } as const;
 
-    await ensureJigDataWorktree(config, DATASET_ID);
+    await ensurePortableData(config, DATASET_ID);
 
-    const snapshot = await readSnapshotAtRef(repo, DATA_REF, DATASET_ID);
-    expect(snapshot.dataset_id).toBe(DATASET_ID);
-    expect(snapshot.tasks).toStrictEqual([]);
+    const current = await readCurrentPortableSnapshot(config, DATASET_ID);
+    expect(current?.snapshot.dataset_id).toBe(DATASET_ID);
+    expect(current?.snapshot.tasks).toStrictEqual([]);
     expect(await git(repo, ["rev-parse", `${DATA_REF}^`])).toBe(
       legacy.stdout,
     );
