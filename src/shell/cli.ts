@@ -225,7 +225,6 @@ async function printStatus(): Promise<void> {
       [
         "service: stopped or unavailable",
         `repository: ${config.repository_path}`,
-        `remote: ${config.remote_name ?? "none"}`,
         "repository_status: unavailable while service is stopped",
         "",
       ].join("\n"),
@@ -237,7 +236,6 @@ async function printStatus(): Promise<void> {
     [
       "service: ready",
       `repository: ${String(status.repository_path ?? config.repository_path)}`,
-      `remote: ${status.remote_configured === true ? "configured" : "none"}`,
       `repository_status: ${String(status.repository_status ?? "unknown")}`,
       "",
     ].join("\n"),
@@ -261,8 +259,6 @@ async function doctor(): Promise<void> {
       [
         "service_healthy: false",
         `repository_path: ${config.repository_path}`,
-        `data_ref: ${config.data_ref}`,
-        `remote_configured: ${config.remote_name !== null}`,
         "diagnostics: service is not running",
         "",
       ].join("\n"),
