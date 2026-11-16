@@ -4,6 +4,10 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Documentation
+
+- Added the UX/UI conformance audit v1.0 and implementation-ready remediation plan for restoring the governed SVG structural design after v1.0.1.
+
 ## [1.0.1] - 2026-11-16
 
 ### Changed
