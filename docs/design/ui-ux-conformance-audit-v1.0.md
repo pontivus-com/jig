@@ -101,37 +101,40 @@ The top bar changes the product's spatial model, consumes horizontal action spac
 
 **Required correction:** separate application navigation from planning-surface controls.
 
-## 4A. Functional continuity defect — unfinished prior-day work is hidden on startup
+## 4A. Functional continuity defect — unfinished prior-day work is not rolled forward
 
-### UX-F01 — Carry-over exists in the core but fails the everyday entry workflow
+### UX-F01 — The current carry-over model is functionally wrong
 
-The planning core's `dayAttention()` correctly derives outstanding Tasks whose `scheduled_date < selectedDate` as carried-over work, and browser coverage proves that a synthetic yesterday Task appears when the user explicitly opens Day.
+The current planning model treats overdue work as a **derived Day-only projection**: `dayAttention()` reads outstanding Tasks whose `scheduled_date < selectedDate` without changing their canonical date.
 
-However, `ui/src/app.tsx` initializes the application destination to `"week"`.
+That does not satisfy the intended product behavior.
 
-Week deliberately renders only `outstandingForDate(tasks, date)` for each actual scheduled date. The functional contract also explicitly forbids duplicating a Task into later Week columns.
+The required behavior is persisted daily rollover:
 
-The result is a product-level failure:
+1. an unfinished Task is scheduled for yesterday;
+2. the local civil day advances;
+3. Jig changes that Task's canonical `scheduled_date` to the current day;
+4. the Task is inserted into the current day's persisted outstanding order;
+5. the old date no longer contains the Task;
+6. Week, Day, narrow/mobile, restart and synchronized replicas all see the same moved card.
 
-1. leave a Task unfinished yesterday;
-2. open Jig today;
-3. Jig opens Week;
-4. the unfinished Task remains visually back on yesterday's column;
-5. today's attention surface does not immediately show it;
-6. the user must know to switch manually to Day to discover carried-over work.
+The current implementation therefore fails even if the Day query can visually surface the old Task.
 
-This contradicts the practical intent of **"unfinished earlier-day items remain in view on subsequent days"** and explains the observed failure even though the isolated Day query passes.
-
-**Classification:** P0 functional/UX defect, not data-loss and not a reason to silently mutate `scheduled_date`.
+**Classification:** P0 functional defect in the planning model and lifecycle.
 
 **Required correction:**
-- the normal application entry point must open the current Day attention surface, or otherwise make today's derived carry-over sequence immediately visible without user discovery;
-- yesterday's Task retains its original scheduled date;
-- Week remains a true scheduled-date board and must not duplicate the Task into today's column;
-- Today shortcut continues to select the current civil date and Day;
-- browser acceptance must start from a persisted prior-day outstanding Task, open Jig from a fresh page/session, and prove that the Task is immediately visible in today's attention workflow without first navigating from Week to Day.
+- add one pure core rollover mutation for every outstanding Task with `scheduled_date < current_local_date`;
+- perform rollover automatically at service startup/catch-up and local day boundary;
+- persist the changed `scheduled_date` and positions in one SQLite transaction;
+- increment revision once and mark sync dirty when at least one Task moves;
+- Week must show the moved card in the current-day column and no longer show it in the old column;
+- Day must read the same canonical current-day bucket rather than synthesize a separate carry-over prefix;
+- a missed multi-day interval catches up directly to the current local date;
+- completed Tasks never roll;
+- reminder time-of-day remains unchanged and therefore applies to the new scheduled date;
+- fresh UI entry still opens Today / Day.
 
-The canonical UX authority must be updated accordingly wherever it still calls Week the default productive/entry surface.
+No second carry-over status/history field is introduced in 1.0.2.
 
 ## 5. Week view
 
@@ -191,37 +194,31 @@ This is the opposite of the reference's compact, low-chrome scan model and consu
 
 ## 6. Day view
 
-### UI-09 — Day does not implement one attention sequence
+### UI-09 — Day is built around an obsolete derived carry-over model
 
-**Functional/reference contract:** Day is one attention list: carried-over earlier outstanding Tasks first, then selected-date Tasks.
+**Corrected functional contract:** after daily rollover, Day reads one canonical outstanding sequence for the selected date.
 
-**Current implementation:** `DayTaskLists` renders a separate `Carried over` section and a separate bordered selected-date section.
+**Current implementation:** `DayTaskLists` renders a separate `Carried over` section based on overdue Tasks that still retain old scheduled dates.
 
 **Impact:** critical.
 
-This changes the information architecture and makes carry-over feel like a separate workflow/state rather than a derived prefix of the same attention sequence.
+**Required correction:** remove the separate carry-over projection. Render one `Attention` sequence from the selected date's canonical bucket after rollover.
 
-**Required correction:** render one Attention sequence. Preserve row-level carry-over treatment inside that sequence.
+### UI-10 — Obsolete carry-over decoration must be removed
 
-### UI-10 — Carry-over row treatment is not the governed treatment
+The corrected persisted-rollover model does not retain a second carry-over status or originating-date presentation field.
 
-**Reference:** carried-over rows use a restrained row-level surface/edge distinction and explicit text equivalent to `Carried over · Wed 18`.
-
-**Current implementation:** the whole carry-over section gets a left border; individual rows use `From Nov 18`.
+**Current implementation:** the UI renders a special carry-over section/labels for Tasks that should already have been moved canonically.
 
 **Impact:** high.
 
-**Required correction:** carry the distinction on the row itself, use the explicit carry-over wording/originating date, and do not rely on section grouping.
+**Required correction:** once rollover commits, the card is a normal card in the current date bucket. Remove `From …` / `Carried over …` presentation and carry-over-only section styling.
 
-### UI-11 — Carried-over reminder text is semantically wrong
+### UI-11 — Reminder semantics must follow the rolled-forward date
 
-**Reference/functional contract:** a reminder on a carried-over Task remains visibly tied to its originating scheduled date, e.g. `Wed 18 · 10:00`, so carry-over cannot imply that the reminder was re-armed for the selected day.
+Under persisted rollover, `scheduled_date` changes while `reminder_time` remains the same local clock time.
 
-**Current implementation:** `TaskDescription` renders `Reminder 10:00` regardless of carry-over.
-
-**Impact:** critical semantic UX defect.
-
-**Required correction:** when a carried-over Task has a reminder, show originating date plus reminder time.
+**Required correction:** after rollover, the reminder belongs to the new current date. Do not display an obsolete originating reminder date.
 
 ### UI-12 — Desktop Day inspector is missing
 
@@ -291,17 +288,17 @@ Current metadata is one flex row. The reference distinguishes context, reminder,
 
 **Required correction:** use a History-specific row composition that shows local completion time.
 
-### UI-19 — Original scheduled date is not discernible in History
+### UI-19 — Scheduled date is not discernible in History
 
-**Functional acceptance:** completion on a later date must preserve and make the original scheduled date discernible.
+**Functional acceptance:** History must show the Task's canonical scheduled date at completion together with actual completion time.
 
-**Reference:** row metadata includes `Scheduled Thu 19`.
+After automatic rollover, that scheduled date is the rolled-forward date; 1.0.2 does not introduce a separate original-schedule history field.
 
 **Current implementation:** generic Task row does not expose the scheduled date.
 
 **Impact:** critical.
 
-**Required correction:** show original scheduled date with completion-time context.
+**Required correction:** show the canonical scheduled date with completion-time context.
 
 ### UI-20 — History uses generic task actions instead of completion-history actions
 
@@ -506,7 +503,7 @@ v1.0.1 correctly removed repository-management UI semantics, but the Settings SV
 - desktop Day inspector.
 
 ### P2 — Semantic content fidelity
-- carry-over label and originating reminder date;
+- persisted daily rollover and reminder-on-new-date semantics;
 - History scheduled date + completion time;
 - corrected status pill and operational hierarchy;
 - Settings diagnostics under the corrected boundary.
@@ -535,9 +532,9 @@ In addition to interaction tests, acceptance must assert these structural invari
 - desktop primary navigation is in the governed rail, not a top-bar replacement;
 - Week/Day task rows do not expose the full action set as simultaneous text buttons;
 - Day presents one Attention sequence;
-- carried-over reminder includes its originating date;
+- rolled-forward reminder applies to the new scheduled date;
 - Day inspector exists at desktop width;
-- History rows expose original scheduled date and actual completion time;
+- History rows expose canonical scheduled date and actual completion time;
 - narrow layout does not stack the desktop navigation/action bars above content;
 - all four destinations remain reachable on narrow screens;
 - Settings contains no migration, branch/ref/worktree or remote-name configuration UI.
