@@ -4,6 +4,17 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced derived carry-over with persisted daily rollover so unfinished prior-day Tasks physically move into the current date across Day, Week, restart and synchronization.
+- Day is now the default planning entry surface and the browser revalidates canonical state across local day boundaries.
+- Reminder delivery now uses one eligibility path: in-app toast while visible and browser Notification while hidden/open when permission is granted.
+
+### Fixed
+
+- Task command admission now performs rollover before revision validation so pre-rollover client revisions are rejected safely.
+- Browser notification permission is requested only from an explicit Settings action and shares duplicate-suppression state with in-app reminders.
+
 ### Documentation
 
 - Added the UX/UI conformance audit v1.0 and implementation-ready remediation plan for restoring the governed SVG structural design after v1.0.1.
