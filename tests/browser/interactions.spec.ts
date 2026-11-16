@@ -356,9 +356,7 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
 
   await expect(page.locator(".jig-week-board")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
-  await expect(
-    page.getByText("Narrow selected task", { exact: true }),
-  ).toBeVisible();
+  await expect(taskCard(page, "Narrow selected task")).toBeVisible();
 
   await page.locator(".jig-mobile-header .jig-mobile-destination-menu > summary").click();
   await page
@@ -368,9 +366,7 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   await expect(
     page.locator(".jig-mobile-header .jig-mobile-destination-menu > summary"),
   ).toHaveText("Day");
-  await expect(
-    page.getByText("Narrow selected task", { exact: true }),
-  ).toBeVisible();
+  await expect(taskCard(page, "Narrow selected task")).toBeVisible();
 });
 
 test("reduced motion preserves non-drag movement semantics", async ({
