@@ -10,6 +10,7 @@ Jig is a small, local-first, just-in-time daily planner. It schedules attention 
 2. [Planning and UX functional requirements](requirements/planning-workbench.md) — observable JIG-FR-01–22 behaviour, including carry-over, confirmed deletion, System/Light/Dark appearance, onboarding/installation, repository ownership, the `jig` command, background availability and automatic synchronization.
 3. [Technical solution](architecture/technical-solution.md) — selected dependencies and exact application architecture, installer/user service, canonical Task, SQLite in the selected repository, isolated repository integration boundary, background sync, canonical snapshot admission and verification.
 4. [UI solution and versioned reference mockups](design/ui-solution.md) — screen hierarchy, desktop/mobile responsive composition, Astryx/dnd-kit ownership, design corrections and browser acceptance.
+5. [v1 MVP implementation plan](implementation/v1-mvp-implementation-plan.md) — dependency-ordered execution tasks, exact implementation surfaces, safe parallelism, verification gates and the definition of implementation complete.
 
 Functional requirements define *what* users can observe. Technical solution owns *how* data and runtime behave. UI solution owns *how* users see and manipulate those functions. No part of the design inherits Order's workflow/lifecycle domain, creates DTO hierarchies, or introduces duplicate task authority.
 
@@ -19,7 +20,7 @@ The seven versioned SVGs under `design/reference/` define the current structural
 
 ## Verification and implementation boundary
 
-The design is sufficiently specified to derive an implementation plan, but it is **not certified**. The implementation must prove:
+The design is closed and the [v1 MVP implementation plan](implementation/v1-mvp-implementation-plan.md) now defines the execution path. The runtime remains **not certified** until implementation proves:
 
 - One-script, non-root Linux installation into a user-selected existing Git repository and a functioning `jig` launcher/user service.
 - SQLite database and versioned Task records contained in the selected personal repo, never the public Jig source repo.
