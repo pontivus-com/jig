@@ -28,6 +28,7 @@ printf 'preserve me\n' > "$DATA_REPO/user.txt"
 git -C "$DATA_REPO" add user.txt
 git -C "$DATA_REPO" commit -m "User data" >/dev/null
 git -C "$DATA_REPO" config commit.gpgSign true
+git -C "$DATA_REPO" config gpg.format ssh
 git -C "$DATA_REPO" config user.signingkey missing-jig-installer-key
 
 bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
@@ -36,11 +37,10 @@ bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/nu
 [[ -x "$HOME/.local/share/jig/runtime/bun" ]]
 [[ -f "$HOME/.config/jig/config.json" ]]
 [[ -f "$DATA_REPO/.jig/local/jig.sqlite" ]]
-[[ -f "$DATA_REPO/.jig/git/format.json" ]]
-git -C "$DATA_REPO" show-ref --verify --quiet refs/heads/jig-data
 [[ "$(cat "$DATA_REPO/user.txt")" == "preserve me" ]]
 [[ -z "$(git -C "$DATA_REPO" status --porcelain=v1)" ]]
 [[ "$(git -C "$DATA_REPO" config --get commit.gpgSign)" == "true" ]]
+[[ "$(git -C "$DATA_REPO" config --get gpg.format)" == "ssh" ]]
 [[ "$(git -C "$DATA_REPO" config --get user.signingkey)" == "missing-jig-installer-key" ]]
 
 "$HOME/.local/bin/jig" status | grep -q '^repository: '
@@ -51,6 +51,45 @@ FIRST_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e   "const c=JSON.parse(a
 bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
 SECOND_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e   "const c=JSON.parse(await Bun.file('$HOME/.config/jig/config.json').text()); const db=new (await import('bun:sqlite')).Database(c.repository_path+'/.jig/local/jig.sqlite'); console.log(db.query('select dataset_id from app_metadata where singleton=1').get().dataset_id); db.close();")"
 [[ "$FIRST_DATASET" == "$SECOND_DATASET" ]]
+
+# A configured but unavailable remote must not prevent local installation.
+OFFLINE_REPO="$TMP_ROOT/offline"
+mkdir -p "$OFFLINE_REPO"
+git -C "$OFFLINE_REPO" init >/dev/null
+git -C "$OFFLINE_REPO" config user.name "Jig Installer Test"
+git -C "$OFFLINE_REPO" config user.email "jig-installer@local.invalid"
+printf 'offline\n' > "$OFFLINE_REPO/offline.txt"
+git -C "$OFFLINE_REPO" add offline.txt
+git -C "$OFFLINE_REPO" commit -m "Offline baseline" >/dev/null
+git -C "$OFFLINE_REPO" remote add origin "$TMP_ROOT/does-not-exist.git"
+
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$OFFLINE_REPO" --port 47934 >/dev/null
+[[ -f "$OFFLINE_REPO/.jig/local/jig.sqlite" ]]
+[[ "$(cat "$OFFLINE_REPO/offline.txt")" == "offline" ]]
+
+# Recover the exact v1.0.0 empty-bootstrap residue and remain rerunnable.
+LEGACY_REPO="$TMP_ROOT/legacy"
+mkdir -p "$LEGACY_REPO"
+git -C "$LEGACY_REPO" init >/dev/null
+git -C "$LEGACY_REPO" config user.name "Jig Installer Test"
+git -C "$LEGACY_REPO" config user.email "jig-installer@local.invalid"
+printf 'legacy\n' > "$LEGACY_REPO/legacy.txt"
+git -C "$LEGACY_REPO" add legacy.txt
+git -C "$LEGACY_REPO" commit -m "Legacy baseline" >/dev/null
+EMPTY_TREE="$(git -C "$LEGACY_REPO" mktree </dev/null)"
+LEGACY_HEAD="$(
+  GIT_AUTHOR_NAME=Jig \
+  GIT_AUTHOR_EMAIL=jig@local.invalid \
+  GIT_COMMITTER_NAME=Jig \
+  GIT_COMMITTER_EMAIL=jig@local.invalid \
+  git -C "$LEGACY_REPO" commit-tree "$EMPTY_TREE" -m "Initialize Jig data"
+)"
+git -C "$LEGACY_REPO" update-ref refs/heads/jig-data "$LEGACY_HEAD"
+
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$LEGACY_REPO" --port 47935 >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$LEGACY_REPO" --port 47935 >/dev/null
+[[ -f "$LEGACY_REPO/.jig/local/jig.sqlite" ]]
+[[ "$(cat "$LEGACY_REPO/legacy.txt")" == "legacy" ]]
 
 # Clone mode refuses to overwrite and successfully configures a new checkout.
 SEED="$TMP_ROOT/seed"
@@ -72,7 +111,6 @@ bash "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$CLO
 
 [[ -f "$CLONE/seed.txt" ]]
 [[ -f "$CLONE/.jig/local/jig.sqlite" ]]
-git -C "$CLONE" show-ref --verify --quiet refs/heads/jig-data
 
 printf 'do not overwrite\n' > "$TMP_ROOT/nonempty"
 if bash "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$TMP_ROOT"   --port 47933   >/dev/null 2>&1; then
