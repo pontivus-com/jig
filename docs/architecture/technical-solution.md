@@ -16,7 +16,7 @@ The normal experience is: run one installer; assign repository; installer config
 | Area | Chosen solution |
 |---|---|
 | Runtime and service | One Bun 1.4.4 process on Linux, `systemd --user` service, loopback HTTP, no external database or remote service |
-| Command and installer | `jig` launcher in ~/.local/bin, one `scripts/install.sh --repo /absolute/existing/repo` command; optional interactive selection if omitted |
+| Command and installer | `jig` launcher in ~/.local/bin, one `scripts/install.sh --repo /absolute/existing/repo` command or `--repo-url URL --checkout /new/empty/path`; optional interactive selection if omitted |
 | UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 and Neutral theme |
 | Cross-day drag | `@dnd-kit/react@0.5.3`, one drag owner; Astryx handles visual primitives |
 | Live data | One Bun SQLite database at `<selected-repo>/.jig/local/jig.sqlite`; immediate transactional writes |
@@ -80,9 +80,9 @@ Only one Bun process may write the configured SQLite file. Enforce a single acti
 
 ### 3.1 Installer and executable lifecycle
 
-A **single installer script** `scripts/install.sh` is the canonical entry point and must be reproducible, noninteractive when flags are supplied, and able to prompt for missing user configuration. Required `--repo` names the absolute path of an existing writable local Git worktree; `--remote` optionally selects a configured remote, defaulting to `origin` when present. The script must:
+A **single installer script** `scripts/install.sh` is the canonical entry point and must be reproducible, noninteractive when flags are supplied, and able to prompt for missing user configuration. `--repo` names the absolute path of an existing writable local Git worktree; alternatively `--repo-url` plus `--checkout` safely clones a specified remote into a new empty local directory. `--remote` selects a configured remote, defaulting to `origin` when present. The modes are mutually exclusive and must not overwrite an existing checkout. The script must:
 
-1. Verify Linux, Git, writable user directories, target path and that the target is a Git repository **other than Jig's public source checkout**. Never silently `git init` another repository or convert the user's directory.
+1. Verify Linux, Git, writable user directories and target path. When given `--repo`, validate the existing target is a writable Git repository **other than Jig's public source checkout**. When given `--repo-url` and `--checkout`, clone only into a new empty user-selected directory, use the normal Git credential mechanism, and validate the checkout after cloning. Never silently `git init`, force-overwrite a checkout, or convert a nonrepository directory.
 2. Install/reuse the exact-pinned Bun runtime, install frozen-lock dependencies and build the React assets, with clear failure if pinned artifacts cannot be installed. Do not download unspecified floating versions or require root for the ordinary user install.
 3. Safely establish `<repo>/.jig/`. Add only a narrowly scoped exclusion to the selected repository's local `.git/info/exclude` (or equivalent repo-local exclude); do not edit the user's tracked .gitignore or stage unrelated changes. Handle .git-as-file linked worktrees by resolving the Git common directory correctly.
 4. Create/adopt the **dedicated `jig-data` ref** inside that same Git repository and attach the isolated worktree at `<repo>/.jig/git/`. Initialize the branch from an empty Git tree, *not* by copying all personal documentation into a new branch. When a remote already has the Jig branch, fetch and validate its format and dataset identity before adopting it. Refuse an existing unrelated branch name or incompatible format; never force reset or force push.
@@ -372,7 +372,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 **Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, in-app due toast, and durable save-error visibility.
 
-**Installer/service:** Non-root one-script setup, exact target selection, idempotent rerun, invalid Git target refusal, existing-branch identity checks, two-repo rehydration, launcher/service restart and auto-sync while browser closed. Measure idle CPU/RSS and reopen responsiveness against an explicit acceptance threshold chosen before performance testing.
+**Installer/service:** Non-root one-script setup in existing-local and remote-URL clone modes, exact target selection, idempotent rerun, invalid Git target refusal, existing-branch identity checks, two-repo rehydration, launcher/service restart and auto-sync while browser closed. Measure idle CPU/RSS and reopen responsiveness against an explicit acceptance threshold chosen before performance testing.
 
 **Security:** Loopback-only listener, same-origin/token checks, no arbitrary task-reference execution, no shell invocation via Git parameters, path containment and no task data in public source.
 
