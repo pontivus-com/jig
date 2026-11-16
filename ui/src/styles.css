@@ -23,29 +23,51 @@ body {
 }
 
 @layer jig {
+  .jig-shell {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    min-height: 100%;
+    height: 100%;
+  }
+
+  .jig-main {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    background: var(--color-background-body);
+  }
+
   .jig-content {
     min-width: 0;
-    height: 100%;
+    min-height: 100%;
     padding: var(--spacing-4);
+  }
+
+  .jig-sidebar {
+    position: sticky;
+    inset-block-start: 0;
+    display: flex;
+    height: 100dvh;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    padding: var(--spacing-3);
+    border-inline-end: 1px solid var(--color-border);
+    background: var(--color-background-surface);
     overflow: auto;
   }
 
-  .jig-topbar {
+  .jig-sidebar-brand,
+  .jig-brand {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: var(--spacing-3);
-    padding: var(--spacing-2) var(--spacing-4);
-    border-block-end: 1px solid var(--color-border);
-    background: var(--color-background-surface);
+    gap: var(--spacing-2);
   }
 
-  .jig-brand {
-    display: flex;
-    flex: 0 0 auto;
-    min-width: 8.5rem;
-    align-items: center;
-    gap: var(--spacing-2);
+  .jig-sidebar-brand {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .jig-brand-logo-wrap {
@@ -90,22 +112,76 @@ body {
     white-space: nowrap;
   }
 
-  .jig-primary-nav,
-  .jig-topbar-actions,
-  .jig-task-actions,
+  .jig-sidebar-nav {
+    display: grid;
+    gap: var(--spacing-1);
+  }
+
+  .jig-sidebar-context {
+    display: grid;
+    gap: var(--spacing-1);
+    margin-block-start: auto;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    overflow-wrap: anywhere;
+  }
+
+  .jig-mobile-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding:
+      var(--spacing-2)
+      max(var(--spacing-3), env(safe-area-inset-right, 0px))
+      var(--spacing-2)
+      max(var(--spacing-3), env(safe-area-inset-left, 0px));
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-background-surface);
+  }
+
+  .jig-mobile-destination-menu {
+    position: relative;
+    justify-self: center;
+  }
+
+  .jig-mobile-destination-menu > summary {
+    min-width: 5rem;
+    padding: var(--spacing-2);
+    border-radius: var(--radius-element);
+    text-align: center;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+  }
+
+  .jig-mobile-destination-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .jig-mobile-destination-panel {
+    position: absolute;
+    z-index: 30;
+    inset-block-start: calc(100% + var(--spacing-1));
+    inset-inline-start: 50%;
+    display: grid;
+    min-width: 10rem;
+    gap: var(--spacing-1);
+    padding: var(--spacing-1);
+    transform: translateX(-50%);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-element);
+    background: var(--color-background-surface);
+    box-shadow: var(--shadow-elevation-med);
+  }
+
+  .jig-view-actions,
   .jig-editor-primary-actions {
     display: flex;
     align-items: center;
     gap: var(--spacing-1);
-  }
-
-  .jig-primary-nav {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .jig-topbar-actions {
-    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .jig-view-heading {
@@ -167,13 +243,19 @@ body {
     outline-offset: -2px;
   }
 
-  .jig-week-column-today .jig-week-column-header::after,
   .jig-date-today::after {
     content: "Today";
     display: block;
     font-size: 0.7rem;
     font-weight: 600;
     color: var(--color-text-secondary);
+  }
+
+  .jig-week-count,
+  .jig-today-label {
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+    font-weight: 600;
   }
 
   .jig-week-column-header {
@@ -549,35 +631,30 @@ body {
   }
 
   @media (max-width: 47.999rem) {
+    .jig-shell {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: 100%;
+    }
+
     .jig-content {
       padding: var(--spacing-3);
     }
 
-    .jig-topbar {
-      align-items: stretch;
-      flex-wrap: wrap;
-      gap: var(--spacing-2);
-      padding-inline:
-        max(var(--spacing-3), env(safe-area-inset-left, 0px))
-        max(var(--spacing-3), env(safe-area-inset-right, 0px));
-    }
-
-    .jig-brand {
-      flex-basis: 100%;
-    }
-
-    .jig-primary-nav,
-    .jig-topbar-actions {
-      width: 100%;
-      overflow-x: auto;
-    }
-
-    .jig-topbar-actions {
-      justify-content: flex-end;
+    .jig-brand-logo-wrap {
+      width: 3.8rem;
+      height: 2.25rem;
     }
 
     .jig-view-heading {
-      align-items: center;
+      align-items: flex-start;
+      flex-direction: column;
+      gap: var(--spacing-2);
+    }
+
+    .jig-view-actions {
+      width: 100%;
+      justify-content: flex-start;
+      overflow-x: auto;
     }
 
     .jig-week-strip {
