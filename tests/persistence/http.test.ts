@@ -5,8 +5,10 @@ import type { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createHttpHandler } from "../../src/shell/http";
 import {
+  applyTaskCommand,
   initializeDatabase,
   readCanonicalState,
+  rollForwardOutstandingInDatabase,
 } from "../../src/shell/sqlite";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
@@ -48,6 +50,7 @@ function handler() {
     }),
     trigger_sync: async () => "local-only",
     on_task_mutation: () => undefined,
+    ensure_current_day_rollover: () => undefined,
   });
 }
 
@@ -152,6 +155,74 @@ describe("loopback HTTP admission", () => {
     expect(readCanonicalState(db).revision).toBe(1);
   });
 
+  it("runs rollover before expected-revision admission", async () => {
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Yesterday",
+        scheduled_date: "2026-11-15",
+      },
+      0,
+      "2026-11-15T10:00:00.000Z",
+      () => "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
+    );
+
+    const handle = createHttpHandler({
+      db,
+      write_token: TOKEN,
+      repository_path: root,
+      ui_directory: root,
+      now: () => "2026-11-16T01:00:00.000Z",
+      create_id: crypto.randomUUID,
+      get_status: () => ({
+        ready: true,
+        repository_path: root,
+        repository_status: "local-only",
+      }),
+      get_diagnostics: () => ({
+        service_healthy: true,
+        sqlite_available: true,
+        sqlite_schema_version: 2,
+        repository_path: root,
+        portable_format_version: 1,
+        repository_adapter_healthy: true,
+      }),
+      trigger_sync: async () => "local-only",
+      on_task_mutation: () => undefined,
+      ensure_current_day_rollover: () => {
+        rollForwardOutstandingInDatabase(
+          db,
+          "2026-11-16",
+          "2026-11-16T01:00:00.000Z",
+        );
+      },
+    });
+
+    const response = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "create",
+          title: "Must be rejected as stale",
+          scheduled_date: "2026-11-16",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toStrictEqual({
+      error: "stale_revision",
+      current_revision: 2,
+    });
+    const state = readCanonicalState(db);
+    expect(state.tasks).toHaveLength(1);
+    expect(state.tasks[0]).toMatchObject({
+      title: "Yesterday",
+      scheduled_date: "2026-11-16",
+    });
+  });
+
   it("rejects unknown command fields instead of widening the boundary", async () => {
     const response = await handler()(
       postRequest("/api/v1/commands", {
@@ -194,6 +265,7 @@ describe("loopback HTTP admission", () => {
         return "synchronized";
       },
           on_task_mutation: () => undefined,
+          ensure_current_day_rollover: () => undefined,
     });
 
     const response = await handle(
