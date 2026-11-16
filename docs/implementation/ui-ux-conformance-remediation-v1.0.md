@@ -166,6 +166,8 @@ Repository, synchronization, appearance and diagnostics
 
 Appearance
   Theme              [System] [Light] [Dark]
+  Browser notifications
+    Unsupported | Not enabled [Enable] | Enabled | Blocked in browser settings
 
 Planning data
   Repository          /absolute/path/to/planning-repo
@@ -433,6 +435,86 @@ Sequence:
 10. assert same current-day bucket persists.
 
 This test is the release blocker for the reported bug.
+
+### 6.11 HTTP admission ordering is strict
+
+For every Task mutation request, the service executes in this exact order:
+
+```text
+ensureCurrentDayRollover()
+→ read post-rollover current revision
+→ compare expected_revision
+→ 409/refetch if stale
+→ execute requested Task mutation only when revision matches
+```
+
+Do not:
+- compare `expected_revision` before rollover;
+- perform rollover after admitting the requested mutation;
+- merge rollover and the requested command into one ambiguous admission decision.
+
+Regression test:
+1. browser/client holds yesterday's revision;
+2. day advances and rollover changes canonical state/revision;
+3. client submits a Task mutation with old revision;
+4. service returns 409;
+5. requested mutation is not applied;
+6. refetch returns rolled-forward state and new revision;
+7. retry with new revision succeeds normally.
+
+### 6.12 Revalidate an already-open browser across local midnight
+
+The service-side timer alone is insufficient because React holds an in-memory canonical Task array.
+
+In `ui/src/app.tsx`, add one browser-local civil-date observer:
+
+```ts
+const [observedToday, setObservedToday] = useState(todayCivilDate);
+```
+
+Use the existing canonical refresh function; do not add polling state or a second cache.
+
+Behavior:
+1. schedule one timeout for the next local civil-day boundary;
+2. on timeout, compute the current local civil date;
+3. also recompute on `window.focus` and `document.visibilitychange`;
+4. when current local date differs from `observedToday`:
+   - update `observedToday`;
+   - call the existing canonical-state refresh path;
+   - if `selectedDate === oldObservedToday`, set `selectedDate` to the new current date;
+   - if the user explicitly selected another historical/future date, preserve it;
+5. reschedule the next boundary timeout.
+
+This browser observer does not perform rollover itself. It only revalidates the service-owned canonical state.
+
+The refreshed Task array must flow to:
+- Week;
+- Day;
+- History;
+- selected-task inspector;
+- `ReminderMonitor`.
+
+Regression tests:
+
+#### 6.12-A open browser midnight rollover
+1. start with yesterday/current-day setup and UI already open;
+2. advance mocked local date across midnight without reloading;
+3. service rollover commits;
+4. browser observer refreshes canonical state;
+5. Day/Week show the card in the new current-day bucket;
+6. no manual navigation/reload is required.
+
+#### 6.12-B explicit date selection preservation
+1. user selects a future or historical date;
+2. local midnight passes;
+3. canonical state refreshes;
+4. selected date remains the explicitly selected date.
+
+#### 6.12-C reminder monitor receives refreshed Task date
+1. overdue Task has reminder time;
+2. rollover moves Task to today while browser remains open;
+3. canonical refresh updates ReminderMonitor input;
+4. reminder eligibility uses today's date/key.
 
 ---
 
@@ -1145,6 +1227,13 @@ Render sections in this order:
 
 ### Appearance
 - System / Light / Dark segmented control.
+- Browser notifications row:
+  - unsupported → `Not supported by this browser`;
+  - default → `Not enabled` + `Enable`;
+  - granted → `Enabled`;
+  - denied → `Blocked in browser settings`.
+- `Enable` must invoke `Notification.requestPermission()` only from the click handler.
+- do not persist a second Jig notification-preference boolean.
 
 ### Planning data
 - label: `Repository`;
@@ -1877,7 +1966,19 @@ No product palette changes expected.
 | UI-35 | UX-005 |
 | UI-36 | UX-025 |
 
-No audit finding is allowed to remain without a task or an explicit preserve/no-change disposition.
+### Cross-cutting functional traceability
+
+| Functional requirement | Implementation task |
+|---|---|
+| JIG-FR-09 persisted daily rollover | UX-006 |
+| JIG-FR-09 HTTP revision safety after rollover | UX-006 §6.11 |
+| JIG-FR-09 open-browser day-boundary revalidation | UX-006 §6.12 |
+| JIG-FR-10 visible reminder toast | UX-024A |
+| JIG-FR-10 hidden/open browser Notification | UX-024A |
+| JIG-FR-10 explicit permission/settings state | UX-003, UX-019, UX-024A |
+| JIG-FR-10 rollover-reminder interaction | UX-006, UX-024A |
+
+No audit finding or cross-cutting functional requirement is allowed to remain without a task or an explicit preserve/no-change disposition.
 
 ---
 
@@ -1895,12 +1996,18 @@ Execute in this order:
 8. UX-019 — Settings.
 9. UX-020…023 — narrow/mobile.
 10. UX-024 — editor.
-11. UX-025…027 — visual/feedback cleanup.
-12. UX-028…029 — regression + conformance tests.
-13. UX-030 — evidence set.
+11. UX-024A — browser reminder notifications + permission UX.
+12. UX-025…027 — visual/feedback cleanup.
+13. UX-028…029 — regression + conformance tests.
+14. UX-030 — evidence set.
 
 ### Gate A — after UX-006
-Persisted rollover core/persistence/browser tests green, including Week bucket movement.
+Persisted rollover core/persistence/browser tests green, including:
+- Week bucket movement;
+- strict rollover-before-revision admission;
+- open-browser midnight canonical refresh;
+- explicit selected-date preservation;
+- ReminderMonitor receiving refreshed rolled-forward Tasks.
 
 ### Gate B — after UX-012
 Desktop shell + Week conformance tests green at 1440×900.
@@ -1908,8 +2015,8 @@ Desktop shell + Week conformance tests green at 1440×900.
 ### Gate C — after UX-017
 Day Attention + inspector + post-rollover semantics green.
 
-### Gate D — after UX-024
-History, Settings, narrow shell, editor green.
+### Gate D — after UX-024A
+History, Settings, narrow shell, editor, browser notification permission states and reminder channel tests green.
 
 ### Gate E — release candidate
 All existing tests + `ui-conformance.spec.ts` + screenshot evidence review green.
@@ -1947,7 +2054,10 @@ Do not defer structural failures to polish.
 25. Due reminders use in-app toast while visible and browser Notification while hidden/open with granted permission.
 26. One delivery key prevents duplicate toast/notification delivery.
 27. Rolled-forward reminders fire against the new scheduled date while preserving reminder time.
-28. No Task schema, persistence-ownership, or Git architecture change is introduced beyond the explicitly planned persisted daily-rollover mutation.
+28. An already-open browser refreshes canonical state across local midnight without manual reload.
+29. A Task mutation with a pre-rollover revision is rejected with 409 before the requested mutation is executed.
+30. Settings exposes browser notification support/permission state without auto-prompting.
+31. No Task schema, persistence-ownership, or Git architecture change is introduced beyond the explicitly planned persisted daily-rollover mutation.
 
 ---
 
