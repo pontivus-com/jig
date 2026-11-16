@@ -5,7 +5,8 @@ import {
   LayerProvider,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
-import jigAppIconUrl from "../../assets/jig-app-icon.svg";
+import jigLogoLightUrl from "../../assets/jig-logo.svg";
+import jigLogoDarkUrl from "../../assets/jig-logo-on-dark.svg";
 import {
   useCallback,
   useEffect,
@@ -330,16 +331,19 @@ export function App(): React.ReactElement {
   const topNav = (
     <div className="jig-topbar">
       <div className="jig-brand" aria-label="Jig">
-        <img
-          className="jig-brand-mark"
-          src={jigAppIconUrl}
-          alt=""
-          aria-hidden="true"
-        />
-        <div className="jig-brand-copy">
-          <strong>Jig</strong>
-          <span>Schedules attention</span>
-        </div>
+        <span className="jig-brand-logo-wrap" aria-hidden="true">
+          <img
+            className="jig-brand-logo jig-brand-logo-light"
+            src={jigLogoLightUrl}
+            alt=""
+          />
+          <img
+            className="jig-brand-logo jig-brand-logo-dark"
+            src={jigLogoDarkUrl}
+            alt=""
+          />
+        </span>
+        <span className="jig-brand-tagline">Schedules attention</span>
       </div>
 
       <nav className="jig-primary-nav" aria-label="Primary">
