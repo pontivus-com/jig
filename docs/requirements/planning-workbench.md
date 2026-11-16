@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Candidate v0.4, updated 2026-11-16 with carry-over, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual mockups are an accepted starting point, not a signed component/theme specification.  
+**Status:** Candidate v0.5, updated 2026-11-17 with persisted daily rollover, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual mockups are an accepted starting point, not a signed component/theme specification.  
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -97,7 +97,7 @@ Completed Tasks are never rolled forward. Manually moving a Task to another date
 
 **Week:** one calendar week of date buckets, with previous/next week controls, jump to today, quick-add scoped to a bucket, compact title-first task rows/cards, clear drag affordances, priority/context/reminder metadata only when it adds value, and an obvious drop target for cross-day movement. Dates with substantial lists must remain navigable without making the entire page unusable. No additional generic “Board” view is needed: the week planner already uses Kanban interaction.
 
-**Day:** selected date and one attention list composed of carried-over earlier outstanding tasks followed by tasks scheduled for the selected date, plus a compact completed section and an on-demand task inspector/editor. Carried-over rows are subtly but immediately distinguishable and show their originating date without changing it. A task's detail surface shows its own minimal fields, optional reference, completion, rescheduling and deletion controls; it does not display the owning project's workflow.
+**Day:** selected date and one attention list composed of the canonical outstanding Tasks scheduled for that date after daily rollover, plus a compact completed section and an on-demand task inspector/editor. A task's detail surface shows its own minimal fields, optional reference, completion, rescheduling and deletion controls; it does not display the owning project's workflow.
 
 **History:** simple dated access to completed items, not a productivity dashboard. Filter by context/project only if useful; metrics are secondary and not MVP acceptance requirements.
 
@@ -105,15 +105,15 @@ Completed Tasks are never rolled forward. Manually moving a Task to another date
 
 **Actions:** desktop pointer drag-and-drop is the primary ordering mechanism. Provide keyboard-accessible alternatives (move before/after or move to date) and visible focus. Completion uses one explicit control. Delete is a destructive action available for outstanding and completed Tasks and always requires explicit confirmation before mutation. Small touch targets or hover-only essential actions are not acceptable even in the desktop-first MVP.
 
-**Visual hierarchy:** dates and work-item titles dominate; the current/selected date is clear; carried-over work has a subtle but scan-visible treatment with its originating date; priority is visually modest, with high priority exceptional rather than every Normal value becoming a strong badge; reminder *time* must be recognizable as an alert and not a time block.
+**Visual hierarchy:** dates and work-item titles dominate; the current/selected date is clear; priority is visually modest, with high priority exceptional rather than every Normal value becoming a strong badge; reminder *time* must be recognizable as an alert and not a time block.
 
-**Appearance:** System, Light and Dark are mandatory presentation modes. They use the same semantic hierarchy, component structure and interaction model; theme is local presentation preference rather than Task or Git-synchronized planning state. All focus, selection, priority, carry-over, completion, save and sync states remain distinguishable in both Light and Dark without relying on color alone.
+**Appearance:** System, Light and Dark are mandatory presentation modes. They use the same semantic hierarchy, component structure and interaction model; theme is local presentation preference rather than Task or Git-synchronized planning state. All focus, selection, priority, completion, save and sync states remain distinguishable in both Light and Dark without relying on color alone.
 
 ## 5. Mobile-first responsive design — later delivery
 
 Define narrow layout and input behavior now, without requiring an independently installable mobile app in desktop v1.
 
-- Day-oriented narrow layout: compact horizontal week strip + one day's attention list, including the same carry-over treatment and originating-date semantics as desktop, rather than seven unreadable columns.
+- Day-oriented narrow layout: compact horizontal week strip + one day's canonical attention list after rollover, rather than seven unreadable columns.
 - Touch-sized controls; drag-and-drop ordering can be implemented later, with move-to-date as a reliable non-drag fallback.
 - Task editor uses a bounded mobile sheet or full-screen treatment with explicit Save/Cancel and preserved edits when navigation changes.
 - The same work item does not become a separate mobile data or lifecycle shape.
@@ -139,9 +139,9 @@ The earlier mockups used the working name Day and were made to validate relation
 6. **Completion history:** complete a task scheduled for Thursday on Friday; history shows the Friday completion timestamp while the original Thursday scheduling fact remains discernible.
 7. **Reminder:** while Jig is open and reminder time arrives, a toast appears. No success claim is made about notifications while Jig is closed.
 8. **Responsive continuity:** narrow and wide layouts represent the same selected task and values, without duplicate project detail or loss of edits.
-9. **Carry-forward:** leave a Thursday Task outstanding. On Friday, Saturday and later selected Days it remains visible with its original Thursday date and carry-over treatment until it is completed, explicitly rescheduled or deleted; simply viewing it never changes `scheduled date`.
+9. **Daily rollover:** leave a Thursday Task outstanding and advance the local day to Friday. Jig changes the Task's canonical `scheduled_date` to Friday, moves the same card into Friday's bucket, and removes it from Thursday. Day and Week show the same moved Task. If Jig is inactive across multiple days, the outstanding Task catches up directly to the current local date. Existing reminder time-of-day is preserved.
 10. **Deletion:** choose Delete on an outstanding or completed Task, cancel the confirmation once with no change, then confirm; the Task is removed from Jig and the next portable Git snapshot records its absence. No in-app trash or restore is offered.
-11. **Theme parity:** switch among System, Light and Dark. Layout, task meaning, carry-over, focus, selection, priority, save and synchronization states remain equivalent and readable; changing theme makes no Task mutation.
+11. **Theme parity:** switch among System, Light and Dark. Layout, task meaning, focus, selection, priority, save and synchronization states remain equivalent and readable; changing theme makes no Task mutation.
 
 ## 8. Installation, everyday operation and data lifecycle
 
