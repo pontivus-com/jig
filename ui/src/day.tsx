@@ -291,11 +291,13 @@ export function DayView({
           <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
           <Button label="Next" variant="ghost" size="sm" onClick={onNextDay} />
           {statusControl}
-          <Button
-            label="Add task"
-            variant="primary"
-            onClick={() => onAdd(selectedDate)}
-          />
+          <span className="jig-header-add">
+            <Button
+              label="Add task"
+              variant="primary"
+              onClick={() => onAdd(selectedDate)}
+            />
+          </span>
         </div>
       </div>
 
@@ -318,6 +320,14 @@ export function DayView({
           onMoveToDate={listProps.onMoveToDate}
           onToggleComplete={listProps.onToggleComplete}
           onDelete={onDelete}
+        />
+      </div>
+      <div className="jig-mobile-quick-add">
+        <Button
+          label="+"
+          aria-label="Add task"
+          variant="primary"
+          onClick={() => onAdd(selectedDate)}
         />
       </div>
     </div>
