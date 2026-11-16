@@ -47,3 +47,7 @@ Certified behavior includes:
 - All 22 functional requirements, pinned Astryx/dnd-kit interaction behavior, responsive UI behavior, System/Light/Dark semantic parity and measured lightweight idle operation.
 
 Independent phone installation remains deferred. Git history, branch, merge and conflict reconciliation are outside Jig's product/domain scope and remain owned by the user's Git tooling; do not turn them into Jig workflow or UI state.
+## UX/UI remediation
+
+- [UX/UI conformance audit v1.0](design/ui-ux-conformance-audit-v1.0.md)
+- [UX/UI conformance remediation plan v1.0](implementation/ui-ux-conformance-remediation-v1.0.md)
