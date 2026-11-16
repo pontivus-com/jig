@@ -33,7 +33,7 @@ Jig owns:
 - validating/adopting a complete Jig portable snapshot presented by the selected repository.
 
 Git owns:
-- acquiring/cloning/moving the repository;
+- repository acquisition/cloning mechanics and transport;
 - repository structure and organization;
 - branches, refs, worktrees, upstreams and topology;
 - user/repository identity and commit-signing policy;
@@ -47,11 +47,11 @@ Jig must never:
 - modify global or repository Git configuration to make its own operations succeed;
 - require a user to create a Jig-specific signing identity/key;
 - implement Git reconciliation, merge/rebase/conflict workflows;
-- provision or clone repositories as part of the Jig installer;
+- implement repository provisioning logic beyond delegating a requested clone to Git;
 - implement a Jig repository-migration subsystem;
 - stage, commit, rewrite, reset, merge or push unrelated repository content.
 
-The repository selected at installation is Jig's data home. If it already contains valid Jig portable data, installation adopts it. Repository continuity between machines/checkouts is provided by Git; Jig does not copy/migrate one repository into another.
+The installer must know the target repository. It may receive either an existing local repository path (`--repo`) or a repository URL plus checkout destination (`--repo-url` + `--checkout`). URL mode is only a thin convenience wrapper around Git clone and must converge immediately to the same existing-checkout installation path. If the selected repository already contains valid Jig portable data, installation adopts it. Repository continuity between machines/checkouts is provided by Git; Jig does not copy/migrate one repository into another.
 
 ## Other external-system boundaries
 
@@ -79,7 +79,7 @@ The v1.0.1 correction exists because v1.0.0 allowed the Git integration mechanis
 
 For v1.0.1, implementations must:
 - restore the authority boundaries above;
-- remove repository migration/provisioning behavior from Jig;
+- remove repository migration and repository-management behavior from Jig while retaining thin installer repository-selection/acquisition inputs;
 - keep automatic synchronization intact;
 - make installation/reinstallation safe against existing valid Jig data and the exact recoverable v1.0.0 failed-bootstrap residue;
 - ensure Git policy such as commit signing cannot make Jig corrupt or strand installation state;
