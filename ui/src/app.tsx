@@ -557,11 +557,11 @@ export function App(): React.ReactElement {
     <Theme theme={jigTheme} mode={themePreference}>
       <LayerProvider>
         <AppShell
-          {...(isNarrow ? { topNav: mobileTopNav } : {})}
           contentPadding={0}
           height="fill"
           variant="section"
         >
+          {isNarrow ? mobileTopNav : null}
           <div className="jig-shell">
             {isNarrow ? null : (
               <aside className="jig-sidebar">
