@@ -17,6 +17,7 @@ export interface DayViewProps {
   readonly tasks: readonly Task[];
   readonly selectedDate: string;
   readonly onAdd: (date: string) => void;
+  readonly onSelectDate: (date: string) => void;
   readonly onEdit: (task: Task) => void;
   readonly onMoveToDate: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
@@ -93,7 +94,7 @@ export function DayTaskLists({
   onMoveToDate,
   onToggleComplete,
   onMove,
-}: Omit<DayViewProps, "onAdd">): React.ReactElement {
+}: Omit<DayViewProps, "onAdd" | "onSelectDate">): React.ReactElement {
   const attention = dayAttention(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
 
@@ -189,6 +190,7 @@ export function DayView({
   tasks,
   selectedDate,
   onAdd,
+  onSelectDate,
   ...listProps
 }: DayViewProps): React.ReactElement {
   return (
@@ -214,7 +216,7 @@ export function DayView({
 
       <DateStrip
         selectedDate={selectedDate}
-        onSelectDate={() => undefined}
+        onSelectDate={onSelectDate}
       />
 
       <DayTaskLists
