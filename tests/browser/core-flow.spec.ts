@@ -14,7 +14,11 @@ async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
   await dialog.getByLabel("Title").fill(title);
   await dialog.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText(title, { exact: true })).toBeVisible();
+  await expect(
+    page
+      .locator(".jig-task-card")
+      .getByText(title, { exact: true }),
+  ).toBeVisible();
 }
 
 test("real runtime supports title-first create, completion, History and reopen", async ({ page }) => {
@@ -101,7 +105,7 @@ test("responsive reflow preserves an open editor draft and appearance remains pr
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
-  await page.locator(".jig-mobile-destination-menu > summary").click();
+  await page.locator(".jig-mobile-header .jig-mobile-destination-menu > summary").click();
   await page
     .locator(".jig-mobile-destination-panel")
     .getByRole("button", { name: "Settings", exact: true })
