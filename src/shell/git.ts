@@ -394,6 +394,16 @@ export async function ensureJigDataWorktree(
       "--verify",
       "HEAD",
     ]);
+    const checkedOutRef = await requireGit(config.worktree_path, [
+      "symbolic-ref",
+      "-q",
+      "HEAD",
+    ]);
+    if (checkedOutRef !== DATA_REF) {
+      throw new GitAdapterError(
+        `Existing Jig worktree is attached to ${checkedOutRef || "detached HEAD"}, expected ${DATA_REF}`,
+      );
+    }
     return;
   } catch {
     try {
@@ -416,7 +426,7 @@ export async function ensureJigDataWorktree(
     "worktree",
     "add",
     config.worktree_path,
-    DATA_REF,
+    DATA_REF.replace("refs/heads/", ""),
   ]);
 }
 
