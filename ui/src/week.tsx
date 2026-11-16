@@ -27,6 +27,10 @@ export interface WeekViewProps {
     destinationDate: string,
     destinationIndex: number,
   ) => Promise<boolean>;
+  readonly onPreviousWeek: () => void;
+  readonly onToday: () => void;
+  readonly onNextWeek: () => void;
+  readonly statusControl: React.ReactNode;
 }
 
 function WeekTaskRow({
@@ -94,6 +98,10 @@ export function WeekView({
   onMoveToDate,
   onToggleComplete,
   onMove,
+  onPreviousWeek,
+  onToday,
+  onNextWeek,
+  statusControl,
 }: WeekViewProps): React.ReactElement {
   const dates = weekDates(selectedDate);
   const today = todayCivilDate();
@@ -146,11 +154,17 @@ export function WeekView({
             })}
           </h1>
         </div>
-        <Button
-          label="Add task"
-          variant="primary"
-          onClick={() => onAdd(selectedDate)}
-        />
+        <div className="jig-view-actions">
+          <Button label="Previous" variant="ghost" size="sm" onClick={onPreviousWeek} />
+          <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
+          <Button label="Next" variant="ghost" size="sm" onClick={onNextWeek} />
+          {statusControl}
+          <Button
+            label="Add task"
+            variant="primary"
+            onClick={() => onAdd(selectedDate)}
+          />
+        </div>
       </div>
 
       <TaskDragProvider tasks={tasks} onMove={onMove}>
@@ -184,14 +198,9 @@ export function WeekView({
                           day: "numeric",
                         })}
                       </strong>
+                      {date === today ? <span className="jig-today-label">Today</span> : null}
                     </button>
-                    <Button
-                      label="Add"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onAdd(date)}
-                      aria-label={`Add task on ${formatCivilDate(date)}`}
-                    />
+                    <span className="jig-week-count">{dateTasks.length}</span>
                   </header>
 
                   {dateTasks.length === 0 ? (
@@ -211,6 +220,13 @@ export function WeekView({
                       ))}
                     </List>
                   )}
+                  <Button
+                    label="+ Add task"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onAdd(date)}
+                    aria-label={`Add task on ${formatCivilDate(date)}`}
+                  />
                 </section>
               </DateDropZone>
             );
