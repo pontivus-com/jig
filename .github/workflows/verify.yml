@@ -6,25 +6,44 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
       - name: Install exact dependency graph
-        run: bun install
+        run: |
+          if [[ -f bun.lock ]]; then
+            bun install --frozen-lockfile
+          else
+            bun install
+          fi
+      - name: Freeze first generated lockfile on the implementation branch
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && hashFiles('bun.lock') != '' }}
+        run: |
+          if ! git ls-files --error-unmatch bun.lock >/dev/null 2>&1; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add bun.lock
+            git commit -m "V1-01 freeze Bun dependency graph"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          fi
+      - name: Verify lockfile is frozen
+        run: bun install --frozen-lockfile
       - name: Typecheck
         run: bun run typecheck
       - name: Core and integration tests
         run: bun run test
       - name: Build
         run: bun run build
-      - name: Preserve generated lockfile
+      - name: Preserve lockfile evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
