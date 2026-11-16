@@ -485,10 +485,12 @@ export function adoptCanonicalSnapshot(
       `UPDATE app_metadata
        SET
          revision = ?,
+         last_exported_revision = ?,
+         last_exported_head = ?,
          last_adopted_head = ?,
          pending_sync = 0
        WHERE singleton = 1`,
-    ).run(revision, adoptedHead);
+    ).run(revision, revision, adoptedHead, adoptedHead);
 
     return { revision, tasks: readTasks(db) };
   });
