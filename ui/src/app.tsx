@@ -5,7 +5,7 @@ import {
   LayerProvider,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
-import { neutralTheme } from "@astryxdesign/theme-neutral/built";
+import jigAppIconUrl from "../../assets/jig-app-icon.svg";
 import {
   useCallback,
   useEffect,
@@ -43,6 +43,7 @@ import {
 } from "./task-editor";
 import { todayCivilDate } from "./dates";
 import { WeekView } from "./week";
+import { jigTheme } from "./theme";
 
 type Destination = "week" | "day" | "history" | "settings";
 
@@ -329,8 +330,16 @@ export function App(): React.ReactElement {
   const topNav = (
     <div className="jig-topbar">
       <div className="jig-brand" aria-label="Jig">
-        <strong>Jig</strong>
-        <span>Schedules attention</span>
+        <img
+          className="jig-brand-mark"
+          src={jigAppIconUrl}
+          alt=""
+          aria-hidden="true"
+        />
+        <div className="jig-brand-copy">
+          <strong>Jig</strong>
+          <span>Schedules attention</span>
+        </div>
       </div>
 
       <nav className="jig-primary-nav" aria-label="Primary">
@@ -485,7 +494,7 @@ export function App(): React.ReactElement {
 
 
   return (
-    <Theme theme={neutralTheme} mode={themePreference}>
+    <Theme theme={jigTheme} mode={themePreference}>
       <LayerProvider>
         <AppShell
           topNav={topNav}
