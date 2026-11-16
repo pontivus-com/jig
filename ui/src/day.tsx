@@ -109,8 +109,9 @@ export function DayTaskLists({
   selectedTaskId,
 }: Omit<
   DayViewProps,
-  "onAdd" | "onSelectDate" | "onPreviousDay" | "onToday" | "onNextDay" | "statusControl" | "selectedTask" | "onDelete"
+  "onAdd" | "onSelectDate" | "onPreviousDay" | "onToday" | "onNextDay" | "statusControl" | "selectedTask" | "onSelectTask" | "onDelete"
 > & {
+  readonly onSelectTask?: ((task: Task) => void) | undefined;
   readonly selectedTaskId?: string | null | undefined;
 }): React.ReactElement {
   const active = outstandingForDate(tasks, selectedDate);
