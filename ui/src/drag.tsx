@@ -10,6 +10,7 @@ import {
   type Ref,
 } from "react";
 import type { Task } from "../../src/core/task";
+import { TaskCardPreview } from "./task-row";
 
 export interface TaskDragProviderProps {
   readonly tasks: readonly Task[];
@@ -96,9 +97,7 @@ export function TaskDragProvider({
       {children}
       <DragOverlay>
         {activeTask === null ? null : (
-          <div className="jig-drag-overlay" aria-hidden="true">
-            {activeTask.title}
-          </div>
+          <TaskCardPreview task={activeTask} />
         )}
       </DragOverlay>
     </DragDropProvider>
