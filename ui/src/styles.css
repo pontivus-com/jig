@@ -48,24 +48,35 @@ body {
     gap: var(--spacing-2);
   }
 
-  .jig-brand-mark {
-    width: 2rem;
-    height: 2rem;
+  .jig-brand-logo-wrap {
+    position: relative;
+    display: block;
+    width: 4.95rem;
+    height: 3rem;
     flex: 0 0 auto;
   }
 
-  .jig-brand-copy {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
+  .jig-brand-logo {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
-  .jig-brand-copy > strong {
-    font-size: 1.05rem;
-    line-height: 1.1;
+  .jig-brand-logo-dark {
+    display: none;
   }
 
-  .jig-brand-copy > span,
+  html[data-theme="dark"] .jig-brand-logo-light {
+    display: none;
+  }
+
+  html[data-theme="dark"] .jig-brand-logo-dark {
+    display: block;
+  }
+
+  .jig-brand-tagline,
   .jig-secondary-copy,
   .jig-task-meta,
   .jig-eyebrow,
@@ -74,8 +85,9 @@ body {
     color: var(--color-text-secondary);
   }
 
-  .jig-brand-copy > span {
+  .jig-brand-tagline {
     font-size: 0.75rem;
+    white-space: nowrap;
   }
 
   .jig-primary-nav,
@@ -426,6 +438,16 @@ body {
     max-width: 42rem;
     gap: var(--spacing-3);
     margin: 10vh auto 0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme]) .jig-brand-logo-light {
+      display: none;
+    }
+
+    html:not([data-theme]) .jig-brand-logo-dark {
+      display: block;
+    }
   }
 
   @media (max-width: 47.999rem) {
