@@ -6,14 +6,13 @@ import {
 import { useSortable } from "@dnd-kit/react/sortable";
 import type { Ref } from "react";
 import type { Task } from "../../src/core/task";
-import { formatCivilDate, formatReminderTime } from "./dates";
+import { formatReminderTime } from "./dates";
 
 export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
-  readonly carriedOverFrom?: string | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
-  readonly dragHandleRef?: Ref<HTMLButtonElement> | undefined;
+  readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
   readonly onMoveUp?: (() => void) | undefined;
@@ -30,48 +29,137 @@ function isSafeWebReference(value: string): boolean {
   }
 }
 
-function TaskDescription({
+function stopPointer(event: React.PointerEvent): void {
+  event.stopPropagation();
+}
+
+function TaskMetadata({
   task,
-  carriedOverFrom,
-}: Readonly<{
-  task: Task;
-  carriedOverFrom?: string;
-}>): React.ReactElement {
+}: Readonly<{ task: Task }>): React.ReactElement {
   return (
     <div className="jig-task-meta">
-      {carriedOverFrom === undefined ? null : (
-        <span className="jig-carry-over-label">
-          From {formatCivilDate(carriedOverFrom, { month: "short", day: "numeric" })}
-        </span>
-      )}
-      {task.context === null ? null : <span>{task.context}</span>}
-      {task.priority === "NORMAL" ? null : (
-        <span className="jig-priority-label">{task.priority.toLowerCase()}</span>
+      {task.context === null ? null : (
+        <span className="jig-task-meta-item">{task.context}</span>
       )}
       {task.reminder_time === null ? null : (
-        <span>Reminder {formatReminderTime(task.reminder_time)}</span>
+        <span className="jig-task-meta-item">
+          {formatReminderTime(task.reminder_time)}
+        </span>
+      )}
+      {task.priority === "NORMAL" ? null : (
+        <span className="jig-task-meta-item jig-priority-label">
+          {task.priority.toLowerCase()}
+        </span>
       )}
       {task.reference === null ? null : isSafeWebReference(task.reference) ? (
         <a
+          className="jig-task-meta-item"
           href={task.reference}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Open reference"
+          onPointerDown={stopPointer}
           onClick={(event) => event.stopPropagation()}
         >
-          Open reference
+          Reference
         </a>
       ) : (
         <button
           type="button"
-          className="jig-copy-reference"
+          className="jig-copy-reference jig-task-meta-item"
+          aria-label="Copy reference"
+          onPointerDown={stopPointer}
           onClick={(event) => {
             event.stopPropagation();
             void navigator.clipboard.writeText(task.reference ?? "");
           }}
         >
-          Copy reference
+          Reference
         </button>
       )}
+    </div>
+  );
+}
+
+function TaskActionMenu({
+  task,
+  onEdit,
+  onMoveUp,
+  onMoveDown,
+  onMoveToDate,
+}: Readonly<{
+  task: Task;
+  onEdit: () => void;
+  onMoveUp?: (() => void) | undefined;
+  onMoveDown?: (() => void) | undefined;
+  onMoveToDate?: (() => void) | undefined;
+}>): React.ReactElement {
+  const closeAndRun = (
+    event: React.MouseEvent<HTMLElement>,
+    action: () => void,
+  ): void => {
+    event.stopPropagation();
+    event.currentTarget.closest("details")?.removeAttribute("open");
+    action();
+  };
+
+  return (
+    <details
+      className="jig-task-menu"
+      onPointerDown={stopPointer}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <summary aria-label={`Actions for ${task.title}`}>•••</summary>
+      <div className="jig-task-menu-panel">
+        <Button
+          label="Edit"
+          variant="ghost"
+          size="sm"
+          onClick={(event) => closeAndRun(event, onEdit)}
+        />
+        {onMoveToDate === undefined ? null : (
+          <Button
+            label="Move to date…"
+            variant="ghost"
+            size="sm"
+            onClick={(event) => closeAndRun(event, onMoveToDate)}
+          />
+        )}
+        {onMoveUp === undefined ? null : (
+          <Button
+            label="Move up"
+            variant="ghost"
+            size="sm"
+            onClick={(event) => closeAndRun(event, onMoveUp)}
+          />
+        )}
+        {onMoveDown === undefined ? null : (
+          <Button
+            label="Move down"
+            variant="ghost"
+            size="sm"
+            onClick={(event) => closeAndRun(event, onMoveDown)}
+          />
+        )}
+      </div>
+    </details>
+  );
+}
+
+export function TaskCardPreview({
+  task,
+}: Readonly<{ task: Task }>): React.ReactElement {
+  return (
+    <div className="jig-task-card jig-drag-card-overlay" aria-hidden="true">
+      <div className="jig-task-card-preview-row">
+        <span className="jig-task-card-preview-checkbox">□</span>
+        <span className="jig-task-drag-handle" aria-hidden="true">
+          ≡
+        </span>
+        <span className="jig-task-title">{task.title}</span>
+        <span className="jig-task-card-preview-menu">•••</span>
+      </div>
+      <TaskMetadata task={task} />
     </div>
   );
 }
@@ -79,9 +167,8 @@ function TaskDescription({
 export function TaskRow({
   task,
   isSelected = false,
-  carriedOverFrom,
   rowRef,
-  dragHandleRef,
+  onSelect,
   onToggleComplete,
   onEdit,
   onMoveUp,
@@ -94,81 +181,67 @@ export function TaskRow({
     <ListItem
       {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
+      className={[
+        "jig-task-card",
+        isSelected ? "jig-task-card-selected" : "",
+        completed ? "jig-task-card-completed" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       isSelected={isSelected}
       align="first-line"
+      {...(onSelect === undefined ? {} : { onClick: onSelect })}
       startContent={
-        <CheckboxInput
-          label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
-          isLabelHidden
-          value={completed}
-          onChange={onToggleComplete}
-          size="sm"
-        />
+        <span
+          className="jig-task-card-leading"
+          onPointerDown={stopPointer}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <CheckboxInput
+            label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
+            isLabelHidden
+            value={completed}
+            onChange={onToggleComplete}
+            size="sm"
+          />
+          {completed ? null : (
+            <span
+              className="jig-task-drag-handle"
+              aria-hidden="true"
+              title="Drag task"
+            >
+              ≡
+            </span>
+          )}
+        </span>
       }
       label={
-        <span className={completed ? "jig-task-title jig-task-title-completed" : "jig-task-title"}>
+        <span
+          className={
+            completed
+              ? "jig-task-title jig-task-title-completed"
+              : "jig-task-title"
+          }
+        >
           {task.title}
         </span>
       }
-      description={
-        <TaskDescription
-          task={task}
-          {...(carriedOverFrom === undefined ? {} : { carriedOverFrom })}
-        />
-      }
+      description={<TaskMetadata task={task} />}
       endContent={
-        <div className="jig-task-actions">
-          {completed || dragHandleRef === undefined ? null : (
-            <Button
-              ref={dragHandleRef}
-              label="Drag"
-              variant="ghost"
-              size="sm"
-              aria-label={`Drag ${task.title}`}
-            />
-          )}
-          {onMoveUp === undefined ? null : (
-            <Button
-              label="Up"
-              variant="ghost"
-              size="sm"
-              onClick={onMoveUp}
-              aria-label={`Move ${task.title} up`}
-            />
-          )}
-          {onMoveDown === undefined ? null : (
-            <Button
-              label="Down"
-              variant="ghost"
-              size="sm"
-              onClick={onMoveDown}
-              aria-label={`Move ${task.title} down`}
-            />
-          )}
-          {onMoveToDate === undefined ? null : (
-            <Button
-              label="Move…"
-              variant="ghost"
-              size="sm"
-              onClick={onMoveToDate}
-              aria-label={`Move ${task.title} to another date`}
-            />
-          )}
-          <Button
-            label="Edit"
-            variant="ghost"
-            size="sm"
-            onClick={onEdit}
-            aria-label={`Edit ${task.title}`}
-          />
-        </div>
+        <TaskActionMenu
+          task={task}
+          onEdit={onEdit}
+          {...(onMoveUp === undefined ? {} : { onMoveUp })}
+          {...(onMoveDown === undefined ? {} : { onMoveDown })}
+          {...(onMoveToDate === undefined ? {} : { onMoveToDate })}
+        />
       }
     />
   );
 }
 
 export interface SortableTaskRowProps
-  extends Omit<TaskRowProps, "rowRef" | "dragHandleRef"> {
+  extends Omit<TaskRowProps, "rowRef"> {
   readonly index: number;
   readonly group: string;
 }
@@ -192,7 +265,6 @@ export function SortableTaskRow({
       {...rowProps}
       task={task}
       rowRef={sortable.ref as Ref<HTMLLIElement>}
-      dragHandleRef={sortable.handleRef as Ref<HTMLButtonElement>}
     />
   );
 }
