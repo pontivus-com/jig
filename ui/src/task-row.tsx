@@ -6,12 +6,11 @@ import {
 import { useSortable } from "@dnd-kit/react/sortable";
 import type { Ref } from "react";
 import type { Task } from "../../src/core/task";
-import { formatCivilDate, formatReminderTime } from "./dates";
+import { formatReminderTime } from "./dates";
 
 export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
-  readonly carriedOverFrom?: string | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
   readonly dragHandleRef?: Ref<HTMLButtonElement> | undefined;
   readonly onToggleComplete: () => void;
@@ -32,18 +31,11 @@ function isSafeWebReference(value: string): boolean {
 
 function TaskDescription({
   task,
-  carriedOverFrom,
 }: Readonly<{
   task: Task;
-  carriedOverFrom?: string;
 }>): React.ReactElement {
   return (
     <div className="jig-task-meta">
-      {carriedOverFrom === undefined ? null : (
-        <span className="jig-carry-over-label">
-          From {formatCivilDate(carriedOverFrom, { month: "short", day: "numeric" })}
-        </span>
-      )}
       {task.context === null ? null : <span>{task.context}</span>}
       {task.priority === "NORMAL" ? null : (
         <span className="jig-priority-label">{task.priority.toLowerCase()}</span>
@@ -79,7 +71,6 @@ function TaskDescription({
 export function TaskRow({
   task,
   isSelected = false,
-  carriedOverFrom,
   rowRef,
   dragHandleRef,
   onToggleComplete,
@@ -110,12 +101,7 @@ export function TaskRow({
           {task.title}
         </span>
       }
-      description={
-        <TaskDescription
-          task={task}
-          {...(carriedOverFrom === undefined ? {} : { carriedOverFrom })}
-        />
-      }
+      description={<TaskDescription task={task} />}
       endContent={
         <div className="jig-task-actions">
           {completed || dragHandleRef === undefined ? null : (
