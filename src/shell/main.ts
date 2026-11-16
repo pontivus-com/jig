@@ -14,6 +14,7 @@ import {
   EXPORT_MAX_FLUSH_MS,
   readSnapshotAtRef,
   retryDelayMs,
+  runGit,
   serializeSnapshot,
   SYNC_HEALTHY_POLL_MS,
   type GitAdapterConfig,
@@ -268,8 +269,14 @@ function createSyncController(
     const metadata = readMetadata(db);
     const state = readCanonicalState(db);
     try {
-      const headResult = await Bun.$`git -C ${config.repository_path} rev-parse ${DATA_REF}`.quiet();
-      const head = headResult.text().trim();
+      const headResult = await runGit(config.repository_path, [
+        "rev-parse",
+        DATA_REF,
+      ]);
+      if (headResult.exit_code !== 0) {
+        return;
+      }
+      const head = headResult.stdout;
       const snapshot = await readSnapshotAtRef(
         config.repository_path,
         DATA_REF,
