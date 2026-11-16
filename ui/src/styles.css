@@ -242,21 +242,6 @@ body {
     justify-content: flex-end;
   }
 
-  .jig-week-column > section,
-  .jig-week-column .jig-task-row {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .jig-week-column .jig-task-row {
-    flex-wrap: wrap;
-  }
-
-  .jig-week-column .jig-task-actions {
-    flex: 1 0 100%;
-    max-width: 100%;
-    justify-content: flex-end;
-  }
 
   .jig-copy-reference,
   .jig-task-meta a {
