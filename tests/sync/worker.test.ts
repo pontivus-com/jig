@@ -86,10 +86,10 @@ function fakeEffects(options: {
       pushCalls.count += 1;
       return pushResults.shift() ?? "synchronized";
     },
-    availability: async () =>
+    mode: async () =>
       (options.remoteName === undefined ? "origin" : options.remoteName) === null
         ? "local-only"
-        : "synchronized",
+        : "remote",
   };
 
   return { effects, commitCalls, pushCalls };
