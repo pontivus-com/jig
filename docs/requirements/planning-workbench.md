@@ -101,7 +101,7 @@ The earlier mockups used the working name Day and were made to validate relation
 4. **Changing priority:** change an existing third-position task to High; its position does not change.
 5. **Interrupted work:** a Thursday task left unfinished remains identifiable on Friday, and can be rescheduled without losing its original identity or external link.
 6. **Completion history:** complete a task scheduled for Thursday on Friday; history shows the Friday completion timestamp while the original Thursday scheduling fact remains discernible.
-7. **Reminder:** while Day is open and reminder time arrives, a toast appears. No success claim is made about notifications while Jig is closed.
+7. **Reminder:** while Jig is open and reminder time arrives, a toast appears. No success claim is made about notifications while Jig is closed.
 8. **Responsive continuity:** narrow and wide layouts represent the same selected task and values, without duplicate project detail or loss of edits.
 
 ## 8. Non-decisions
