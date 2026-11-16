@@ -39,11 +39,13 @@ Each architecture bundle contains one top-level `jig/` directory with:
 - `runtime/bun` — pinned Bun runtime for the bundle architecture;
 - `src/` — canonical Jig runtime/core sources;
 - `dist/` — production Vite UI built from the exact release commit;
+- `assets/` — canonical Jig logo, icon and favicon variants;
 - `scripts/install.sh` — canonical installer behavior;
 - `scripts/jig` — launcher;
 - `package.json`, `bun.lock`, `.bun-version`;
 - `README.md`, `CHANGELOG.md`, `LICENSE`;
 - `docs/install.md`;
+- `docs/design/brand-and-theme.md` and `docs/product/product-identity.md`;
 - `RELEASE.json` containing release version, Git commit, platform, architecture and Bun version.
 
 The installer recognizes this certified payload and does not rebuild the UI or reinstall JavaScript dependencies. Source-checkout installation remains available for contributors and continues to build from the frozen dependency graph.
