@@ -1,0 +1,46 @@
+/*
+ * Jig brand foundation — executable palette authority.
+ *
+ * Product identity: Option A — ink navy + amber + warm paper.
+ * These are primitive values only. Components must consume Astryx semantic
+ * tokens through ui/src/theme.ts rather than reading --jig-* directly.
+ */
+:root {
+  --jig-ink-50: #F9FAFD;
+  --jig-ink-100: #EFF2F7;
+  --jig-ink-200: #DCE1EB;
+  --jig-ink-300: #C0C8D6;
+  --jig-ink-400: #9BA5B8;
+  --jig-ink-500: #788499;
+  --jig-ink-600: #5A667E;
+  --jig-ink-700: #3E4A62;
+  --jig-ink-800: #253046;
+  --jig-ink-900: #162034;
+  --jig-ink-950: #0B1426;
+
+  --jig-amber-50: #FEF3E7;
+  --jig-amber-100: #FEE3C5;
+  --jig-amber-200: #FBCA93;
+  --jig-amber-300: #FAB45F;
+  --jig-amber-400: #F9A733;
+  --jig-amber-500: #F59E0B;
+  --jig-amber-600: #D28412;
+  --jig-amber-700: #B86C00;
+  --jig-amber-800: #8E5200;
+  --jig-amber-900: #683B01;
+  --jig-amber-950: #442603;
+
+  --jig-paper-50: #FDFCF9;
+  --jig-paper-100: #F7F4EF;
+  --jig-paper-200: #EBE7E1;
+  --jig-paper-300: #D8D3CC;
+  --jig-paper-400: #BCB7AE;
+  --jig-paper-500: #9A948A;
+  --jig-paper-600: #7A7469;
+  --jig-paper-700: #5B544A;
+  --jig-paper-800: #3D372E;
+  --jig-paper-900: #25211A;
+  --jig-paper-950: #14110C;
+
+  --jig-white: #FFFFFF;
+}

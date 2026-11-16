@@ -1,8 +1,8 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Proposed binding UX/UI realization v0.3, 2026-11-16. Visual references and functional screen structure are governed; final browser screenshots and usability certification are pending.
+**Status:** Binding v1 UX/UI realization v0.4, 2026-11-16. Functional structure, Option A branding, Jig Light/Dark theming and browser evidence are governed.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–22.
-**Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status.
+**Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Turn the accepted early mobile/day/week/editor mockups into a versioned interface baseline while distinguishing layout intent from noncanonical visual decoration.
 
 ## 1. Source mockups and governed reference assets
@@ -58,16 +58,24 @@ The UI does **not** classify the cause as divergence, merge conflict, branch sta
 
 ## 3. Visual language
 
-Use the **published Astryx 0.7.13 core and Neutral theme** pinned with Order's verified baseline. Public semantic tokens own background/surface/border/text/accent, spacing, typography, focus and control states. Reuse existing foundation components rather than copying Order's private Workbench wrappers or styling internal Astryx selectors.
+Use the published **Astryx 0.7.13 core** with Jig's canonical theme defined by [Brand and theme system](brand-and-theme.md). `jigTheme` extends Astryx Neutral so Astryx continues to own spacing, typography mechanics, component structure and semantic status families, while Jig owns the product palette and its Light/Dark role mapping.
+
+Theme ownership is singular:
+
+- `ui/src/theme.css` owns raw Jig Ink/Amber/Paper primitives;
+- `ui/src/theme.ts` maps those primitives to public Astryx semantic roles;
+- `ui/src/styles.css` composes layout using semantic tokens and does not define a second palette;
+- `ui/src/app.tsx` mounts the one root Jig Theme owner.
 
 Visual rules:
 1. **Compact, low-chrome and scan-oriented.** Prefer list/row structure with subtle boundaries to decorative card stacks; no gratuitous shadows/gradients.
 2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
 3. **One primary action per active surface.** Quick Add is prominent at week level. A task detail editor has a single Save control. Completion uses an independently accessible checkbox/command.
 4. **Clear current date and visible focus.** Selection/current, hover, focus, and save status remain semantically distinguishable without color alone.
-5. **Theme parity.** System/Light/Dark are mandatory. One application theme owner uses Astryx Neutral semantic roles; System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, carry-over, completion, save and sync semantics must remain clear in both themes without relying on color alone. Do not create a separate per-feature palette or duplicate dark-mode mockup set.
-6. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, selected date or pending form draft changes as a side effect of a breakpoint.
-7. **SVGs are light-mode structural references, not a light-only palette contract.** Their wording, geometry, density and representative visual character are reviewable. Final color/typography comes from the pinned Astryx semantic foundation and must pass browser review in both Light and Dark; no parallel dark SVG set is required.
+5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/focus emphasis. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
+6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, carry-over, completion, save and sync semantics must remain clear in both themes without relying on color alone.
+7. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, selected date or pending form draft changes as a side effect of a breakpoint.
+8. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable, but the final production palette is the canonical Jig theme. No duplicate dark-mode structural mockup set is required.
 
 ## 4. Screen specifications
 
@@ -138,6 +146,6 @@ Use actual approved Astryx and dnd-kit versions in Playwright for final UI evide
 
 ## 7. Design change control
 
-The seven versioned SVGs in `docs/design/reference/` are the current light-mode baseline for layout, interaction hierarchy, density and representative visual character. Dark mode is governed by semantic theming rules above and does not require duplicate reference SVGs. When an interaction changes, update this document and the relevant SVG together. If only runtime appearance changes to correct Astryx component parity, update implementation and browser evidence without inventing a second canonical visual-token contract.
+The seven versioned SVGs in `docs/design/reference/` remain the structural baseline for layout, interaction hierarchy and density. Production color, logo use and Light/Dark behavior are governed centrally by [Brand and theme system](brand-and-theme.md); no duplicate dark structural SVG set is required. When an interaction changes, update this document and the relevant SVG together. If only runtime appearance changes to correct Astryx component parity, update implementation and browser evidence without inventing a second canonical visual-token contract.
 
 Do not refer to the previous Day branding as a current product identity. Do not use project-specific task details as content that Jig must store; they exist only as illustrative samples. An implementation plan must link to this document and to [Technical solution](../architecture/technical-solution.md).

@@ -17,7 +17,7 @@ The normal experience is: run one installer; assign repository; installer config
 |---|---|
 | Runtime and service | One Bun 1.4.4 process on Linux, `systemd --user` service, loopback HTTP, no external database or remote service |
 | Command and installer | `jig` launcher in ~/.local/bin, one `scripts/install.sh --repo /absolute/existing/repo` command or `--repo-url URL --checkout /new/empty/path`; optional interactive selection if omitted |
-| UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 and Neutral theme |
+| UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 with Jig theme derived from Neutral |
 | Cross-day drag | `@dnd-kit/react@0.5.3`, one drag owner; Astryx handles visual primitives |
 | Live data | One Bun SQLite database at `<selected-repo>/.jig/local/jig.sqlite`; immediate transactional writes |
 | Versioned data | Deterministic Task JSON and manifest committed to a dedicated `jig-data` Git branch/ref **of the same selected repository**, through an isolated linked worktree under `<selected-repo>/.jig/git/` |
@@ -37,7 +37,7 @@ The initial dependency set is exact-pinned; no wholesale Order package manifest 
 
 **Development:** typescript 7.0.2; vite 8.3.5; @types/react 19.3.0; @types/react-dom 19.3.0; @types/bun 1.4.4; vitest 5.0.5; @playwright/test 1.64.1. Use Bun 1.4.4 as the installed runtime; pin it in repository runtime metadata. The exact baseline is a reproducibility selection, not a claim that later packages are incompatible.
 
-Use Bun built-ins for SQLite and spawning Git. Do not add an ORM, repository object abstraction, task mapper/DTO layer, date utility package, notification service, state-management framework, CodeMirror, OpenCode SDK, Tailwind build integration, a StyleX compiler plugin or a second UI toolkit without demonstrated necessity. Astryx's published core CSS and built Neutral theme are sufficient for the initial presentation; custom Jig board geometry uses a small stylesheet consuming public Astryx tokens.
+Use Bun built-ins for SQLite and spawning Git. Do not add an ORM, repository object abstraction, task mapper/DTO layer, date utility package, notification service, state-management framework, CodeMirror, OpenCode SDK, Tailwind build integration, a StyleX compiler plugin or a second UI toolkit without demonstrated necessity. Astryx's published core and Neutral theme are the foundation; Jig owns one derived semantic theme whose raw Ink/Amber/Paper primitives are centralized in `ui/src/theme.css` and whose public Astryx role mapping lives in `ui/src/theme.ts`. Custom Jig geometry uses a small stylesheet consuming only those semantic roles.
 
 **Verified references:**
 - [Order manifest](https://github.com/pontivus-com/order/blob/master/package.json), [runtime pin](https://github.com/pontivus-com/order/blob/master/.bun-version), [application composition](https://github.com/pontivus-com/order/blob/master/ui/src/app.tsx), [UI imports](https://github.com/pontivus-com/order/blob/master/ui/src/styles.css), [theme](https://github.com/pontivus-com/order/blob/master/ui/src/theme.css), [settings composition](https://github.com/pontivus-com/order/blob/master/ui/src/SettingsWorkspace.tsx), [action wrapper](https://github.com/pontivus-com/order/blob/master/ui/src/primitives/WorkbenchAction.tsx), [confirmation wrapper](https://github.com/pontivus-com/order/blob/master/ui/src/primitives/WorkbenchConfirmation.tsx), and [notice wrapper](https://github.com/pontivus-com/order/blob/master/ui/src/primitives/WorkbenchNotice.tsx).
@@ -52,7 +52,7 @@ Use the sources below to avoid rediscovery, while preserving Jig's own domain an
 | Jig concern | First implementation source to inspect | What to reuse / learn | What not to copy |
 |---|---|---|---|
 | Runtime and dependency pins | Order `package.json`, `.bun-version` | Proven React/TypeScript/Vite/Bun/Astryx versions and peer requirements | Order-only packages such as OpenCode, CodeMirror, React Query and Tailwind |
-| Astryx CSS/bootstrap | Order `ui/src/styles.css` | Required Astryx reset/core/Neutral theme import ordering and body token usage | Order CSS classes and Tailwind layers; Jig uses only the minimum stylesheet required by its own composition |
+| Astryx CSS/bootstrap | Order `ui/src/styles.css` | Required Astryx reset/core import ordering and semantic body-token usage | Order CSS classes and Tailwind layers; Jig uses only the minimum stylesheet required by its own composition |
 | System/Light/Dark mechanics | Order `ui/src/app.tsx` and `ui/src/theme.css` | Theme preference lifecycle, local presentation persistence, System fallback and semantic-token switching | Order-specific color literals, `pontivus-order-theme` key, WorkItem state or toolbar composition |
 | Buttons/actions | Order `WorkbenchAction.tsx` + Astryx Button/IconButton public APIs | Exact public props/variants and accessible icon-button labeling | The `WorkbenchAction` wrapper itself |
 | Destructive confirmation | Order `WorkbenchConfirmation.tsx` as behavior evidence plus Astryx destructive-dialog API | Modal confirmation semantics, destructive action tone, pending protection | The Order wrapper or repository-disconnect semantics; Jig confirmation owns Task deletion only |
@@ -254,7 +254,7 @@ Use prepared statements and explicit transactions. WAL may be enabled for local 
 
 ## 5. Astryx UI composition and responsive behavior
 
-Consume the public Astryx components directly; do not import Order's internal Workbench* modules or duplicate their lifecycle semantics. Use the Neutral theme and public semantic roles, not the original green decorative screenshot palette. One application theme owner **must** support System/Light/Dark. System follows the browser/platform color preference; an explicit Light or Dark choice overrides it locally. Browser visual preference is presentation state, not Task state, and is not exported to Git. The same semantic roles, structure and interaction hierarchy must remain valid in both themes; no parallel dark-mode component tree or hard-coded per-feature palette is permitted.
+Consume the public Astryx components directly; do not import Order's internal Workbench* modules or duplicate their lifecycle semantics. Use the canonical Jig theme from [Brand and theme system](../design/brand-and-theme.md), derived from Astryx Neutral and mapped only through public semantic roles. One application theme owner **must** support System/Light/Dark. System follows the browser/platform color preference; an explicit Light or Dark choice overrides it locally. Browser visual preference is presentation state, not Task state, and is not exported to Git. The same semantic roles, structure and interaction hierarchy must remain valid in both themes; no parallel dark-mode component tree or hard-coded per-feature palette is permitted.
 
 | Jig region | Astryx foundation | Jig-specific part |
 |---|---|---|
@@ -436,7 +436,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-19 safe coexistence | dedicated jig-data branch/worktree behind repository adapter; no main-branch writes | Unrelated staged/unstaged user docs unchanged; generic sync issue never becomes planning/domain conflict state |
 | JIG-FR-20 low-friction idle | one Bun service, bounded timers/backoff | Measured low idle CPU/RSS and responsive reopen |
 | JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
-| JIG-FR-22 appearance | One Astryx Neutral theme owner + local preference | System/Light/Dark render equivalent hierarchy and state semantics without Task/Git mutation |
+| JIG-FR-22 appearance | One Jig theme owner derived from Astryx Neutral + local preference | System/Light/Dark render equivalent hierarchy and state semantics without Task/Git mutation |
 
 ### 10.1 Test boundaries
 
