@@ -448,3 +448,61 @@ Jig v1 is complete only when all of the following are true:
 - no implementation worker had to make a new product/architecture decision to complete the build.
 
 At that point the code is a v1 MVP release candidate. Anything beyond these gates is post-v1 scope unless it fixes a defect against the frozen design.
+
+## 15. Functional requirement-to-task coverage
+
+This matrix is normative for plan completeness. V1-23 provides integrated evidence for every row; the listed tasks are the primary implementation owners.
+
+| Requirement | Primary implementation tasks | Required implementation evidence |
+|---|---|---|
+| FR-01 quick create | V1-03, V1-13, V1-14 | title-only create on initiating date |
+| FR-02 date navigation | V1-04, V1-12, V1-14, V1-15 | day/week/today navigation with no Task mutation |
+| FR-03 within-day order | V1-03, V1-06, V1-18 | exact persisted reorder |
+| FR-04 cross-day move | V1-03, V1-06, V1-18 | exact destination/date/index including empty date |
+| FR-05 priority insertion | V1-03, V1-13, V1-14 | mixed-list insertion law |
+| FR-06 preserve manual intent | V1-03, V1-13 | priority edit leaves position unchanged |
+| FR-07 flexible modifications | V1-03, V1-13 | all optional fields/date editable without workflow gate |
+| FR-08 complete/reopen | V1-03, V1-06, V1-15, V1-16 | same Task identity, completion time, reopen semantics |
+| FR-09 carry-over | V1-04, V1-15, V1-18 | derived earlier unfinished presentation without date mutation |
+| FR-10 reminders | V1-19 | in-app session-bounded reminder with durable local suppression |
+| FR-11 external context | V1-13, V1-24 | safe HTTP(S) open / non-HTTP copy only |
+| FR-12 honest outcomes | V1-07, V1-12, V1-19 | failed save/sync never shown as success |
+| FR-13 responsive continuity | V1-20 | selected date/Task/draft survives reflow |
+| FR-14 local retention | V1-05, V1-06, V1-10, V1-23 | restart and complete-snapshot rehydration |
+| FR-15 installer | V1-21, V1-24 | one-script existing-repo/clone modes and safe failure |
+| FR-16 repository-contained data | V1-09, V1-21, V1-22 | `.jig/local` + isolated `jig-data`; deliberate migration |
+| FR-17 desktop availability | V1-22, V1-24 | launcher + user service + fallback |
+| FR-18 automatic repository sync | V1-08, V1-09, V1-10, V1-11 | immediate local save plus background export/sync |
+| FR-19 safe coexistence/sync honesty | V1-09, V1-11, V1-17 | unrelated repo state untouched; generic sync status only |
+| FR-20 low-friction idle | V1-11, V1-22, V1-24 | bounded worker and measured resource/readiness limits |
+| FR-21 delete | V1-03, V1-06, V1-08, V1-13, V1-16 | confirmation, row/file absence, position compaction, round trip |
+| FR-22 appearance | V1-12, V1-17, V1-20, V1-23 | System/Light/Dark semantic parity |
+
+## 16. Technical-design coverage audit
+
+| Technical concern | Plan owner(s) | Coverage gate |
+|---|---|---|
+| exact dependency/source provenance | V1-01 | frozen install/build/typecheck |
+| canonical Task + invariants | V1-02 | canonical validation tests |
+| pure operations/derived views | V1-03,V1-04 | core test suite |
+| SQLite schema/revision/transactions | V1-05,V1-06 | persistence + rollback/restart tests |
+| loopback API/security token/revision | V1-07,V1-12 | HTTP + stale-revision browser tests |
+| deterministic complete snapshot | V1-08 | byte-stable round trip |
+| isolated repository branch/worktree | V1-09 | dirty-repo coexistence + ref ownership tests |
+| snapshot admission/crash safety | V1-10,V1-11 | transactional adoption + crash recovery |
+| bounded background sync/status | V1-11,V1-17 | fake-clock/transport/status tests |
+| Astryx/theme/UI composition | V1-12–V1-17,V1-20 | structural/browser/theme evidence |
+| one-owner drag and accessibility | V1-18,V1-20 | pointer/touch/keyboard/reduced-motion Playwright |
+| browser reminders | V1-19 | timing/suppression/session tests |
+| installer/config/dataset identity | V1-21 | disposable installation fixtures |
+| launcher/service/single writer/migration/uninstall | V1-22 | lifecycle and failure-injection fixtures |
+| security/trust boundaries | V1-07,V1-09,V1-13,V1-21,V1-22,V1-24 | explicit security certification |
+| FR-01–22 integrated behavior | V1-23 | full acceptance matrix |
+| resource limits | V1-24 | measured reference-host evidence |
+| implementation/evidence closeout | V1-25 | verify + screenshots + documentation status |
+
+Every normative implementation concern in the technical solution is owned by at least one task and ends in an executable or recorded gate. Deferred/non-goal capabilities remain intentionally unowned by implementation tasks.
+
+## 17. Plan audit verdict
+
+This v1.1 plan deliberately keeps **25 tasks across six waves**. The completeness audit did not require another subsystem or architectural layer; it required making previously implicit technical obligations explicit inside their existing owners. A task may be split into smaller commits for review, but splitting must not create a new semantic owner or alter the dependency order above.
