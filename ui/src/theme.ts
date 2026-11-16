@@ -1,113 +1,126 @@
 import { defineTheme } from "@astryxdesign/core/theme";
 import { neutralTheme } from "@astryxdesign/theme-neutral";
 
-export const JIG_BRAND_COLORS = {
-  ink: "#0B1426",
-  inkSurface: "#111C2F",
-  inkRaised: "#162238",
-  canvas: "#F7F4EF",
-  surface: "#FFFFFF",
-  mutedSurface: "#EEEAE3",
-  amber: "#F59E0B",
-  amberLightInteractive: "#B86C00",
-  amberLightText: "#8E5200",
-  amberDarkText: "#FFD166",
-  amberMutedLight: "#F7E4C3",
-  amberMutedDark: "#49320E",
-  textSecondaryLight: "#526071",
-  textSecondaryDark: "#B7C1CE",
-  textDisabledLight: "#8791A0",
-  textDisabledDark: "#6F7A88",
-  borderEmphasizedLight: "#CDD3DB",
-  borderEmphasizedDark: "#3B4656",
-} as const;
-
+/**
+ * Jig's Astryx semantic theme.
+ *
+ * Raw palette values live only in theme.css. This file owns the mapping from
+ * those brand primitives to the public Astryx semantic roles used by every
+ * component and Jig composition.
+ */
 export const jigTheme = defineTheme({
   name: "jig",
   extends: neutralTheme,
   tokens: {
     "--color-background-body": [
-      JIG_BRAND_COLORS.canvas,
-      JIG_BRAND_COLORS.ink,
+      "var(--jig-paper-100)",
+      "var(--jig-ink-950)",
     ],
     "--color-background-surface": [
-      JIG_BRAND_COLORS.surface,
-      JIG_BRAND_COLORS.inkSurface,
+      "var(--jig-white)",
+      "var(--jig-ink-900)",
     ],
     "--color-background-card": [
-      JIG_BRAND_COLORS.surface,
-      JIG_BRAND_COLORS.inkSurface,
+      "var(--jig-white)",
+      "var(--jig-ink-900)",
     ],
     "--color-background-popover": [
-      JIG_BRAND_COLORS.surface,
-      JIG_BRAND_COLORS.inkRaised,
+      "var(--jig-white)",
+      "var(--jig-ink-800)",
     ],
     "--color-background-muted": [
-      JIG_BRAND_COLORS.mutedSurface,
-      JIG_BRAND_COLORS.inkSurface,
+      "var(--jig-paper-200)",
+      "var(--jig-ink-900)",
     ],
 
-    // The canonical brand amber remains #F59E0B. Light mode uses the darker
-    // functional stop so fills/focus rings retain non-text contrast on white.
+    // Brand amber is #F59E0B. Light UI uses the darker 700 stop for
+    // non-text contrast on white/paper; dark UI can use canonical amber.
     "--color-accent": [
-      JIG_BRAND_COLORS.amberLightInteractive,
-      JIG_BRAND_COLORS.amber,
+      "var(--jig-amber-700)",
+      "var(--jig-amber-500)",
     ],
     "--color-accent-muted": [
-      JIG_BRAND_COLORS.amberMutedLight,
-      JIG_BRAND_COLORS.amberMutedDark,
+      "var(--jig-amber-100)",
+      "color-mix(in oklab, var(--jig-amber-500) 22%, var(--jig-ink-900))",
     ],
     "--color-text-accent": [
-      JIG_BRAND_COLORS.amberLightText,
-      JIG_BRAND_COLORS.amberDarkText,
+      "var(--jig-amber-800)",
+      "var(--jig-amber-300)",
     ],
     "--color-icon-accent": [
-      JIG_BRAND_COLORS.amberLightInteractive,
-      JIG_BRAND_COLORS.amber,
+      "var(--jig-amber-700)",
+      "var(--jig-amber-500)",
     ],
     "--color-on-accent": [
-      JIG_BRAND_COLORS.ink,
-      JIG_BRAND_COLORS.ink,
+      "var(--jig-ink-950)",
+      "var(--jig-ink-950)",
     ],
     "--focus-outline-color": [
-      JIG_BRAND_COLORS.amberLightInteractive,
-      JIG_BRAND_COLORS.amber,
+      "var(--jig-amber-700)",
+      "var(--jig-amber-500)",
     ],
 
-    "--color-text-primary": [JIG_BRAND_COLORS.ink, "#F8FAFC"],
+    "--color-text-primary": [
+      "var(--jig-ink-950)",
+      "var(--jig-ink-50)",
+    ],
     "--color-text-secondary": [
-      JIG_BRAND_COLORS.textSecondaryLight,
-      JIG_BRAND_COLORS.textSecondaryDark,
+      "var(--jig-ink-600)",
+      "var(--jig-ink-300)",
     ],
     "--color-text-disabled": [
-      JIG_BRAND_COLORS.textDisabledLight,
-      JIG_BRAND_COLORS.textDisabledDark,
+      "var(--jig-ink-400)",
+      "var(--jig-ink-600)",
     ],
-    "--color-icon-primary": [JIG_BRAND_COLORS.ink, "#F8FAFC"],
+    "--color-icon-primary": [
+      "var(--jig-ink-950)",
+      "var(--jig-ink-50)",
+    ],
     "--color-icon-secondary": [
-      "#5F6B7A",
-      JIG_BRAND_COLORS.textSecondaryDark,
+      "var(--jig-ink-600)",
+      "var(--jig-ink-300)",
     ],
     "--color-icon-disabled": [
-      JIG_BRAND_COLORS.textDisabledLight,
-      JIG_BRAND_COLORS.textDisabledDark,
+      "var(--jig-ink-400)",
+      "var(--jig-ink-600)",
     ],
 
-    "--color-neutral": ["#0B14260F", "#FFFFFF1A"],
-    "--color-overlay": ["#0B142680", "#000000CC"],
-    "--color-overlay-hover": ["#0B14260D", "#FFFFFF0D"],
-    "--color-overlay-pressed": ["#0B14261A", "#FFFFFF1A"],
-    "--color-border": ["#0B142614", "#FFFFFF1A"],
-    "--color-border-emphasized": [
-      JIG_BRAND_COLORS.borderEmphasizedLight,
-      JIG_BRAND_COLORS.borderEmphasizedDark,
+    "--color-neutral": [
+      "color-mix(in srgb, var(--jig-ink-950) 6%, transparent)",
+      "color-mix(in srgb, var(--jig-white) 10%, transparent)",
     ],
-    "--color-shadow": ["#0B14261A", "#0000004D"],
-    "--color-tint-hover": [JIG_BRAND_COLORS.ink, "#FFFFFF"],
+    "--color-overlay": [
+      "color-mix(in srgb, var(--jig-ink-950) 50%, transparent)",
+      "color-mix(in srgb, black 80%, transparent)",
+    ],
+    "--color-overlay-hover": [
+      "color-mix(in srgb, var(--jig-ink-950) 5%, transparent)",
+      "color-mix(in srgb, var(--jig-white) 5%, transparent)",
+    ],
+    "--color-overlay-pressed": [
+      "color-mix(in srgb, var(--jig-ink-950) 10%, transparent)",
+      "color-mix(in srgb, var(--jig-white) 10%, transparent)",
+    ],
+    "--color-border": [
+      "color-mix(in srgb, var(--jig-ink-950) 8%, transparent)",
+      "color-mix(in srgb, var(--jig-white) 10%, transparent)",
+    ],
+    "--color-border-emphasized": [
+      "var(--jig-ink-200)",
+      "var(--jig-ink-700)",
+    ],
+    "--color-shadow": [
+      "color-mix(in srgb, var(--jig-ink-950) 12%, transparent)",
+      "color-mix(in srgb, black 36%, transparent)",
+    ],
+    "--color-tint-hover": [
+      "var(--jig-ink-950)",
+      "var(--jig-white)",
+    ],
 
     "--shadow-inset-hover":
-      "inset 0px 0px 0px 2px light-dark(#B86C004D, #F59E0B4D)",
+      "inset 0 0 0 2px light-dark(color-mix(in srgb, var(--jig-amber-700) 32%, transparent), color-mix(in srgb, var(--jig-amber-500) 32%, transparent))",
     "--shadow-inset-selected":
-      "inset 0px 0px 0px 2px light-dark(#B86C0080, #F59E0B80)",
+      "inset 0 0 0 2px light-dark(color-mix(in srgb, var(--jig-amber-700) 55%, transparent), color-mix(in srgb, var(--jig-amber-500) 55%, transparent))",
   },
 });
