@@ -36,11 +36,13 @@
 <text x="44" y="715" class="xs" fill="#657187" font-weight="700">Date change behavior</text>
 <text x="44" y="738" class="s" fill="#152238">Changing date uses priority-guided insertion.</text>
 <text x="44" y="756" class="xs" fill="#657187">Dragging uses the exact drop position.</text>
+<rect x="30" y="784" width="354" height="34" rx="7" fill="#fff0ef" stroke="#e6b5b0" stroke-width="1"/>
+<text x="207" y="806" class="s" fill="#a33a34" font-weight="700" text-anchor="middle">Delete task…</text>
 <line x1="30" y1="826" x2="384" y2="826" stroke="#dfe5ee" stroke-width="1"/>
 <rect x="30" y="846" width="132" height="46" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
 <text x="75" y="875" class="b" fill="#152238">Cancel</text>
 <rect x="174" y="846" width="210" height="46" rx="8" fill="#244b91" stroke="#244b91" stroke-width="1"/>
 <text x="260" y="875" class="b" fill="#fff" font-weight="700">Save</text>
 <text x="30" y="925" class="xs" fill="#657187">Reference and Notes are separate canonical fields.</text>
-<text x="30" y="944" class="xs" fill="#657187">No delete action in the v1 reference.</text>
+<text x="30" y="944" class="xs" fill="#657187">Delete requires confirmation; prior Git history is the only recovery.</text>
 </svg>
