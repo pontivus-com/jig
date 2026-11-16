@@ -1,0 +1,126 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { Database } from "bun:sqlite";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Task } from "../../src/core/task";
+import {
+  adoptCanonicalSnapshot,
+  applyTaskCommand,
+  initializeDatabase,
+  readCanonicalState,
+} from "../../src/shell/sqlite";
+import {
+  serializeSnapshot,
+  validateSnapshot,
+} from "../../src/shell/git";
+
+const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
+let root = "";
+let db: Database;
+
+function snapshotTask(idSuffix: string, title: string, position: number): Task {
+  return {
+    id: `018f47f0-7b5c-7d4d-8e2b-9c3aa11f${idSuffix}`,
+    title,
+    scheduled_date: "2026-11-16",
+    position,
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: null,
+    completed_at: null,
+    created_at: "2026-11-16T01:00:00.000Z",
+    updated_at: "2026-11-16T01:00:00.000Z",
+  };
+}
+
+beforeEach(async () => {
+  root = await mkdtemp(join(tmpdir(), "jig-import-"));
+  db = initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
+});
+
+afterEach(async () => {
+  db.close();
+  await rm(root, { recursive: true, force: true });
+});
+
+describe("complete-snapshot adoption", () => {
+  it("adopts canonical values and deletion by absence atomically", () => {
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Local only",
+        scheduled_date: "2026-11-15",
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0999",
+    );
+
+    const remote = snapshotTask("0101", "Remote", 0);
+    const snapshot = validateSnapshot(
+      serializeSnapshot([remote], DATASET_ID).files,
+      DATASET_ID,
+    );
+    const adopted = adoptCanonicalSnapshot(
+      db,
+      snapshot.tasks,
+      "0123456789012345678901234567890123456789",
+    );
+
+    expect(adopted.tasks).toStrictEqual([remote]);
+    expect(readCanonicalState(db).tasks).toStrictEqual([remote]);
+  });
+
+  it("rejects invalid candidate data before SQLite mutation", () => {
+    const before = readCanonicalState(db);
+    const bad = snapshotTask("0101", "Bad", 3);
+
+    expect(() =>
+      validateSnapshot(
+        new Map(
+          serializeSnapshot(
+            [{ ...bad, position: 0 }],
+            DATASET_ID,
+          ).files,
+        ).set(
+          `tasks/${bad.id}.json`,
+          `${JSON.stringify(bad, null, 2)}\n`,
+        ),
+        DATASET_ID,
+      ),
+    ).toThrow();
+
+    expect(readCanonicalState(db)).toStrictEqual(before);
+  });
+
+  it("rolls back an interrupted adoption and can retry", () => {
+    const remote = snapshotTask("0101", "Remote", 0);
+    const snapshot = validateSnapshot(
+      serializeSnapshot([remote], DATASET_ID).files,
+      DATASET_ID,
+    );
+    const before = readCanonicalState(db);
+
+    db.exec(`
+      CREATE TRIGGER inject_import_failure
+      BEFORE INSERT ON task
+      BEGIN
+        SELECT RAISE(ABORT, 'injected import failure');
+      END;
+    `);
+
+    expect(() =>
+      adoptCanonicalSnapshot(db, snapshot.tasks, "head-a"),
+    ).toThrow(/injected import failure/);
+    expect(readCanonicalState(db)).toStrictEqual(before);
+
+    db.exec("DROP TRIGGER inject_import_failure");
+    expect(
+      adoptCanonicalSnapshot(db, snapshot.tasks, "head-a").tasks,
+    ).toStrictEqual([remote]);
+  });
+});
