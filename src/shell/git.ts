@@ -370,12 +370,40 @@ export async function inspectPortableCandidate(
   config: GitAdapterConfig,
 ): Promise<PortableSnapshotCandidate | null> {
   assertAdapterPaths(config);
+
   const local = await readCurrentPortableSnapshot(config);
+  if (local !== null) {
+    return local;
+  }
+
   const remoteName = await discoverSynchronizationRemote(
     config.repository_path,
   );
   if (remoteName === null) {
-    return local;
+    return null;
+  }
+
+  const trackingRef = `refs/remotes/${remoteName}/jig-data`;
+  const trackedHead = await runGit(config.repository_path, [
+    "show-ref",
+    "--verify",
+    "--hash",
+    trackingRef,
+  ]);
+  if (trackedHead.exit_code === 0 && trackedHead.stdout.length > 0) {
+    const tracked = {
+      head: trackedHead.stdout,
+      snapshot: await readSnapshotAtRef(
+        config.repository_path,
+        trackingRef,
+      ),
+    };
+    await requireGit(config.repository_path, [
+      "update-ref",
+      DATA_REF,
+      tracked.head,
+    ]);
+    return tracked;
   }
 
   const advertised = await runGit(config.repository_path, [
@@ -388,10 +416,9 @@ export async function inspectPortableCandidate(
     advertised.exit_code !== 0 ||
     advertised.stdout.length === 0
   ) {
-    return local;
+    return null;
   }
 
-  const trackingRef = `refs/remotes/${remoteName}/jig-data`;
   const fetched = await runGit(config.repository_path, [
     "fetch",
     "--no-tags",
@@ -399,33 +426,20 @@ export async function inspectPortableCandidate(
     `refs/heads/jig-data:${trackingRef}`,
   ]);
   if (fetched.exit_code !== 0) {
-    return local;
+    return null;
   }
 
-  let remote: PortableSnapshotCandidate;
-  try {
-    const head = await requireGit(config.repository_path, [
-      "rev-parse",
+  const head = await requireGit(config.repository_path, [
+    "rev-parse",
+    trackingRef,
+  ]);
+  const remote = {
+    head,
+    snapshot: await readSnapshotAtRef(
+      config.repository_path,
       trackingRef,
-    ]);
-    remote = {
-      head,
-      snapshot: await readSnapshotAtRef(
-        config.repository_path,
-        trackingRef,
-      ),
-    };
-  } catch (error) {
-    if (local !== null) {
-      return local;
-    }
-    throw error;
-  }
-
-  if (local !== null) {
-    return local;
-  }
-
+    ),
+  };
   await requireGit(config.repository_path, [
     "update-ref",
     DATA_REF,
