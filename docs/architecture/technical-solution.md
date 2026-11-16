@@ -284,9 +284,17 @@ Presentation rules: consistent spacing and density, one primary action, accessib
 
 ## 6. Browser reminders
 
-A reminder is optional HH:mm on a scheduled date. The browser UI evaluates due outstanding tasks while Jig is open; it uses the device's local civil date/time, checks active reminders every **30 seconds** while the document is active, and rechecks immediately on tab visibility/focus. Browser timer throttling may delay delivery in hidden tabs; resume checks handle reminders that became due since this app session started. An eligible reminder produces an Astryx dismissible toast; an OS/browser notification is an optional permitted enhancement, not an acceptance dependency.
+A reminder is optional HH:mm on a scheduled date. The browser UI evaluates due outstanding Tasks while Jig is open using the device's local civil date/time and checks every **30 seconds**, with immediate recheck on focus/visibility changes. Browser timer throttling may delay delivery in hidden tabs.
 
-Keep the implementation bounded: no push sender, persistent scheduler, service worker notification daemon, background queue, or alert guarantee when Jig is closed or the machine sleeps. Delivery is best effort while the UI is running. A locally stored key (task ID + scheduled date + reminder time) suppresses repeated display on each timer tick and reload. On changing date/time, the new key becomes eligible; on completion it is no longer eligible. Suppression state remains device-local and cannot change Task completion or scheduled order. Only reminders due since the current app session began are eligible for catch-up on resume; do not replay stale reminders from earlier sessions or past dates as a flood on launch.
+Delivery has two presentation channels over the same reminder eligibility calculation:
+- when the document is visible, show the existing Astryx dismissible toast;
+- when the document is open but not visible and `Notification.permission === "granted"`, issue a browser `Notification` for the same reminder.
+
+Browser notification permission is requested only from an explicit user gesture, exposed through Settings. Do not call `Notification.requestPermission()` during startup, page load, or timer execution. Settings must show unsupported/default/granted/denied state honestly.
+
+Use one device-local delivery key `task ID + scheduled date + reminder time` for both channels. Mark the key delivered only after one channel is successfully dispatched. A notification uses the same key as its `tag` where supported, so browser replacement behavior cannot create repeated notifications. On rollover, `scheduled_date` changes while `reminder_time` stays the same, producing a new eligibility/delivery key for the rolled-forward date.
+
+Keep the implementation bounded: no push sender, persistent scheduler, service worker notification daemon, background queue, or alert guarantee when Jig/browser is closed or the machine sleeps. Delivery is best effort while the UI is running. On changing date/time, the new key becomes eligible; on completion it is no longer eligible. Suppression state remains device-local and cannot change Task completion or scheduled order. Only reminders due since the current app session began are eligible for catch-up; do not replay stale reminders from earlier sessions or past dates as a flood on launch.
 
 Failure to use system notifications must not suppress the in-app toast. Reminder messages are transient; failed persistence/synchronization messages require durable visible feedback instead of only a toast.
 
