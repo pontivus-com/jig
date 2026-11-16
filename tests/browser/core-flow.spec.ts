@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { resetCanonicalTasks } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
+  await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
 });
