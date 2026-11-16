@@ -18,6 +18,7 @@ import type {
   Task,
   TaskCommand,
 } from "../../src/core/task";
+import { formatCivilDate } from "./dates";
 
 interface TaskDraft {
   readonly title: string;
@@ -165,11 +166,15 @@ export function TaskEditor({
         <div className="jig-editor">
           <DialogHeader
             title={task === null ? "Add task" : "Edit task"}
-            subtitle={
-              task === null
-                ? "Start with a title. Everything else is optional."
-                : "Update only what changed."
-            }
+            subtitle={formatCivilDate(
+              task?.scheduled_date ?? initiatingDate,
+              {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              },
+            )}
             {...(isSaving ? {} : { onOpenChange })}
           />
 
@@ -205,6 +210,15 @@ export function TaskEditor({
               weekStartsOn="mon"
             />
 
+            <TextInput
+              label="Context"
+              value={draft.context}
+              onChange={(value) => update("context", value)}
+              isOptional
+              width="100%"
+              placeholder="Project, client, or place"
+            />
+
             <SegmentedControl
               label="Priority"
               value={draft.priority}
@@ -215,15 +229,6 @@ export function TaskEditor({
               <SegmentedControlItem value="NORMAL" label="Normal" />
               <SegmentedControlItem value="LOW" label="Low" />
             </SegmentedControl>
-
-            <TextInput
-              label="Context"
-              value={draft.context}
-              onChange={(value) => update("context", value)}
-              isOptional
-              width="100%"
-              placeholder="Project, client, or place"
-            />
 
             <TimeInput
               label="Reminder"
