@@ -19,7 +19,7 @@ import {
   serializeSnapshot,
   writePortableSnapshot,
 } from "../../src/shell/git";
-import { DATA_REF } from "../../src/shell/sqlite";
+const DATA_REF = "refs/heads/jig-data";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 const roots: string[] = [];
