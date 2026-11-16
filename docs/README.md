@@ -1,25 +1,31 @@
 # Jig documentation
 
-**Status:** Initial product and decision-complete desktop technical baseline, 2026-11-16. Implementation is not yet built or certified.
+**Status:** Proposed product, functional, technical and UI solution design baseline (2026-11-16). Runtime, installer, service and browser implementation remain unbuilt and unverified.
 
-Jig is a lightweight, local-first, just-in-time daily planner. A Jig item is a dated intention or reminder, not the authoritative definition of the work it references. Jig helps the user get on track without making the plan rigid.
+Jig is a small, local-first, just-in-time daily planner. It schedules attention rather than duplicating the underlying project work. All planning data must live under the Jig directory of the user-selected personal Git repository, with a lightweight local desktop service and automatic Git sync.
 
-## Reading order and concern ownership
+## Canonical reading order
 
-1. [Product definition](product/product-definition.md) — **product intent:** problem, job, scope, exclusions and MVP outcomes.
-2. [Planning and UX functional design](requirements/planning-workbench.md) — **functional behavior:** week/day views, task data, priorities, drag-and-drop, reminders, completion, responsiveness and acceptance scenarios.
-3. [Technical solution design](architecture/technical-solution.md) — **technical realization:** exact dependencies, UI ownership, functional core, SQLite task authority, Git snapshot/fast-forward contract, notifications, local security and verification.
+1. [Product definition](product/product-definition.md) — intent, product boundary and MVP outcomes.
+2. [Planning and UX functional requirements](requirements/planning-workbench.md) — observable JIG-FR-01–20 behaviour, including onboarding/installation, repository ownership, the `jig` command, background availability and automatic synchronization.
+3. [Technical solution](architecture/technical-solution.md) — selected dependencies and exact application architecture, installer/user service, canonical Task, SQLite in the selected repository, isolated Jig Git branch/worktree, background sync, failure/recovery and verification.
+4. [UI solution and versioned reference mockups](design/ui-solution.md) — screen hierarchy, desktop/mobile responsive composition, Astryx/dnd-kit ownership, design corrections and browser acceptance.
 
-The product definition governs intent; the functional design specifies observable behavior; technical design must implement both without redefining them. This is a small documentation baseline, not an invitation to copy Order's governance, lifecycle or architecture wholesale.
+Functional requirements define *what* users can observe. Technical solution owns *how* data and runtime behave. UI solution owns *how* users see and manipulate those functions. No part of the design inherits Order's workflow/lifecycle domain, creates DTO hierarchies, or introduces duplicate task authority.
 
-## Design validation status
+## Screen references
 
-The earlier mockups, originally labeled **Day**, were accepted as a functional UX starting point. Their layout illustrates date buckets, drag-and-drop ordering, a compact task editor and mobile-first recomposition. The app's established name is **Jig**. Mockup colors, branding, navigation duplication, illustrative dates and URLs are not canonical.
+The four versioned SVGs under `design/reference/` reconstruct the approved earlier Day-labelled mockup layouts with Jig naming and a restrained Astryx-compatible presentation. Original raster source filenames and hashes are documented in [UI solution §1](design/ui-solution.md). They are not claimed to be byte-identical copies of the originals.
 
-The visual foundation to validate is Order's current Astryx-based compact UI. Jig should reuse compatible public foundations and interaction patterns; the calendar-Kanban board itself is Jig-specific.
+## Verification and implementation boundary
 
-## Design closure and verification boundary
+The design is sufficiently specified to derive an implementation plan, but it is **not certified**. The implementation must prove:
 
-The [technical solution](architecture/technical-solution.md) selects Bun, React, Astryx, dnd-kit, SQLite, and a private Git task-snapshot format, with safe sequential fast-forward synchronization. It explicitly defers independent phone installation and automatic merging of concurrent device edits. Those capabilities must not be claimed by the desktop MVP.
+- One-script, non-root Linux installation into a user-selected existing Git repository and a functioning `jig` launcher/user service.
+- SQLite database and versioned Task records contained in the selected personal repo, never the public Jig source repo.
+- No automatic changes to unrelated documents, branches or staging in the selected repository.
+- Immediate local SQLite saves plus automatic background export/commit/fetch/push/retry, including when the browser is closed.
+- Explicit local-only, pending, synchronized and blocked status; no silent data loss or divergent-history overwrite.
+- All 20 functional requirements, pinned Astryx/dnd-kit cross-date gestures, responsive UI behavior and measured lightweight idle operation.
 
-Next, derive a minimal implementation plan, then verify the exact dependency integration, task operations, crash recovery, Git transfer, and responsive/browser acceptance matrix. Keep personal planning data separate from this public source repository.
+Independent phone installation and safe simultaneous offline merge remain deferred. Do not claim they work solely because the mobile layout and data format are designed.
