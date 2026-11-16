@@ -35,7 +35,7 @@ export function TaskInspector({
   }
 
   return (
-    <aside className="jig-task-inspector" aria-label={\`Task details for \${task.title}\`}>
+    <aside className="jig-task-inspector" aria-label={`Task details for ${task.title}`}>
       <div className="jig-task-inspector-heading">
         <div>
           <p className="jig-eyebrow">Selected task</p>
