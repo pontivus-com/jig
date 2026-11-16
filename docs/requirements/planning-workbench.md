@@ -30,7 +30,7 @@ Jig supports evening planning of the next day, morning planning, and unrestricte
 
 **Completion:** explicit transition to done with a completion timestamp. Completion is distinct from scheduled date. Reopening makes the same task outstanding again.
 
-**Carry-over:** derived presentation state for an outstanding task whose scheduled date is earlier than the selected date. Carry-over never changes the task's scheduled date and is not a separate persisted status or ordering authority.
+**Rollover:** persisted daily movement of an outstanding task whose scheduled date is earlier than the current local civil date. Rollover changes the task's `scheduled_date` to the current local civil date and places the card into that day's persisted outstanding order. It is not a separate status flag.
 
 **Deletion:** confirmed permanent removal of a Task from Jig. Deletion creates no soft-delete state, trash record, tombstone, or application-level undo history. If an earlier exported version exists, repository Git history is the recovery mechanism.
 
@@ -46,7 +46,7 @@ Jig supports evening planning of the next day, morning planning, and unrestricte
 | JIG-FR-06 | Preserve manual intent | Changing a task's priority after creation changes its indicator only. It does not reorder an existing day. Manual drag order remains authoritative. |
 | JIG-FR-07 | Flexible modifications | Title, date, priority, context, reference, note and reminder can be edited without an approval or workflow gate. |
 | JIG-FR-08 | Complete and reopen | Completion removes the task from the outstanding sequence, records when it completed, and makes it visible in completed/history. Reopen restores the same task identity and schedule. |
-| JIG-FR-09 | Carry forward unfinished past work | An outstanding Task whose scheduled date precedes the selected Day remains visible on subsequent Day views until completed, explicitly rescheduled or deleted. It retains its original scheduled date and is marked with a subtle but scan-visible carry-over treatment including that originating date; no silent auto-rollover occurs. |
+| JIG-FR-09 | Roll unfinished work into the current day | When Jig observes that the local civil date has advanced, every outstanding Task whose `scheduled_date` is earlier than the current local civil date is persistently moved into the current day's bucket by changing its `scheduled_date`. The same moved card must therefore appear in the current-day bucket in Week, Day and every other view. Completed Tasks are never rolled forward. |
 | JIG-FR-10 | In-app reminders | While Jig is open, a due task reminder displays an unobtrusive toast; a system/browser notification is optional when supported and permitted. There is no background notification delivery contract. |
 | JIG-FR-11 | Access original context | Open/copy a provided reference without duplicating project execution or source content into Jig. |
 | JIG-FR-12 | Report honest outcomes | On persistence failure, the UI does not claim that the change was saved; the operator can understand and recover from the failure. |
@@ -71,13 +71,27 @@ This keeps priority useful on capture without introducing a hidden automatic sch
 
 The selected date's completed area shows items scheduled for that date which are now done. The history view can group items by actual completion date. These are different queries over the same underlying completion fact. Reopening places the task back into the outstanding list on its scheduled date; any needed ordering adjustment is explicit.
 
-### Carry-over presentation and ordering
+### Daily rollover and ordering
 
-The Day attention sequence is a derived concatenation, not a second persisted order. Outstanding tasks from dates earlier than the selected date appear first, ordered by original scheduled date from oldest to newest and then by each date's persisted position. Tasks scheduled for the selected date follow in their persisted position order. Week remains an actual scheduled-date view and does not duplicate one Task into later date columns.
+Rollover is a persisted planning mutation, not a view-only projection.
 
-Every carried-over row keeps its normal task structure but receives a subtle, readily scannable treatment such as a restrained surface/edge difference plus text equivalent to **Carried over · Thu 19**. Color alone cannot carry this meaning. The originating date is always the Task's actual scheduled date, not merely “yesterday.” Carry-over is derived from `completed = false` and `scheduled date < selected date`; it is never stored as a status or flag.
+When Jig starts, resumes, or otherwise detects that the local civil date is later than a Task's scheduled date, every outstanding overdue Task is moved to the current local civil date. This updates the canonical Task itself, so Week, Day, narrow/mobile views, restart and synchronization all observe the same bucket.
 
-Merely viewing a carried-over Task on a later Day does not reschedule it. Its reminder remains tied to the original scheduled date and is not re-armed or shifted forward by carry-over. Dragging a carried-over Task into the selected-date sequence is an explicit reschedule to that selected date and exact drop position. Using a date action/editor is also an explicit reschedule and uses the normal priority-assisted insertion rule.
+Rollover ordering is deterministic:
+
+1. overdue Tasks are collected oldest scheduled date first;
+2. within each source date, preserve persisted position;
+3. place that rolled-forward sequence at the beginning of the current day's outstanding sequence;
+4. preserve the existing relative order of Tasks already scheduled for the current day after the rolled-forward sequence;
+5. rewrite positions contiguously from zero.
+
+If Jig was not running for multiple days, one catch-up mutation moves every still-outstanding Task with `scheduled_date < current_local_date` directly to `current_local_date`. Do not create intermediate historical day mutations.
+
+Because the scheduled date physically changes, Week must show the card in the new current-day column and must no longer show it in the old column.
+
+A reminder is part of the scheduled Task. When rollover changes the Task's scheduled date, its existing reminder time remains the same time-of-day and therefore applies to the new rolled-forward date. Do not preserve or display an obsolete originating reminder date unless a separate future product requirement introduces explicit schedule history.
+
+Completed Tasks are never rolled forward. Manually moving a Task to another date remains explicit and uses the existing move/edit semantics.
 
 ## 4. Desktop spatial UX — MVP
 
