@@ -23,10 +23,10 @@ Illustrative item: **Thursday — Legal app: TTA workflow remediation**. Jig own
 ## 3. Audience and operating conditions
 
 - Initial user: one person managing granular commitments across several work contexts and personal activities.
-- Initial installation and main use: desktop browser accessing a locally installed application.
+- Initial installation and main use: Linux desktop browser backed by a minimal local user service, launched with `jig` or kept running by the user's service manager.
 - Design from the beginning: responsive, mobile-first information hierarchy and touch-aware interaction model.
 - Independent phone installation and Git synchronization are future delivery needs. Desktop MVP must not make the canonical data or interaction design incompatible with them.
-- Local/offline work is fundamental; no third-party online service is needed for ordinary planning.
+- Local/offline work is fundamental; no third-party online service is needed for ordinary planning. The user explicitly chooses an existing personal/organization Git repository as Jig's planning-data home. Its canonical records and operational SQLite database live under a dedicated Jig directory inside that repository, never in Jig's public source repository.
 
 ## 4. MVP outcomes
 
@@ -39,7 +39,9 @@ An operator must be able to:
 5. optionally mark importance and set a reminder, without estimating duration;
 6. complete or reopen work and review completed versus unfinished items;
 7. follow an optional reference to the actual project or work system;
-8. retain the plan locally and have a credible Git-compatible portability/backup/sync path.
+8. retain all planning state under the selected personal Git repository and synchronize portable task data automatically when a Git remote is available;
+9. install and configure Jig in a single guided script, including repository selection and a background service;
+10. launch or reopen Jig through a simple `jig` desktop command, with fast idle-to-use interaction and a low background resource footprint.
 
 ## 5. Product principles
 
@@ -49,7 +51,9 @@ An operator must be able to:
 - **Unrestricted adaptation:** no approvals, fixed WIP rules, forced focus states, or automatic reordering of an established plan.
 - **No duplicated authority:** the planning card refers outward; it does not try to reproduce Order, SPAN, Legal or other project artifacts.
 - **History without ceremony:** completed work remains inspectable; unfinished work never silently disappears.
-- **Portable ownership:** a user controls local planning data and can back it up or synchronize through Git without a required hosted Jig service.
+- **Portable ownership:** a user-selected Git repository contains Jig's local database and Git-tracked logical task records in an isolated Jig area; the software's source repository contains no personal task data.
+- **Low-friction lifecycle:** one installer configures the repository, local executable and Linux user service; saves and normal Git synchronization are automatic rather than a repeated user chore.
+- **Non-invasive coexistence:** Jig does not stage, commit, overwrite, merge or publish unrelated content in the selected repository.
 
 ## 6. Deliberate exclusions
 
