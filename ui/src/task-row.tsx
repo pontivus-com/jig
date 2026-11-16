@@ -14,6 +14,7 @@ export interface TaskRowProps {
   readonly isSortable?: boolean | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
+  readonly onSelect?: (() => void) | undefined;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
   readonly onMoveToDate?: (() => void) | undefined;
@@ -149,6 +150,7 @@ export function TaskRow({
   isSortable = false,
   onToggleComplete,
   onEdit,
+  onSelect,
   onMoveUp,
   onMoveDown,
   onMoveToDate,
@@ -167,6 +169,7 @@ export function TaskRow({
         .filter(Boolean)
         .join(" ")}
       data-task-id={task.id}
+      onClick={onSelect}
       tabIndex={isSortable ? 0 : undefined}
       aria-label={isSortable ? `Task ${task.title}. Drag to move.` : undefined}
     >
