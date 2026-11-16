@@ -101,7 +101,11 @@ test("responsive reflow preserves an open editor draft and appearance remains pr
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.locator(".jig-mobile-destination-menu > summary").click();
+  await page
+    .locator(".jig-mobile-destination-panel")
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   await page.getByText("Dark", { exact: true }).click();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("jig-theme"))).toBe("dark");
   const after = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
