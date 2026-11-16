@@ -36,8 +36,10 @@ async function syncNow(page: Page): Promise<void> {
     const response = await fetch("/api/v1/sync", {
       method: "POST",
       headers: {
+        "content-type": "application/json",
         "x-jig-write-token": token,
       },
+      body: "{}",
     });
     if (!response.ok) {
       throw new Error(
