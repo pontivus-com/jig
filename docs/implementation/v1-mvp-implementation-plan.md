@@ -252,7 +252,7 @@ Build Week / Day / History / Settings navigation with Today as a Day shortcut. `
 
 Use plain browser `fetch`; do not add React Query or another state framework. Hold only selected date/task, modal draft, drag preview and theme preference as presentation state.
 
-Implement System/Light/Dark using Astryx Neutral semantic roles and local browser preference. Do not copy Order's color literals or private wrappers.
+Implement System/Light/Dark through one Jig theme derived from Astryx Neutral. Raw Jig brand primitives are centralized in `ui/src/theme.css`; `ui/src/theme.ts` maps them to public Astryx semantic roles. Do not copy Order color literals, create per-feature palettes, or introduce private wrappers.
 
 **Gate:** navigation makes no Task mutation; canonical reads/commands use one HTTP client; a forced 409 refetches current canonical state without a blind retry or draft loss; System follows media preference; explicit Light/Dark survives browser reload without entering Git/Task data.
 
