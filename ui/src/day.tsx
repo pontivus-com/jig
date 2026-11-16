@@ -10,7 +10,7 @@ import {
   outstandingForDate,
 } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
-import { formatCivilDate } from "./dates";
+import { formatCivilDate, formatReminderTime } from "./dates";
 import { DateStrip } from "./date-strip";
 import { SortableTaskRow, TaskRow } from "./task-row";
 
@@ -178,6 +178,15 @@ export function DayTaskLists({
   );
 }
 
+function isSafeWebReference(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 function TaskInspector({
   task,
   onEdit,
@@ -221,8 +230,38 @@ function TaskInspector({
         <dl className="jig-task-inspector-details">
           {task.context === null ? null : <><dt>Context</dt><dd>{task.context}</dd></>}
           <dt>Priority</dt><dd>{task.priority.toLowerCase()}</dd>
-          {task.reminder_time === null ? null : <><dt>Reminder</dt><dd>{task.reminder_time}</dd></>}
-          {task.reference === null ? null : <><dt>Reference</dt><dd>{task.reference}</dd></>}
+          {task.reminder_time === null ? null : (
+            <>
+              <dt>Reminder</dt>
+              <dd>{formatReminderTime(task.reminder_time)}</dd>
+            </>
+          )}
+          {task.reference === null ? null : (
+            <>
+              <dt>Reference</dt>
+              <dd>
+                {isSafeWebReference(task.reference) ? (
+                  <a
+                    href={task.reference}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open reference
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    className="jig-copy-reference"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(task.reference ?? "");
+                    }}
+                  >
+                    Copy reference
+                  </button>
+                )}
+              </dd>
+            </>
+          )}
           {task.note === null ? null : <><dt>Notes</dt><dd>{task.note}</dd></>}
         </dl>
         <div className="jig-task-inspector-actions">
