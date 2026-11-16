@@ -39,7 +39,7 @@ The original PNG bytes are **not** yet stored in the repository; their hashes an
 The initial desktop IA has exactly **Week**, **Day**, **History**, and **Settings** as meaningful destinations. **Today** is a shortcut that selects the current local civil date within Day, not a separate destination. A separate **Board** destination is redundant: Week already is the dated Kanban board. The original mockups' Plan/Day/Board duplicates are not required screens.
 
 - **Week** is the default productive surface: Monday–Sunday buckets, current/selected date emphasis, per-day ordered outstanding tasks, quick-add scoped to each date and cross-day drop targets. Long days scroll without losing date headings.
-- **Day** is a focused selected date with one attention sequence: carried-over earlier outstanding Tasks followed by Tasks scheduled for the selected date, then a compact Completed group and on-demand task detail. Carried-over Tasks retain their original scheduled date and receive a subtle but scan-visible originating-date treatment. The Today shortcut selects the current local civil date; changing selection never reschedules tasks.
+- **Day** is a focused selected date with one canonical outstanding sequence for that date after daily rollover, then a compact Completed group and on-demand task detail. The Today shortcut selects the current local civil date; changing selection itself never reschedules tasks.
 - **History** is a lightweight dated list grouped by actual completion date, not a dashboard. Completed items may also be viewed under their originally scheduled date. Each completed row has an explicit open/actions affordance so the same Task can be reopened or permanently deleted after confirmation.
 - **Settings** exposes theme, configured repository path (read-only unless explicit migration), service/autosync health, remote connection, and diagnostics. Sync now/retry, diagnostics and repository migration use the shell operational endpoints defined by Technical solution §3.2; they never become Task commands or Git-conflict workflow. It does not expose Order projects, Git history/merge/conflict workflows, or developer tooling.
 - **No separately persisted boards, projects or queues.** Context is a short optional Task label and may be displayed or used as a filter, not an independent domain.
@@ -73,7 +73,7 @@ Visual rules:
 3. **One primary action per active surface.** Quick Add is prominent at week level. A task detail editor has a single Save control. Completion uses an independently accessible checkbox/command.
 4. **Clear current date and visible focus.** Selection/current, hover, focus, and save status remain semantically distinguishable without color alone.
 5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/focus emphasis. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
-6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, carry-over, completion, save and sync semantics must remain clear in both themes without relying on color alone.
+6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics must remain clear in both themes without relying on color alone.
 7. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, selected date or pending form draft changes as a side effect of a breakpoint.
 8. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable, but the final production palette is the canonical Jig theme. No duplicate dark-mode structural mockup set is required.
 
@@ -91,13 +91,13 @@ The original mockup's additional Board link, excessive Normal badges, green card
 
 ### 4.2 Desktop Day
 
-A date strip permits switching selected days. The attention list begins with outstanding Tasks from earlier scheduled dates, ordered by originating date and their persisted per-date position, followed by Tasks scheduled for the selected date. Carry-over rows keep the normal task structure but add a restrained surface/edge distinction plus an explicit label such as **Carried over · Thu 19**; this must be obvious when scanning yet visually secondary to title/date and cannot rely on color alone. Any reminder shown on a carried-over row remains labeled with its originating date and must not imply that the old reminder has become due again on the selected Day. Completed is compact and separately expandable. An optional right-hand inspector shows the selected Task, title, context, priority, reminder, reference, note and actions to complete/reopen, edit, move date or Delete; Delete is destructive and requires confirmation before mutation.
+A date strip permits switching selected days. The attention list shows the canonical outstanding sequence scheduled for the selected date after service-owned daily rollover. No derived carry-over prefix or originating-date badge is rendered. Completed is compact and separately expandable. An optional right-hand inspector shows the selected Task, title, context, priority, reminder, reference, note and actions to complete/reopen, edit, move date or Delete; Delete is destructive and requires confirmation before mutation.
 
 Day view and Week view query the **same Task**; opening the inspector does not create a second editable Task object. Preserve position changes and reload state. A due reminder may appear in an Astryx toast, not as a new work item.
 
 ### 4.3 Mobile narrow Day
 
-Below the single application-owned **48rem / 768 CSS px** breakpoint, the week board becomes a horizontal seven-date strip plus one Day attention list. Preserve the same carried-over originating-date treatment, prominent title-first tasks, touch-sized checkbox and action targets, drag handles where touch reordering is supported and a non-drag move-to-date command. A persistent Quick Add target may move to the thumb-reachable region, but must not obscure the last item or reminder feedback.
+Below the single application-owned **48rem / 768 CSS px** breakpoint, the week board becomes a horizontal seven-date strip plus one Day attention list. Preserve prominent title-first task cards, touch-sized checkbox and action targets, whole-card drag where supported and a non-drag move-to-date command. A persistent Quick Add target may move to the thumb-reachable region, but must not obscure the last item or reminder feedback.
 
 Desktop MVP requires responsive semantic continuity and basic mobile-sized layout validation. It does **not** require installation as a self-contained phone app, native Git commands or background push notifications.
 
@@ -113,8 +113,8 @@ Use explicit Save/Cancel, persistent form errors on invalid data or server refus
 |---|---|
 | Shell, navigation, buttons, icon buttons, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
 | Sortable rows, drop zones, drag overlays, keyboard drag, pointer/touch gesture lifecycle | @dnd-kit/react only; do not activate Astryx List createReorderable on the same row |
-| Week/date bucket composition, Day carry-over treatment/concatenation, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
-| Scheduled date, ordering, carry-over query, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
+| Week/date bucket composition, Day selected-date sequence, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
+| Scheduled date, ordering, daily rollover, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
 | Task reads/writes and generic repository synchronization status | Bun service with SQLite plus isolated repository integration adapter |
 | Reminder due eligibility and toast presentation while browser is open | Browser-side timer + Astryx useToast; no background sender |
 
@@ -131,7 +131,7 @@ Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the sa
 | Cross-day drag | Destination and position persist, source loses item, empty date works |
 | Midday edits | Metadata/priority edits preserve manual ordering |
 | Completion | Task leaves active list, keeps scheduled date and actual completion time/history |
-| Carry-over | Earlier unfinished Task remains in the Day attention list with a subtle originating-date marker; merely viewing it never changes scheduled date; explicit drag into selected-date sequence reschedules it |
+| Daily rollover | Earlier unfinished Task is automatically moved into the current local date by changing `scheduled_date`; the same moved card appears in the current bucket in Week and Day |
 | Delete | Cancelled confirmation makes no mutation; confirmed deletion removes outstanding/completed Task from all current views and remains deleted after reload/Git round trip |
 | Responsive reflow | No loss of selected date, task, open editor draft or outstanding modifications |
 | Keyboard and touch | No hover-only essential actions; non-drag alternatives and visible focus |
