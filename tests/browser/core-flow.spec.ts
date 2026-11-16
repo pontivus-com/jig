@@ -98,9 +98,34 @@ test("responsive reflow preserves an open editor draft and appearance remains pr
   expect(after).toEqual(before);
 });
 
-test("System, Light and Dark remain presentation-only and preserve the same Settings semantics", async ({
+test("System, Light and Dark use the canonical Jig theme and remain presentation-only", async ({
   page,
 }) => {
+  await expect(page.locator(".jig-brand-mark")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        document.documentElement.getAttribute("data-astryx-theme"),
+      ),
+    )
+    .toBe("jig");
+
+  const resolvedColors = async (): Promise<{
+    background: string;
+    accent: string;
+  }> =>
+    page.evaluate(() => {
+      const probe = document.createElement("div");
+      probe.style.color = "var(--color-accent)";
+      document.body.append(probe);
+      const accent = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        background: getComputedStyle(document.body).backgroundColor,
+        accent,
+      };
+    });
+
   const before = await page.evaluate(async () =>
     fetch("/api/v1/tasks").then((response) => response.json()),
   );
@@ -129,6 +154,23 @@ test("System, Light and Dark remain presentation-only and preserve the same Sett
         page.evaluate(() => localStorage.getItem("jig-theme")),
       )
       .toBe(stored);
+
+    if (label === "Light") {
+      await expect
+        .poll(() => resolvedColors())
+        .toEqual({
+          background: "rgb(247, 244, 239)",
+          accent: "rgb(184, 108, 0)",
+        });
+    }
+    if (label === "Dark") {
+      await expect
+        .poll(() => resolvedColors())
+        .toEqual({
+          background: "rgb(11, 20, 38)",
+          accent: "rgb(245, 158, 11)",
+        });
+    }
   }
 
   const after = await page.evaluate(async () =>
