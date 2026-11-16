@@ -302,9 +302,42 @@ async function discoverSynchronizationRemote(
     );
   }
   const remotes = result.stdout.split("\n").filter(Boolean);
-  if (remotes.includes("origin")) {
-    return "origin";
+  if (remotes.length === 0) {
+    return null;
   }
+
+  const pushDefault = await runGit(repositoryPath, [
+    "config",
+    "--get",
+    "remote.pushDefault",
+  ]);
+  if (
+    pushDefault.exit_code === 0 &&
+    remotes.includes(pushDefault.stdout)
+  ) {
+    return pushDefault.stdout;
+  }
+
+  const branch = await runGit(repositoryPath, [
+    "symbolic-ref",
+    "--quiet",
+    "--short",
+    "HEAD",
+  ]);
+  if (branch.exit_code === 0 && branch.stdout.length > 0) {
+    const branchRemote = await runGit(repositoryPath, [
+      "config",
+      "--get",
+      `branch.${branch.stdout}.remote`,
+    ]);
+    if (
+      branchRemote.exit_code === 0 &&
+      remotes.includes(branchRemote.stdout)
+    ) {
+      return branchRemote.stdout;
+    }
+  }
+
   return remotes.length === 1 ? remotes[0] ?? null : null;
 }
 
