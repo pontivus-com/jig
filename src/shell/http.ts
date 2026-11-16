@@ -39,6 +39,7 @@ export interface HttpDependencies {
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
   readonly trigger_sync: () => Promise<RepositoryStatus>;
+  readonly ensure_current_day_rollover: () => void;
   readonly on_task_mutation: () => void;
 }
 
@@ -385,7 +386,12 @@ export function createHttpHandler(
     const { pathname } = url;
 
     if (request.method === "GET" && pathname === "/api/v1/tasks") {
-      return json(readCanonicalState(dependencies.db));
+      try {
+        dependencies.ensure_current_day_rollover();
+        return json(readCanonicalState(dependencies.db));
+      } catch (error) {
+        return errorResponse(error);
+      }
     }
     if (request.method === "GET" && pathname === "/api/v1/status") {
       return json(dependencies.get_status());
@@ -433,6 +439,7 @@ export function createHttpHandler(
             );
           }
 
+          dependencies.ensure_current_day_rollover();
           const result = applyTaskCommand(
             dependencies.db,
             parseCommand(body.command),
