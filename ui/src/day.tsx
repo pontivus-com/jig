@@ -2,6 +2,7 @@ import {
   Button,
   List,
 } from "@astryxdesign/core";
+import type { ReactNode } from "react";
 import type { Task } from "../../src/core/task";
 import {
   completedForScheduledDate,
@@ -88,7 +89,10 @@ export function DayTaskLists({
   onMoveToDate,
   onToggleComplete,
   onMove,
-}: Omit<DayViewProps, "onAdd" | "onSelectDate">): React.ReactElement {
+}: Omit<
+  DayViewProps,
+  "onAdd" | "onSelectDate" | "onPrevious" | "onToday" | "onNext" | "statusControl"
+>): React.ReactElement {
   const active = outstandingForDate(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
 
@@ -155,6 +159,10 @@ export function DayView({
   selectedDate,
   onAdd,
   onSelectDate,
+  onPrevious,
+  onToday,
+  onNext,
+  statusControl,
   ...listProps
 }: DayViewProps): React.ReactElement {
   return (
@@ -171,11 +179,17 @@ export function DayView({
             })}
           </h1>
         </div>
-        <Button
-          label="Add task"
-          variant="primary"
-          onClick={() => onAdd(selectedDate)}
-        />
+        <div className="jig-view-actions">
+          <Button label="Previous" variant="ghost" size="sm" onClick={onPrevious} />
+          <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
+          <Button label="Next" variant="ghost" size="sm" onClick={onNext} />
+          {statusControl}
+          <Button
+            label="Add task"
+            variant="primary"
+            onClick={() => onAdd(selectedDate)}
+          />
+        </div>
       </div>
 
       <DateStrip
