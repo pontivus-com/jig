@@ -1,0 +1,28 @@
+@layer reset, astryx-base, astryx-theme, jig;
+
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/theme-neutral/theme.css";
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background-body);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.jig-bootstrap {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: var(--spacing-6);
+}
