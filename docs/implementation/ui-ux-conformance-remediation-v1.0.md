@@ -137,6 +137,47 @@ It must:
 - not claim synchronized before service status does;
 - not expose Git topology.
 
+## 3A. Phase B0 — restore everyday carry-over continuity
+
+This is a functional blocker and must land before or with the shell refactor.
+
+### B0.1 — current Day is the normal planning entry surface
+
+Change application initialization so a fresh Jig UI session opens:
+- destination: Day;
+- selected date: current local civil date.
+
+Do not silently change any Task's `scheduled_date`.
+
+Week remains reachable as the seven-day scheduled-date board.
+
+### B0.2 — carry-over must be visible immediately on fresh open
+
+On a fresh page/session with an outstanding Task scheduled before today:
+- load canonical state;
+- render today's Day attention sequence;
+- show the prior-date Task as carried over without any navigation action;
+- preserve its original scheduled date.
+
+### B0.3 — update canonical UX wording
+
+Where `ui-solution.md` currently describes Week as the default productive surface, revise it to distinguish:
+- **Day/current date** = default operational entry and continuity surface;
+- **Week** = principal weekly planning/rearrangement surface.
+
+This does not reduce Week's importance; it ensures yesterday's unfinished work cannot be missed when Jig is opened today.
+
+### B0.4 — regression tests
+
+Add browser coverage that:
+1. creates/persists an outstanding yesterday Task;
+2. starts from a fresh page load with no prior destination state;
+3. asserts Day/current date is the initial destination;
+4. asserts the Task is visible with carry-over treatment;
+5. asserts the Task's stored `scheduled_date` is still yesterday.
+
+Keep the existing explicit Day carry-over test as lower-level coverage.
+
 ## 4. Phase C — canonical task-row composition
 
 Create one cohesive Task row composition in `ui/src/task-row.tsx` using Astryx primitives.
