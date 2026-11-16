@@ -133,27 +133,19 @@ export function SettingsView({
         </div>
       </section>
 
-      <section className="jig-settings-section" aria-labelledby="sync-heading">
-        <h2 id="sync-heading">Repository synchronization</h2>
-        <p>{statusMessage(status)}</p>
+      <section className="jig-settings-section" aria-labelledby="planning-data-heading">
+        <h2 id="planning-data-heading">Planning data</h2>
         <dl className="jig-diagnostics">
           <div>
             <dt>Repository</dt>
             <dd>{status?.repository_path ?? "Unavailable"}</dd>
           </div>
-          <div>
-            <dt>Local database</dt>
-            <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
-          </div>
-          <div>
-            <dt>Repository adapter</dt>
-            <dd>
-              {diagnostics?.repository_adapter_healthy
-                ? "Healthy"
-                : "Needs attention"}
-            </dd>
-          </div>
         </dl>
+      </section>
+
+      <section className="jig-settings-section" aria-labelledby="sync-heading">
+        <h2 id="sync-heading">Synchronization</h2>
+        <p>{statusMessage(status)}</p>
         <Button
           label="Sync now"
           variant="secondary"
@@ -162,6 +154,28 @@ export function SettingsView({
             void onSync();
           }}
         />
+      </section>
+
+      <section className="jig-settings-section" aria-labelledby="diagnostics-heading">
+        <h2 id="diagnostics-heading">Diagnostics</h2>
+        <dl className="jig-diagnostics">
+          <div>
+            <dt>Jig service</dt>
+            <dd>{status === null ? "Unavailable" : "Healthy"}</dd>
+          </div>
+          <div>
+            <dt>Local database</dt>
+            <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
+          </div>
+          <div>
+            <dt>Portable data</dt>
+            <dd>
+              {diagnostics?.repository_adapter_healthy
+                ? "Healthy"
+                : "Needs attention"}
+            </dd>
+          </div>
+        </dl>
       </section>
 
     </div>
