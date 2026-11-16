@@ -11,6 +11,7 @@ export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragActivatorRef?: Ref<HTMLDivElement> | undefined;
   readonly isSortable?: boolean | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -170,6 +171,7 @@ export function TaskRow({
   task,
   isSelected = false,
   rowRef,
+  dragActivatorRef,
   isSortable = false,
   onToggleComplete,
   onEdit,
@@ -211,23 +213,32 @@ export function TaskRow({
           />
         </div>
 
-        {isSortable ? (
-          <span className="jig-task-drag-handle" aria-hidden="true">
-            ≡
-          </span>
-        ) : null}
+        <div
+          ref={dragActivatorRef}
+          className={
+            isSortable
+              ? "jig-task-drag-surface jig-task-drag-surface-sortable"
+              : "jig-task-drag-surface"
+          }
+        >
+          {isSortable ? (
+            <span className="jig-task-drag-handle" aria-hidden="true">
+              ≡
+            </span>
+          ) : null}
 
-        <div className="jig-task-card-content">
-          <span
-            className={
-              completed
-                ? "jig-task-title jig-task-title-completed"
-                : "jig-task-title"
-            }
-          >
-            {task.title}
-          </span>
-          <TaskMetadata task={task} />
+          <div className="jig-task-card-content">
+            <span
+              className={
+                completed
+                  ? "jig-task-title jig-task-title-completed"
+                  : "jig-task-title"
+              }
+            >
+              {task.title}
+            </span>
+            <TaskMetadata task={task} />
+          </div>
         </div>
 
         <TaskActionMenu
@@ -253,7 +264,7 @@ function setRef<T>(ref: Ref<T>, node: T | null): void {
 }
 
 export interface SortableTaskRowProps
-  extends Omit<TaskRowProps, "rowRef" | "isSortable"> {
+  extends Omit<TaskRowProps, "rowRef" | "dragActivatorRef" | "isSortable"> {
   readonly index: number;
   readonly group: string;
 }
@@ -273,17 +284,15 @@ export function SortableTaskRow({
   });
 
   const sortableRef = sortable.ref as Ref<HTMLLIElement>;
-  const activatorRef = sortable.handleRef as Ref<HTMLLIElement>;
+  const activatorRef = sortable.handleRef as Ref<HTMLDivElement>;
 
   return (
     <TaskRow
       {...rowProps}
       task={task}
       isSortable
-      rowRef={(node) => {
-        setRef(sortableRef, node);
-        setRef(activatorRef, node);
-      }}
+      rowRef={sortableRef}
+      dragActivatorRef={activatorRef}
     />
   );
 }
