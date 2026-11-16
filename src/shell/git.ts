@@ -39,7 +39,11 @@ export interface PortableSnapshot {
 
 export interface GitAdapterConfig {
   readonly repository_path: string;
-  readonly worktree_path: string;
+}
+
+export interface PortableSnapshotCandidate {
+  readonly head: string;
+  readonly snapshot: PortableSnapshot;
 }
 
 export interface GitCommandResult {
@@ -235,21 +239,14 @@ export function validateSnapshot(
 }
 
 function assertAdapterPaths(config: GitAdapterConfig): void {
-  if (!isAbsolute(config.repository_path) || !isAbsolute(config.worktree_path)) {
-    throw new GitAdapterError("Repository and Jig worktree paths must be absolute");
+  if (!isAbsolute(config.repository_path)) {
+    throw new GitAdapterError("Repository path must be absolute");
   }
+}
 
-  const expected = resolve(config.repository_path, ".jig", "git");
-  if (resolve(config.worktree_path) !== expected) {
-    throw new GitAdapterError(
-      "Jig linked worktree must be <repository>/.jig/git",
-    );
-  }
-
-  const relation = relative(config.repository_path, config.worktree_path);
-  if (relation.startsWith("..") || isAbsolute(relation)) {
-    throw new GitAdapterError("Jig worktree escapes the configured repository");
-  }
+function jigWorktreePath(config: GitAdapterConfig): string {
+  assertAdapterPaths(config);
+  return resolve(config.repository_path, ".jig", "git");
 }
 
 export async function runGit(
@@ -309,6 +306,107 @@ export async function discoverSynchronizationRemote(
     return "origin";
   }
   return remotes.length === 1 ? remotes[0] ?? null : null;
+}
+
+
+export async function readCurrentPortableSnapshot(
+  config: GitAdapterConfig,
+  expectedDatasetId?: string,
+): Promise<PortableSnapshotCandidate | null> {
+  assertAdapterPaths(config);
+  const head = await runGit(config.repository_path, [
+    "show-ref",
+    "--verify",
+    "--hash",
+    DATA_REF,
+  ]);
+  if (head.exit_code !== 0 || head.stdout.length === 0) {
+    return null;
+  }
+  return {
+    head: head.stdout,
+    snapshot: await readSnapshotAtRef(
+      config.repository_path,
+      DATA_REF,
+      expectedDatasetId,
+    ),
+  };
+}
+
+export async function inspectPortableCandidate(
+  config: GitAdapterConfig,
+): Promise<PortableSnapshotCandidate | null> {
+  assertAdapterPaths(config);
+  const local = await readCurrentPortableSnapshot(config);
+  const remoteName = await discoverSynchronizationRemote(
+    config.repository_path,
+  );
+  if (remoteName === null) {
+    return local;
+  }
+
+  const advertised = await runGit(config.repository_path, [
+    "ls-remote",
+    "--exit-code",
+    remoteName,
+    "refs/heads/jig-data",
+  ]);
+  if (
+    advertised.exit_code !== 0 ||
+    advertised.stdout.length === 0
+  ) {
+    return local;
+  }
+
+  const trackingRef = `refs/remotes/${remoteName}/jig-data`;
+  const fetched = await runGit(config.repository_path, [
+    "fetch",
+    "--no-tags",
+    remoteName,
+    `refs/heads/jig-data:${trackingRef}`,
+  ]);
+  if (fetched.exit_code !== 0) {
+    return local;
+  }
+
+  let remote: PortableSnapshotCandidate;
+  try {
+    const head = await requireGit(config.repository_path, [
+      "rev-parse",
+      trackingRef,
+    ]);
+    remote = {
+      head,
+      snapshot: await readSnapshotAtRef(
+        config.repository_path,
+        trackingRef,
+      ),
+    };
+  } catch (error) {
+    if (local !== null) {
+      return local;
+    }
+    throw error;
+  }
+
+  if (local !== null) {
+    return local;
+  }
+
+  await requireGit(config.repository_path, [
+    "update-ref",
+    DATA_REF,
+    remote.head,
+  ]);
+  return remote;
+}
+
+export async function repositorySynchronizationAvailability(
+  config: GitAdapterConfig,
+): Promise<"local-only" | "synchronized"> {
+  return (await discoverSynchronizationRemote(config.repository_path)) === null
+    ? "local-only"
+    : "synchronized";
 }
 
 export async function repositoryCommonDir(
@@ -476,15 +574,15 @@ export async function ensureJigDataWorktree(
     }
   }
 
-  const worktreeGit = resolve(config.worktree_path, ".git");
+  const worktreeGit = resolve(jigWorktreePath(config), ".git");
   try {
     await readFile(worktreeGit, "utf8");
-    await requireGit(config.worktree_path, [
+    await requireGit(jigWorktreePath(config), [
       "rev-parse",
       "--verify",
       "HEAD",
     ]);
-    const checkedOutRef = await requireGit(config.worktree_path, [
+    const checkedOutRef = await requireGit(jigWorktreePath(config), [
       "symbolic-ref",
       "-q",
       "HEAD",
@@ -497,13 +595,13 @@ export async function ensureJigDataWorktree(
     return;
   } catch {
     try {
-      const entries = await readdir(config.worktree_path);
+      const entries = await readdir(jigWorktreePath(config));
       if (entries.length > 0) {
         throw new GitAdapterError(
           "Refusing to replace a non-empty existing Jig worktree path",
         );
       }
-      await rm(config.worktree_path, { recursive: true, force: true });
+      await rm(jigWorktreePath(config), { recursive: true, force: true });
     } catch (error) {
       if (error instanceof GitAdapterError) {
         throw error;
@@ -515,7 +613,7 @@ export async function ensureJigDataWorktree(
   await requireGit(config.repository_path, [
     "worktree",
     "add",
-    config.worktree_path,
+    jigWorktreePath(config),
     DATA_REF.replace("refs/heads/", ""),
   ]);
 }
@@ -557,8 +655,8 @@ export async function commitSnapshot(
   revision: number,
 ): Promise<string> {
   assertAdapterPaths(config);
-  await writeSnapshotToWorktree(config.worktree_path, snapshot);
-  await requireGit(config.worktree_path, [
+  await writeSnapshotToWorktree(jigWorktreePath(config), snapshot);
+  await requireGit(jigWorktreePath(config), [
     "add",
     "-A",
     "--",
@@ -566,7 +664,7 @@ export async function commitSnapshot(
     "tasks",
   ]);
 
-  const staged = await requireGit(config.worktree_path, [
+  const staged = await requireGit(jigWorktreePath(config), [
     "diff",
     "--cached",
     "--name-only",
@@ -587,7 +685,7 @@ export async function commitSnapshot(
 
   if (stagedPaths.length !== 0) {
     await requireGit(
-      config.worktree_path,
+      jigWorktreePath(config),
       [
         "-c",
         "commit.gpgSign=false",
@@ -605,7 +703,7 @@ export async function commitSnapshot(
     );
   }
 
-  return requireGit(config.worktree_path, ["rev-parse", "HEAD"]);
+  return requireGit(jigWorktreePath(config), ["rev-parse", "HEAD"]);
 }
 
 export async function readSnapshotAtRef(
