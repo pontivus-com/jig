@@ -10,7 +10,7 @@ The supported public installation path is the immutable GitHub Release bundle. E
 - Git;
 - `curl`;
 - `tar`;
-- a writable existing Git repository, or a Git URL and new/empty checkout location;
+- a writable existing Git repository;
 - `systemd --user` for the normal background-service path.
 
 If `systemd --user` is unavailable, installation still verifies the foreground runtime and `jig serve` remains available.
@@ -22,24 +22,9 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
   | bash -s -- --repo /absolute/path/to/your/planning-repo
 ```
 
-Optionally select a Git remote for automatic background synchronization:
+Jig uses the selected repository's existing Git configuration for automatic synchronization. Repository cloning, remotes, credentials, signing policy and topology remain Git responsibilities rather than Jig installer options.
 
-```bash
-curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
-  | bash -s -- --repo /absolute/path/to/your/planning-repo --remote origin
-```
-
-## Clone the planning repository during installation
-
-```bash
-curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
-  | bash -s -- \
-      --repo-url git@github.com:you/planning.git \
-      --checkout /absolute/new/path/planning \
-      --remote origin
-```
-
-The checkout path must be new or empty. Jig never initializes an arbitrary non-repository directory and never overwrites an existing non-empty checkout.
+If you need a repository checkout first, obtain it with ordinary Git tooling and then run the installer against that existing checkout.
 
 ## Install a pinned version
 
@@ -61,15 +46,9 @@ Application/runtime:
 ~/.config/systemd/user/jig.service   # when systemd --user is available
 ```
 
-Planning data remains inside the repository you selected:
+Planning data remains inside the repository you selected. SQLite lives under `<repo>/.jig/local/`; deterministic portable Jig records are synchronized through the repository adapter. Any branch/ref/worktree isolation mechanics are internal Git-adapter details and are not part of the user configuration.
 
-```text
-<repo>/.jig/local/jig.sqlite
-<repo>/.jig/git/
-refs/heads/jig-data
-```
-
-The selected repository's ordinary branch, index, staged files and unrelated content are not used by Jig's automatic synchronization.
+The selected repository's unrelated content and ordinary working state are not touched by Jig's automatic synchronization.
 
 ## Use Jig
 
@@ -77,18 +56,14 @@ The selected repository's ordinary branch, index, staged files and unrelated con
 jig
 jig status
 jig sync
-jig doctor
+jig doctor   # optional Jig-health diagnostics when present
 ```
 
 `jig` starts the user service when necessary and opens the loopback UI. If no desktop URL opener is available it prints the local URL.
 
-## Move Jig to another planning repository
+## Use Jig with another repository checkout
 
-```bash
-jig configure --repo /absolute/path/to/new/repository
-```
-
-Migration validates and prepares the destination before switching configuration. Failure leaves the original repository active.
+Repository movement/cloning is performed with ordinary Git/filesystem tooling. Obtain the desired existing checkout, then install Jig against it with `--repo`. If that repository already contains valid Jig portable data, Jig adopts it automatically. There is no separate Jig repository-migration command.
 
 ## Upgrade
 
