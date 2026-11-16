@@ -25,6 +25,10 @@ export interface DayViewProps {
     destinationDate: string,
     destinationIndex: number,
   ) => Promise<boolean>;
+  readonly onPreviousDay: () => void;
+  readonly onToday: () => void;
+  readonly onNextDay: () => void;
+  readonly statusControl: React.ReactNode;
 }
 
 function ActiveRow({
@@ -88,7 +92,10 @@ export function DayTaskLists({
   onMoveToDate,
   onToggleComplete,
   onMove,
-}: Omit<DayViewProps, "onAdd" | "onSelectDate">): React.ReactElement {
+}: Omit<
+  DayViewProps,
+  "onAdd" | "onSelectDate" | "onPreviousDay" | "onToday" | "onNextDay" | "statusControl"
+>): React.ReactElement {
   const active = outstandingForDate(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
 
@@ -152,6 +159,10 @@ export function DayView({
   selectedDate,
   onAdd,
   onSelectDate,
+  onPreviousDay,
+  onToday,
+  onNextDay,
+  statusControl,
   ...listProps
 }: DayViewProps): React.ReactElement {
   return (
@@ -168,11 +179,17 @@ export function DayView({
             })}
           </h1>
         </div>
-        <Button
-          label="Add task"
-          variant="primary"
-          onClick={() => onAdd(selectedDate)}
-        />
+        <div className="jig-view-actions">
+          <Button label="Previous" variant="ghost" size="sm" onClick={onPreviousDay} />
+          <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
+          <Button label="Next" variant="ghost" size="sm" onClick={onNextDay} />
+          {statusControl}
+          <Button
+            label="Add task"
+            variant="primary"
+            onClick={() => onAdd(selectedDate)}
+          />
+        </div>
       </div>
 
       <DateStrip
