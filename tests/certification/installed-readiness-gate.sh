@@ -16,6 +16,11 @@ command -v jig >/dev/null 2>&1 || {
   printf 'installed readiness certification requires the installed jig launcher on PATH\n' >&2
   exit 1
 }
+readonly INSTALLED_BUN="${JIG_APP_DIR:-$HOME/.local/share/jig}/runtime/bun"
+[[ -x "$INSTALLED_BUN" ]] || {
+  printf 'installed readiness certification requires the pinned Jig Bun runtime at %s\n' "$INSTALLED_BUN" >&2
+  exit 1
+}
 command -v curl >/dev/null 2>&1 || {
   printf 'installed readiness certification requires curl\n' >&2
   exit 1
@@ -27,7 +32,7 @@ config_path="$HOME/.config/jig/config.json"
   exit 1
 }
 
-port="$(bun -e 'const c=JSON.parse(await Bun.file(process.argv[1]).text()); console.log(c.http_port)' "$config_path")"
+port="$("$INSTALLED_BUN" -e 'const c=JSON.parse(await Bun.file(process.argv[1]).text()); console.log(c.http_port)' "$config_path")"
 [[ "$port" =~ ^[0-9]+$ ]] || {
   printf 'invalid configured Jig HTTP port\n' >&2
   exit 1
@@ -75,6 +80,6 @@ if (( p95_ms > READY_LIMIT_MS )); then
 fi
 
 printf 'host: %s\n' "$(uname -srvmo)"
-printf 'bun: %s\n' "$(bun --version)"
+printf 'bun: %s\n' "$("$INSTALLED_BUN" --version)"
 printf 'systemd: %s\n' "$(systemctl --version | head -n1)"
 printf 'stopped_service_http_readiness_p95_ms_20: %s\n' "$p95_ms"
