@@ -24,3 +24,7 @@ jobs:
         run: bun run test
       - name: Build
         run: bun run build
+      - name: Shell syntax
+        run: bash -n scripts/install.sh scripts/jig tests/install/installer-smoke.sh
+      - name: Installer and lifecycle smoke
+        run: bash tests/install/installer-smoke.sh
