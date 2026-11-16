@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   applyTaskCommand,
   initializeDatabase,
+  openDatabase,
   readCanonicalState,
   StaleRevisionError,
 } from "../../src/shell/sqlite";
@@ -162,7 +163,6 @@ describe("transactional canonical persistence", () => {
     const before = readCanonicalState(db);
     db.close();
 
-    const { openDatabase } = require("../../src/shell/sqlite") as typeof import("../../src/shell/sqlite");
     db = openDatabase(join(root, "jig.sqlite"));
 
     expect(readCanonicalState(db)).toStrictEqual(before);
