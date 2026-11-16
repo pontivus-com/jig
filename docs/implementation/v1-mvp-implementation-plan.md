@@ -1,6 +1,6 @@
 # Jig — v1 MVP implementation plan
 
-**Status:** Implementation-ready execution plan, v1.1 (2026-11-16), completeness-audited against JIG-FR-01–22, Technical solution v0.5 and UI solution v0.3.
+**Status:** Implementation-ready execution plan, v1.2 (2026-11-16), completeness-audited against JIG-FR-01–22, Technical solution v0.6 and UI solution v0.3.
 **Target:** Build and certify the first Jig desktop MVP without reopening product, functional, technical, or UI design.
 **Required baseline:** Implement only from a repository revision that contains the current canonical product definition, JIG-FR-01–22 functional design, technical solution v0.5 or later, and UI solution v0.3 or later.
 
@@ -73,6 +73,7 @@ tests/
   persistence/
   sync/
   browser/
+  install/
 ```
 
 `task-row.tsx` and `ui/src/http.ts` are intentional small additions to the technical solution's illustrative tree. `task-row.tsx` centralizes one presentation of canonical Task semantics across Week/Day; `ui/src/http.ts` centralizes the same-origin canonical fetch/command boundary, revision handling and write-token use. Neither may introduce a second Task/command representation.
@@ -191,11 +192,11 @@ Expose canonical reads only: complete Task set + revision and the minimal persis
 
 **Files:** `src/shell/http.ts`, `src/shell/main.ts`, `tests/persistence/http.test.ts`.
 
-Implement Technical solution §3.2 exactly: `GET /api/v1/tasks`, `GET /api/v1/status`, `POST /api/v1/commands`, `expected_revision`, 400/404/409/500 behavior, default port 47831 and the canonical repository-status vocabulary.
+Implement Technical solution §3.2 exactly: `GET /api/v1/tasks`, `GET /api/v1/status`, `GET /api/v1/diagnostics`, `POST /api/v1/commands`, `POST /api/v1/sync`, `POST /api/v1/migrate`, `expected_revision` for Task commands, the specified status/error behavior, default port 47831 and the canonical repository-status vocabulary. `/sync` and `/migrate` are thin shell-operation admissions backed by the same sync/migration functions used elsewhere; they are not Task commands or a second domain model.
 
 Generate one 256-bit token per service process, inject it into the same-origin application bootstrap, require `X-Jig-Write-Token` for mutations, reject cross-origin writes and do not enable permissive CORS. Serve the built Vite application from the same loopback origin so the token bootstrap and API share one trust boundary. HTTP envelopes wrap canonical values; they are not DTO/domain models.
 
-**Gate:** HTTP tests prove stale revision makes no mutation, missing/bad token is rejected, cross-origin mutation is rejected, static UI/bootstrap is served from the same loopback origin, and success is returned only after SQLite commit.
+**Gate:** HTTP tests prove stale revision makes no mutation, diagnostics contain no Task content/credentials/secrets, `/sync` only triggers the serialized worker, migration failure leaves the original data root active, missing/bad token is rejected on every state-changing POST, cross-origin mutation is rejected, static UI/bootstrap is served from the same loopback origin, and Task-command success is returned only after SQLite commit.
 
 ## 8. Wave C — portable snapshot and repository boundary
 
@@ -295,9 +296,9 @@ Group completed Tasks by actual completion date in viewing-device local time, ne
 
 **Files:** `ui/src/settings.tsx`, `ui/src/app.tsx`.
 
-Expose configured repository path, remote name/presence, service/sync health, theme and diagnostics/retry. Use only the four canonical status concepts: local-only, pending/retrying, synchronized, sync issue. Never expose divergence/merge/conflict as Jig workflow.
+Expose configured repository path, remote name/presence, service/sync health, theme and diagnostics/retry. Use `GET /api/v1/diagnostics` for sanitized operational evidence, `POST /api/v1/sync` for Sync now/retry, and `POST /api/v1/migrate` for the explicit repository migration flow. Use only the four canonical status concepts: local-only, pending/retrying, synchronized, sync issue. Never expose divergence/merge/conflict as Jig workflow.
 
-Repository migration remains deliberate and must call the explicit migration path implemented by installer/service work; do not provide an editable path field that silently switches data roots.
+Repository migration remains deliberate: the UI collects/explicitly confirms the destination path, invokes the one shell-owned migration operation, and reloads canonical Tasks/status only after success. Do not provide an editable path field that silently switches data roots.
 
 **Gate:** screenshots and browser tests match `desktop-settings-sync.svg` and `sync-failure-states.svg` semantics.
 
@@ -345,7 +346,7 @@ Never `git init` an arbitrary nonrepository path, overwrite an existing checkout
 
 **Files:** `scripts/jig`, installer-generated user-service unit, shell status hooks.
 
-`jig` opens the ready local UI or starts the service then opens it. Implement `jig status`, diagnostic/retry `jig sync`, `jig doctor`, and `jig configure --repo <path>` deliberate repository migration behavior required by the technical solution. Migration must briefly block writers, flush/export the latest local state, validate destination ownership/identity, rehydrate/copy safely, and atomically switch configuration only on success; failure leaves the original repository active. Enforce one active writable service per configured data root before SQLite is opened for mutation.
+`jig` opens the ready local UI or starts the service then opens it. Implement `jig status`, diagnostic/retry `jig sync`, `jig doctor`, and `jig configure --repo <path>` deliberate repository migration behavior required by the technical solution. The CLI and HTTP operational endpoints must call the same shell-owned status/diagnostic, sync-trigger and migration functions; do not implement parallel operational paths. Migration must briefly block writers, flush/export the latest local state, validate destination ownership/identity, rehydrate/copy safely, and atomically switch configuration only on success; failure leaves the original repository active. Enforce one active writable service per configured data root before SQLite is opened for mutation.
 
 Implement uninstall through the existing launcher/installer lifecycle rather than another daemon/tool: stop/remove Jig service/application configuration and binaries while preserving the selected repository's `.jig/` planning data by default. Do not silently enable systemd linger or alter administrator policy.
 
@@ -486,7 +487,7 @@ This matrix is normative for plan completeness. V1-23 provides integrated eviden
 | canonical Task + invariants | V1-02 | canonical validation tests |
 | pure operations/derived views | V1-03,V1-04 | core test suite |
 | SQLite schema/revision/transactions | V1-05,V1-06 | persistence + rollback/restart tests |
-| loopback API/security token/revision | V1-07,V1-12 | HTTP + stale-revision browser tests |
+| loopback API/security token/revision + Settings operations | V1-07,V1-12,V1-17,V1-22 | HTTP, operational-action reuse + stale-revision browser tests |
 | deterministic complete snapshot | V1-08 | byte-stable round trip |
 | isolated repository branch/worktree | V1-09 | dirty-repo coexistence + ref ownership tests |
 | snapshot admission/crash safety | V1-10,V1-11 | transactional adoption + crash recovery |
@@ -505,4 +506,4 @@ Every normative implementation concern in the technical solution is owned by at 
 
 ## 17. Plan audit verdict
 
-This v1.1 plan deliberately keeps **25 tasks across six waves**. The completeness audit did not require another subsystem or architectural layer; it required making previously implicit technical obligations explicit inside their existing owners. A task may be split into smaller commits for review, but splitting must not create a new semantic owner or alter the dependency order above.
+This v1.2 plan deliberately keeps **25 tasks across six waves**. The completeness audit did not require another subsystem or architectural layer; it required making previously implicit technical obligations explicit inside their existing owners. A task may be split into smaller commits for review, but splitting must not create a new semantic owner or alter the dependency order above.
