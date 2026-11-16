@@ -13,11 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
       - name: Install exact frozen dependency graph
         run: bun install --frozen-lockfile
+      - name: Verify PR release metadata
+        if: github.event_name == 'pull_request'
+        run: bun scripts/verify-release.ts --mode pr --base origin/master
+      - name: Verify release tooling compiles
+        run: bun build scripts/package-release.ts scripts/verify-release.ts --target=bun --outdir "${RUNNER_TEMP}/jig-release-tool-check"
       - name: Typecheck
         run: bun run typecheck
       - name: Core and integration tests
@@ -29,6 +36,6 @@ jobs:
       - name: Real-browser acceptance
         run: bun run test:browser
       - name: Shell syntax
-        run: bash -n scripts/install.sh scripts/jig tests/install/installer-smoke.sh tests/certification/resource-gate.sh tests/certification/installed-readiness-gate.sh
+        run: bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/installer-smoke.sh tests/certification/resource-gate.sh tests/certification/installed-readiness-gate.sh
       - name: Installer and lifecycle smoke
         run: bash tests/install/installer-smoke.sh
