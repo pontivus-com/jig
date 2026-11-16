@@ -4,10 +4,16 @@ import {
   SegmentedControl,
   SegmentedControlItem,
 } from "@astryxdesign/core";
+import { useEffect, useState } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
 } from "../../src/shell/http";
+import {
+  browserNotificationState,
+  requestBrowserNotificationPermission,
+  type BrowserNotificationState,
+} from "./browser-notifications";
 
 export type ThemePreference = "system" | "light" | "dark";
 
@@ -38,6 +44,21 @@ function statusMessage(status: ServiceStatus | null): string {
   }
 }
 
+function notificationStatusMessage(
+  state: BrowserNotificationState,
+): string {
+  switch (state) {
+    case "unsupported":
+      return "Not supported by this browser";
+    case "default":
+      return "Not enabled";
+    case "granted":
+      return "Enabled";
+    case "denied":
+      return "Blocked in browser settings";
+  }
+}
+
 export function SettingsView({
   themePreference,
   status,
@@ -47,6 +68,17 @@ export function SettingsView({
   onThemePreferenceChange,
   onSync,
 }: SettingsViewProps): React.ReactElement {
+  const [notificationState, setNotificationState] =
+    useState<BrowserNotificationState>(browserNotificationState);
+
+  useEffect(() => {
+    const refresh = (): void => {
+      setNotificationState(browserNotificationState());
+    };
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, []);
+
   return (
     <div className="jig-settings-view">
       <div className="jig-view-heading">
@@ -79,6 +111,25 @@ export function SettingsView({
           <SegmentedControlItem value="light" label="Light" />
           <SegmentedControlItem value="dark" label="Dark" />
         </SegmentedControl>
+
+        <div className="jig-settings-notifications">
+          <div>
+            <strong>Browser notifications</strong>
+            <p>{notificationStatusMessage(notificationState)}</p>
+          </div>
+          {notificationState === "default" ? (
+            <Button
+              label="Enable"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void requestBrowserNotificationPermission().then(
+                  setNotificationState,
+                );
+              }}
+            />
+          ) : null}
+        </div>
       </section>
 
       <section className="jig-settings-section" aria-labelledby="sync-heading">
