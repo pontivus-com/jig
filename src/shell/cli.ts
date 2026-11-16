@@ -284,55 +284,6 @@ async function doctor(): Promise<void> {
   }
 }
 
-async function configure(argv: readonly string[]): Promise<void> {
-  if (argv.length !== 2 || argv[0] !== "--repo") {
-    throw new CliError(
-      "Usage: jig configure --repo /absolute/path/to/repository",
-    );
-  }
-
-  const config = await loadConfig();
-  await startService(config);
-  const result = await postOperation(config, "/api/v1/migrate", {
-    repository_path: argv[1],
-  });
-  if (result.migrated !== true) {
-    throw new CliError("Repository migration did not complete");
-  }
-
-  process.stdout.write(
-    "Repository migration committed. Jig is restarting on the new data root.\n",
-  );
-
-  if (await systemdAvailable()) {
-    const target = argv[1];
-    const started = performance.now();
-    while (performance.now() - started < 5_000) {
-      try {
-        const next = await loadConfig();
-        const nextStatus = await statusIfReady(next);
-        if (
-          next.repository_path === target &&
-          nextStatus?.repository_path === target
-        ) {
-          process.stdout.write(`repository: ${target}\n`);
-          return;
-        }
-      } catch {
-        // Expected while the service is intentionally restarting.
-      }
-      await Bun.sleep(100);
-    }
-    throw new CliError(
-      "Migration succeeded but the restarted service did not become ready",
-    );
-  }
-
-  process.stdout.write(
-    "systemd --user is unavailable; restart the foreground service with 'jig serve'.\n",
-  );
-}
-
 async function uninstall(): Promise<void> {
   const home = homedir();
   const appDir = resolve(home, ".local", "share", "jig");
@@ -410,9 +361,6 @@ async function runCli(argv: readonly string[]): Promise<void> {
       }
       await doctor();
       return;
-    case "configure":
-      await configure(rest);
-      return;
     case "serve":
       if (rest.length !== 0) {
         throw new CliError("Usage: jig serve");
@@ -434,7 +382,7 @@ async function runCli(argv: readonly string[]): Promise<void> {
       return;
     default:
       throw new CliError(
-        "Usage: jig [status|sync|doctor|configure --repo PATH|serve|uninstall]",
+        "Usage: jig [status|sync|doctor|serve|uninstall]",
       );
   }
 }
