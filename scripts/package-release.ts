@@ -122,6 +122,7 @@ try {
     for (const source of [
       "src",
       "dist",
+      "assets",
       "scripts/install.sh",
       "scripts/jig",
       "package.json",
@@ -131,6 +132,8 @@ try {
       "CHANGELOG.md",
       "LICENSE",
       "docs/install.md",
+      "docs/design/brand-and-theme.md",
+      "docs/product/product-identity.md",
     ]) {
       copyInto(source, jigRoot);
     }
