@@ -5,7 +5,6 @@ import {
 import type { Task } from "../../src/core/task";
 import {
   completedForScheduledDate,
-  dayAttention,
   outstandingForDate,
 } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
@@ -31,8 +30,6 @@ export interface DayViewProps {
 function ActiveRow({
   task,
   tasks,
-  selectedDate,
-  carriedOver,
   onEdit,
   onMoveToDate,
   onToggleComplete,
@@ -40,8 +37,6 @@ function ActiveRow({
 }: Readonly<{
   task: Task;
   tasks: readonly Task[];
-  selectedDate: string;
-  carriedOver: boolean;
   onEdit: (task: Task) => void;
   onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
@@ -55,7 +50,6 @@ function ActiveRow({
       task={task}
       index={position}
       group={task.scheduled_date}
-      carriedOverFrom={carriedOver ? task.scheduled_date : undefined}
       onToggleComplete={() => {
         void onToggleComplete(task);
       }}
@@ -95,64 +89,31 @@ export function DayTaskLists({
   onToggleComplete,
   onMove,
 }: Omit<DayViewProps, "onAdd" | "onSelectDate">): React.ReactElement {
-  const attention = dayAttention(tasks, selectedDate);
+  const active = outstandingForDate(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
 
   return (
     <TaskDragProvider tasks={tasks} onMove={onMove}>
       <div className="jig-day-lists">
-        {attention.carried_over.length === 0 ? null : (
-          <section
-            className="jig-carry-over-section"
-            aria-labelledby="carry-over-heading"
-          >
-            <h2 id="carry-over-heading">Carried over</h2>
-            <p className="jig-secondary-copy">
-              Earlier unfinished work. Original dates remain unchanged until you explicitly move a task.
-            </p>
-            <List density="compact" hasDividers edge="flush">
-              {attention.carried_over.map((task) => (
-                <ActiveRow
-                  key={task.id}
-                  task={task}
-                  tasks={tasks}
-                  selectedDate={selectedDate}
-                  carriedOver
-                  onEdit={onEdit}
-                  onMoveToDate={onMoveToDate}
-                  onToggleComplete={onToggleComplete}
-                  onMove={onMove}
-                />
-              ))}
-            </List>
-          </section>
-        )}
-
         <DateDropZone
           date={selectedDate}
           className="jig-day-scheduled-section"
         >
-          <section aria-labelledby="day-scheduled-heading">
-            <h2 id="day-scheduled-heading">
-              {formatCivilDate(selectedDate, {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
+          <section aria-labelledby="day-attention-heading">
+            <h2 id="day-attention-heading">
+              Attention <span className="jig-task-count">({active.length})</span>
             </h2>
-            {attention.scheduled.length === 0 ? (
+            {active.length === 0 ? (
               <p className="jig-empty-state">
                 Nothing scheduled for this date.
               </p>
             ) : (
               <List density="balanced" hasDividers edge="flush">
-                {attention.scheduled.map((task) => (
+                {active.map((task) => (
                   <ActiveRow
                     key={task.id}
                     task={task}
                     tasks={tasks}
-                    selectedDate={selectedDate}
-                    carriedOver={false}
                     onEdit={onEdit}
                     onMoveToDate={onMoveToDate}
                     onToggleComplete={onToggleComplete}
