@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("Start with a title. Everything else is optional.")).toBeVisible();
+  await expect(dialog.getByText(/\w{3}, \w{3} \d{1,2}, \d{4}/)).toBeVisible();
   await dialog.getByLabel("Title").fill(title);
   await dialog.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(dialog).toBeHidden();
@@ -18,7 +18,9 @@ async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
 }
 
 test("real runtime supports title-first create, completion, History and reopen", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: /–/ })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Day", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
 
   await addTitleOnlyTask(page, "Browser acceptance task");
   await page.getByLabel("Complete Browser acceptance task").click();
@@ -27,7 +29,15 @@ test("real runtime supports title-first create, completion, History and reopen",
   await expect(page.getByRole("heading", { name: "Completed work", exact: true })).toBeVisible();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeVisible();
 
-  await page.getByLabel("Reopen Browser acceptance task").click();
+  const historyRow = page
+    .getByText("Browser acceptance task", { exact: true })
+    .locator("xpath=ancestor::div[contains(@class,'jig-history-task-row')][1]");
+  await historyRow
+    .locator('summary[aria-label="Actions for Browser acceptance task"]')
+    .click();
+  await historyRow
+    .getByRole("button", { name: "Reopen", exact: true })
+    .click();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeHidden();
 });
 
