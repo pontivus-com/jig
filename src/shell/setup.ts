@@ -153,7 +153,7 @@ export async function selectRemote(
   return remotes.includes("origin") ? "origin" : null;
 }
 
-async function localCandidate(
+export async function inspectLocalCandidate(
   repositoryPath: string,
 ): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
   const result = await runGit(repositoryPath, [
@@ -171,7 +171,7 @@ async function localCandidate(
   };
 }
 
-async function remoteCandidate(
+export async function inspectRemoteCandidate(
   repositoryPath: string,
   remoteName: string | null,
 ): Promise<{ readonly head: string; readonly snapshot: PortableSnapshot } | null> {
@@ -252,12 +252,12 @@ export async function initializeRepositoryInstallation(options: {
     recursive: true,
   });
 
-  let local: Awaited<ReturnType<typeof localCandidate>>;
-  let remote: Awaited<ReturnType<typeof remoteCandidate>>;
+  let local: Awaited<ReturnType<typeof inspectLocalCandidate>>;
+  let remote: Awaited<ReturnType<typeof inspectRemoteCandidate>>;
   try {
     [local, remote] = await Promise.all([
-      localCandidate(repositoryPath),
-      remoteCandidate(repositoryPath, remoteName),
+      inspectLocalCandidate(repositoryPath),
+      inspectRemoteCandidate(repositoryPath, remoteName),
     ]);
   } catch (error) {
     throw new InstallationError(
