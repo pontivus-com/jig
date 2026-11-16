@@ -1,3 +1,4 @@
+import { Button } from "@astryxdesign/core";
 import { useToast } from "@astryxdesign/core/Toast";
 import { useEffect, useRef } from "react";
 import type { Task } from "../../src/core/task";
@@ -111,6 +112,17 @@ export function ReminderMonitor({
           body: `Reminder: ${task.title}`,
           uniqueID: key,
           collisionBehavior: "ignore",
+          renderContent: ({ body, dismiss }) => (
+            <div className="jig-reminder-toast-content">
+              <span>{body}</span>
+              <Button
+                label="Dismiss"
+                variant="ghost"
+                size="sm"
+                onClick={dismiss}
+              />
+            </div>
+          ),
         });
       }
     };
