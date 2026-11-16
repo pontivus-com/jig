@@ -10,7 +10,7 @@ The supported public installation path is the immutable GitHub Release bundle. E
 - Git;
 - `curl`;
 - `tar`;
-- a writable existing Git repository;
+- a writable existing Git repository, or a Git repository URL plus a new/empty checkout destination;
 - `systemd --user` for the normal background-service path.
 
 If `systemd --user` is unavailable, installation still verifies the foreground runtime and `jig serve` remains available.
@@ -22,9 +22,20 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
   | bash -s -- --repo /absolute/path/to/your/planning-repo
 ```
 
-Jig uses the selected repository's existing Git configuration for automatic synchronization. Repository cloning, remotes, credentials, signing policy and topology remain Git responsibilities rather than Jig installer options.
+Jig uses the selected repository's Git configuration for automatic synchronization. Git remains responsible for credentials, signing policy, topology and transport semantics.
 
-If you need a repository checkout first, obtain it with ordinary Git tooling and then run the installer against that existing checkout.
+## Install from a repository URL
+
+The installer can also identify the target repository by URL and delegate acquisition to Git:
+
+```bash
+curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
+  | bash -s -- \
+      --repo-url git@github.com:you/planning.git \
+      --checkout /absolute/new/path/planning
+```
+
+The checkout path must be new or empty. After `git clone` succeeds, installation follows the exact same path as `--repo`; Jig does not introduce separate repository-management semantics.
 
 ## Install a pinned version
 
