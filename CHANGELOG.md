@@ -10,11 +10,13 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - Removed the Jig-owned repository migration workflow and its CLI/HTTP/Settings surfaces.
 - Simplified Jig application configuration so Git ref/remote mechanics remain inside the repository adapter.
 - Retained both installer target modes: existing checkout via `--repo` and thin Git-clone handoff via `--repo-url` + `--checkout`.
+- Release certification now smokes the packaged arm64 bundle on a native arm64 runner in addition to the packaged x64 bundle.
 
 ### Fixed
 
 - Jig-generated synchronization commits opt out of commit signing per invocation without changing user or repository Git configuration.
 - Fresh initialization now creates a valid empty portable Jig snapshot as the first Jig data commit instead of publishing an invalid empty bootstrap state.
+- Installation adopts valid Jig data already fetched into the selected repository even when the remote is temporarily unavailable.
 - Installation can narrowly recover the exact empty bootstrap residue produced by the v1.0.0 failed-install path.
 
 
