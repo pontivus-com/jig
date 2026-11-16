@@ -3,7 +3,7 @@ import {
   CheckboxInput,
 } from "@astryxdesign/core";
 import { useSortable } from "@dnd-kit/react/sortable";
-import type { Ref } from "react";
+import { useState, type Ref } from "react";
 import type { Task } from "../../src/core/task";
 import { formatReminderTime } from "./dates";
 
@@ -86,60 +86,83 @@ function TaskActionMenu({
   onMoveDown?: (() => void) | undefined;
   onMoveToDate?: (() => void) | undefined;
 }>): React.ReactElement {
+  const [open, setOpen] = useState(false);
+
+  const action = (callback: () => void): (() => void) => () => {
+    setOpen(false);
+    callback();
+  };
+
   return (
-    <details
+    <div
       className="jig-task-menu"
       onPointerDown={stopDrag}
       onClick={stopDrag}
     >
-      <summary aria-label={`Actions for ${task.title}`}>•••</summary>
-      <div className="jig-task-menu-panel">
-        <Button label="Edit" variant="ghost" size="sm" onClick={onEdit} />
-        {onMoveToDate === undefined ? null : (
+      <button
+        type="button"
+        className="jig-task-menu-trigger"
+        aria-label={`Actions for ${task.title}`}
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        •••
+      </button>
+      {open ? (
+        <div className="jig-task-menu-panel">
           <Button
-            label="Move to date…"
+            label="Edit"
             variant="ghost"
             size="sm"
-            onClick={onMoveToDate}
+            onClick={action(onEdit)}
           />
-        )}
-        {onMoveUp === undefined ? null : (
-          <Button
-            label="Move up"
-            variant="ghost"
-            size="sm"
-            onClick={onMoveUp}
-          />
-        )}
-        {onMoveDown === undefined ? null : (
-          <Button
-            label="Move down"
-            variant="ghost"
-            size="sm"
-            onClick={onMoveDown}
-          />
-        )}
-        {task.reference === null ? null : isSafeWebReference(task.reference) ? (
-          <a
-            className="jig-task-menu-link"
-            href={task.reference}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open reference
-          </a>
-        ) : (
-          <Button
-            label="Copy reference"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              void navigator.clipboard.writeText(task.reference ?? "");
-            }}
-          />
-        )}
-      </div>
-    </details>
+          {onMoveToDate === undefined ? null : (
+            <Button
+              label="Move to date…"
+              variant="ghost"
+              size="sm"
+              onClick={action(onMoveToDate)}
+            />
+          )}
+          {onMoveUp === undefined ? null : (
+            <Button
+              label="Move up"
+              variant="ghost"
+              size="sm"
+              onClick={action(onMoveUp)}
+            />
+          )}
+          {onMoveDown === undefined ? null : (
+            <Button
+              label="Move down"
+              variant="ghost"
+              size="sm"
+              onClick={action(onMoveDown)}
+            />
+          )}
+          {task.reference === null ? null : isSafeWebReference(task.reference) ? (
+            <a
+              className="jig-task-menu-link"
+              href={task.reference}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+            >
+              Open reference
+            </a>
+          ) : (
+            <Button
+              label="Copy reference"
+              variant="ghost"
+              size="sm"
+              onClick={action(() => {
+                void navigator.clipboard.writeText(task.reference ?? "");
+              })}
+            />
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
