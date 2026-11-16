@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="414" height="980" viewBox="0 0 414 980" role="img" aria-label="Jig mobile editor canonical reference">
+<style>text{font-family:Inter,Arial,Helvetica,sans-serif}.t{fill:#152238}.m{fill:#657187}.muted{fill:#8a96a8}.h1{font-size:26px;font-weight:700}.h2{font-size:18px;font-weight:700}.b{font-size:13px;font-weight:600}.s{font-size:11px;font-weight:500}.xs{font-size:10px;font-weight:500}</style>
+<rect x="0" y="0" width="414" height="980" rx="0" fill="#f6f8fb" stroke="none" stroke-width="1"/>
+<rect x="12" y="12" width="390" height="956" rx="24" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<text x="30" y="52" class="h2">Edit task</text>
+<text x="30" y="76" class="s" fill="#657187">Thursday, 19 November</text>
+<rect x="314" y="30" width="70" height="30" rx="7" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<text x="334" y="50" class="xs" fill="#152238" font-weight="700">Cancel</text>
+<text x="30" y="112" class="s" fill="#657187" font-weight="700">Title</text>
+<rect x="30" y="122" width="354" height="44" rx="7" fill="#f9fbfd" stroke="#cbd4e2" stroke-width="1"/>
+<text x="42" y="150" class="b" fill="#152238" font-weight="500">Legal — TTA workflow remediation</text>
+<text x="30" y="184" class="s" fill="#657187" font-weight="700">Date</text>
+<rect x="30" y="194" width="354" height="44" rx="7" fill="#f9fbfd" stroke="#cbd4e2" stroke-width="1"/>
+<text x="42" y="222" class="b" fill="#152238" font-weight="500">19 Nov 2026</text>
+<text x="30" y="256" class="s" fill="#657187" font-weight="700">Context</text>
+<rect x="30" y="266" width="354" height="44" rx="7" fill="#f9fbfd" stroke="#cbd4e2" stroke-width="1"/>
+<text x="42" y="294" class="b" fill="#152238" font-weight="500">Legal App</text>
+<text x="30" y="328" class="s" fill="#657187" font-weight="700">Priority</text>
+<rect x="30" y="342" width="70" height="30" rx="15" fill="#fff0ef" stroke="#fff0ef" stroke-width="1"/>
+<text x="50" y="362" class="xs" fill="#a33a34" font-weight="700">High</text>
+<rect x="110" y="342" width="84" height="30" rx="15" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<text x="132" y="362" class="xs" fill="#152238" font-weight="700">Normal</text>
+<rect x="204" y="342" width="66" height="30" rx="15" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<text x="225" y="362" class="xs" fill="#152238" font-weight="700">Low</text>
+<text x="30" y="400" class="s" fill="#657187" font-weight="700">Reminder</text>
+<rect x="30" y="410" width="354" height="44" rx="7" fill="#f9fbfd" stroke="#cbd4e2" stroke-width="1"/>
+<text x="42" y="438" class="b" fill="#152238" font-weight="500">10:00</text>
+<text x="30" y="472" class="s" fill="#657187" font-weight="700">Reference</text>
+<rect x="30" y="482" width="354" height="44" rx="7" fill="#f9fbfd" stroke="#cbd4e2" stroke-width="1"/>
+<text x="42" y="510" class="b" fill="#152238" font-weight="500">https://github.com/pontivus-com/jig</text>
+<text x="30" y="544" class="s" fill="#657187" font-weight="700">Notes</text>
+<rect x="30" y="554" width="354" height="104" rx="7" fill="#f9fbfd" stroke="#cbd4e2" stroke-width="1"/>
+<text x="42" y="582" class="b" fill="#152238" font-weight="500">Details remain in the authoritative project.</text>
+<text x="42" y="604" class="s" fill="#657187">This is only a short planning note.</text>
+<rect x="30" y="690" width="354" height="72" rx="8" fill="#f4f7fb" stroke="#dce3ec" stroke-width="1"/>
+<text x="44" y="715" class="xs" fill="#657187" font-weight="700">Date change behavior</text>
+<text x="44" y="738" class="s" fill="#152238">Changing date uses priority-guided insertion.</text>
+<text x="44" y="756" class="xs" fill="#657187">Dragging uses the exact drop position.</text>
+<rect x="30" y="784" width="354" height="34" rx="7" fill="#fff0ef" stroke="#e6b5b0" stroke-width="1"/>
+<text x="207" y="806" class="s" fill="#a33a34" font-weight="700" text-anchor="middle">Delete task…</text>
+<line x1="30" y1="826" x2="384" y2="826" stroke="#dfe5ee" stroke-width="1"/>
+<rect x="30" y="846" width="132" height="46" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
+<text x="75" y="875" class="b" fill="#152238">Cancel</text>
+<rect x="174" y="846" width="210" height="46" rx="8" fill="#244b91" stroke="#244b91" stroke-width="1"/>
+<text x="260" y="875" class="b" fill="#fff" font-weight="700">Save</text>
+<text x="30" y="925" class="xs" fill="#657187">Reference and Notes are separate canonical fields.</text>
+<text x="30" y="944" class="xs" fill="#657187">Delete requires confirmation; prior Git history is the only recovery.</text>
+</svg>
