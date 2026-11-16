@@ -97,3 +97,42 @@ test("responsive reflow preserves an open editor draft and appearance remains pr
   const after = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
   expect(after).toEqual(before);
 });
+
+test("System, Light and Dark remain presentation-only and preserve the same Settings semantics", async ({
+  page,
+}) => {
+  const before = await page.evaluate(async () =>
+    fetch("/api/v1/tasks").then((response) => response.json()),
+  );
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Jig settings", exact: true }),
+  ).toBeVisible();
+
+  for (const [label, stored] of [
+    ["Light", "light"],
+    ["Dark", "dark"],
+    ["System", null],
+  ] as const) {
+    const option = page.getByRole("radio", {
+      name: label,
+      exact: true,
+    });
+    await option.click();
+    await expect(option).toHaveAttribute("aria-checked", "true");
+    await expect(
+      page.getByRole("heading", { name: "Appearance", exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() => localStorage.getItem("jig-theme")),
+      )
+      .toBe(stored);
+  }
+
+  const after = await page.evaluate(async () =>
+    fetch("/api/v1/tasks").then((response) => response.json()),
+  );
+  expect(after).toEqual(before);
+});
