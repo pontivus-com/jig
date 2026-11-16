@@ -65,4 +65,4 @@ No quantitative productivity/time-saving claim is established by this design bas
 
 ## 8. Downstream ownership
 
-The [Planning and UX functional design](../requirements/planning-workbench.md) owns the exact user-visible behaviors. The [Technical direction](../architecture/technical-direction.md) evaluates realization options; it cannot add product features or weaken the functional contract.
+The [Planning and UX functional design](../requirements/planning-workbench.md) owns the exact user-visible behaviors. The [Technical solution design](../architecture/technical-solution.md) specifies the minimal runtime, storage and UI realization; it cannot add product features or weaken the functional contract.
