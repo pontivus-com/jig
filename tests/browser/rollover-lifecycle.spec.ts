@@ -49,7 +49,9 @@ test("an already-open Day refreshes canonical rollover across local midnight", a
   const today = await browserCivilDate(page);
 
   await expect(
-    page.getByText("Midnight rollover", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .getByText("Midnight rollover", { exact: true }),
   ).toBeVisible();
   const task = (await apiState(page)).tasks.find(
     (candidate) => candidate.title === "Midnight rollover",
