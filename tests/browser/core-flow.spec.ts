@@ -20,13 +20,13 @@ test("real runtime supports title-first create, completion, History and reopen",
   await expect(page.getByRole("heading", { name: /–/ })).toBeVisible();
 
   await addTitleOnlyTask(page, "Browser acceptance task");
-  await page.getByLabel("Complete Browser acceptance task").check();
+  await page.getByLabel("Complete Browser acceptance task").click();
 
   await page.getByRole("button", { name: "History", exact: true }).click();
   await expect(page.getByRole("heading", { name: /History/i })).toBeVisible();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeVisible();
 
-  await page.getByLabel("Reopen Browser acceptance task").check();
+  await page.getByLabel("Reopen Browser acceptance task").click();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeHidden();
 });
 
@@ -67,7 +67,7 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   });
 
   await dialog.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(dialog.getByRole("alert")).toContainText("out of date");
+  await expect(dialog.getByText("This view was out of date.", { exact: false })).toBeVisible();
   await expect(page.getByText("Concurrent canonical task", { exact: true })).toBeVisible();
 
   const tasks = await page.evaluate(async () => {
