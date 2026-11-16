@@ -114,13 +114,18 @@ export function WeekView({
             <p className="jig-eyebrow">Week</p>
             <h1>Plan the week</h1>
           </div>
-          <span className="jig-header-add">
-            <Button
-              label="Add task"
-              variant="primary"
-              onClick={() => onAdd(selectedDate)}
-            />
-          </span>
+          <div className="jig-view-actions">
+            <Button label="Previous" variant="ghost" size="sm" onClick={onPreviousWeek} />
+            <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
+            <Button label="Next" variant="ghost" size="sm" onClick={onNextWeek} />
+            <span className="jig-header-add">
+              <Button
+                label="Add task"
+                variant="primary"
+                onClick={() => onAdd(selectedDate)}
+              />
+            </span>
+          </div>
         </div>
         <DateStrip
           selectedDate={selectedDate}
