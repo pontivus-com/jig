@@ -23,29 +23,30 @@ body {
 }
 
 @layer jig {
-  .jig-content {
-    min-width: 0;
-    height: 100%;
-    padding: var(--spacing-4);
-    overflow: auto;
+  .jig-shell {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    min-height: 100dvh;
+    background: var(--color-background-body);
   }
 
-  .jig-topbar {
+  .jig-sidebar {
+    position: sticky;
+    inset-block-start: 0;
     display: flex;
+    height: 100dvh;
     min-width: 0;
-    align-items: center;
-    gap: var(--spacing-3);
-    padding: var(--spacing-2) var(--spacing-4);
-    border-block-end: 1px solid var(--color-border);
+    flex-direction: column;
+    gap: var(--spacing-4);
+    padding: var(--spacing-3);
+    overflow: auto;
+    border-inline-end: 1px solid var(--color-border);
     background: var(--color-background-surface);
   }
 
-  .jig-brand {
-    display: flex;
-    flex: 0 0 auto;
-    min-width: 8.5rem;
-    align-items: center;
-    gap: var(--spacing-2);
+  .jig-sidebar-brand {
+    display: grid;
+    gap: var(--spacing-1);
   }
 
   .jig-brand-logo-wrap {
@@ -81,36 +82,72 @@ body {
   .jig-task-meta,
   .jig-eyebrow,
   .jig-empty-column,
-  .jig-empty-state {
+  .jig-empty-state,
+  .jig-sidebar-context {
     color: var(--color-text-secondary);
   }
 
   .jig-brand-tagline {
     font-size: 0.75rem;
-    white-space: nowrap;
   }
 
-  .jig-primary-nav,
-  .jig-topbar-actions,
-  .jig-task-actions,
-  .jig-editor-primary-actions {
-    display: flex;
-    align-items: center;
+  .jig-sidebar-nav {
+    display: grid;
     gap: var(--spacing-1);
   }
 
-  .jig-primary-nav {
-    flex: 1 1 auto;
-    min-width: 0;
+  .jig-sidebar-nav > * {
+    width: 100%;
+    justify-content: flex-start;
   }
 
-  .jig-topbar-actions {
-    flex: 0 0 auto;
+  .jig-sidebar-context {
+    display: grid;
+    gap: var(--spacing-0-5);
+    margin-block-start: auto;
+    font-size: 0.75rem;
+  }
+
+  .jig-sidebar-context small {
+    overflow-wrap: anywhere;
+  }
+
+  .jig-main {
+    min-width: 0;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
+  .jig-main-banner {
+    padding: var(--spacing-3) var(--spacing-4) 0;
+  }
+
+  .jig-content {
+    min-width: 0;
+    min-height: 100%;
+    padding: var(--spacing-4);
+  }
+
+  .jig-mobile-header {
+    display: none;
+  }
+
+  .jig-view-actions,
+  .jig-editor-primary-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--spacing-1);
+  }
+
+  .jig-status-control {
+    white-space: nowrap;
   }
 
   .jig-view-heading {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--spacing-4);
     margin-block-end: var(--spacing-4);
@@ -140,25 +177,25 @@ body {
 
   .jig-week-board {
     display: grid;
-    grid-template-columns: repeat(7, minmax(15rem, 1fr));
+    grid-template-columns: repeat(7, minmax(8.75rem, 1fr));
     gap: var(--spacing-2);
-    min-width: max-content;
+    min-width: 0;
     padding-block-end: var(--spacing-3);
   }
 
   .jig-week-view {
     min-width: 0;
-    overflow-x: auto;
   }
 
   .jig-week-column {
-    width: 15rem;
+    width: auto;
+    min-width: 0;
     min-height: 18rem;
-    max-height: calc(100dvh - 13rem);
+    max-height: calc(100dvh - 12rem);
     overflow: auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-container);
-    background: var(--color-background-surface);
+    background: var(--color-background-body);
   }
 
   .jig-week-column-selected {
@@ -166,13 +203,16 @@ body {
     outline-offset: -2px;
   }
 
-  .jig-week-column-today .jig-week-column-header::after,
-  .jig-date-today::after {
-    content: "Today";
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 600;
+  .jig-weekday-line {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+
+  .jig-weekday-line small {
     color: var(--color-text-secondary);
+    font-size: 0.65rem;
+    font-weight: 600;
   }
 
   .jig-week-column-header {
@@ -218,8 +258,20 @@ body {
 
   .jig-empty-column,
   .jig-empty-state {
-    padding: var(--spacing-4);
+    padding: var(--spacing-3);
     text-align: center;
+  }
+
+  .jig-week-add-task {
+    width: calc(100% - 2 * var(--spacing-2));
+    margin: var(--spacing-2);
+    justify-content: flex-start;
+  }
+
+  .jig-task-count {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .jig-date-drop-zone {
@@ -231,6 +283,57 @@ body {
   .jig-date-drop-zone-active {
     outline: 2px dashed var(--color-accent);
     outline-offset: -3px;
+  }
+
+  .jig-task-card-list {
+    display: grid;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2);
+  }
+
+  .jig-task-card {
+    position: relative;
+    min-width: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-element);
+    background: var(--color-background-surface);
+    cursor: grab;
+  }
+
+  .jig-task-card:active {
+    cursor: grabbing;
+  }
+
+  .jig-task-card-selected {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  .jig-task-card-completed {
+    cursor: default;
+  }
+
+  .jig-task-card-leading,
+  .jig-task-card-preview-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+
+  .jig-task-card-leading {
+    min-width: 2.75rem;
+  }
+
+  .jig-task-drag-handle {
+    display: inline-flex;
+    min-width: 1.2rem;
+    min-height: 1.2rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    font-weight: 700;
+    cursor: grab;
+    user-select: none;
   }
 
   .jig-task-title {
@@ -247,13 +350,15 @@ body {
 
   .jig-task-meta {
     display: flex;
+    min-width: 0;
     flex-wrap: wrap;
     gap: var(--spacing-1) var(--spacing-2);
-    font-size: 0.78rem;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
   }
 
-  .jig-carry-over-label {
-    font-weight: 600;
+  .jig-task-meta-item {
+    min-width: 0;
   }
 
   .jig-priority-label {
@@ -261,36 +366,87 @@ body {
     text-transform: capitalize;
   }
 
-  .jig-task-actions {
-    min-width: 0;
-    max-width: 9rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-
   .jig-copy-reference,
   .jig-task-meta a {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 0.15em;
   }
 
-  .jig-drag-overlay {
-    max-width: 20rem;
-    padding: var(--spacing-2) var(--spacing-3);
+  .jig-task-menu {
+    position: relative;
+  }
+
+  .jig-task-menu > summary {
+    display: flex;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-element);
+    cursor: pointer;
+    list-style: none;
+    color: var(--color-text-secondary);
+    font-weight: 700;
+  }
+
+  .jig-task-menu > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .jig-task-menu > summary:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .jig-task-menu-panel {
+    position: absolute;
+    z-index: 20;
+    inset-block-start: calc(100% + var(--spacing-1));
+    inset-inline-end: 0;
+    display: grid;
+    min-width: 9rem;
+    gap: var(--spacing-0-5);
+    padding: var(--spacing-1);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-element);
     background: var(--color-background-surface);
-    color: var(--color-text-primary);
     box-shadow: var(--shadow-elevation-med);
+  }
+
+  .jig-task-menu-panel > * {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .jig-drag-card-overlay {
+    width: min(20rem, 100%);
+    padding: var(--spacing-2);
+    box-shadow: var(--shadow-elevation-med);
+    cursor: grabbing;
+  }
+
+  .jig-task-card-preview-row {
+    min-width: 0;
+  }
+
+  .jig-task-card-preview-checkbox,
+  .jig-task-card-preview-menu {
+    color: var(--color-text-secondary);
   }
 
   .jig-week-strip {
     display: grid;
-    grid-template-columns: repeat(7, minmax(4rem, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: var(--spacing-1);
     margin-block-end: var(--spacing-3);
-    overflow-x: auto;
+    overflow: visible;
   }
 
   .jig-week-strip-date {
@@ -325,12 +481,13 @@ body {
     gap: var(--spacing-4);
   }
 
-  .jig-carry-over-section {
-    padding-inline-start: var(--spacing-3);
-    border-inline-start: 3px solid var(--color-border-emphasized);
+  .jig-section-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-2);
   }
 
-  .jig-carry-over-section > h2,
   .jig-day-scheduled-section h2,
   .jig-history-group h2,
   .jig-settings-section h2 {
@@ -340,10 +497,6 @@ body {
 
   .jig-day-scheduled-section {
     min-height: 9rem;
-    padding: var(--spacing-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-container);
-    background: var(--color-background-surface);
   }
 
   .jig-completed-section {
@@ -382,6 +535,18 @@ body {
   .jig-settings-section {
     display: grid;
     gap: var(--spacing-3);
+  }
+
+  .jig-settings-notifications {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+  }
+
+  .jig-settings-notifications p {
+    margin-block: var(--spacing-0-5) 0;
+    color: var(--color-text-secondary);
   }
 
   .jig-diagnostics {
@@ -451,43 +616,126 @@ body {
   }
 
   @media (max-width: 47.999rem) {
+    .jig-shell {
+      display: block;
+    }
+
+    .jig-sidebar {
+      display: none;
+    }
+
+    .jig-main {
+      min-height: 100dvh;
+    }
+
+    .jig-mobile-header {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--spacing-2);
+      padding:
+        var(--spacing-2)
+        max(var(--spacing-3), env(safe-area-inset-right, 0px))
+        var(--spacing-2)
+        max(var(--spacing-3), env(safe-area-inset-left, 0px));
+      border-block-end: 1px solid var(--color-border);
+      background: var(--color-background-surface);
+    }
+
+    .jig-mobile-brand {
+      font-weight: 700;
+    }
+
+    .jig-mobile-destination-menu {
+      position: relative;
+      justify-self: center;
+    }
+
+    .jig-mobile-destination-menu > summary {
+      min-width: 5rem;
+      padding: var(--spacing-1) var(--spacing-2);
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+      list-style: none;
+    }
+
+    .jig-mobile-destination-menu > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .jig-mobile-destination-panel {
+      position: absolute;
+      z-index: 40;
+      inset-block-start: calc(100% + var(--spacing-1));
+      inset-inline-start: 50%;
+      display: grid;
+      min-width: 8rem;
+      padding: var(--spacing-1);
+      transform: translateX(-50%);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-element);
+      background: var(--color-background-surface);
+      box-shadow: var(--shadow-elevation-med);
+    }
+
+    .jig-mobile-destination-panel button {
+      appearance: none;
+      min-height: 2.75rem;
+      border: 0;
+      border-radius: var(--radius-element);
+      padding: var(--spacing-2);
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: start;
+      cursor: pointer;
+    }
+
+    .jig-mobile-destination-panel button[aria-current="page"] {
+      background: var(--color-background-highlight);
+      font-weight: 700;
+    }
+
     .jig-content {
       padding: var(--spacing-3);
     }
 
-    .jig-topbar {
-      align-items: stretch;
-      flex-wrap: wrap;
-      gap: var(--spacing-2);
-      padding-inline:
-        max(var(--spacing-3), env(safe-area-inset-left, 0px))
-        max(var(--spacing-3), env(safe-area-inset-right, 0px));
-    }
-
-    .jig-brand {
-      flex-basis: 100%;
-    }
-
-    .jig-primary-nav,
-    .jig-topbar-actions {
-      width: 100%;
-      overflow-x: auto;
-    }
-
-    .jig-topbar-actions {
-      justify-content: flex-end;
-    }
-
     .jig-view-heading {
-      align-items: center;
+      align-items: flex-start;
+      flex-direction: column;
+      gap: var(--spacing-2);
+    }
+
+    .jig-view-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .jig-view-actions .jig-status-control {
+      display: none;
     }
 
     .jig-week-strip {
-      grid-template-columns: repeat(7, minmax(3.75rem, 1fr));
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: var(--spacing-0-5);
+      overflow: visible;
     }
 
-    .jig-task-actions {
-      max-width: 12rem;
+    .jig-week-strip-date {
+      min-width: 0;
+      min-height: 3rem;
+      padding-inline: var(--spacing-0-5);
+    }
+
+    .jig-task-menu-panel {
+      position: fixed;
+      inset-inline: var(--spacing-3);
+      inset-block-end: calc(var(--spacing-3) + env(safe-area-inset-bottom, 0px));
+      min-width: 0;
     }
 
     .jig-editor-actions {
