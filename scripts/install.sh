@@ -127,7 +127,10 @@ trap cleanup EXIT INT TERM
 BUN_BIN="$BUILD_ROOT/runtime/bun"
 mkdir -p "$(dirname "$BUN_BIN")"
 
-if command -v bun >/dev/null 2>&1 && [[ "$(bun --version 2>/dev/null || true)" == "$BUN_VERSION" ]]; then
+PACKAGED_RUNTIME="$SOURCE_ROOT/runtime/bun"
+if [[ -x "$PACKAGED_RUNTIME" ]]; then
+  cp "$PACKAGED_RUNTIME" "$BUN_BIN"
+elif command -v bun >/dev/null 2>&1 && [[ "$(bun --version 2>/dev/null || true)" == "$BUN_VERSION" ]]; then
   cp "$(command -v bun)" "$BUN_BIN"
 else
   command -v curl >/dev/null 2>&1 || fail "curl is required to install the pinned Bun runtime."
@@ -155,24 +158,29 @@ fi
 chmod 0755 "$BUN_BIN"
 [[ "$("$BUN_BIN" --version)" == "$BUN_VERSION" ]] || fail "Pinned Bun runtime verification failed."
 
-BUILD_APP="$BUILD_ROOT/app"
-mkdir -p "$BUILD_APP"
-cp "$SOURCE_ROOT/package.json" "$BUILD_APP/"
-cp "$SOURCE_ROOT/bun.lock" "$BUILD_APP/"
-cp "$SOURCE_ROOT/.bun-version" "$BUILD_APP/"
-cp "$SOURCE_ROOT/tsconfig.json" "$BUILD_APP/"
-cp "$SOURCE_ROOT/vite.config.ts" "$BUILD_APP/"
-cp "$SOURCE_ROOT/index.html" "$BUILD_APP/"
-cp -R "$SOURCE_ROOT/src" "$BUILD_APP/"
-cp -R "$SOURCE_ROOT/ui" "$BUILD_APP/"
+if [[ -f "$SOURCE_ROOT/RELEASE.json" && -f "$SOURCE_ROOT/dist/index.html" ]]; then
+  BUILD_APP="$SOURCE_ROOT"
+  printf 'Using certified prebuilt Jig release payload\n'
+else
+  BUILD_APP="$BUILD_ROOT/app"
+  mkdir -p "$BUILD_APP"
+  cp "$SOURCE_ROOT/package.json" "$BUILD_APP/"
+  cp "$SOURCE_ROOT/bun.lock" "$BUILD_APP/"
+  cp "$SOURCE_ROOT/.bun-version" "$BUILD_APP/"
+  cp "$SOURCE_ROOT/tsconfig.json" "$BUILD_APP/"
+  cp "$SOURCE_ROOT/vite.config.ts" "$BUILD_APP/"
+  cp "$SOURCE_ROOT/index.html" "$BUILD_APP/"
+  cp -R "$SOURCE_ROOT/src" "$BUILD_APP/"
+  cp -R "$SOURCE_ROOT/ui" "$BUILD_APP/"
 
-printf 'Installing frozen dependencies and building Jig assets\n'
-(
-  cd "$BUILD_APP"
-  "$BUN_BIN" install --frozen-lockfile
-  "$BUN_BIN" run typecheck
-  "$BUN_BIN" run build
-)
+  printf 'Installing frozen dependencies and building Jig assets\n'
+  (
+    cd "$BUILD_APP"
+    "$BUN_BIN" install --frozen-lockfile
+    "$BUN_BIN" run typecheck
+    "$BUN_BIN" run build
+  )
+fi
 
 if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
   systemctl --user stop jig.service >/dev/null 2>&1 || true
@@ -201,6 +209,9 @@ cp -R "$BUILD_APP/dist" "$STAGED_APP/"
 cp "$BUILD_APP/package.json" "$STAGED_APP/"
 cp "$BUILD_APP/bun.lock" "$STAGED_APP/"
 cp "$BUILD_APP/.bun-version" "$STAGED_APP/"
+if [[ -f "$BUILD_APP/RELEASE.json" ]]; then
+  cp "$BUILD_APP/RELEASE.json" "$STAGED_APP/"
+fi
 
 mkdir -p "$(dirname "$APP_DIR")"
 if [[ -e "$APP_DIR" ]]; then
