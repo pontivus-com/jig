@@ -1,6 +1,6 @@
 # Jig — v1 MVP implementation plan
 
-**Status:** Implementation-ready execution plan, v1.0 (2026-11-16).
+**Status:** Implementation-ready execution plan, v1.1 (2026-11-16), completeness-audited against JIG-FR-01–22, Technical solution v0.5 and UI solution v0.3.
 **Target:** Build and certify the first Jig desktop MVP without reopening product, functional, technical, or UI design.
 **Required baseline:** Implement only from a repository revision that contains the current canonical product definition, JIG-FR-01–22 functional design, technical solution v0.5 or later, and UI solution v0.3 or later.
 
@@ -59,6 +59,7 @@ ui/
   src/
     main.tsx
     app.tsx
+    http.ts
     task-row.tsx
     week.tsx
     day.tsx
@@ -74,7 +75,7 @@ tests/
   browser/
 ```
 
-`task-row.tsx` is the one intentional addition to the technical solution's illustrative tree because Week and Day require the same Task-row semantics and interaction affordances. It must remain a presentation component, not another Task representation.
+`task-row.tsx` and `ui/src/http.ts` are intentional small additions to the technical solution's illustrative tree. `task-row.tsx` centralizes one presentation of canonical Task semantics across Week/Day; `ui/src/http.ts` centralizes the same-origin canonical fetch/command boundary, revision handling and write-token use. Neither may introduce a second Task/command representation.
 
 ## 4. Required package scripts
 
@@ -117,7 +118,7 @@ Do not add a lint/format framework merely to satisfy this plan. Use repository-n
 | 17 | V1-17 Settings/status surface | V1-11,V1-12 | repository/service/theme truth |
 | 18 | V1-18 dnd-kit and keyboard movement | V1-03,V1-14,V1-15 | exact same/cross-date movement |
 | 19 | V1-19 reminders and failure feedback | V1-07,V1-13,V1-15 | reminder/save/sync feedback |
-| 20 | V1-20 responsive/mobile-sized composition | V1-14..V1-19 | 768px semantic reflow |
+| 20 | V1-20 responsive/mobile-sized composition | V1-14,V1-15,V1-16,V1-17,V1-18,V1-19 | 768px semantic reflow |
 | 21 | V1-21 installer and configuration lifecycle | V1-05,V1-09,V1-11 | one-script installation |
 | 22 | V1-22 launcher, user service and diagnostics | V1-07,V1-11,V1-21 | `jig` desktop lifecycle |
 | 23 | V1-23 end-to-end browser and repository certification | V1-01..V1-22 | FR-01–22 evidence |
@@ -192,9 +193,9 @@ Expose canonical reads only: complete Task set + revision and the minimal persis
 
 Implement Technical solution §3.2 exactly: `GET /api/v1/tasks`, `GET /api/v1/status`, `POST /api/v1/commands`, `expected_revision`, 400/404/409/500 behavior, default port 47831 and the canonical repository-status vocabulary.
 
-Generate one 256-bit token per service process, inject it into the same-origin application bootstrap, require `X-Jig-Write-Token` for mutations, reject cross-origin writes and do not enable permissive CORS. HTTP envelopes wrap canonical values; they are not DTO/domain models.
+Generate one 256-bit token per service process, inject it into the same-origin application bootstrap, require `X-Jig-Write-Token` for mutations, reject cross-origin writes and do not enable permissive CORS. Serve the built Vite application from the same loopback origin so the token bootstrap and API share one trust boundary. HTTP envelopes wrap canonical values; they are not DTO/domain models.
 
-**Gate:** HTTP tests prove stale revision makes no mutation, missing/bad token is rejected, cross-origin mutation is rejected, and success is returned only after SQLite commit.
+**Gate:** HTTP tests prove stale revision makes no mutation, missing/bad token is rejected, cross-origin mutation is rejected, static UI/bootstrap is served from the same loopback origin, and success is returned only after SQLite commit.
 
 ## 8. Wave C — portable snapshot and repository boundary
 
@@ -212,11 +213,11 @@ Do not persist a tombstone. Current Task membership is exact.
 
 **Files:** `src/shell/git.ts`, `tests/sync/git-adapter.test.ts`.
 
-Use Bun argument-array subprocess calls to ordinary Git. Create/adopt only the dedicated `jig-data` ref and linked worktree under `<repo>/.jig/git/`. Stage/commit only app-owned snapshot files. Never use shell interpolation, force push/reset/rebase, arbitrary merge, or the user's ordinary branch/index.
+Use Bun argument-array subprocess calls to ordinary Git. Create a new `jig-data` ref from an empty Git tree, or adopt an existing compatible ref only after validating portable format and dataset identity. Attach its linked worktree under `<repo>/.jig/git/`. Stage/commit only app-owned snapshot files. Refuse an existing unrelated/incompatible `jig-data` ref. Never use shell interpolation, force push/reset/rebase, arbitrary merge, or the user's ordinary branch/index.
 
 Implement the four operational outcomes only: `local-only`, `pending/retrying`, `synchronized`, `sync-issue`. Do not expose Git topology to the core/UI.
 
-**Gate:** fixture repository with unrelated staged and unstaged files remains byte/index unchanged while Jig exports/commits/pushes its isolated data.
+**Gate:** fixture repository with unrelated staged and unstaged files remains byte/index unchanged while Jig exports/commits/pushes its isolated data; empty-tree initialization, compatible existing-ref adoption and incompatible-ref refusal are covered.
 
 ### V1-10 — Implement validated complete-snapshot adoption
 
@@ -234,9 +235,9 @@ Persist enough adopted-snapshot metadata to resume safely after a process crash 
 
 Implement the exact 3-second debounce / 15-second maximum flush and 60-second healthy polling / 5,10,20,40,80,160,300-second retry schedule. Browser presence is irrelevant. If SQLite advances during export, leave the later revision pending for the next cycle.
 
-Local saves never wait for Git. A Git/export failure never rolls back SQLite. The adapter may provide a candidate snapshot only after repository state outside Jig resolves to one concrete snapshot.
+Local saves never wait for Git. A Git/export failure never rolls back SQLite. The adapter may provide a candidate snapshot only after repository state outside Jig resolves to one concrete snapshot. On startup, reconcile the explicit failure window where a Git commit succeeded but the exported-revision/head metadata update did not; recover from the actual committed snapshot/head rather than duplicating or losing the export.
 
-**Gate:** fake-clock/process tests prove batching, retry/reset behavior, browser-independent synchronization and preservation of local authority through failures.
+**Gate:** fake-clock/process tests prove batching, retry/reset behavior, browser-independent synchronization, preservation of local authority through failures, and commit-succeeded/metadata-update-failed crash recovery.
 
 ## 9. Wave D — UI foundation and functional surfaces
 
@@ -244,13 +245,15 @@ Before this wave, read Technical solution §2.1. The implementation source map i
 
 ### V1-12 — Build app shell, navigation and one theme owner
 
-**Files:** `ui/src/main.tsx`, `ui/src/app.tsx`, `ui/src/styles.css`.
+**Files:** `ui/src/main.tsx`, `ui/src/app.tsx`, `ui/src/http.ts`, `ui/src/styles.css`.
 
-Build Week / Day / History / Settings navigation with Today as a Day shortcut. Fetch canonical Tasks/revision/status through the small HTTP API using plain browser `fetch`; do not add React Query or another state framework. Hold only selected date/task, modal draft, drag preview and theme preference as presentation state.
+Build Week / Day / History / Settings navigation with Today as a Day shortcut. `ui/src/http.ts` is the single browser-side API owner: read the injected write token, fetch canonical Tasks/revision/status, submit canonical commands with `expected_revision`, and update the in-memory revision only from server responses. On HTTP 409, refetch canonical state before offering/retrying the user operation; never blindly replay a stale mutation. Preserve any open editor draft while reconciling canonical state. Surface 400/404/500 outcomes without claiming success. Do not create transport DTO classes/shapes.
+
+Use plain browser `fetch`; do not add React Query or another state framework. Hold only selected date/task, modal draft, drag preview and theme preference as presentation state.
 
 Implement System/Light/Dark using Astryx Neutral semantic roles and local browser preference. Do not copy Order's color literals or private wrappers.
 
-**Gate:** navigation makes no Task mutation; System follows media preference; explicit Light/Dark survives browser reload without entering Git/Task data.
+**Gate:** navigation makes no Task mutation; canonical reads/commands use one HTTP client; a forced 409 refetches current canonical state without a blind retry or draft loss; System follows media preference; explicit Light/Dark survives browser reload without entering Git/Task data.
 
 ### V1-13 — Build shared Task row and editor
 
@@ -258,9 +261,9 @@ Implement System/Light/Dark using Astryx Neutral semantic roles and local browse
 
 Task row must expose independent completion control, title, optional context, exceptional priority, optional reminder, drag handle and action affordance. Avoid duplicate focus stops and hover-only required actions.
 
-Editor supports Title, Date, Context, Priority, Reminder, Reference and Notes with explicit Save/Cancel. New Task defaults to title + initiating date only. Existing Task supports destructive Delete -> Astryx confirmation -> canonical delete command. Priority edit never reorders. Date edit uses priority-assisted insertion.
+Editor supports Title, Date, Context, Priority, Reminder, Reference and Notes with explicit Save/Cancel. New Task defaults to title + initiating date only. Existing Task supports destructive Delete -> Astryx confirmation -> canonical delete command. Priority edit never reorders. Date edit uses priority-assisted insertion. Safe `http`/`https` references may open with normal browser navigation; filesystem/repository/other locators are copied only. Never execute, shell-expand, scan, clone or dereference a Task reference.
 
-**Gate:** component/browser tests cover title-only create, metadata edit with stable order, confirmation cancel/no mutation, confirmed delete, and keyboard focus behavior.
+**Gate:** component/browser tests cover title-only create, metadata edit with stable order, confirmation cancel/no mutation, confirmed delete, safe HTTP(S) reference opening, non-HTTP locator copy-only behavior, and keyboard focus behavior.
 
 ### V1-14 — Build Desktop Week
 
