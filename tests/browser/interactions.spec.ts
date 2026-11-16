@@ -17,6 +17,22 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+async function taskCard(page: Page, title: string) {
+  return page
+    .getByText(title, { exact: true })
+    .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
+}
+
+async function runTaskAction(
+  page: Page,
+  title: string,
+  action: string,
+): Promise<void> {
+  const card = await taskCard(page, title);
+  await card.locator(`summary[aria-label="Actions for ${title}"]`).click();
+  await card.getByRole("button", { name: action, exact: true }).click();
+}
+
 async function createTask(
   page: Page,
   title: string,
@@ -88,9 +104,7 @@ test("non-drag movement uses the same exact index semantics", async ({
   await createTask(page, "Second exact task", today);
   await page.reload();
 
-  await page
-    .getByRole("button", { name: "Move First exact task down" })
-    .click();
+  await runTaskAction(page, "First exact task", "Move down");
 
   await expect
     .poll(async () =>
@@ -108,9 +122,7 @@ test("non-drag movement uses the same exact index semantics", async ({
     )
     .toEqual(["Second exact task", "First exact task"]);
 
-  await page
-    .getByRole("button", { name: "Move First exact task up" })
-    .click();
+  await runTaskAction(page, "First exact task", "Move up");
 
   await expect
     .poll(async () =>
@@ -149,9 +161,7 @@ test("priority edits preserve established manual order", async ({
     )
     .map((task) => task.id);
 
-  await page
-    .getByRole("button", { name: "Edit Priority edited task" })
-    .click({ timeout: 5_000 });
+  await runTaskAction(page, "Priority edited task", "Edit");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: 5_000 });
   const highPriority = dialog.getByRole("radio", {
@@ -189,9 +199,7 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   await createTask(page, "Editable metadata task", today);
   await page.reload();
 
-  await page
-    .getByRole("button", { name: "Edit Editable metadata task" })
-    .click();
+  await runTaskAction(page, "Editable metadata task", "Edit");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Context").fill("Client Alpha");
   await dialog
@@ -221,16 +229,14 @@ test("real pointer drag moves a Task across dated Week drop zones", async ({
   await page.reload();
   await page.getByRole("button", { name: "Week", exact: true }).click();
 
-  const handle = page.getByRole("button", {
-    name: "Drag Pointer drag contract",
-  });
+  const card = await taskCard(page, "Pointer drag contract");
   const destination = page.locator(
     `[data-date="${destinationDate}"]`,
   );
-  await expect(handle).toBeVisible();
+  await expect(card).toBeVisible();
   await expect(destination).toBeVisible();
 
-  const sourceBox = await handle.boundingBox();
+  const sourceBox = await card.boundingBox();
   const destinationBox = await destination.boundingBox();
   expect(sourceBox).not.toBeNull();
   expect(destinationBox).not.toBeNull();
@@ -304,9 +310,7 @@ test("deletion requires confirmation and removes the canonical Task", async ({
   await createTask(page, "Delete contract task", today);
   await page.reload();
 
-  await page
-    .getByRole("button", { name: "Edit Delete contract task" })
-    .click();
+  await runTaskAction(page, "Delete contract task", "Edit");
   const editor = page.getByRole("dialog");
   await editor
     .getByRole("button", { name: "Delete task…" })
@@ -369,9 +373,7 @@ test("reduced motion preserves non-drag movement semantics", async ({
   await createTask(page, "Reduced motion second", today);
   await page.reload();
 
-  await page
-    .getByRole("button", { name: "Move Reduced motion first down" })
-    .click();
+  await runTaskAction(page, "Reduced motion first", "Move down");
 
   await expect
     .poll(async () =>
