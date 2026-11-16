@@ -580,16 +580,11 @@ body {
 
   .jig-day-scheduled-section {
     min-height: 9rem;
-    padding: var(--spacing-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-container);
-    background: var(--color-background-surface);
   }
 
   .jig-completed-section {
-    padding: var(--spacing-2) var(--spacing-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-container);
+    padding-block: var(--spacing-2);
+    border-block-start: 1px solid var(--color-border);
   }
 
   .jig-completed-section > summary {
