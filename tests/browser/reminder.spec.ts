@@ -34,20 +34,19 @@ test("due reminder fires once while open, dismisses, and edited time creates a n
   await page.reload();
 
   await page.clock.runFor(60_000);
-  const firstToast = page
-    .getByRole("status")
-    .filter({ hasText: "Reminder: Timed reminder" });
-  await expect(firstToast).toBeVisible();
-  await firstToast
-    .getByRole("button", { name: /dismiss/i })
+  const firstReminder = page.getByText(
+    "Reminder: Timed reminder",
+    { exact: true },
+  );
+  await expect(firstReminder).toBeVisible();
+  await page
+    .getByRole("button", { name: "Dismiss", exact: true })
     .click();
-  await expect(firstToast).toBeHidden();
+  await expect(firstReminder).toBeHidden();
 
   await page.clock.runFor(30_000);
   await expect(
-    page
-      .getByRole("status")
-      .filter({ hasText: "Reminder: Timed reminder" }),
+    page.getByText("Reminder: Timed reminder", { exact: true }),
   ).toHaveCount(0);
 
   const task = await taskByTitle(page, "Timed reminder");
@@ -61,10 +60,9 @@ test("due reminder fires once while open, dismisses, and edited time creates a n
   await page.reload();
   await page.clock.runFor(30_000);
 
-  const secondToast = page
-    .getByRole("status")
-    .filter({ hasText: "Reminder: Timed reminder" });
-  await expect(secondToast).toBeVisible();
+  await expect(
+    page.getByText("Reminder: Timed reminder", { exact: true }),
+  ).toBeVisible();
 
   const deliveredKeys = await page.evaluate(() =>
     Object.keys(localStorage).filter((key) =>
