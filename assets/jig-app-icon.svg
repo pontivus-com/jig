@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Jig app icon</title>
+  <desc id="desc">Jig's white guide mark and amber alignment pin on an ink-navy tile.</desc>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#0B1426"/>
+  <path d="M48 10v25c0 11-7 18-18 18h-4c-9 0-15-5-16-14" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="28" cy="34" r="5" fill="#F59E0B"/>
+</svg>
