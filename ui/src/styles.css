@@ -236,6 +236,8 @@ body {
   }
 
   .jig-task-actions {
+    min-width: 0;
+    max-width: 9rem;
     flex-wrap: wrap;
     justify-content: flex-end;
   }
