@@ -21,7 +21,6 @@ import {
   writeConfigAtomic,
   loadConfig,
 } from "../../src/shell/config";
-import { DATA_REF } from "../../src/shell/sqlite";
 
 const roots: string[] = [];
 
@@ -64,7 +63,6 @@ describe("V1 security and trust boundaries", () => {
       "src/shell/git.ts",
       "src/shell/config.ts",
       "src/shell/setup.ts",
-      "src/shell/migration.ts",
     ]) {
       const contents = await source(path);
       expect(contents).not.toContain("write_token");
@@ -78,8 +76,6 @@ describe("V1 security and trust boundaries", () => {
       {
         version: 1,
         repository_path: root,
-        remote_name: null,
-        data_ref: DATA_REF,
         http_port: 47831,
       },
       configPath,
@@ -88,8 +84,6 @@ describe("V1 security and trust boundaries", () => {
     expect(await loadConfig(configPath)).toStrictEqual({
       version: 1,
       repository_path: root,
-      remote_name: null,
-      data_ref: DATA_REF,
       http_port: 47831,
     });
     expect(await readFile(configPath, "utf8")).not.toContain(
