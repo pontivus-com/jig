@@ -1,4 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
+import { resetCanonicalTasks } from "./helpers";
+
+test.beforeEach(async ({ page }) => {
+  await resetCanonicalTasks(page);
+  await page.reload();
+});
 
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
@@ -11,7 +17,6 @@ async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
 }
 
 test("real runtime supports title-first create, completion, History and reopen", async ({ page }) => {
-  await page.goto("/");
   await expect(page.getByRole("heading", { name: /–/ })).toBeVisible();
 
   await addTitleOnlyTask(page, "Browser acceptance task");
@@ -26,7 +31,6 @@ test("real runtime supports title-first create, completion, History and reopen",
 });
 
 test("stale revisions refetch canonical state and never blindly replay a mutation", async ({ page }) => {
-  await page.goto("/");
   await addTitleOnlyTask(page, "Stale view seed");
 
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
@@ -76,7 +80,6 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
 });
 
 test("responsive reflow preserves an open editor draft and appearance remains presentation-only", async ({ page }) => {
-  await page.goto("/");
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Title").fill("Draft survives reflow");
