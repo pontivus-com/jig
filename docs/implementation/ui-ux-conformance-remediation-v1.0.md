@@ -1332,6 +1332,178 @@ At narrow width:
 
 ---
 
+# 11A. Wave 8A — browser reminder notifications
+
+## UX-024A — Add browser Notification delivery for due reminders
+
+**Files**
+- `ui/src/reminder.tsx`
+- `ui/src/settings.tsx`
+- `ui/src/app.tsx` only if permission/status plumbing is needed
+- `tests/browser/interactions.spec.ts` or a focused new `tests/browser/reminders.spec.ts`
+- `docs/design/ui-solution.md` Settings/reminder copy if needed for exact wording
+
+### 24A.1 Preserve one reminder eligibility calculation
+
+Keep the existing eligibility rules:
+- Task is outstanding;
+- `scheduled_date === today`;
+- `reminder_time !== null`;
+- due time is after the current app-session start;
+- due time is <= now;
+- delivery key has not already been delivered.
+
+Do not create separate toast and notification schedulers.
+
+### 24A.2 Split delivery by document visibility
+
+Refactor `ReminderMonitor` so one eligible reminder chooses exactly one presentation channel:
+
+```text
+document visible
+  → Astryx toast
+
+document hidden + Notification supported + permission granted
+  → browser Notification
+
+document hidden + permission default/denied/unsupported
+  → do not mark delivered;
+     allow focus/visibility catch-up toast when the page becomes visible
+```
+
+This avoids duplicate toast + browser notification delivery for the same reminder.
+
+### 24A.3 Browser Notification payload
+
+For granted permission, construct:
+
+```ts
+new Notification("Jig reminder", {
+  body: task.title,
+  tag: reminderKey(task),
+})
+```
+
+No Task note/reference/private metadata is placed in the system notification body.
+
+If notification construction throws, do **not** mark the delivery key; visible/focus catch-up remains possible.
+
+### 24A.4 Delivery suppression
+
+The same `reminderKey(task)` is authoritative for both channels:
+
+```text
+jig-reminder-delivered:|task-id|scheduled-date|HH:mm
+```
+
+Rules:
+- mark delivered only after toast dispatch or browser Notification construction succeeds;
+- never mark merely because a due reminder was detected;
+- use the same key as Notification `tag`;
+- completion makes a reminder ineligible;
+- editing date/time naturally creates a different key;
+- daily rollover changes `scheduled_date`, therefore creates a new key for the rolled-forward date;
+- pruning may remove keys for dates earlier than today.
+
+Do not add server-side reminder delivery state.
+
+### 24A.5 Explicit permission UX in Settings
+
+Add a small `Browser notifications` row in Settings.
+
+States:
+- unsupported → `Not supported by this browser`; no action;
+- `default` → `Not enabled` + `Enable` button;
+- `granted` → `Enabled`;
+- `denied` → `Blocked in browser settings`; no repeated permission prompt.
+
+The `Enable` button directly calls:
+
+```ts
+await Notification.requestPermission()
+```
+
+from the click handler.
+
+Do not request permission:
+- at application startup;
+- when a reminder is created;
+- from a timer;
+- from a visibility/focus handler.
+
+Permission preference is browser-owned; do not persist another Jig boolean.
+
+### 24A.6 Rollover interaction
+
+Regression behavior:
+
+```text
+Task scheduled yesterday
+reminder_time = 10:00
+daily rollover → scheduled_date becomes today
+reminder_time remains 10:00
+today 10:00 eligibility → browser/toast reminder fires using today's key
+```
+
+Do not display or notify using yesterday's date after rollover.
+
+### 24A.7 Browser tests
+
+Add deterministic browser tests with the Notification API stubbed before page load.
+
+Required:
+
+#### R01 — visible-page toast
+- create due-today reminder;
+- page visible;
+- assert Astryx reminder toast;
+- assert browser Notification constructor not called.
+
+#### R02 — hidden-page browser notification
+- permission = `granted`;
+- simulate hidden document / invoke the monitor through the test-visible path;
+- assert one Notification:
+  - title `Jig reminder`;
+  - body Task title;
+  - tag equals reminder delivery key;
+- assert no duplicate toast for same key.
+
+#### R03 — denied/default permission catch-up
+- permission `default` or `denied`;
+- reminder becomes due while hidden;
+- assert delivery key is not marked;
+- simulate visible/focus;
+- assert in-app toast appears once.
+
+#### R04 — explicit permission request
+- Settings shows `Enable` only for `default`;
+- clicking it calls `Notification.requestPermission()`;
+- startup does not call it;
+- denied state does not repeatedly prompt.
+
+#### R05 — rollover + reminder
+- create yesterday Task with reminder time still upcoming today;
+- trigger/observe rollover;
+- assert API `scheduled_date === today`;
+- assert reminder key uses today's date;
+- assert due reminder is delivered on today's schedule.
+
+#### R06 — completed Task
+- complete before due time;
+- assert neither toast nor browser notification fires.
+
+### 24A.8 Acceptance
+
+The reminder feature is complete only when:
+- visible Jig produces the existing toast;
+- hidden/open Jig with granted permission produces a browser-level notification;
+- denied/unsupported permission does not break reminder catch-up;
+- no duplicate delivery occurs;
+- rollover naturally retargets the reminder to the new scheduled date;
+- no service worker/background daemon is introduced.
+
+---
+
 # 12. Wave 9 — visual-system cleanup
 
 ## UX-025 — Replace heavy generic card stacks with governed low-chrome structure
@@ -1771,7 +1943,11 @@ Do not defer structural failures to polish.
 21. Existing drag/edit/complete/delete/reminder/sync tests stay green.
 22. New conformance tests stay green.
 23. New 1.0.2 screenshot evidence is reviewed against corrected SVGs.
-24. No Task schema, persistence-ownership, or Git architecture change is introduced beyond the explicitly planned persisted daily-rollover mutation.
+24. Browser notification permission is requested only by explicit user action.
+25. Due reminders use in-app toast while visible and browser Notification while hidden/open with granted permission.
+26. One delivery key prevents duplicate toast/notification delivery.
+27. Rolled-forward reminders fire against the new scheduled date while preserving reminder time.
+28. No Task schema, persistence-ownership, or Git architecture change is introduced beyond the explicitly planned persisted daily-rollover mutation.
 
 ---
 
