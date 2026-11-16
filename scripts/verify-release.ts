@@ -127,6 +127,10 @@ const baseVersion =
     ? "0.0.0"
     : packageVersionFromText(basePackageText);
 const baseChangelog = gitMaybe("show", `${base}:CHANGELOG.md`);
+const baseUnreleased =
+  baseChangelog === null
+    ? null
+    : sectionBody(baseChangelog + "\n", "## [Unreleased]");
 const currentUnreleased = sectionBody(changelog, "## [Unreleased]");
 
 if (currentUnreleased === null) {
@@ -149,11 +153,20 @@ if (mode === "pr") {
     if (packageVersion !== target) {
       fail("release PR package.json version must equal its branch version");
     }
+    const releaseComparison = compareVersions(
+      parseVersion(packageVersion),
+      parseVersion(baseVersion),
+    );
+    if (releaseComparison < 0) {
+      fail("release PR version must not be lower than the base version");
+    }
     if (
-      compareVersions(parseVersion(packageVersion), parseVersion(baseVersion)) <=
-      0
+      releaseComparison === 0 &&
+      (baseUnreleased === null || baseUnreleased === "")
     ) {
-      fail("release PR version must be greater than the base version");
+      fail(
+        "same-version release finalization requires non-empty base [Unreleased] content",
+      );
     }
     if (!releasedSectionExists(changelog, packageVersion)) {
       fail("release PR changelog must contain the matching released section");
@@ -191,11 +204,8 @@ if (mode === "pr") {
       fail("ordinary work PRs must leave non-empty [Unreleased] content");
     }
 
-    if (baseChangelog !== null) {
-      const baseUnreleased = sectionBody(baseChangelog + "\n", "## [Unreleased]");
-      if (baseUnreleased === currentUnreleased) {
-        fail("ordinary work PRs must change the [Unreleased] section");
-      }
+    if (baseUnreleased !== null && baseUnreleased === currentUnreleased) {
+      fail("ordinary work PRs must change the [Unreleased] section");
     }
 
     const body = pullRequestBody();
@@ -226,11 +236,20 @@ if (mode === "pr") {
     }
   }
 } else if (mode === "release-commit") {
+  const releaseComparison = compareVersions(
+    parseVersion(packageVersion),
+    parseVersion(baseVersion),
+  );
+  if (releaseComparison < 0) {
+    fail("release commit version must not be lower than the base version");
+  }
   if (
-    compareVersions(parseVersion(packageVersion), parseVersion(baseVersion)) <=
-    0
+    releaseComparison === 0 &&
+    (baseUnreleased === null || baseUnreleased === "")
   ) {
-    fail("release commit must increase package.json.version");
+    fail(
+      "same-version release finalization requires non-empty base [Unreleased] content",
+    );
   }
   if (!releasedSectionExists(changelog, packageVersion)) {
     fail("release commit changelog must contain the matching released section");
