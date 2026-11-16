@@ -132,6 +132,10 @@ body {
     display: none;
   }
 
+  .jig-mobile-quick-add {
+    display: none;
+  }
+
   .jig-view-actions,
   .jig-editor-primary-actions {
     display: flex;
@@ -762,6 +766,26 @@ body {
 
     .jig-content {
       padding: var(--spacing-3);
+      padding-block-end: calc(5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .jig-header-add {
+      display: none;
+    }
+
+    .jig-mobile-quick-add {
+      position: fixed;
+      z-index: 25;
+      inset-inline-end: max(var(--spacing-4), env(safe-area-inset-right, 0px));
+      inset-block-end: max(var(--spacing-4), env(safe-area-inset-bottom, 0px));
+      display: inline-flex;
+      min-width: 3.25rem;
+      min-height: 3.25rem;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      box-shadow: var(--shadow-elevation-med);
+      font-size: 1.35rem;
     }
 
     .jig-view-heading {
