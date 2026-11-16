@@ -4,6 +4,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-16
+
 ### Added
 
 - Initial Jig v1 MVP: Week, Day, History and Settings surfaces for lightweight date-based personal planning.
