@@ -18,7 +18,7 @@ The normal experience is: run one installer; assign repository; installer config
 | Area | Chosen solution |
 |---|---|
 | Runtime and service | One Bun 1.4.4 process on Linux, `systemd --user` service, loopback HTTP, no external database or remote service |
-| Command and installer | `jig` launcher in ~/.local/bin and `scripts/install.sh --repo /absolute/existing/repo`; repository acquisition/cloning is performed with ordinary Git tooling before Jig installation |
+| Command and installer | `jig` launcher in ~/.local/bin; `scripts/install.sh --repo /absolute/existing/repo` or `--repo-url URL --checkout /new/empty/path`. URL mode delegates acquisition to Git and then converges on the same selected-checkout installation path. |
 | UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 with Jig theme derived from Neutral |
 | Cross-day drag | `@dnd-kit/react@0.5.3`, one drag owner; Astryx handles visual primitives |
 | Live data | One Bun SQLite database at `<selected-repo>/.jig/local/jig.sqlite`; immediate transactional writes |
@@ -107,15 +107,15 @@ Only one Bun process may write the configured SQLite file. Enforce a single acti
 
 ### 3.1 Installer and executable lifecycle
 
-A **single installer script** `scripts/install.sh` is the canonical entry point. `--repo` names the absolute path of an existing writable local Git repository selected by the user. Jig does not clone, initialize, relocate or otherwise provision that repository; repository acquisition and organization remain ordinary Git responsibilities.
+A **single installer script** `scripts/install.sh` is the canonical entry point. `--repo` names the absolute path of an existing writable local Git repository selected by the user. Alternatively, `--repo-url` plus `--checkout` identifies a repository to obtain through ordinary Git clone semantics into a new/empty checkout; after cloning, the installer must use the exact same selected-checkout setup path as `--repo`. Jig does not invent separate repository lifecycle semantics around URL mode.
 
 The installer must:
 
-1. Verify Linux, Git, writable user application directories and that `--repo` resolves to an existing writable Git repository other than Jig's public source checkout. Never `git init` an arbitrary directory and never clone or overwrite a checkout.
+1. Verify Linux, Git and writable user application directories. For `--repo`, validate an existing writable Git repository other than Jig's public source checkout. For `--repo-url` + `--checkout`, require a new/empty destination, invoke Git clone using normal Git credentials/configuration, then validate the resulting checkout through the same repository-validation path. Never `git init` an arbitrary directory or overwrite a non-empty checkout.
 2. Install/reuse the exact-pinned runtime and certified application payload without requiring root for the ordinary user path.
 3. Safely establish `<repo>/.jig/local/` for SQLite/local operational state without modifying unrelated tracked files.
 4. Inspect the selected repository for valid existing Jig portable data through the repository adapter. If valid Jig data exists, adopt it and initialize/hydrate local SQLite from that data when no compatible local database exists. If no Jig data exists, initialize a new Jig dataset and allow the adapter to publish its first valid portable snapshot. **The installer must never publish or leave behind an intermediate Git state that Jig itself considers invalid.**
-5. Treat Git synchronization setup as an integration step, not as repository management. Ambient user Git configuration/policy must not be rewritten. Git signing, identities, credentials, remotes, branch topology and worktree mechanics remain Git concerns; adapter operations must either work within that environment or report a synchronization issue without corrupting installation/local planning state.
+5. Treat Git synchronization setup as an integration step, not as repository management. URL-mode acquisition may delegate a single clone operation to Git, but ambient user Git configuration/policy must not be rewritten. Git signing, identities, credentials, remotes, branch topology and worktree mechanics remain Git concerns; adapter operations must either work within that environment or report a synchronization issue without corrupting installation/local planning state.
 6. Save only Jig application configuration (selected repository path and local HTTP port), install the `jig` command, and install/enable/start a `systemd --user` service when available. Otherwise provide the documented foreground fallback.
 7. Verify local application readiness, SQLite/task storage, and the ability of the repository adapter to represent/synchronize Jig data. A repository transport problem may be reported as a synchronization issue but must not invalidate an otherwise usable local installation.
 
