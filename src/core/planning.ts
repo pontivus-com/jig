@@ -5,6 +5,7 @@ import {
   normalizeTitle,
   type Priority,
   type Task,
+  type TaskEditChanges,
   validateTask,
 } from "./task";
 
@@ -18,16 +19,6 @@ export class PlanningError extends Error {
     this.name = "PlanningError";
     this.code = code;
   }
-}
-
-export interface TaskEditChanges {
-  readonly title?: string;
-  readonly scheduled_date?: string;
-  readonly priority?: Priority;
-  readonly context?: string | null;
-  readonly reference?: string | null;
-  readonly note?: string | null;
-  readonly reminder_time?: string | null;
 }
 
 export interface DayAttention {
