@@ -1,9 +1,11 @@
 # Jig — technical solution design
 
-**Status:** Proposed binding desktop MVP technical solution, v0.6 (2026-11-16), reflecting JIG-FR-01–22, explicit repository-boundary ownership, closed implementation contracts, and explicit Settings operational endpoints. Not yet implemented, performance-tested or runtime-certified.
+**Status:** Corrected binding desktop MVP technical solution, v0.7 (2026-11-16), with the v1.0.1 authority-boundary correction: automatic Git synchronization remains required, while repository acquisition, topology, policy and reconciliation remain Git responsibilities rather than Jig product/application responsibilities.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
+
+**Foundational authority rule:** For every external integration, identify the authoritative owner first. Jig implements only the minimum interface needed for Jig's product job and must not absorb that external system's configuration, topology, provisioning, migration, reconciliation or policy. For Git specifically, Jig owns deterministic Jig records, automatic synchronization intent and coarse sync outcome; Git owns repository acquisition, branches/refs/worktrees, signing/identity, credentials, remotes, history and reconciliation. A Git isolation technique may exist inside the adapter, but it is not Jig domain, user workflow or configuration.
 
 ## 1. Decisions, baseline and user experience
 
@@ -16,16 +18,16 @@ The normal experience is: run one installer; assign repository; installer config
 | Area | Chosen solution |
 |---|---|
 | Runtime and service | One Bun 1.4.4 process on Linux, `systemd --user` service, loopback HTTP, no external database or remote service |
-| Command and installer | `jig` launcher in ~/.local/bin, one `scripts/install.sh --repo /absolute/existing/repo` command or `--repo-url URL --checkout /new/empty/path`; optional interactive selection if omitted |
+| Command and installer | `jig` launcher in ~/.local/bin and `scripts/install.sh --repo /absolute/existing/repo`; repository acquisition/cloning is performed with ordinary Git tooling before Jig installation |
 | UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 with Jig theme derived from Neutral |
 | Cross-day drag | `@dnd-kit/react@0.5.3`, one drag owner; Astryx handles visual primitives |
 | Live data | One Bun SQLite database at `<selected-repo>/.jig/local/jig.sqlite`; immediate transactional writes |
-| Versioned data | Deterministic Task JSON and manifest committed to a dedicated `jig-data` Git branch/ref **of the same selected repository**, through an isolated linked worktree under `<selected-repo>/.jig/git/` |
-| Repository sync boundary | Daemon automatically debounces exports and uses an isolated Git adapter to commit/fetch/push Jig-only data. The adapter exposes only synchronized, pending/retrying, local-only or sync-issue outcomes plus complete candidate snapshots; Git history/branch/merge/conflict reconciliation remains outside Jig. |
+| Versioned data | Deterministic Task JSON and manifest synchronized through Git inside the selected repository. The adapter may use an isolated Git namespace internally, but branch/ref/worktree lifecycle is an implementation detail confined to that adapter rather than Jig application state or user configuration. |
+| Repository sync boundary | Daemon automatically debounces Jig-record export and invokes a thin Git adapter. The adapter is responsible only for synchronizing Jig-owned portable data without touching unrelated repository content and returns coarse synchronization outcomes plus validated Jig snapshots; Git topology, policy, credentials and reconciliation remain external. |
 | Notifications | Astryx Toast while browser is open; no background push or notification delivery promise |
 | Mobile | Narrow mobile-first layout and touch accessibility in desktop web UI; standalone phone installation deferred |
 
-The selected repository's ordinary working branch, index, dirty files and unrelated commits are **never** touched by Jig's automatic Git operations. Using a separate branch/worktree in the same repository provides this isolation without creating an unrelated second Git repository or requiring an external service.
+The selected repository's ordinary working state, staged files and unrelated content are **never** touched by Jig's automatic synchronization. The adapter must provide this isolation using the smallest Git mechanism that satisfies the requirement; the application must not model or manage that mechanism outside the adapter.
 
 This is an architecture contract; actual interaction, installation, Git branch/worktree lifecycle and resource use still need verification against the exact pinned environment. No unresolved technology choice may be delegated casually to implementers.
 
@@ -64,7 +66,7 @@ Use the sources below to avoid rediscovery, while preserving Jig's own domain an
 | Reference action | Astryx Link/Button | Safe open/copy affordance | Automatic dereferencing or project-content import |
 | Cross-date drag | Pinned `@dnd-kit/react@0.5.3` package API, then dnd-kit multi-list guide | One provider, sortable task IDs, dated droppables, drag overlay and exact destination index | A second reorder system or priority-derived drop position |
 | SQLite | Bun 1.4.4 SQLite API | Prepared statements, explicit transactions and WAL behavior used by the schema in §4.3 | ORM/repository abstraction |
-| Git integration | Standard Git CLI through Bun argument-array subprocess | linked worktree/ref operations, scoped stage/commit/fetch/push in the repository adapter | Order repository-management domain, Git libraries, shell interpolation or Jig-level merge/conflict workflow |
+| Git integration | Standard Git CLI through Bun argument-array subprocess | the minimum scoped operations required to synchronize Jig-owned portable records while leaving unrelated repository state untouched | repository provisioning, user Git policy/configuration, topology management, reconciliation, Git libraries, shell interpolation or Jig-level merge/conflict workflow |
 | HTTP/service | Bun 1.4.4 runtime APIs + §3.2 of this document | Loopback serving, static UI, canonical command admission and write-token checks | A second transport model, external server framework or DTO layer |
 
 When the source map and this document differ, **this document wins for Jig semantics**. The upstream source is consulted to learn a proven API/integration pattern, not to import its product decisions. If a pinned upstream API does not match the cited example, make the smallest Jig-local adjustment and record the verified API difference; do not redesign the architecture or introduce another dependency.
@@ -104,44 +106,44 @@ Only one Bun process may write the configured SQLite file. Enforce a single acti
 
 ### 3.1 Installer and executable lifecycle
 
-A **single installer script** `scripts/install.sh` is the canonical entry point and must be reproducible, noninteractive when flags are supplied, and able to prompt for missing user configuration. `--repo` names the absolute path of an existing writable local Git worktree; alternatively `--repo-url` plus `--checkout` safely clones a specified remote into a new empty local directory. `--remote` selects a configured remote, defaulting to `origin` when present. The modes are mutually exclusive and must not overwrite an existing checkout. The script must:
+A **single installer script** `scripts/install.sh` is the canonical entry point. `--repo` names the absolute path of an existing writable local Git repository selected by the user. Jig does not clone, initialize, relocate or otherwise provision that repository; repository acquisition and organization remain ordinary Git responsibilities.
 
-1. Verify Linux, Git, writable user directories and target path. When given `--repo`, validate the existing target is a writable Git repository **other than Jig's public source checkout**. When given `--repo-url` and `--checkout`, clone only into a new empty user-selected directory, use the normal Git credential mechanism, and validate the checkout after cloning. Never silently `git init`, force-overwrite a checkout, or convert a nonrepository directory.
-2. Install/reuse the exact-pinned Bun runtime, install frozen-lock dependencies and build the React assets, with clear failure if pinned artifacts cannot be installed. Do not download unspecified floating versions or require root for the ordinary user install.
-3. Safely establish `<repo>/.jig/`. Add only a narrowly scoped exclusion to the selected repository's local `.git/info/exclude` (or equivalent repo-local exclude); do not edit the user's tracked .gitignore or stage unrelated changes. Handle .git-as-file linked worktrees by resolving the Git common directory correctly.
-4. Create/adopt the **dedicated `jig-data` ref** inside that same Git repository and attach the isolated worktree at `<repo>/.jig/git/`. Initialize the branch from an empty Git tree, *not* by copying all personal documentation into a new branch. When a remote already has the Jig branch, fetch and validate its format and dataset identity before adopting it. Refuse an existing unrelated branch name or incompatible format; never force reset or force push.
-5. Create/migrate SQLite under `<repo>/.jig/local/`, or hydrate it from a validated Jig Git snapshot when installing on another device. Preserve source data on failure; no destructive reinstall or unconfirmed restore.
-6. Save the target absolute path and chosen Git remote/ref in user-local configuration; install a `jig` command. Install/enable/start a `systemd --user` service if available; otherwise provide a documented foreground fallback and mark the service feature unavailable rather than claiming it installed.
-7. Verify `jig status`, local HTTP readiness, Task storage, and Git local commit (remote transport only when configured). Print exactly where database, Git records and service live and whether remote auto-sync is enabled.
+The installer must:
 
-`jig` opens the local UI in the default browser, starting the service on demand if it is not up. `jig status` reports service, configured repository, local save state and Git sync health. `jig sync` is an optional diagnostic/retry command, not the normal way to make data durable. `jig doctor` diagnoses repo/worktree/service problems; `jig configure --repo <path>` changes target only via explicit migration/validation and never silently starts a second empty plan. Uninstall removes app/service configuration but preserves all `.jig/` data by default.
+1. Verify Linux, Git, writable user application directories and that `--repo` resolves to an existing writable Git repository other than Jig's public source checkout. Never `git init` an arbitrary directory and never clone or overwrite a checkout.
+2. Install/reuse the exact-pinned runtime and certified application payload without requiring root for the ordinary user path.
+3. Safely establish `<repo>/.jig/local/` for SQLite/local operational state without modifying unrelated tracked files.
+4. Inspect the selected repository for valid existing Jig portable data through the repository adapter. If valid Jig data exists, adopt it and initialize/hydrate local SQLite from that data when no compatible local database exists. If no Jig data exists, initialize a new Jig dataset and allow the adapter to publish its first valid portable snapshot. **The installer must never publish or leave behind an intermediate Git state that Jig itself considers invalid.**
+5. Treat Git synchronization setup as an integration step, not as repository management. Ambient user Git configuration/policy must not be rewritten. Git signing, identities, credentials, remotes, branch topology and worktree mechanics remain Git concerns; adapter operations must either work within that environment or report a synchronization issue without corrupting installation/local planning state.
+6. Save only Jig application configuration (selected repository path and local HTTP port), install the `jig` command, and install/enable/start a `systemd --user` service when available. Otherwise provide the documented foreground fallback.
+7. Verify local application readiness, SQLite/task storage, and the ability of the repository adapter to represent/synchronize Jig data. A repository transport problem may be reported as a synchronization issue but must not invalidate an otherwise usable local installation.
 
-User-session service availability is guaranteed only while the user's user-service manager is active. Login persistence beyond that (e.g. linger policy) is an explicit administrator/OS configuration, not silently enabled by Jig.
+`jig` opens the local UI, starting the service on demand if needed. The supported public CLI is `jig`, `jig status`, `jig sync`, `jig serve`, and `jig uninstall`. `jig doctor` may remain only as a small Jig-health diagnostic; it must not expose or repair Git topology. There is no `jig configure --repo` migration workflow. To use another checkout/repository, obtain it through ordinary Git/filesystem tooling and install Jig against that existing repository; valid existing Jig data is adopted automatically.
+
+User-session service availability is guaranteed only while the user's user-service manager is active. Login persistence beyond that (for example linger policy) is administrator/OS configuration and is never silently changed by Jig.
 
 ### 3.2 Local configuration and HTTP contract
 
-The local configuration file is **`~/.config/jig/config.json`** and has one versioned schema:
+The local configuration file is **`~/.config/jig/config.json`** and contains only Jig application configuration:
 
 ~~~json
 {
   "version": 1,
   "repository_path": "/absolute/path/to/selected-repository",
-  "remote_name": "origin",
-  "data_ref": "refs/heads/jig-data",
   "http_port": 47831
 }
 ~~~
 
-`remote_name` is either a non-empty Git remote name or `null`. `data_ref` is fixed to `refs/heads/jig-data` in v1 and is recorded so future migrations can verify identity; it is not an ordinary UI setting. `repository_path` must be absolute and resolve to the validated selected repository. `http_port` is the installer-selected loopback port. Invalid version, missing required keys, an invalid port, a nonabsolute repository path, or an incompatible data ref fails startup with a specific configuration error; Jig never guesses a replacement repository. Theme preference is **not** stored here: the browser stores exactly `system | light | dark` under local presentation storage and it never enters Task data or Git exports.
+`repository_path` is the existing repository selected at installation and `http_port` is Jig's loopback port. Git remotes, refs, worktrees, signing, identity and credentials are **not Jig application configuration**; they remain Git repository/user configuration and are discovered/used only inside the thin repository adapter where required. Theme preference remains browser-local presentation state.
 
-The browser API is deliberately small and serializes the canonical core types directly; do not create transport DTO classes or a second Task/command schema.
+The browser API serializes canonical core types directly; do not create transport DTO classes or a second Task/command schema.
 
-- `GET /api/v1/tasks` → `{ revision, tasks }`, where `tasks` is the complete canonical Task set. Week, Day, carry-over and History are derived from these canonical values.
-- `GET /api/v1/status` → service readiness, configured repository path, whether a remote is configured, and one repository status from `local-only | pending | retrying | synchronized | sync-issue`.
-- `GET /api/v1/diagnostics` → sanitized operational facts required by Settings/`jig doctor`: service health, SQLite availability/schema version, configured repository path/data ref, portable-format version, remote configured/not-configured and repository-adapter health. It contains no Task title/note/reference content, credentials or raw secret/token values.
-- `POST /api/v1/commands` accepts one canonical discriminated Task command plus `expected_revision`.
-- `POST /api/v1/sync` requests an immediate export/synchronization attempt through the existing serialized repository worker and returns HTTP **202** with the current repository status. It does not make Task state durable and does not bypass the worker/adapter.
-- `POST /api/v1/migrate` accepts only `{ repository_path }`, invokes the same shell-owned migration operation as `jig configure --repo <path>`, and returns success only after destination validation/rehydration and atomic configuration switch. Failure leaves the original data root active. The browser reloads canonical Tasks/status after success.
+- `GET /api/v1/tasks` → `{ revision, tasks }`, where `tasks` is the complete canonical Task set.
+- `GET /api/v1/status` → service readiness, selected repository path, and one synchronization status from `local-only | pending | retrying | synchronized | sync-issue`.
+- `GET /api/v1/diagnostics` → sanitized **Jig** health only: service health, SQLite availability/schema version, repository accessibility, portable-format validity and coarse adapter health. It contains no Git topology repair model, credentials, Task content or secrets.
+- `POST /api/v1/commands` accepts one canonical Task command plus `expected_revision`.
+- `POST /api/v1/sync` requests an immediate synchronization attempt through the existing serialized repository worker and returns HTTP **202** with the current synchronization status.
+- There is no repository-migration HTTP endpoint.
 
 The command union is exactly:
 
@@ -158,9 +160,9 @@ delete   { task_id }
 
 Every Task command requires the revision read by the caller as `expected_revision`. If it does not equal the current SQLite revision, return HTTP **409** with the current revision and make no mutation; the browser refetches canonical state before retrying. Validation errors are **400**, a missing Task is **404**, and an unexpected persistence failure is **500** with no claimed save. Successful create/edit/move/complete/reopen returns `{ revision, task }`; successful delete returns `{ revision, deleted_task_id }`. These are thin HTTP envelopes around canonical values, not independent domain models.
 
-The operational endpoints are shell admission only, not a second domain command model. `/sync` calls the one existing sync-worker trigger. `/migrate` calls the one existing repository-migration function also used by the launcher. Do not duplicate their implementation in the HTTP layer.
+The operational endpoints are shell admission only, not a second domain command model. `/sync` calls the one existing sync-worker trigger. Do not duplicate synchronization implementation in the HTTP layer.
 
-At service start generate a fresh **256-bit random write token**. Inject it into the same-origin served application bootstrap and require it as `X-Jig-Write-Token` on **every state-changing POST endpoint** (`/commands`, `/sync`, `/migrate`) together with `Content-Type: application/json`. Reject missing/incorrect token, cross-origin mutation requests and all permissive CORS. The token lives only for that service process, is never written to configuration, logs, SQLite or Git, and is regenerated on restart.
+At service start generate a fresh **256-bit random write token**. Inject it into the same-origin served application bootstrap and require it as `X-Jig-Write-Token` on **every state-changing POST endpoint** (`/commands`, `/sync`) together with `Content-Type: application/json`. Reject missing/incorrect token, cross-origin mutation requests and all permissive CORS. The token lives only for that service process, is never written to configuration, logs, SQLite or Git, and is regenerated on restart.
 
 ## 4. Canonical Task model
 
@@ -289,31 +291,19 @@ Failure to use system notifications must not suppress the in-app toast. Reminder
 
 ## 7. Repository-contained data, automatic Git sync and recovery
 
-### 7.1 Data ownership and branch isolation
+### 7.1 Data ownership and Git integration boundary
 
-The selected personal or organization repository is the **only configured data home**. Example:
+The selected repository is the **only configured data home**. Jig's operational SQLite database remains under `<repo>/.jig/local/`; deterministic portable task records are represented through the repository adapter for Git synchronization.
 
-~~~text
-/home/user/personal-docs/       <-- user's EXISTING repository
-  .git/                         <-- same repository Git object database
-  existing-documents/           <-- untouched by Jig
-  .jig/                         <-- locally excluded from ordinary branch
-    local/
-      jig.sqlite                <-- SQLite operational authority, not Git committed
-      jig.sqlite-wal            <-- optional transient local WAL file
-      jig.sqlite-shm
-    git/                        <-- linked worktree attached to jig-data branch
-      .git                      <-- worktree pointer into parent's .git metadata
-      format.json               <-- Git-tracked canonical snapshot format
-      tasks/
-        <stable-uuid>.json      <-- Git-tracked canonical Task records
-~~~
+The application-level contract is intentionally independent of Git topology:
 
-Do not create a second standalone Git repository. The `jig-data` branch/ref lives in the **existing chosen repository**, and only Jig touches the linked worktree's index and app-owned paths. The ordinary docs branch, its index and user edits are never staged, committed, merged, reset, rebased, checked out or pushed by Jig. Background `git push` targets **only** the `jig-data` ref. Local user data never appears in pontivus-com/jig by default.
+- Jig owns the canonical Task state, SQLite durability, portable Jig snapshot format, automatic synchronization scheduling and coarse sync outcome.
+- Git owns repository acquisition, branch/ref/worktree mechanics, signing and identity policy, remotes/credentials, history and reconciliation.
+- The repository adapter may use an isolated branch/ref/worktree or another Git-native mechanism when necessary to guarantee that unrelated repository content is never staged, committed, rewritten or pushed. That choice is private to the adapter and must not appear as Jig domain state, user configuration, migration workflow or UI terminology.
+- Jig never modifies the user's global or repository Git policy to make synchronization work.
+- A repository with no usable remote remains a fully usable local Jig installation and reports `local-only`.
 
-The ordinary branch's tracked files will not show the `jig-data` contents: they live on a separate branch, inside the linked worktree under `.jig/git/`. This explicit placement is intentional to make unattended Git operations safe when the selected repository also holds personal documents and has unrelated staged changes.
-
-An unconfigured Git remote is allowed: Jig remains a fully usable, automatically locally committed planner, and displays **Local only — no remote configured**. If the target repo has a remote, choose its existing connection; no Jig-hosted account is necessary. Future independent mobile installations can join the same private branch and rebuild their SQLite database from the versioned records, but standalone phone deployment is not an MVP promise.
+Existing valid Jig portable data in the selected repository is continuity authority for a fresh local installation. Obtaining, cloning, moving or reorganizing the repository is done with ordinary Git/filesystem tooling; Jig simply installs against the resulting existing checkout and adopts valid Jig data it finds there.
 
 ### 7.2 Portable snapshot format
 
@@ -323,32 +313,32 @@ The portable tree is a **complete snapshot**; every file path ID matches its emb
 
 ### 7.3 Write and automatic synchronization loop
 
-**On each UI mutation:** validate the canonical command; in one SQLite transaction apply Task state and increment the durable local revision/dirty marker. Return saved state to the UI immediately on commit. Do not wait for network or Git. Task operations never write SQLite and Git simultaneously as a pseudo-two-phase transaction.
+**On each UI mutation:** validate the canonical command; in one SQLite transaction apply Task state and increment the durable local revision/dirty marker. Return saved state to the UI immediately on commit. Do not wait for Git or network.
 
-**Export worker:** when the durable revision differs from last exported revision, coalesce rapid edits for **3 seconds after the latest committed Task mutation**, with a **15-second maximum flush interval** while edits continue. Read a consistent database snapshot, deterministically regenerate app-owned JSON/manifest in the isolated worktree, remove stale app-owned Task files that are no longer present in that database snapshot, stage only those paths and create a local commit if content changed. Commit only within the `jig-data` worktree and update the exported revision/head metadata afterward. If newer SQLite changes arrived during export, leave them pending for the next pass. At startup, compare the existing Git snapshot and SQLite revision to reconcile a commit that succeeded immediately before a crash/metadata update. A failed export is retried with backoff and does not roll back a successful local task save.
+**Export worker:** coalesce rapid local mutations, read one consistent SQLite state and deterministically regenerate the portable Jig snapshot. The worker asks the repository adapter to synchronize that snapshot. It does not contain Git topology logic and does not expose branch/ref/worktree mechanics to the rest of Jig.
 
-**Repository sync adapter:** after local export/commit, the isolated Git adapter attempts the configured repository synchronization without waiting for a user click. While synchronized and a remote is configured, poll every **60 seconds**. After failure, retry after **5, 10, 20, 40, 80, 160, then 300 seconds**, and remain capped at 300 seconds until one attempt succeeds; success resets the cadence to 60 seconds. It stages only Jig-owned paths and targets only the dedicated Jig ref. It must never force push, reset, rebase, merge arbitrary histories, or modify the user's ordinary working branch.
+**Repository adapter:** perform only the minimum Git operations needed to synchronize Jig-owned portable records while guaranteeing that unrelated repository content is untouched. The adapter must not modify user Git configuration, signing policy, identity, credentials or repository organization. Machine-generated Jig synchronization commits must not fail merely because the user's ordinary commit-signing policy is incompatible with Jig's synthetic synchronization identity; solve that at the individual adapter invocation boundary without changing persistent Git configuration.
 
-The planning/domain layers do not inspect branch ancestry, ahead/behind counts, merge bases, conflict markers or Git error categories. The adapter exposes only these operational outcomes:
+The planning/domain layers receive only these outcomes:
 
-- **Local only:** no remote is configured; Task mutations and local exports continue normally.
-- **Pending / retrying:** export or repository transport has not completed yet; successful local Task saves remain authoritative.
-- **Synchronized:** the latest exported snapshot has been accepted by the configured repository boundary.
-- **Sync issue:** repository synchronization cannot currently complete. Preserve the local SQLite state and exported records; do not mutate planning data to resolve the Git condition. Repository history/branch/conflict reconciliation is performed externally with Git tooling.
+- **Local only:** no usable repository transport is configured; local Task mutations and portable export continue.
+- **Pending / retrying:** export or synchronization has not completed yet.
+- **Synchronized:** the latest portable Jig snapshot has synchronized successfully.
+- **Sync issue:** synchronization cannot currently complete. Preserve SQLite/local Jig data; Git diagnosis/reconciliation remains external.
 
-The adapter may present a new complete candidate snapshot to Jig only after the repository boundary has a single concrete snapshot to offer. Jig then performs normal canonical validation and transactional adoption; it does not ask how Git arrived at that snapshot.
+Retry/backoff may remain bounded and automatic, but Git error categories, ancestry, merge bases, branch divergence and conflict states do not become Jig workflow. When the selected repository exposes a valid complete Jig snapshot, Jig may validate/adopt it transactionally without modelling how Git produced it.
 
-Startup resumes pending export/synchronization work from durable local metadata. Repository-boundary failure never discards local Tasks. Browser open state is irrelevant to auto-sync scheduling. Do not automatically generate commits for each intermediate pixel/drag event: one saved drop is one task operation, and rapid edits are batched for Git.
+**Guarantee:** successful SQLite save is immediate local durability; portable export and Git synchronization are eventual and independent. Git failure cannot turn a successful Task save into a failed Task operation or corrupt installation.
 
-**Guarantee:** a successful SQLite save is durable locally immediately; automatic export and repository synchronization are separate eventual steps with explicit operational status. The UI must never conflate “Saved locally” with “Synchronized remotely.” A persistent repository failure is exposed as a generic sync issue, not translated into a Jig conflict/divergence workflow.
+### 7.4 Existing-data adoption, restore and safety
 
-### 7.4 Import, restore, migration and safety
+On installation, inspect the selected existing repository for a complete valid Jig portable snapshot. If one exists and no compatible SQLite database is present, initialize SQLite from that snapshot transactionally. If compatible SQLite already exists, preserve it and verify dataset compatibility without implicit destructive replacement.
 
-On a fresh installation with an existing valid remote `jig-data` ref, the installer automatically fetches and validates the full snapshot before populating a fresh SQLite DB. It does not overwrite an existing database without explicit confirmation and a recoverable local backup.
+There is **no Jig repository-migration subsystem**. To move/use Jig elsewhere, the repository is cloned/moved by Git/filesystem tooling and Jig is installed against that resulting checkout. Existing valid Jig portable data is then adopted through the same installation path.
 
-When the repository integration boundary presents a complete candidate snapshot for adoption, validate the entire snapshot before changing SQLite. Adopt it in one SQLite transaction, reconciling complete Task membership including deletion of Tasks absent from that snapshot, then update the adopted-snapshot marker. On validation error or transaction failure, keep the prior DB intact and report a generic sync issue. Repository branch/history reconciliation must already have occurred outside Jig before a candidate snapshot is presented. If a crash occurs during adoption, durable metadata reveals the unfinished step and startup resumes or safely retries the import.
+Never leave a partially initialized Git state that a subsequent Jig installation interprets as valid data. The first observable Jig portable state created by a fresh installation must itself satisfy the portable snapshot contract. For v1.0.1, the installer/adapter must also recognize the exact non-data bootstrap residue produced by the v1.0.0 failed-install path and recover only when that state is unambiguously Jig-created and contains no user Jig data; unknown malformed states remain non-destructive sync/install errors.
 
-Moving Jig to another selected repository is a deliberate operation: block writers briefly, export the latest local state, validate the destination Git root and branch ownership, copy/rehydrate the database/records without touching unrelated files, and switch the active config atomically only on success. On failure remain attached to the original repository. Never leave two independent active installation writers for one Task dataset.
+When a complete candidate Jig snapshot is presented, validate the entire snapshot before changing SQLite and adopt it in one transaction. Validation/adoption failure leaves prior SQLite state intact. Git history/topology reconciliation is never attempted by Jig.
 
 ### 7.5 Failure truth table
 
@@ -430,10 +420,10 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-13 responsive continuity | Same Task + Astryx responsive composition | Narrow/wide navigation preserves selection and draft |
 | JIG-FR-14 local retention | SQLite inside configured personal Git repository | All Task fields survive service restart, checkout/re-import restores complete state |
 | JIG-FR-15 installer | scripts/install.sh, pinned runtime, user service | Single invocation configures source install, repo data area and launcher |
-| JIG-FR-16 data locality | selected .jig/local and .jig/git linked worktree | No personal data in Jig source checkout or separate default data location |
+| JIG-FR-16 data locality / continuity | selected repository `.jig/local` plus portable repository snapshot through the adapter | Existing valid Jig data is adopted on install; no separate migration subsystem |
 | JIG-FR-17 desktop availability | jig launcher + systemd --user | jig opens existing local service or starts it; restart survives |
 | JIG-FR-18 automatic Git sync | durable dirty revision + isolated repository sync adapter | Local save immediately, background export/synchronization without user action |
-| JIG-FR-19 safe coexistence | dedicated jig-data branch/worktree behind repository adapter; no main-branch writes | Unrelated staged/unstaged user docs unchanged; generic sync issue never becomes planning/domain conflict state |
+| JIG-FR-19 safe coexistence | thin repository adapter with private isolation mechanism | Unrelated staged/unstaged user content unchanged; generic sync issue never becomes planning/domain conflict state |
 | JIG-FR-20 low-friction idle | one Bun service, bounded timers/backoff | Measured low idle CPU/RSS and responsive reopen |
 | JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
 | JIG-FR-22 appearance | One Jig theme owner derived from Astryx Neutral + local preference | System/Light/Dark render equivalent hierarchy and state semantics without Task/Git mutation |
@@ -444,11 +434,11 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 **SQLite integration:** One failed transaction rolls back every affected position/date; uniqueness and completeness checks; restart with WAL; task query by scheduled and completion dates; migration from a fresh empty database; corrupted input rejected before persistence.
 
-**Repository/Git integration:** An existing personal-repo fixture with deliberately dirty/staged unrelated files, an isolated jig-data linked worktree and a local bare remote. Verify the installer creates/adopts only the Jig branch; deterministic auto export; JSON round trip; deletion removes the Task file and survives candidate-snapshot adoption without a tombstone; commit/metadata crash recovery; schema/order rejection; transport/push failure preserves SQLite and reports only a generic sync issue; after repository state is reconciled externally and a valid complete snapshot is presented, synchronization/adoption resumes; ordinary repo branch and index remain untouched.
+**Repository/Git integration:** Use existing-repository fixtures with unrelated dirty/staged files and normal developer Git configurations, including commit signing enabled with no Jig key. Verify automatic export/synchronization touches only Jig-owned portable data; user Git configuration is unchanged; installation/retry survives synchronization failure; existing valid Jig data is adopted; the exact v1.0.0 empty-bootstrap residue recovers safely; unknown malformed states are non-destructive; ordinary repository content remains untouched.
 
 **Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: same-day drag, Thursday-to-Friday drag, empty-day drop, carried-over earlier work with originating-date treatment, carry-over drag that explicitly reschedules, Escape cancel, task checkbox/link/editor non-interference, keyboard move alternatives, confirmed/cancelled deletion, long-list scrolling, mobile narrow layout, responsive switching with unsaved editor, System/Light/Dark parity, in-app due toast, and durable save-error visibility.
 
-**Installer/service:** Non-root one-script setup in existing-local and remote-URL clone modes, exact target selection, idempotent rerun, invalid Git target refusal, existing-branch identity checks, two-repo rehydration, launcher/service restart and auto-sync while browser closed. Enforce the exact resource/readiness thresholds in §7.6.
+**Installer/service:** Non-root one-script setup against an existing local repository, exact target selection, idempotent rerun, invalid target refusal, existing-data adoption, failed-install retry, launcher/service restart and auto-sync while browser closed. Repository cloning/provisioning and repository migration are outside Jig.
 
 **Security:** Loopback-only listener, same-origin/token checks, no arbitrary task-reference execution, no shell invocation via Git parameters, path containment and no task data in public source.
 
@@ -466,9 +456,9 @@ Independent phone installation, native mobile Git/process/filesystem integration
 
 - **SQLite primary inside the selected personal repository:** Operational queries, atomic multi-item reordering and crash recovery remain simple; only deterministic logical records are Git committed. No user task data is stored by default in the public Jig source repo.
 - **One exporter and one importer instead of two live authorities:** SQLite owns local edits; Git versions validated snapshots at explicit synchronization boundaries.
-- **Dedicated branch + linked worktree in the selected repository:** Automatic Jig commits cannot accidentally stage, push, modify or merge unrelated personal documentation. Same Git object store, not a second repository.
+- **Isolation is an adapter responsibility, not an application responsibility:** The repository adapter must guarantee that automatic Jig synchronization cannot touch unrelated repository content. A dedicated branch/worktree may be one implementation technique, but it is not part of Jig's domain, user configuration or lifecycle contract.
 - **Automatic bounded Git sync instead of manual export:** Local SQLite saves trigger background commit/fetch/push with safe retries even when the browser is closed; network status is separately visible.
-- **Repository boundary instead of a Jig Git state machine:** Jig exports and validates complete canonical snapshots and receives only operational synchronization outcomes. Git history/branch/merge/conflict reconciliation stays with external Git tooling and never becomes Task/domain state.
+- **Repository boundary instead of a Jig Git state machine:** Jig exports/validates portable snapshots and receives only operational synchronization outcomes. Git acquisition, topology, policy, credentials, history and reconciliation stay with Git tooling and never become Jig domain/configuration/state.
 - **Astryx directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows.
 - **dnd-kit instead of Astryx same-list reordering plus custom cross-day dragging:** One coordinated drag system across all seven date columns with a single canonical move command.
 - **Browser-side toasts instead of background infrastructure:** Exact compliance with open-app reminder requirements.
