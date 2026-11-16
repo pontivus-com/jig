@@ -12,8 +12,8 @@ fail() {
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/install.sh --repo /absolute/existing/repo [--remote NAME] [--port PORT]
-  scripts/install.sh --repo-url URL --checkout /absolute/new/path [--remote NAME] [--port PORT]
+  scripts/install.sh --repo /absolute/existing/repo [--port PORT]
+  scripts/install.sh --repo-url URL --checkout /absolute/new/path [--port PORT]
 
 If no repository mode is supplied, the installer prompts for an existing Git
 repository path. --repo and --repo-url/--checkout are mutually exclusive.
@@ -30,7 +30,6 @@ SOURCE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_PATH=""
 REPO_URL=""
 CHECKOUT_PATH=""
-REMOTE_NAME=""
 PORT="$DEFAULT_PORT"
 
 while (($# > 0)); do
@@ -48,11 +47,6 @@ while (($# > 0)); do
     --checkout)
       (($# >= 2)) || fail "--checkout requires a value."
       CHECKOUT_PATH="$2"
-      shift 2
-      ;;
-    --remote)
-      (($# >= 2)) || fail "--remote requires a value."
-      REMOTE_NAME="$2"
       shift 2
       ;;
     --port)
@@ -189,9 +183,6 @@ fi
 
 STAGED_CONFIG="$BUILD_ROOT/config.json"
 SETUP_ARGS=(--repo "$TARGET_REPO" --port "$PORT" --config "$STAGED_CONFIG")
-if [[ -n "$REMOTE_NAME" ]]; then
-  SETUP_ARGS+=(--remote "$REMOTE_NAME")
-fi
 
 printf 'Preparing isolated Jig data boundary in %s\n' "$TARGET_REPO"
 (
@@ -292,25 +283,18 @@ else
 fi
 
 [[ -f "$TARGET_REPO/.jig/local/jig.sqlite" ]] || fail "SQLite initialization verification failed."
-git -C "$TARGET_REPO" show-ref --verify --quiet refs/heads/jig-data || fail "jig-data ref verification failed."
 [[ -f "$TARGET_REPO/.jig/git/format.json" ]] || fail "Portable snapshot verification failed."
-
-REMOTE_CONFIGURED="$("$APP_DIR/runtime/bun" -e   "const c=JSON.parse(await Bun.file('$CONFIG_PATH').text()); console.log(c.remote_name ?? 'none');")"
 
 printf '\nJig installed successfully.\n'
 printf 'Application: %s\n' "$APP_DIR"
 printf 'Launcher: %s\n' "$BIN_DIR/jig"
 printf 'Configuration: %s\n' "$CONFIG_PATH"
 printf 'SQLite: %s/.jig/local/jig.sqlite\n' "$TARGET_REPO"
-printf 'Git records: %s/.jig/git (refs/heads/jig-data)\n' "$TARGET_REPO"
+printf 'Portable Jig records: %s/.jig/git\n' "$TARGET_REPO"
 if [[ "$SERVICE_AVAILABLE" == "true" ]]; then
   printf 'Service: %s (systemd --user, enabled and started)\n' "$UNIT_PATH"
 else
   printf 'Service: background user service unavailable; run "jig serve" as the foreground fallback.\n'
 fi
-if [[ "$REMOTE_CONFIGURED" == "none" ]]; then
-  printf 'Remote auto-sync: disabled (local-only)\n'
-else
-  printf 'Remote auto-sync: enabled via remote "%s"\n' "$REMOTE_CONFIGURED"
-fi
+printf 'Repository synchronization: managed automatically from the selected repository Git configuration\n'
 printf 'No systemd linger policy was changed.\n'
