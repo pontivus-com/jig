@@ -29,7 +29,7 @@ async function openTaskActions(
 ): Promise<ReturnType<typeof taskCard>> {
   const card = taskCard(page, title);
   await card
-    .locator(`summary[aria-label="Actions for ${title}"]`)
+    .getByRole("button", { name: `Actions for ${title}`, exact: true })
     .click();
   return card;
 }
@@ -66,9 +66,7 @@ test("unfinished prior-day cards roll into today across Day and Week", async ({
   await expect(
     page.getByRole("button", { name: "Day", exact: true }),
   ).toHaveAttribute("aria-current", "page");
-  await expect(
-    page.getByText("Rollover contract", { exact: true }),
-  ).toBeVisible();
+  await expect(taskCard(page, "Rollover contract")).toBeVisible();
 
   await expect
     .poll(
@@ -350,7 +348,7 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   await createTask(page, "Narrow selected task", today);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator(".jig-mobile-destination-menu > summary").click();
+  await page.locator(".jig-mobile-header .jig-mobile-destination-menu > summary").click();
   await page
     .locator(".jig-mobile-destination-panel")
     .getByRole("button", { name: "Week", exact: true })
@@ -362,13 +360,13 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
     page.getByText("Narrow selected task", { exact: true }),
   ).toBeVisible();
 
-  await page.locator(".jig-mobile-destination-menu > summary").click();
+  await page.locator(".jig-mobile-header .jig-mobile-destination-menu > summary").click();
   await page
     .locator(".jig-mobile-destination-panel")
     .getByRole("button", { name: "Day", exact: true })
     .click();
   await expect(
-    page.locator(".jig-mobile-destination-menu > summary"),
+    page.locator(".jig-mobile-header .jig-mobile-destination-menu > summary"),
   ).toHaveText("Day");
   await expect(
     page.getByText("Narrow selected task", { exact: true }),
