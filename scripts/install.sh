@@ -283,14 +283,13 @@ else
 fi
 
 [[ -f "$TARGET_REPO/.jig/local/jig.sqlite" ]] || fail "SQLite initialization verification failed."
-[[ -f "$TARGET_REPO/.jig/git/format.json" ]] || fail "Portable snapshot verification failed."
 
 printf '\nJig installed successfully.\n'
 printf 'Application: %s\n' "$APP_DIR"
 printf 'Launcher: %s\n' "$BIN_DIR/jig"
 printf 'Configuration: %s\n' "$CONFIG_PATH"
 printf 'SQLite: %s/.jig/local/jig.sqlite\n' "$TARGET_REPO"
-printf 'Portable Jig records: %s/.jig/git\n' "$TARGET_REPO"
+printf 'Planning repository: %s\n' "$TARGET_REPO"
 if [[ "$SERVICE_AVAILABLE" == "true" ]]; then
   printf 'Service: %s (systemd --user, enabled and started)\n' "$UNIT_PATH"
 else
