@@ -298,6 +298,7 @@ async function requireGit(
 
 export async function ensureJigDataWorktree(
   config: GitAdapterConfig,
+  expectedDatasetId?: string,
 ): Promise<void> {
   assertAdapterPaths(config);
   await requireGit(config.repository_path, ["rev-parse", "--git-dir"]);
@@ -309,8 +310,9 @@ export async function ensureJigDataWorktree(
     "--quiet",
     DATA_REF,
   ]);
+  const createdRef = hasRef.exit_code !== 0;
 
-  if (hasRef.exit_code !== 0) {
+  if (createdRef) {
     const emptyTree = await requireGit(
       config.repository_path,
       ["mktree"],
@@ -332,6 +334,18 @@ export async function ensureJigDataWorktree(
       DATA_REF,
       commit,
     ]);
+  } else if (expectedDatasetId !== undefined) {
+    try {
+      await readSnapshotAtRef(
+        config.repository_path,
+        DATA_REF,
+        expectedDatasetId,
+      );
+    } catch (error) {
+      throw new GitAdapterError(
+        `Existing jig-data ref is not a compatible Jig snapshot: ${String(error)}`,
+      );
+    }
   }
 
   const worktreeGit = resolve(config.worktree_path, ".git");
@@ -344,7 +358,20 @@ export async function ensureJigDataWorktree(
     ]);
     return;
   } catch {
-    await rm(config.worktree_path, { recursive: true, force: true });
+    try {
+      const entries = await readdir(config.worktree_path);
+      if (entries.length > 0) {
+        throw new GitAdapterError(
+          "Refusing to replace a non-empty existing Jig worktree path",
+        );
+      }
+      await rm(config.worktree_path, { recursive: true, force: true });
+    } catch (error) {
+      if (error instanceof GitAdapterError) {
+        throw error;
+      }
+      // A missing worktree path is the expected first-install case.
+    }
   }
 
   await requireGit(config.repository_path, [
