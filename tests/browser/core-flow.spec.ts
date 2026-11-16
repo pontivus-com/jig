@@ -37,7 +37,10 @@ test("real runtime supports title-first create, completion, History and reopen",
     .getByText("Browser acceptance task", { exact: true })
     .locator("xpath=ancestor::div[contains(@class,'jig-history-task-row')][1]");
   await historyRow
-    .locator('summary[aria-label="Actions for Browser acceptance task"]')
+    .getByRole("button", {
+      name: "Actions for Browser acceptance task",
+      exact: true,
+    })
     .click();
   await historyRow
     .getByRole("button", { name: "Reopen", exact: true })
