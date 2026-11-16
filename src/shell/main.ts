@@ -6,27 +6,10 @@ import {
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import { isAbsolute, resolve } from "node:path";
-import type { Database } from "bun:sqlite";
-import {
-  commitSnapshot,
-  ensureJigDataWorktree,
-  EXPORT_DEBOUNCE_MS,
-  EXPORT_MAX_FLUSH_MS,
-  readSnapshotAtRef,
-  retryDelayMs,
-  runGit,
-  serializeSnapshot,
-  SYNC_HEALTHY_POLL_MS,
-  type GitAdapterConfig,
-  pushJigDataRef,
-} from "./git";
 import {
   DATA_REF,
   openDatabase,
   PORTABLE_FORMAT_VERSION,
-  readCanonicalState,
-  readMetadata,
-  markExported,
   SQLITE_SCHEMA_VERSION,
   type RepositoryStatus,
 } from "./sqlite";
@@ -35,6 +18,7 @@ import {
   type Diagnostics,
   type ServiceStatus,
 } from "./http";
+import { createSyncController } from "./sync";
 
 export interface JigConfig {
   readonly version: 1;
@@ -220,166 +204,6 @@ function snapshotsEqual(
     }
   }
   return true;
-}
-
-interface SyncController {
-  readonly start: () => Promise<void>;
-  readonly stop: () => void;
-  readonly notifyMutation: () => void;
-  readonly trigger: () => Promise<RepositoryStatus>;
-  readonly status: () => RepositoryStatus;
-}
-
-function createSyncController(
-  db: Database,
-  config: JigConfig,
-): SyncController {
-  const adapter: GitAdapterConfig = {
-    repository_path: config.repository_path,
-    worktree_path: resolve(config.repository_path, ".jig", "git"),
-    remote_name: config.remote_name,
-  };
-
-  let currentStatus: RepositoryStatus =
-    config.remote_name === null ? "local-only" : "pending";
-  let running: Promise<RepositoryStatus> | null = null;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let firstDirtyAt: number | null = null;
-  let failureCount = 0;
-  let stopped = false;
-
-  const clearTimer = (): void => {
-    if (timer !== null) {
-      clearTimeout(timer);
-      timer = null;
-    }
-  };
-
-  const schedule = (delayMs: number): void => {
-    if (stopped) {
-      return;
-    }
-    clearTimer();
-    timer = setTimeout(() => {
-      void trigger();
-    }, delayMs);
-  };
-
-  const reconcileCommittedExport = async (): Promise<void> => {
-    const metadata = readMetadata(db);
-    const state = readCanonicalState(db);
-    try {
-      const headResult = await runGit(config.repository_path, [
-        "rev-parse",
-        DATA_REF,
-      ]);
-      if (headResult.exit_code !== 0) {
-        return;
-      }
-      const head = headResult.stdout;
-      const snapshot = await readSnapshotAtRef(
-        config.repository_path,
-        DATA_REF,
-        metadata.dataset_id,
-      );
-      const expected = serializeSnapshot(
-        state.tasks,
-        metadata.dataset_id,
-      );
-      if (
-        snapshotsEqual(snapshot.files, expected.files) &&
-        (metadata.last_exported_head !== head ||
-          metadata.last_exported_revision !== state.revision)
-      ) {
-        markExported(db, state.revision, head);
-      }
-    } catch {
-      // No committed export exists yet; the normal export path will create it.
-    }
-  };
-
-  const runOnce = async (): Promise<RepositoryStatus> => {
-    try {
-      await ensureJigDataWorktree(adapter, readMetadata(db).dataset_id);
-      await reconcileCommittedExport();
-
-      const state = readCanonicalState(db);
-      const metadata = readMetadata(db);
-      if (state.revision !== metadata.last_exported_revision) {
-        currentStatus = "pending";
-        const snapshot = serializeSnapshot(
-          state.tasks,
-          metadata.dataset_id,
-        );
-        const head = await commitSnapshot(
-          adapter,
-          snapshot,
-          state.revision,
-        );
-        markExported(db, state.revision, head);
-      }
-
-      const pushed = await pushJigDataRef(adapter);
-      currentStatus = pushed;
-      failureCount = pushed === "sync-issue" ? failureCount + 1 : 0;
-      firstDirtyAt = null;
-
-      if (pushed === "sync-issue") {
-        currentStatus = "retrying";
-        schedule(retryDelayMs(failureCount));
-      } else {
-        schedule(SYNC_HEALTHY_POLL_MS);
-      }
-      return pushed;
-    } catch {
-      failureCount += 1;
-      currentStatus = "retrying";
-      schedule(retryDelayMs(failureCount));
-      return "sync-issue";
-    }
-  };
-
-  const trigger = async (): Promise<RepositoryStatus> => {
-    if (running !== null) {
-      return running;
-    }
-    clearTimer();
-    running = runOnce().finally(() => {
-      running = null;
-    });
-    return running;
-  };
-
-  return {
-    start: async () => {
-      stopped = false;
-      await ensureJigDataWorktree(adapter, readMetadata(db).dataset_id);
-      await reconcileCommittedExport();
-      const metadata = readMetadata(db);
-      if (metadata.pending_sync) {
-        currentStatus = "pending";
-        schedule(0);
-      } else {
-        currentStatus =
-          config.remote_name === null ? "local-only" : "synchronized";
-        schedule(SYNC_HEALTHY_POLL_MS);
-      }
-    },
-    stop: () => {
-      stopped = true;
-      clearTimer();
-    },
-    notifyMutation: () => {
-      currentStatus = "pending";
-      const now = Date.now();
-      firstDirtyAt ??= now;
-      const latestTarget = now + EXPORT_DEBOUNCE_MS;
-      const maximumTarget = firstDirtyAt + EXPORT_MAX_FLUSH_MS;
-      schedule(Math.max(0, Math.min(latestTarget, maximumTarget) - now));
-    },
-    trigger,
-    status: () => currentStatus,
-  };
 }
 
 function createStatus(
