@@ -106,4 +106,4 @@ The earlier mockups used the working name Day and were made to validate relation
 
 ## 8. Non-decisions
 
-This functional specification does **not** select SQLite, file formats, a Git merge policy, a drag-and-drop library, exact breakpoints, deployment wrappers, the final theme, or the implementation component graph. See [technical direction](../architecture/technical-direction.md). These choices must satisfy this document, not redefine it.
+This functional specification does **not** select SQLite, file formats, a Git merge policy, a drag-and-drop library, exact breakpoints, deployment wrappers, the final theme, or the implementation component graph. See [technical solution](../architecture/technical-solution.md). The technical choices satisfy this document and do not redefine it.
