@@ -8,8 +8,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jig-v1-performance-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: jig-v1-performance-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   resource-certification:
