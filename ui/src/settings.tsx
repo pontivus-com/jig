@@ -4,6 +4,7 @@ import {
   SegmentedControl,
   SegmentedControlItem,
 } from "@astryxdesign/core";
+import { useEffect, useState } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
@@ -19,6 +20,16 @@ export interface SettingsViewProps {
   readonly isOperating: boolean;
   readonly onThemePreferenceChange: (value: ThemePreference) => void;
   readonly onSync: () => Promise<void>;
+}
+
+type BrowserNotificationState =
+  | "unsupported"
+  | NotificationPermission;
+
+function browserNotificationState(): BrowserNotificationState {
+  return "Notification" in window
+    ? window.Notification.permission
+    : "unsupported";
 }
 
 function statusMessage(status: ServiceStatus | null): string {
@@ -47,6 +58,22 @@ export function SettingsView({
   onThemePreferenceChange,
   onSync,
 }: SettingsViewProps): React.ReactElement {
+  const [notificationState, setNotificationState] =
+    useState<BrowserNotificationState>(browserNotificationState);
+
+  useEffect(() => {
+    setNotificationState(browserNotificationState());
+  }, []);
+
+  const enableNotifications = async (): Promise<void> => {
+    if (!("Notification" in window)) {
+      setNotificationState("unsupported");
+      return;
+    }
+    const permission = await window.Notification.requestPermission();
+    setNotificationState(permission);
+  };
+
   return (
     <div className="jig-settings-view">
       <div className="jig-view-heading">
@@ -79,29 +106,46 @@ export function SettingsView({
           <SegmentedControlItem value="light" label="Light" />
           <SegmentedControlItem value="dark" label="Dark" />
         </SegmentedControl>
+
+        <div className="jig-settings-row">
+          <div>
+            <strong>Browser notifications</strong>
+            <p className="jig-secondary-copy">
+              {notificationState === "unsupported"
+                ? "Not supported by this browser."
+                : notificationState === "granted"
+                  ? "Enabled."
+                  : notificationState === "denied"
+                    ? "Blocked in browser settings."
+                    : "Not enabled."}
+            </p>
+          </div>
+          {notificationState === "default" ? (
+            <Button
+              label="Enable"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void enableNotifications();
+              }}
+            />
+          ) : null}
+        </div>
       </section>
 
-      <section className="jig-settings-section" aria-labelledby="sync-heading">
-        <h2 id="sync-heading">Repository synchronization</h2>
-        <p>{statusMessage(status)}</p>
+      <section className="jig-settings-section" aria-labelledby="planning-data-heading">
+        <h2 id="planning-data-heading">Planning data</h2>
         <dl className="jig-diagnostics">
           <div>
             <dt>Repository</dt>
             <dd>{status?.repository_path ?? "Unavailable"}</dd>
           </div>
-          <div>
-            <dt>Local database</dt>
-            <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
-          </div>
-          <div>
-            <dt>Repository adapter</dt>
-            <dd>
-              {diagnostics?.repository_adapter_healthy
-                ? "Healthy"
-                : "Needs attention"}
-            </dd>
-          </div>
         </dl>
+      </section>
+
+      <section className="jig-settings-section" aria-labelledby="sync-heading">
+        <h2 id="sync-heading">Synchronization</h2>
+        <p>{statusMessage(status)}</p>
         <Button
           label="Sync now"
           variant="secondary"
@@ -110,6 +154,28 @@ export function SettingsView({
             void onSync();
           }}
         />
+      </section>
+
+      <section className="jig-settings-section" aria-labelledby="diagnostics-heading">
+        <h2 id="diagnostics-heading">Diagnostics</h2>
+        <dl className="jig-diagnostics">
+          <div>
+            <dt>Jig service</dt>
+            <dd>{status === null ? "Unavailable" : "Healthy"}</dd>
+          </div>
+          <div>
+            <dt>Local database</dt>
+            <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
+          </div>
+          <div>
+            <dt>Portable data</dt>
+            <dd>
+              {diagnostics?.repository_adapter_healthy
+                ? "Healthy"
+                : "Needs attention"}
+            </dd>
+          </div>
+        </dl>
       </section>
 
     </div>

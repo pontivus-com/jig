@@ -1,19 +1,109 @@
-import { List } from "@astryxdesign/core";
+import {
+  AlertDialog,
+  Button,
+} from "@astryxdesign/core";
+import { useState } from "react";
 import type { Task } from "../../src/core/task";
 import { historyByCompletionDate } from "../../src/core/planning";
 import { formatCivilDate } from "./dates";
-import { TaskRow } from "./task-row";
 
 export interface HistoryViewProps {
   readonly tasks: readonly Task[];
   readonly onEdit: (task: Task) => void;
   readonly onReopen: (task: Task) => Promise<boolean>;
+  readonly onDelete: (taskId: string) => Promise<boolean>;
+}
+
+function completionTime(task: Task): string {
+  if (task.completed_at === null) {
+    return "";
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(task.completed_at));
+}
+
+function HistoryTaskRow({
+  task,
+  onEdit,
+  onReopen,
+  onDelete,
+}: Readonly<{
+  task: Task;
+  onEdit: (task: Task) => void;
+  onReopen: (task: Task) => Promise<boolean>;
+  onDelete: (taskId: string) => Promise<boolean>;
+}>): React.ReactElement {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  return (
+    <>
+      <div className="jig-history-task-row">
+        <span className="jig-history-check" aria-hidden="true">✓</span>
+        <div className="jig-history-task-content">
+          <strong>{task.title}</strong>
+          <span className="jig-secondary-copy">
+            {task.context === null ? "" : `${task.context} · `}
+            Scheduled {formatCivilDate(task.scheduled_date, {
+              weekday: "short",
+              day: "numeric",
+            })}
+          </span>
+        </div>
+        <time dateTime={task.completed_at ?? undefined}>
+          {completionTime(task)}
+        </time>
+        <details className="jig-task-menu">
+          <summary aria-label={`Actions for ${task.title}`}>•••</summary>
+          <div className="jig-task-menu-panel">
+            <Button
+              label="Reopen"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                void onReopen(task);
+              }}
+            />
+            <Button
+              label="Edit"
+              variant="ghost"
+              size="sm"
+              onClick={() => onEdit(task)}
+            />
+            <Button
+              label="Delete task…"
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleteOpen(true)}
+            />
+          </div>
+        </details>
+      </div>
+      <AlertDialog
+        isOpen={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete task?"
+        description="This permanently removes the completed task from current Jig data."
+        actionLabel="Delete task"
+        cancelLabel="Cancel"
+        actionVariant="destructive"
+        onAction={async () => {
+          const deleted = await onDelete(task.id);
+          if (deleted) {
+            setDeleteOpen(false);
+          }
+        }}
+      />
+    </>
+  );
 }
 
 export function HistoryView({
   tasks,
   onEdit,
   onReopen,
+  onDelete,
 }: HistoryViewProps): React.ReactElement {
   const timeZone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -41,26 +131,30 @@ export function HistoryView({
               aria-labelledby={`history-${group.completion_date}`}
               className="jig-history-group"
             >
-              <h2 id={`history-${group.completion_date}`}>
-                {formatCivilDate(group.completion_date, {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </h2>
-              <List density="compact" hasDividers edge="flush">
+              <div className="jig-history-heading">
+                <h2 id={`history-${group.completion_date}`}>
+                  {formatCivilDate(group.completion_date, {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </h2>
+                <span className="jig-secondary-copy">
+                  {group.tasks.length} completed
+                </span>
+              </div>
+              <div className="jig-history-task-list">
                 {group.tasks.map((task) => (
-                  <TaskRow
+                  <HistoryTaskRow
                     key={task.id}
                     task={task}
-                    onToggleComplete={() => {
-                      void onReopen(task);
-                    }}
-                    onEdit={() => onEdit(task)}
+                    onEdit={onEdit}
+                    onReopen={onReopen}
+                    onDelete={onDelete}
                   />
                 ))}
-              </List>
+              </div>
             </section>
           ))}
         </div>

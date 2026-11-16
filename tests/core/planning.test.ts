@@ -8,6 +8,7 @@ import {
   editTask,
   moveTask,
   reopenTask,
+  rollForwardOutstanding,
 } from "../../src/core/planning";
 
 const NOW = "2026-11-16T01:00:00.000Z";
@@ -213,4 +214,72 @@ describe("planning mutations", () => {
     expect(result.task.completed_at).toBe(LATER);
     expect(result.task.position).toBeNull();
   });
+  it("rolls overdue outstanding Tasks into today before existing today Tasks", () => {
+    const oldest = { ...task(1, "2026-11-14", 0), reminder_time: "10:00" };
+    const yesterday = task(2, "2026-11-15", 0);
+    const today = task(3, "2026-11-16", 0);
+
+    const result = rollForwardOutstanding(
+      [oldest, yesterday, today],
+      "2026-11-16",
+      LATER,
+    );
+
+    expect(result.moved_task_ids).toEqual([oldest.id, yesterday.id]);
+    expect(positions(result.tasks, "2026-11-14")).toEqual([]);
+    expect(positions(result.tasks, "2026-11-15")).toEqual([]);
+    expect(positions(result.tasks, "2026-11-16")).toEqual([
+      "Task 1",
+      "Task 2",
+      "Task 3",
+    ]);
+    expect(
+      result.tasks.find((candidate) => candidate.id === oldest.id),
+    ).toMatchObject({
+      scheduled_date: "2026-11-16",
+      position: 0,
+      reminder_time: "10:00",
+      updated_at: LATER,
+    });
+    assertTaskSet(result.tasks);
+  });
+
+  it("rollover catches up multiple missed days directly and leaves completed Tasks unchanged", () => {
+    const outstanding = task(1, "2026-12-30", 0);
+    const completed = completeTask(
+      [task(2, "2026-12-31", 0)],
+      task(2, "2026-12-31", 0).id,
+      "2026-12-31T12:00:00.000Z",
+    ).task;
+
+    const result = rollForwardOutstanding(
+      [outstanding, completed],
+      "2027-01-02",
+      "2027-01-02T00:00:00.000Z",
+    );
+
+    expect(result.moved_task_ids).toEqual([outstanding.id]);
+    expect(
+      result.tasks.find((candidate) => candidate.id === outstanding.id),
+    ).toMatchObject({
+      scheduled_date: "2027-01-02",
+      position: 0,
+    });
+    expect(
+      result.tasks.find((candidate) => candidate.id === completed.id),
+    ).toStrictEqual(completed);
+  });
+
+  it("rollover is a no-op when nothing is overdue", () => {
+    const existing = [task(1, "2026-11-16", 0)];
+    const result = rollForwardOutstanding(
+      existing,
+      "2026-11-16",
+      LATER,
+    );
+
+    expect(result.tasks).toBe(existing);
+    expect(result.moved_task_ids).toEqual([]);
+  });
+
 });

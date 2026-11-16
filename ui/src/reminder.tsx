@@ -80,10 +80,6 @@ export function ReminderMonitor({
     pruneOldReminderKeys(todayCivilDate());
 
     const check = (): void => {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-
       const now = new Date();
       const today = todayCivilDate(now);
       for (const task of tasks) {
@@ -107,32 +103,48 @@ export function ReminderMonitor({
           continue;
         }
 
-        markDelivered(key);
-        showToast({
-          body: `Reminder: ${task.title}`,
-          uniqueID: key,
-          collisionBehavior: "ignore",
-          renderContent: ({ body, dismiss }) => (
-            <div className="jig-reminder-toast-content">
-              <span>{body}</span>
-              <Button
-                label="Dismiss"
-                variant="ghost"
-                size="sm"
-                onClick={dismiss}
-              />
-            </div>
-          ),
-        });
+        if (document.visibilityState === "visible") {
+          showToast({
+            body: `Reminder: ${task.title}`,
+            uniqueID: key,
+            collisionBehavior: "ignore",
+            renderContent: ({ body, dismiss }) => (
+              <div className="jig-reminder-toast-content">
+                <span>{body}</span>
+                <Button
+                  label="Dismiss"
+                  variant="ghost"
+                  size="sm"
+                  onClick={dismiss}
+                />
+              </div>
+            ),
+          });
+          markDelivered(key);
+          continue;
+        }
+
+        if (
+          "Notification" in window &&
+          window.Notification.permission === "granted"
+        ) {
+          try {
+            new window.Notification("Jig reminder", {
+              body: task.title,
+              tag: key,
+            });
+            markDelivered(key);
+          } catch {
+            // Keep the reminder eligible for visible-page catch-up.
+          }
+        }
       }
     };
 
     check();
     const interval = window.setInterval(check, REMINDER_INTERVAL_MS);
     const onVisibility = (): void => {
-      if (document.visibilityState === "visible") {
-        check();
-      }
+      check();
     };
     window.addEventListener("focus", check);
     document.addEventListener("visibilitychange", onVisibility);

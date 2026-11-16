@@ -21,11 +21,6 @@ export class PlanningError extends Error {
   }
 }
 
-export interface DayAttention {
-  readonly carried_over: readonly Task[];
-  readonly scheduled: readonly Task[];
-}
-
 export interface HistoryGroup {
   readonly completion_date: string;
   readonly tasks: readonly Task[];
@@ -494,6 +489,92 @@ export function deleteTask(
   return { tasks: nextTasks, deleted_task_id: taskId };
 }
 
+export function rollForwardOutstanding(
+  tasks: readonly Task[],
+  currentLocalDate: string,
+  updatedAt: string,
+): {
+  readonly tasks: readonly Task[];
+  readonly moved_task_ids: readonly string[];
+} {
+  assertTaskSet(tasks);
+  assertCivilDate(currentLocalDate, "current_local_date");
+  assertUtcInstant(updatedAt, "updated_at");
+
+  const overdue = tasks
+    .filter(
+      (task) =>
+        task.completed_at === null &&
+        task.scheduled_date < currentLocalDate,
+    )
+    .sort((left, right) => {
+      const dateComparison = left.scheduled_date.localeCompare(
+        right.scheduled_date,
+      );
+      return dateComparison !== 0
+        ? dateComparison
+        : (left.position ?? 0) - (right.position ?? 0);
+    });
+
+  if (overdue.length === 0) {
+    return { tasks, moved_task_ids: [] };
+  }
+
+  const movedIds = new Set(overdue.map((task) => task.id));
+  const affectedSourceDates = [
+    ...new Set(overdue.map((task) => task.scheduled_date)),
+  ];
+  const existingDestination = activeSequence(tasks, currentLocalDate);
+
+  let nextTasks = tasks.map((task) => {
+    const movedIndex = overdue.findIndex(
+      (candidate) => candidate.id === task.id,
+    );
+    if (movedIndex < 0) {
+      return task;
+    }
+    return validateTask({
+      ...task,
+      scheduled_date: currentLocalDate,
+      position: movedIndex,
+      updated_at: updatedAt,
+    });
+  });
+
+  for (const sourceDate of affectedSourceDates) {
+    const remaining = nextTasks
+      .filter(
+        (task) =>
+          task.completed_at === null &&
+          task.scheduled_date === sourceDate &&
+          !movedIds.has(task.id),
+      )
+      .sort((left, right) => (left.position ?? 0) - (right.position ?? 0));
+    nextTasks = applyActiveSequence(
+      nextTasks,
+      sourceDate,
+      remaining,
+      updatedAt,
+    );
+  }
+
+  const movedDestination = overdue.map((task) =>
+    taskById(nextTasks, task.id),
+  );
+  nextTasks = applyActiveSequence(
+    nextTasks,
+    currentLocalDate,
+    [...movedDestination, ...existingDestination],
+    updatedAt,
+  );
+  assertTaskSet(nextTasks);
+
+  return {
+    tasks: nextTasks,
+    moved_task_ids: overdue.map((task) => task.id),
+  };
+}
+
 export function addCivilDays(
   civilDate: string,
   amount: number,
@@ -543,34 +624,6 @@ export function outstandingForDate(
   assertTaskSet(tasks);
   assertCivilDate(scheduledDate);
   return activeSequence(tasks, scheduledDate);
-}
-
-export function dayAttention(
-  tasks: readonly Task[],
-  selectedDate: string,
-): DayAttention {
-  assertTaskSet(tasks);
-  assertCivilDate(selectedDate);
-
-  const carriedOver = tasks
-    .filter(
-      (task) =>
-        task.completed_at === null &&
-        task.scheduled_date < selectedDate,
-    )
-    .sort((left, right) => {
-      const dateComparison = left.scheduled_date.localeCompare(
-        right.scheduled_date,
-      );
-      return dateComparison !== 0
-        ? dateComparison
-        : (left.position ?? 0) - (right.position ?? 0);
-    });
-
-  return {
-    carried_over: carriedOver,
-    scheduled: activeSequence(tasks, selectedDate),
-  };
 }
 
 export function completedForScheduledDate(

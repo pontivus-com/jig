@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import {
   openDatabase,
   PORTABLE_FORMAT_VERSION,
+  rollForwardOutstandingInDatabase,
   SQLITE_SCHEMA_VERSION,
   type RepositoryStatus,
 } from "./sqlite";
@@ -16,6 +17,10 @@ import {
   type JigConfig,
 } from "./config";
 import { acquireWriterLease } from "./writer";
+import {
+  localCivilDate,
+  millisecondsUntilNextLocalDay,
+} from "./local-date";
 
 function writeToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -55,9 +60,44 @@ export async function main(): Promise<void> {
   const db = openDatabase(
     resolve(config.repository_path, ".jig", "local", "jig.sqlite"),
   );
+
+  const startupNow = new Date();
+  rollForwardOutstandingInDatabase(
+    db,
+    localCivilDate(startupNow),
+    startupNow.toISOString(),
+  );
+
   const sync = createSyncController(db, config);
+  let rolloverTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const ensureCurrentDayRollover = (): void => {
+    const now = new Date();
+    const result = rollForwardOutstandingInDatabase(
+      db,
+      localCivilDate(now),
+      now.toISOString(),
+    );
+    if (result.moved_task_ids.length > 0) {
+      sync.notifyMutation();
+    }
+  };
+
+  const scheduleNextRollover = (): void => {
+    rolloverTimer = setTimeout(() => {
+      try {
+        ensureCurrentDayRollover();
+      } finally {
+        scheduleNextRollover();
+      }
+    }, millisecondsUntilNextLocalDay());
+  };
 
   const shutdown = async (): Promise<void> => {
+    if (rolloverTimer !== null) {
+      clearTimeout(rolloverTimer);
+      rolloverTimer = null;
+    }
     sync.stop();
     db.close();
     await lease.release();
@@ -71,6 +111,7 @@ export async function main(): Promise<void> {
   });
 
   await sync.start();
+  scheduleNextRollover();
 
   const handler = createHttpHandler({
     db,
@@ -83,6 +124,7 @@ export async function main(): Promise<void> {
     get_diagnostics: () => createDiagnostics(config, sync.status()),
     trigger_sync: sync.trigger,
     on_task_mutation: sync.notifyMutation,
+    ensure_current_day_rollover: ensureCurrentDayRollover,
   });
 
   Bun.serve({
