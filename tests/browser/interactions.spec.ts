@@ -362,3 +362,61 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
     page.getByText("Narrow selected task", { exact: true }),
   ).toBeVisible();
 });
+
+test("reduced motion preserves non-drag movement semantics", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Reduced motion first", today);
+  await createTask(page, "Reduced motion second", today);
+  await page.reload();
+
+  await page
+    .getByRole("button", { name: "Move Reduced motion first down" })
+    .click();
+
+  await expect
+    .poll(async () =>
+      (await apiState(page)).tasks
+        .filter(
+          (task) =>
+            task.completed_at === null &&
+            task.scheduled_date === today,
+        )
+        .sort(
+          (left, right) =>
+            (left.position ?? 0) - (right.position ?? 0),
+        )
+        .map((task) => task.title),
+    )
+    .toEqual(["Reduced motion second", "Reduced motion first"]);
+
+  await expect(
+    page.locator(".jig-date-drop-zone").first(),
+  ).toHaveCSS("transition-property", "none");
+});
+
+test("long Week columns keep sticky date controls reachable while tasks scroll", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  for (let index = 0; index < 18; index += 1) {
+    await createTask(page, `Long list task ${index + 1}`, today);
+  }
+  await page.reload();
+
+  const column = page.locator(`[data-date="${today}"]`);
+  await expect(column).toBeVisible();
+  const lastTask = column.getByText("Long list task 18", {
+    exact: true,
+  });
+  await lastTask.scrollIntoViewIfNeeded();
+  await expect(lastTask).toBeVisible();
+
+  await expect(
+    column.getByRole("button", {
+      name: /^Add task on /,
+    }),
+  ).toBeVisible();
+});
