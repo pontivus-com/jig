@@ -120,10 +120,12 @@ if (!/^## \[Unreleased\]$/m.test(changelog)) {
 
 const mode = argument("--mode") ?? fail("--mode is required");
 const base = argument("--base") ?? "origin/master";
-const basePackageText =
-  gitMaybe("show", `${base}:package.json`) ??
-  fail(`unable to read package.json from ${base}`);
-const baseVersion = packageVersionFromText(basePackageText);
+const basePackageText = gitMaybe("show", `${base}:package.json`);
+const bootstrappingPublicVersion = basePackageText === null;
+const baseVersion =
+  basePackageText === null
+    ? "0.0.0"
+    : packageVersionFromText(basePackageText);
 const baseChangelog = gitMaybe("show", `${base}:CHANGELOG.md`);
 const currentUnreleased = sectionBody(changelog, "## [Unreleased]");
 
@@ -173,8 +175,14 @@ if (mode === "pr") {
       );
     }
   } else {
-    if (packageVersion !== baseVersion) {
+    if (!bootstrappingPublicVersion && packageVersion !== baseVersion) {
       fail("ordinary work PRs must not change package.json.version");
+    }
+    if (
+      bootstrappingPublicVersion &&
+      !changedFiles.includes("package.json")
+    ) {
+      fail("initial public implementation PR must establish package.json");
     }
     if (!changedFiles.includes("CHANGELOG.md")) {
       fail("ordinary work PRs must update CHANGELOG.md [Unreleased]");
