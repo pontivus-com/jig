@@ -7,13 +7,13 @@ import {
 import { constants as fsConstants } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import {
-  ensureJigDataWorktree,
   ensureJigLocalExclude,
+  ensurePortableData,
   GitAdapterError,
   inspectPortableCandidate,
   runGit,
   serializeSnapshot,
-  commitSnapshot,
+  writePortableSnapshot,
   type GitAdapterConfig,
 } from "./git";
 import {
@@ -225,7 +225,7 @@ export async function initializeRepositoryInstallation(options: {
   }
 
   try {
-    await ensureJigDataWorktree(adapter, datasetId);
+    await ensurePortableData(adapter, datasetId);
   } catch (error) {
     if (error instanceof GitAdapterError) {
       throw new InstallationError(error.message);
@@ -247,7 +247,7 @@ export async function initializeRepositoryInstallation(options: {
 
     const state = readCanonicalState(db);
     const snapshot = serializeSnapshot(state.tasks, datasetId);
-    await commitSnapshot(
+    await writePortableSnapshot(
       adapter,
       snapshot,
       state.revision,
