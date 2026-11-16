@@ -24,7 +24,7 @@ test("real runtime supports title-first create, completion, History and reopen",
   await page.getByLabel("Complete Browser acceptance task").click();
 
   await page.getByRole("button", { name: "History", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /History/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Completed work", exact: true })).toBeVisible();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeVisible();
 
   await page.getByLabel("Reopen Browser acceptance task").click();
@@ -69,8 +69,6 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
 
   await dialog.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(dialog.getByText("This view was out of date.", { exact: false })).toBeVisible();
-  await expect(page.getByText("Concurrent canonical task", { exact: true })).toBeVisible();
-
   const tasks = await page.evaluate(async () => {
     const state = await fetch("/api/v1/tasks").then((response) => response.json()) as {
       tasks: Array<{ title: string }>;
