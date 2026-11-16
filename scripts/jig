@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_DIR="${JIG_APP_DIR:-$HOME/.local/share/jig}"
+BUN_BIN="$APP_DIR/runtime/bun"
+CLI="$APP_DIR/src/shell/cli.ts"
+
+if [[ ! -x "$BUN_BIN" ]]; then
+  printf 'jig: pinned Bun runtime is missing at %s\n' "$BUN_BIN" >&2
+  exit 1
+fi
+
+if [[ ! -f "$CLI" ]]; then
+  printf 'jig: application files are missing at %s\n' "$APP_DIR" >&2
+  exit 1
+fi
+
+exec "$BUN_BIN" "$CLI" "$@"
