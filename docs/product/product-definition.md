@@ -14,7 +14,7 @@ The day is often planned the preceding evening or early morning. Circumstances c
 
 **Jig schedules attention, not project execution.**
 
-Jig gives one person an ordered calendar of lightweight work intentions, optional priority and reminders, immediate rearrangement, and a reliable view of what remains and what was completed. Unfinished earlier-day items remain in view on subsequent days until the user completes, explicitly reschedules, or deletes them; Jig does not silently rewrite the date the user originally intended.
+Jig gives one person an ordered calendar of lightweight work intentions, optional priority and reminders, immediate rearrangement, and a reliable view of what remains and what was completed. At the start of a new local day, unfinished earlier-day items automatically roll forward into the current day by changing their scheduled date. The cards therefore physically move into the next/current day bucket everywhere in Jig until the user completes, explicitly reschedules, or deletes them.
 
 A Jig task represents *something to attend to on a date*, not a complete project requirement, issue, work package or implementation plan. It may point to the authoritative work in another project or system. The details and execution lifecycle continue to live there.
 
@@ -33,7 +33,7 @@ Illustrative item: **Thursday — Legal app: TTA workflow remediation**. Jig own
 An operator must be able to:
 
 1. plan tomorrow, today, or any selected date by adding lightweight items;
-2. review an entire week and the selected day's attention list, including unfinished earlier-day items carried forward without changing their original scheduled date;
+2. review an entire week and the selected day's attention list, with unfinished earlier-day items automatically rolled into the current day's bucket by updating their scheduled date;
 3. change the order of items at any point using drag-and-drop;
 4. move work to another date without losing it;
 5. optionally mark importance and set a reminder, without estimating duration;
@@ -50,7 +50,7 @@ An operator must be able to:
 - **Minimal input:** task title and date are sufficient to create a task. Everything else is optional/defaulted.
 - **Unrestricted adaptation:** no approvals, fixed WIP rules, forced focus states, or automatic reordering of an established plan.
 - **No duplicated authority:** the planning card refers outward; it does not try to reproduce Order, SPAN, Legal or other project artifacts.
-- **History without ceremony:** completed work remains inspectable; unfinished work carries forward visibly until completed, explicitly rescheduled or deleted.
+- **History without ceremony:** completed work remains inspectable; unfinished work automatically rolls forward into the current day until completed, explicitly rescheduled or deleted.
 - **Simple deletion:** confirmed deletion removes the task from Jig rather than creating another lifecycle state. Recovery of previously exported states is delegated to Git history instead of an application trash, soft-delete or undo subsystem.
 - **Portable ownership:** a user-selected Git repository contains Jig's local database and Git-tracked logical task records in an isolated Jig area; the software's source repository contains no personal task data.
 - **Authority boundaries:** Jig owns planning information, local durability, deterministic portable Jig records and the intent/outcome of automatic synchronization. External systems remain authoritative for their own mechanics. In particular, Git owns repository acquisition, topology, branches/refs/worktrees, signing and identity policy, credentials, history, merge/rebase/conflict handling and reconciliation. Jig may invoke the minimum Git operations required to synchronize Jig-owned records, but must not turn those mechanics into Jig domain, configuration, migration or user workflow.
