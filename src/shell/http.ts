@@ -43,6 +43,7 @@ export interface HttpDependencies {
   readonly get_diagnostics: () => Diagnostics;
   readonly trigger_sync: () => Promise<RepositoryStatus>;
   readonly migrate_repository: (repositoryPath: string) => Promise<void>;
+  readonly before_task_mutation: () => void;
   readonly on_task_mutation: () => void;
 }
 
@@ -437,6 +438,7 @@ export function createHttpHandler(
             );
           }
 
+          dependencies.before_task_mutation();
           const result = applyTaskCommand(
             dependencies.db,
             parseCommand(body.command),
