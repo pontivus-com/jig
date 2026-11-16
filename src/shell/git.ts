@@ -349,6 +349,83 @@ export async function ensureJigLocalExclude(
 }
 
 
+async function createInitialSnapshotRef(
+  repositoryPath: string,
+  datasetId: string,
+  parentHead?: string,
+): Promise<void> {
+  const snapshot = serializeSnapshot([], datasetId);
+  const formatJson = snapshot.files.get("format.json");
+  if (formatJson === undefined) {
+    throw new GitAdapterError("Initial Jig snapshot is missing format.json");
+  }
+
+  const blob = await requireGit(
+    repositoryPath,
+    ["hash-object", "-w", "--stdin"],
+    formatJson,
+  );
+  const tree = await requireGit(
+    repositoryPath,
+    ["mktree"],
+    `100644 blob ${blob}\tformat.json\n`,
+  );
+  const commitArgs = [
+    "commit-tree",
+    tree,
+    ...(parentHead === undefined ? [] : ["-p", parentHead]),
+    "-m",
+    "Initialize Jig data",
+  ];
+  const commit = await requireGit(
+    repositoryPath,
+    commitArgs,
+    undefined,
+    {
+      GIT_AUTHOR_NAME: "Jig",
+      GIT_AUTHOR_EMAIL: "jig@local.invalid",
+      GIT_COMMITTER_NAME: "Jig",
+      GIT_COMMITTER_EMAIL: "jig@local.invalid",
+    },
+  );
+  await requireGit(
+    repositoryPath,
+    [
+      "update-ref",
+      DATA_REF,
+      commit,
+      ...(parentHead === undefined ? [] : [parentHead]),
+    ],
+  );
+}
+
+async function isLegacyEmptyBootstrap(
+  repositoryPath: string,
+): Promise<string | null> {
+  const head = await runGit(repositoryPath, ["rev-parse", DATA_REF]);
+  if (head.exit_code !== 0 || head.stdout.length === 0) {
+    return null;
+  }
+  const names = await runGit(repositoryPath, [
+    "ls-tree",
+    "-r",
+    "--name-only",
+    DATA_REF,
+  ]);
+  if (names.exit_code !== 0 || names.stdout.length !== 0) {
+    return null;
+  }
+  const subject = await runGit(repositoryPath, [
+    "log",
+    "-1",
+    "--format=%s",
+    DATA_REF,
+  ]);
+  return subject.exit_code === 0 && subject.stdout === "Initialize Jig data"
+    ? head.stdout
+    : null;
+}
+
 export async function ensureJigDataWorktree(
   config: GitAdapterConfig,
   expectedDatasetId?: string,
@@ -366,27 +443,15 @@ export async function ensureJigDataWorktree(
   const createdRef = hasRef.exit_code !== 0;
 
   if (createdRef) {
-    const emptyTree = await requireGit(
+    if (expectedDatasetId === undefined) {
+      throw new GitAdapterError(
+        "A dataset id is required to initialize Jig portable data",
+      );
+    }
+    await createInitialSnapshotRef(
       config.repository_path,
-      ["mktree"],
-      "",
+      expectedDatasetId,
     );
-    const commit = await requireGit(
-      config.repository_path,
-      ["commit-tree", emptyTree, "-m", "Initialize Jig data"],
-      undefined,
-      {
-        GIT_AUTHOR_NAME: "Jig",
-        GIT_AUTHOR_EMAIL: "jig@local.invalid",
-        GIT_COMMITTER_NAME: "Jig",
-        GIT_COMMITTER_EMAIL: "jig@local.invalid",
-      },
-    );
-    await requireGit(config.repository_path, [
-      "update-ref",
-      DATA_REF,
-      commit,
-    ]);
   } else if (expectedDatasetId !== undefined) {
     try {
       await readSnapshotAtRef(
@@ -395,8 +460,18 @@ export async function ensureJigDataWorktree(
         expectedDatasetId,
       );
     } catch (error) {
-      throw new GitAdapterError(
-        `Existing jig-data ref is not a compatible Jig snapshot: ${String(error)}`,
+      const legacyHead = await isLegacyEmptyBootstrap(
+        config.repository_path,
+      );
+      if (legacyHead === null) {
+        throw new GitAdapterError(
+          `Existing jig-data ref is not a compatible Jig snapshot: ${String(error)}`,
+        );
+      }
+      await createInitialSnapshotRef(
+        config.repository_path,
+        expectedDatasetId,
+        legacyHead,
       );
     }
   }
