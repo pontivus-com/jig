@@ -1,0 +1,549 @@
+import {
+  AppShell,
+  Banner,
+  Button,
+  LayerProvider,
+} from "@astryxdesign/core";
+import { Theme } from "@astryxdesign/core/theme";
+import { neutralTheme } from "@astryxdesign/theme-neutral/built";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { Task, TaskCommand } from "../../src/core/task";
+import {
+  addCivilDays,
+  outstandingForDate,
+} from "../../src/core/planning";
+import type { CanonicalState } from "../../src/shell/sqlite";
+import type {
+  Diagnostics,
+  ServiceStatus,
+} from "../../src/shell/http";
+import { DayView } from "./day";
+import { HistoryView } from "./history";
+import {
+  isStaleRevision,
+  migrateRepository,
+  readCanonicalTasks,
+  readDiagnostics,
+  readStatus,
+  submitTaskCommand,
+  triggerSync,
+} from "./http";
+import { ReminderMonitor } from "./reminder";
+import {
+  SettingsView,
+  type ThemePreference,
+} from "./settings";
+import {
+  MoveTaskDialog,
+  TaskEditor,
+} from "./task-editor";
+import { todayCivilDate } from "./dates";
+import { WeekView } from "./week";
+
+type Destination = "week" | "day" | "history" | "settings";
+
+const THEME_STORAGE_KEY = "jig-theme";
+const NARROW_MEDIA = "(max-width: 47.999rem)";
+
+function savedThemePreference(): ThemePreference {
+  try {
+    const value = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return value === "light" || value === "dark" ? value : "system";
+  } catch {
+    return "system";
+  }
+}
+
+function useNarrowLayout(): boolean {
+  const [isNarrow, setIsNarrow] = useState(
+    () => window.matchMedia(NARROW_MEDIA).matches,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(NARROW_MEDIA);
+    const update = (): void => setIsNarrow(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return isNarrow;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function repositoryStatusLabel(status: ServiceStatus | null): string {
+  switch (status?.repository_status) {
+    case "local-only":
+      return "Saved locally";
+    case "pending":
+      return "Sync pending";
+    case "retrying":
+      return "Sync retrying";
+    case "synchronized":
+      return "Saved · Synced";
+    case "sync-issue":
+      return "Sync issue";
+    default:
+      return "Status";
+  }
+}
+
+function destinationLabel(destination: Destination): string {
+  switch (destination) {
+    case "week":
+      return "Week";
+    case "day":
+      return "Day";
+    case "history":
+      return "History";
+    case "settings":
+      return "Settings";
+  }
+}
+
+export function App(): React.ReactElement {
+  const [destination, setDestination] = useState<Destination>("week");
+  const [selectedDate, setSelectedDate] = useState(todayCivilDate);
+  const [canonical, setCanonical] = useState<CanonicalState | null>(null);
+  const [status, setStatus] = useState<ServiceStatus | null>(null);
+  const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
+  const [isOperating, setIsOperating] = useState(false);
+  const [themePreference, setThemePreference] =
+    useState<ThemePreference>(savedThemePreference);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorTaskId, setEditorTaskId] = useState<string | null>(null);
+  const [editorDate, setEditorDate] = useState(selectedDate);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
+  const isNarrow = useNarrowLayout();
+
+  const tasks = canonical?.tasks ?? [];
+  const editorTask =
+    editorTaskId === null
+      ? null
+      : tasks.find((task) => task.id === editorTaskId) ?? null;
+  const moveTask =
+    moveTaskId === null
+      ? null
+      : tasks.find((task) => task.id === moveTaskId) ?? null;
+
+  const refreshCanonical = useCallback(async (): Promise<void> => {
+    const next = await readCanonicalTasks();
+    setCanonical(next);
+  }, []);
+
+  const refreshOperationalState = useCallback(
+    async (): Promise<void> => {
+      const [nextStatus, nextDiagnostics] = await Promise.all([
+        readStatus(),
+        readDiagnostics(),
+      ]);
+      setStatus(nextStatus);
+      setDiagnostics(nextDiagnostics);
+    },
+    [],
+  );
+
+  const load = useCallback(async (): Promise<void> => {
+    setLoadError(null);
+    try {
+      await Promise.all([
+        refreshCanonical(),
+        refreshOperationalState(),
+      ]);
+    } catch (error) {
+      setLoadError(errorMessage(error));
+    }
+  }, [refreshCanonical, refreshOperationalState]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      void readStatus()
+        .then(setStatus)
+        .catch(() => undefined);
+    }, 15_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const runCommand = useCallback(
+    async (command: TaskCommand): Promise<boolean> => {
+      if (canonical === null || isOperating) {
+        return false;
+      }
+
+      setOperationError(null);
+      setIsOperating(true);
+      try {
+        await submitTaskCommand(command, canonical.revision);
+        try {
+          await refreshCanonical();
+        } catch (refreshError) {
+          setOperationError(
+            `Saved locally, but Jig could not refresh the view: ${errorMessage(refreshError)}. Reload the application.`,
+          );
+          return true;
+        }
+        void readStatus().then(setStatus).catch(() => undefined);
+        return true;
+      } catch (error) {
+        if (isStaleRevision(error)) {
+          try {
+            await refreshCanonical();
+          } catch {
+            // Keep the original concurrency failure visible.
+          }
+          setOperationError(
+            "This view was out of date. Jig reloaded canonical Tasks; review your change and submit it again.",
+          );
+          return false;
+        }
+
+        setOperationError(errorMessage(error));
+        return false;
+      } finally {
+        setIsOperating(false);
+      }
+    },
+    [canonical, isOperating, refreshCanonical],
+  );
+
+  const toggleComplete = useCallback(
+    async (task: Task): Promise<boolean> =>
+      runCommand(
+        task.completed_at === null
+          ? { type: "complete", task_id: task.id }
+          : { type: "reopen", task_id: task.id },
+      ),
+    [runCommand],
+  );
+
+  const moveTaskExact = useCallback(
+    async (
+      taskId: string,
+      destinationDate: string,
+      destinationIndex: number,
+    ): Promise<boolean> =>
+      runCommand({
+        type: "move",
+        task_id: taskId,
+        destination_date: destinationDate,
+        destination_index: destinationIndex,
+      }),
+    [runCommand],
+  );
+
+  const openCreate = useCallback((date: string): void => {
+    setEditorTaskId(null);
+    setEditorDate(date);
+    setOperationError(null);
+    setEditorOpen(true);
+  }, []);
+
+  const openEdit = useCallback((task: Task): void => {
+    setEditorTaskId(task.id);
+    setEditorDate(task.scheduled_date);
+    setOperationError(null);
+    setEditorOpen(true);
+  }, []);
+
+  const openMoveToDate = useCallback((task: Task): void => {
+    setMoveTaskId(task.id);
+    setOperationError(null);
+    setMoveDialogOpen(true);
+  }, []);
+
+  const changeTheme = useCallback((value: ThemePreference): void => {
+    setThemePreference(value);
+    try {
+      if (value === "system") {
+        window.localStorage.removeItem(THEME_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(THEME_STORAGE_KEY, value);
+      }
+    } catch {
+      // Theme persistence is presentation-only and never affects Task state.
+    }
+  }, []);
+
+  const syncNow = useCallback(async (): Promise<void> => {
+    if (isOperating) {
+      return;
+    }
+    setIsOperating(true);
+    setOperationError(null);
+    try {
+      await triggerSync();
+      await refreshOperationalState();
+    } catch (error) {
+      setOperationError(errorMessage(error));
+    } finally {
+      setIsOperating(false);
+    }
+  }, [isOperating, refreshOperationalState]);
+
+  const migrate = useCallback(
+    async (repositoryPath: string): Promise<boolean> => {
+      if (isOperating) {
+        return false;
+      }
+      setIsOperating(true);
+      setOperationError(null);
+      try {
+        await migrateRepository(repositoryPath);
+        await Promise.all([
+          refreshCanonical(),
+          refreshOperationalState(),
+        ]);
+        return true;
+      } catch (error) {
+        setOperationError(errorMessage(error));
+        return false;
+      } finally {
+        setIsOperating(false);
+      }
+    },
+    [
+      isOperating,
+      refreshCanonical,
+      refreshOperationalState,
+    ],
+  );
+
+  const navigateDate = (amount: number): void => {
+    setSelectedDate((current) => addCivilDays(current, amount));
+  };
+
+  const topNav = (
+    <div className="jig-topbar">
+      <div className="jig-brand" aria-label="Jig">
+        <strong>Jig</strong>
+        <span>Schedules attention</span>
+      </div>
+
+      <nav className="jig-primary-nav" aria-label="Primary">
+        {(["week", "day", "history", "settings"] as const).map(
+          (item) => (
+            <Button
+              key={item}
+              label={destinationLabel(item)}
+              variant={destination === item ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setDestination(item)}
+              aria-current={destination === item ? "page" : undefined}
+            />
+          ),
+        )}
+      </nav>
+
+      <div className="jig-topbar-actions">
+        {destination === "week" || destination === "day" ? (
+          <>
+            <Button
+              label="Previous"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                navigateDate(destination === "week" ? -7 : -1)
+              }
+            />
+            <Button
+              label="Today"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedDate(todayCivilDate());
+                setDestination("day");
+              }}
+            />
+            <Button
+              label="Next"
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                navigateDate(destination === "week" ? 7 : 1)
+              }
+            />
+          </>
+        ) : null}
+
+        <Button
+          label={repositoryStatusLabel(status)}
+          variant="ghost"
+          size="sm"
+          onClick={() => setDestination("settings")}
+        />
+      </div>
+    </div>
+  );
+
+  const durableBanner = operationError !== null ? (
+    <Banner
+      status="error"
+      title="Jig could not complete the operation"
+      description={operationError}
+      container="section"
+      collapsible={false}
+    />
+  ) : status?.repository_status === "sync-issue" ? (
+    <Banner
+      status="warning"
+      title="Repository synchronization issue"
+      description="Local planning data remains safe. Repository synchronization currently has an operational issue."
+      container="section"
+      collapsible={false}
+      endContent={
+        <Button
+          label="Retry"
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            void syncNow();
+          }}
+        />
+      }
+    />
+  ) : null;
+
+  const content = canonical === null ? (
+    <div className="jig-loading">
+      <h1>Jig</h1>
+      {loadError === null ? (
+        <p>Loading local planning data…</p>
+      ) : (
+        <>
+          <Banner
+            status="error"
+            title="Jig could not load local planning data"
+            description={loadError}
+            collapsible={false}
+          />
+          <Button
+            label="Retry"
+            variant="primary"
+            onClick={() => {
+              void load();
+            }}
+          />
+        </>
+      )}
+    </div>
+  ) : destination === "week" ? (
+    <WeekView
+      tasks={tasks}
+      selectedDate={selectedDate}
+      isNarrow={isNarrow}
+      onSelectDate={setSelectedDate}
+      onAdd={openCreate}
+      onEdit={openEdit}
+      onMoveToDate={openMoveToDate}
+      onToggleComplete={toggleComplete}
+      onMove={moveTaskExact}
+    />
+  ) : destination === "day" ? (
+    <DayView
+      tasks={tasks}
+      selectedDate={selectedDate}
+      onSelectDate={setSelectedDate}
+      onAdd={openCreate}
+      onEdit={openEdit}
+      onMoveToDate={openMoveToDate}
+      onToggleComplete={toggleComplete}
+      onMove={moveTaskExact}
+    />
+  ) : destination === "history" ? (
+    <HistoryView
+      tasks={tasks}
+      onEdit={openEdit}
+      onReopen={toggleComplete}
+    />
+  ) : (
+    <SettingsView
+      themePreference={themePreference}
+      status={status}
+      diagnostics={diagnostics}
+      operationError={operationError}
+      isOperating={isOperating}
+      onThemePreferenceChange={changeTheme}
+      onSync={syncNow}
+      onMigrate={migrate}
+    />
+  );
+
+  const moveDestinationIndex = useMemo(() => {
+    if (moveTask === null) {
+      return 0;
+    }
+    return (destinationDate: string): number =>
+      outstandingForDate(tasks, destinationDate).filter(
+        (task) => task.id !== moveTask.id,
+      ).length;
+  }, [moveTask, tasks]);
+
+  return (
+    <Theme theme={neutralTheme} mode={themePreference}>
+      <LayerProvider>
+        <AppShell
+          topNav={topNav}
+          banner={durableBanner}
+          contentPadding={0}
+          height="fill"
+          variant="section"
+        >
+          <div className="jig-content">{content}</div>
+        </AppShell>
+
+        <TaskEditor
+          isOpen={editorOpen}
+          task={editorTask}
+          initiatingDate={editorDate}
+          externalError={operationError}
+          isSaving={isOperating}
+          onOpenChange={setEditorOpen}
+          onSave={runCommand}
+          onDelete={(taskId) =>
+            runCommand({ type: "delete", task_id: taskId })
+          }
+        />
+
+        <MoveTaskDialog
+          task={moveTask}
+          isOpen={moveDialogOpen}
+          initialDate={moveTask?.scheduled_date ?? selectedDate}
+          isSaving={isOperating}
+          error={operationError}
+          onOpenChange={setMoveDialogOpen}
+          onMove={async (destinationDate) => {
+            if (moveTask === null) {
+              return false;
+            }
+            const destinationIndex =
+              typeof moveDestinationIndex === "function"
+                ? moveDestinationIndex(destinationDate)
+                : 0;
+            return moveTaskExact(
+              moveTask.id,
+              destinationDate,
+              destinationIndex,
+            );
+          }}
+        />
+
+        <ReminderMonitor tasks={tasks} />
+      </LayerProvider>
+    </Theme>
+  );
+}
