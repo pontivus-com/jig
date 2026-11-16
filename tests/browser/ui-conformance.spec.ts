@@ -116,7 +116,10 @@ test("Task cards expose content, whole-card drag affordance and one hidden actio
   await expect(card).toContainText(/2:30|14:30/);
   await expect(card.locator(".jig-task-drag-handle")).toHaveText("≡");
   await expect(
-    card.locator('summary[aria-label="Actions for Card contract"]'),
+    card.getByRole("button", {
+      name: "Actions for Card contract",
+      exact: true,
+    }),
   ).toHaveText("•••");
 
   await expect(
@@ -218,8 +221,8 @@ test("narrow layout uses one compact app header, seven visible dates and persist
   await page.reload();
 
   await expect(page.locator(".jig-sidebar")).toHaveCount(0);
-  await expect(page.locator(".jig-mobile-header")).toBeVisible();
-  await expect(page.locator(".jig-mobile-destination-menu > summary")).toHaveText("Day");
+  await expect(page.locator(".jig-mobile-header").first()).toBeVisible();
+  await expect(page.locator(".jig-mobile-header .jig-mobile-destination-menu > summary")).toHaveText("Day");
 
   const strip = page.locator(".jig-week-strip");
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
@@ -236,7 +239,7 @@ test("narrow layout uses one compact app header, seven visible dates and persist
     }),
   ).toBeVisible();
 
-  await page.locator(".jig-mobile-destination-menu > summary").click();
+  await page.locator(".jig-mobile-header .jig-mobile-destination-menu > summary").click();
   for (const label of ["Week", "Day", "History", "Settings"]) {
     await expect(
       page
