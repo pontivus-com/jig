@@ -4,6 +4,18 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Changed
+
+- Started the 1.0.2 UX/UI conformance remediation: Day is the default entry surface, Day reads the canonical selected-date bucket, and the obsolete derived carry-over presentation path is removed.
+- Added persisted daily rollover so unfinished prior-day Tasks physically move into the current day's canonical bucket across Day, Week, restart and synchronization.
+- Added browser-side local-day revalidation so an already-open UI refreshes canonical state across midnight.
+- Added hidden-tab browser reminder notifications when permission is granted, while retaining visible-page in-app toasts and explicit permission control in Settings.
+
+### Fixed
+
+- Task mutation admission now performs day rollover before expected-revision validation, preventing stale pre-rollover commands from being admitted.
+- Reminder suppression now supports the browser Notification channel without introducing a closed-app/background notification subsystem.
+
 ### Documentation
 
 - Added the UX/UI conformance audit v1.0 and implementation-ready remediation plan for restoring the governed SVG structural design after v1.0.1.
