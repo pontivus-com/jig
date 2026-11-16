@@ -6,7 +6,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
@@ -81,7 +81,6 @@ describe("isolated jig-data adapter", () => {
 
     const config = {
       repository_path: repo,
-      worktree_path: resolve(repo, ".jig", "git"),
     } as const;
 
     await ensureJigDataWorktree(config, DATASET_ID);
@@ -119,7 +118,6 @@ describe("isolated jig-data adapter", () => {
 
     const config = {
       repository_path: repo,
-      worktree_path: resolve(repo, ".jig", "git"),
     } as const;
 
     await expect(
@@ -135,7 +133,6 @@ describe("isolated jig-data adapter", () => {
 
     const config = {
       repository_path: repo,
-      worktree_path: resolve(repo, ".jig", "git"),
     } as const;
 
     await ensureJigDataWorktree(config, DATASET_ID);
@@ -175,7 +172,6 @@ describe("isolated jig-data adapter", () => {
 
     const config = {
       repository_path: repo,
-      worktree_path: resolve(repo, ".jig", "git"),
     } as const;
 
     await ensureJigDataWorktree(config, DATASET_ID);
