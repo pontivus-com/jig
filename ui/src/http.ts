@@ -160,7 +160,6 @@ export async function readStatus(): Promise<ServiceStatus> {
   if (
     payload.ready !== true ||
     typeof payload.repository_path !== "string" ||
-    typeof payload.remote_configured !== "boolean" ||
     !isRepositoryStatus(payload.repository_status)
   ) {
     throw new JigHttpError(
@@ -173,7 +172,6 @@ export async function readStatus(): Promise<ServiceStatus> {
   return {
     ready: true,
     repository_path: payload.repository_path,
-    remote_configured: payload.remote_configured,
     repository_status: payload.repository_status,
   };
 }
@@ -183,7 +181,6 @@ export async function readDiagnostics(): Promise<Diagnostics> {
   const booleanFields = [
     "service_healthy",
     "sqlite_available",
-    "remote_configured",
     "repository_adapter_healthy",
   ] as const;
 
@@ -200,7 +197,6 @@ export async function readDiagnostics(): Promise<Diagnostics> {
   if (
     typeof payload.sqlite_schema_version !== "number" ||
     typeof payload.repository_path !== "string" ||
-    typeof payload.data_ref !== "string" ||
     typeof payload.portable_format_version !== "number"
   ) {
     throw new JigHttpError(
@@ -215,9 +211,7 @@ export async function readDiagnostics(): Promise<Diagnostics> {
     sqlite_available: payload.sqlite_available as boolean,
     sqlite_schema_version: payload.sqlite_schema_version,
     repository_path: payload.repository_path,
-    data_ref: payload.data_ref,
     portable_format_version: payload.portable_format_version,
-    remote_configured: payload.remote_configured as boolean,
     repository_adapter_healthy:
       payload.repository_adapter_healthy as boolean,
   };
