@@ -415,62 +415,146 @@ Settings receives status in its synchronization section rather than duplicating 
 
 # 5. Wave 2 — replace the Task row interaction model
 
-## UX-009 — Rebuild `TaskRow` as the canonical compact row
+## UX-009 — Rebuild `TaskRow` as the canonical Task card
 
 **Audit coverage:** UI-07, UI-08, UI-15, UI-16, UI-17, UI-30  
 **Files**
 - `ui/src/task-row.tsx`
+- `ui/src/drag.tsx`
 - `ui/src/styles.css`
 - callers in `week.tsx`, `day.tsx`, `history.tsx`
 
-### 9.1 Keep
+### 9.1 The card is the primary interaction object
 
-Keep:
-- `CheckboxInput`;
-- `ListItem` if it can produce the required card rhythm;
-- `useSortable`;
-- Task object directly;
-- reference open/copy behavior.
+The UI must read as **cards that can be picked up and moved**, similar to the interaction clarity of a Trello card.
 
-### 9.2 Directly visible controls
-
-For active sortable rows, render exactly:
-1. completion checkbox;
-2. drag handle;
-3. title + metadata;
-4. overflow action trigger.
-
-For completed/non-sortable rows:
-1. completion/reopen control where appropriate;
-2. title + metadata;
-3. overflow trigger.
-
-### 9.3 Drag handle
-
-Replace:
-
-```tsx
-<Button label="Drag" ... />
-```
-
-with a compact icon/text-symbol button:
+A normal active Task card contains only:
 
 ```text
-≡
+┌──────────────────────────────┐
+│ □  ≡  Task title        •••  │
+│       Context · 10:00        │
+│       High                   │
+└──────────────────────────────┘
 ```
 
-Accessible name:
-`Drag <task title>`.
+Depending on Task data, metadata rows collapse naturally.
 
-The visual label is not `Drag`.
+There must be **no visible text controls** saying:
+- Drag;
+- Edit;
+- Move;
+- Up;
+- Down.
 
-### 9.4 Action menu implementation
+The card itself communicates:
+- this is one movable Task;
+- checkbox = complete/reopen;
+- subtle grip = drag affordance;
+- `•••` = secondary actions.
+
+### 9.2 Card visual contract
+
+The canonical Week SVG establishes the target proportions:
+- approximately 148 px wide inside a 160 px Week column;
+- typical card height ~86 px for title + one/two metadata lines;
+- ~8 px corner radius;
+- 1 px semantic border;
+- surface background distinct from column background;
+- compact internal padding;
+- cards separated by whitespace, not full-width list dividers.
+
+Implementation must remain fluid rather than hard-code 148 px, but preserve this visual density.
+
+Use:
+- `background: var(--color-background-surface)`;
+- semantic border token;
+- Astryx radius token closest to the reference;
+- no decorative shadow at rest unless the current Astryx token is materially needed for separation.
+
+The selected card may use the governed subtle selected surface/border.
+
+### 9.3 Card content hierarchy
+
+Visible content is limited to Task information and compact affordances.
+
+Order:
+1. checkbox;
+2. subtle drag grip `≡`;
+3. title;
+4. overflow trigger `•••`;
+5. metadata beneath title.
+
+Metadata order when present:
+1. carry-over origin;
+2. context;
+3. reminder;
+4. High/Low priority;
+5. reference affordance.
+
+Normal priority is omitted.
+
+Do not display implementation verbs on the card.
+
+### 9.4 Drag behavior — move the full card
+
+The current `ui/src/drag.tsx` renders only:
+
+```tsx
+<div className="jig-drag-overlay">{activeTask.title}</div>
+```
+
+Delete this title-only overlay.
+
+During drag, the overlay must render a **full visual Task card clone**, with the same:
+- dimensions;
+- title;
+- context/reminder/priority metadata;
+- border/radius;
+- internal spacing.
+
+Interactive controls inside the drag clone are inert/aria-hidden.
+
+The user must see the same card lift and move, not a text label detach from the card.
+
+### 9.5 Drag activation
+
+Pointer users:
+- the subtle `≡` grip is always a valid drag activator;
+- when dnd-kit permits without stealing interaction from controls, the non-interactive card body should also act as a drag activator so the card can be grabbed naturally;
+- checkbox, links/reference control and `•••` menu must never start a drag.
+
+Cursor:
+- card/grip indicates `grab` where dragging is available;
+- active drag indicates `grabbing`.
+
+Keyboard/touch:
+- retain dnd-kit accessible keyboard drag behavior;
+- overflow retains Move to date / Move up / Move down as non-drag alternatives;
+- touch targets remain at least approximately 44 CSS px even where the visual glyph is small.
+
+If the installed dnd-kit API requires one explicit activator, use the grip as the activator rather than inventing custom pointer-drag code. The requirement is that the **visual object that moves is the card**.
+
+### 9.6 Drop behavior
+
+While dragging:
+- source card is visually lifted/ghosted but its location remains understandable;
+- candidate destination column/date gets the existing semantic drop-target treatment;
+- exact insertion position remains visible through dnd-kit sortable behavior;
+- dropping within a date preserves exact-position reorder;
+- dropping in another date performs the existing exact-position move;
+- dropping onto an empty date appends at index 0;
+- cancel returns the card with no Task mutation.
+
+Do not change `TaskCommand` or move semantics.
+
+### 9.7 Overflow menu
 
 Add a local `TaskActionMenu` in `task-row.tsx`.
 
 Do **not** add a dependency.
 
-Implement with a native disclosure:
+Implement with a native disclosure or the smallest Astryx-supported disclosure available:
 
 ```tsx
 <details className="jig-task-menu">
@@ -481,40 +565,30 @@ Implement with a native disclosure:
 </details>
 ```
 
-Menu buttons use existing Astryx `Button` primitives.
-
-Action order for active Task:
+Actions for an active Task:
 1. Edit
 2. Move to date…
-3. Move up (when available)
-4. Move down (when available)
+3. Move up — accessible alternative only
+4. Move down — accessible alternative only
 
-Delete remains in editor/inspector because it requires confirmation.
+These labels appear **inside the opened menu**, never on the resting card.
 
-Completed History/Day rows use caller-supplied action set; do not show drag/reorder actions.
+Delete remains behind the confirmed editor/inspector path.
 
-### 9.5 Metadata function
+### 9.8 Carry-over metadata
 
-Replace `TaskDescription` with a metadata composition that renders in this order when present:
-1. carry-over origin;
-2. context;
-3. reminder;
-4. High/Low priority;
-5. reference.
-
-Normal priority is omitted.
-
-Carry-over label must be:
+Carry-over label:
 
 ```text
 Carried over · Wed 18
 ```
 
-not `From Nov 18`.
+not:
+```text
+From Nov 18
+```
 
-### 9.6 Carry-over reminder
-
-When `carriedOverFrom` exists and `reminder_time` exists:
+When carried-over Task has a reminder:
 
 ```text
 Wed 18 · 10:00
@@ -522,26 +596,45 @@ Wed 18 · 10:00
 
 Do not render only `Reminder 10:00`.
 
-When not carried over:
-```text
-10:00
-```
-with the semantic reminder affordance/icon treatment.
+### 9.9 CSS replacement
 
-### 9.7 CSS
-
-Delete/reduce:
-- `.jig-task-actions` max-width/flex-wrap behavior for visible action clusters.
+Remove/reduce:
+- `.jig-task-actions` visible action-cluster layout;
+- generic full-width divider-list treatment as the card boundary;
+- title-only `.jig-drag-overlay`.
 
 Add:
+- `.jig-task-card`;
+- `.jig-task-card-selected`;
+- `.jig-task-card-dragging`;
 - `.jig-task-drag-handle`;
 - `.jig-task-menu`;
 - `.jig-task-menu-panel`;
-- `.jig-task-card`;
 - `.jig-task-meta-item`;
-- `.jig-task-carried-over`.
+- `.jig-task-carried-over`;
+- `.jig-drag-card-overlay`.
 
-The action panel must layer above rows and not affect row width.
+The action panel must layer above cards and never increase card width.
+
+### 9.10 Acceptance
+
+At rest:
+- a Task reads visually as one card;
+- no visible Drag/Edit/Move/Up/Down text exists;
+- card content is legible in the canonical narrow Week column.
+
+During drag:
+- the complete card lifts;
+- the complete card follows the pointer/keyboard operation;
+- destination highlighting/insertion remains clear;
+- no title-only drag chip appears.
+
+Browser assertions must verify:
+- resting card has one checkbox, one grip and one overflow trigger;
+- visible action text is absent before menu open;
+- drag overlay contains the Task card title **and metadata**, not title alone;
+- dragged overlay bounding box is approximately the source card bounding box;
+- cross-date drop and exact-position reorder still mutate the same canonical Task correctly.
 
 ---
 
