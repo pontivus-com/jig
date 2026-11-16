@@ -5,8 +5,8 @@
 **Date:** 2026-11-17  
 **Governing audit:** [UX/UI conformance audit v1.0](../design/ui-ux-conformance-audit-v1.0.md)  
 **Authority order:** product definition → functional requirements → UI solution → corrected SVG references → brand/theme → implementation.  
-**Scope:** Correct the post-1.0.1 UI/UX implementation so it conforms to the approved structural design and restore the broken prior-day carry-over entry workflow.  
-**Non-goal:** Change Task semantics, persistence ownership, synchronization architecture, installer behavior, Git ownership boundaries, Astryx ownership, or dnd-kit semantics.
+**Scope:** Correct the post-1.0.1 UI/UX implementation so it conforms to the approved structural design and replace the broken derived carry-over behavior with persisted daily rollover.  
+**Non-goal:** Change the Task schema, persistence ownership, synchronization architecture, installer behavior, Git ownership boundaries, Astryx ownership, or dnd-kit semantics. This release intentionally changes rollover semantics by mutating `scheduled_date` for overdue outstanding Tasks.
 
 ---
 
@@ -14,18 +14,18 @@
 
 1.0.2 is complete only when Jig:
 
-1. opens on **Today / Day** so unfinished prior-day work is immediately visible as carry-over;
+1. automatically rolls every unfinished prior-day card into the current day's canonical bucket by changing `scheduled_date`, and opens on **Today / Day**;
 2. uses the governed desktop **left rail + planning canvas** shell rather than the current global top bar;
 3. shows a seven-day Week at the 1440×900 reference viewport without forced horizontal scrolling;
 4. uses compact Task rows with one drag handle and one overflow menu rather than the current visible `Drag / Up / Down / Move / Edit` action cluster;
-5. renders Day as one **Attention** sequence with row-level carry-over treatment;
+5. renders Day as one **Attention** sequence from the selected date's canonical bucket after rollover;
 6. provides the governed desktop selected-Task inspector;
-7. renders History with original scheduled date and actual completion time;
+7. renders History with canonical scheduled date and actual completion time;
 8. exposes Settings/Sync without repository migration, remote-name configuration, branch/ref/worktree terminology or Git reconciliation semantics;
 9. uses a deliberate compact narrow/mobile shell instead of wrapping the desktop chrome;
 10. has new browser assertions and screenshot evidence that compare the implementation to the corrected reference set.
 
-This release is a **UI composition and UX correction**. Existing planning behavior remains authoritative unless this plan explicitly identifies a presentation/entry-flow defect.
+This release is a **UI composition + focused planning-behavior correction**. Existing planning behavior remains authoritative except for the explicitly replaced derived carry-over model.
 
 ---
 
@@ -36,7 +36,7 @@ This release is a **UI composition and UX correction**. Existing planning behavi
 Do not change:
 
 - `Task`, `TaskCommand`, `TaskEditChanges`;
-- `dayAttention()`, `outstandingForDate()`, `weekDates()`, `historyByCompletionDate()`;
+- `outstandingForDate()`, `weekDates()`, `historyByCompletionDate()` remain semantic owners; `dayAttention()` carry-over behavior is retired/replaced by persisted rollover;
 - priority-assisted insertion law;
 - exact-position drag/drop law;
 - completion/reopen/delete transitions;
@@ -234,54 +234,205 @@ Do not alter structural geometry in this copy-only task.
 
 # 4. Wave 1 — fix the daily continuity bug and application shell
 
-## UX-006 — Make Today / Day the fresh-session entry surface
+## UX-006 — Implement persisted daily rollover and make Today / Day the fresh-session entry
 
 **Audit coverage:** UX-F01  
 **Files**
+- `src/core/planning.ts`
+- `src/shell/sqlite.ts`
+- `src/shell/main.ts`
+- `src/shell/http.ts`
 - `ui/src/app.tsx`
+- `ui/src/day.tsx`
+- `tests/core/planning.test.ts`
+- `tests/persistence/mutations.test.ts` or equivalent SQLite mutation test
 - `tests/browser/interactions.spec.ts`
+- new/updated lifecycle test for local-day rollover
 
-**Current code to replace**
+### 6.1 Add one pure core rollover operation
+
+Add to `src/core/planning.ts`:
+
+```ts
+export function rollForwardOutstanding(
+  tasks: readonly Task[],
+  currentLocalDate: string,
+  updatedAt: string,
+): {
+  readonly tasks: readonly Task[];
+  readonly moved_task_ids: readonly string[];
+}
+```
+
+Rules:
+
+1. validate Task set, `currentLocalDate`, and `updatedAt`;
+2. select Tasks where:
+   - `completed_at === null`;
+   - `scheduled_date < currentLocalDate`;
+3. sort selected Tasks by:
+   - source `scheduled_date` ascending;
+   - source `position` ascending;
+4. remove them from their source-day active sequences;
+5. move them directly to `currentLocalDate`;
+6. destination sequence is:
+   - rolled-forward Tasks in the deterministic order above;
+   - then existing current-day outstanding Tasks in their existing relative order;
+7. rewrite destination positions contiguously from zero;
+8. compact every affected source date;
+9. for each moved Task update:
+   - `scheduled_date = currentLocalDate`;
+   - `updated_at = updatedAt`;
+   - keep id/title/priority/context/reference/note/reminder_time unchanged;
+10. completed Tasks are untouched;
+11. if no Task moves, return the original semantic state with empty `moved_task_ids`.
+
+Do not create:
+- `carried_over` flag;
+- original-scheduled-date field;
+- rollover history table;
+- per-day intermediate mutations.
+
+If Jig was inactive for several days, all overdue Tasks move directly to the current local date in one operation.
+
+### 6.2 Remove the derived carry-over planning path
+
+The UI must stop depending on overdue Tasks remaining on old dates.
+
+`dayAttention()` must no longer be the source of a carry-over prefix.
+
+Preferred minimal correction:
+- remove `DayAttention` / `dayAttention()` if no remaining caller requires them;
+- Day reads `outstandingForDate(tasks, selectedDate)`.
+
+Do not keep both persisted rollover and a derived carry-over projection.
+
+### 6.3 Add one SQLite transaction owner
+
+Add a cohesive persistence operation in `src/shell/sqlite.ts`, conceptually:
+
+```ts
+rollForwardOutstandingInDatabase(
+  db,
+  currentLocalDate,
+  updatedAt,
+): {
+  revision: number;
+  moved_task_ids: readonly string[];
+}
+```
+
+Requirements:
+- read one canonical state;
+- call the pure core rollover;
+- if nothing moved, do not increment revision or dirty sync state;
+- if Tasks moved, persist all affected Task dates/positions atomically;
+- increment revision exactly once;
+- mark pending sync/dirty exactly as a normal successful Task mutation;
+- rollback the whole rollover on any persistence failure.
+
+Do not loop through HTTP commands one Task at a time.
+
+### 6.4 Service-owned day-boundary trigger
+
+Rollover is automatic and owned by the service, not by a particular view.
+
+In `src/shell/main.ts`:
+1. run an idempotent rollover catch-up during service startup before normal planning state is served;
+2. schedule one timer for the next local civil-day boundary;
+3. when it fires, run the same SQLite rollover transaction;
+4. notify the existing sync controller when Tasks moved;
+5. schedule the next boundary;
+6. clear the timer on service shutdown.
+
+Also perform a cheap idempotent `ensureCurrentDayRollover()` before:
+- returning canonical Task state;
+- admitting a Task mutation.
+
+This catches suspend/sleep or delayed timer execution.
+
+No per-Task timers.
+
+### 6.5 Local date owner
+
+Use the service machine's local civil date for automatic rollover.
+
+Add one small date helper in an existing cohesive date/shell module; do not add a date library.
+
+The local service and local browser are assumed to share the host's civil timezone for the desktop MVP.
+
+### 6.6 Reminder behavior
+
+`reminder_time` remains unchanged.
+
+Because `scheduled_date` changes, an overdue Task with `10:00` reminder becomes a current-day Task with a current-day `10:00` reminder.
+
+Do not display the obsolete source date as reminder metadata.
+
+### 6.7 UI entry
+
+Change:
 
 ```ts
 const [destination, setDestination] = useState<Destination>("week");
-const [selectedDate, setSelectedDate] = useState(todayCivilDate);
 ```
 
-**Target**
+to:
 
 ```ts
 const [destination, setDestination] = useState<Destination>("day");
-const [selectedDate, setSelectedDate] = useState(todayCivilDate);
 ```
 
-No destination persistence is added in 1.0.2.
+Selected date remains today's local civil date.
 
-**Required behavior**
-- fresh page load opens Day;
-- selected date is today's local civil date;
-- `dayAttention(tasks, selectedDate)` supplies earlier unfinished work;
-- no prior-day Task is rescheduled;
-- Week continues to show the Task only on its original scheduled date;
-- Today action always sets today + Day.
+Day reads the already-rolled canonical bucket.
 
-**Regression test**
-Add a new test before the existing explicit Day carry-over test:
+### 6.8 Core tests
+
+Add tests:
+
+1. yesterday Task moves to today and date changes;
+2. Task disappears from yesterday sequence;
+3. Task appears in today's sequence;
+4. existing today's Tasks remain after rolled-forward Tasks;
+5. multiple old dates preserve old-date + position ordering;
+6. source positions compact;
+7. multi-day catch-up moves directly to current date;
+8. completed Tasks never move;
+9. reminder time is preserved;
+10. no-op rollover returns no moved ids;
+11. month/year boundary works.
+
+### 6.9 Persistence tests
+
+Prove:
+- all affected dates update in one transaction;
+- one revision increment;
+- pending sync set;
+- rollback leaves every date unchanged on failure;
+- restart reads the new rolled-forward dates.
+
+### 6.10 Browser acceptance
+
+Test:
 
 ```text
-"fresh startup exposes prior-day unfinished work in today's attention list"
+"unfinished prior-day cards roll into today across Day and Week"
 ```
 
-Test sequence:
-1. reset canonical state;
-2. create Task scheduled yesterday through API;
-3. reload as fresh UI;
-4. do not click Day;
-5. assert Day is current destination;
-6. assert today's heading/date;
-7. assert Task visible;
-8. assert `Carried over · <yesterday>` visible;
-9. fetch API state and assert `scheduled_date === yesterday`.
+Sequence:
+1. persist Task scheduled yesterday;
+2. fresh service/UI startup;
+3. assert Day is initial destination;
+4. assert card visible in today's Day Attention;
+5. fetch API and assert `scheduled_date === today`;
+6. navigate Week;
+7. assert card is in today's column;
+8. assert card is absent from yesterday's column;
+9. reload;
+10. assert same current-day bucket persists.
+
+This test is the release blocker for the reported bug.
 
 ---
 
@@ -486,11 +637,10 @@ Order:
 5. metadata beneath title.
 
 Metadata order when present:
-1. carry-over origin;
-2. context;
-3. reminder;
-4. High/Low priority;
-5. reference affordance.
+1. context;
+2. reminder;
+3. High/Low priority;
+4. reference affordance.
 
 Normal priority is omitted.
 
@@ -587,26 +737,17 @@ These labels appear **inside the opened menu**, never on the resting card.
 
 Delete remains behind the confirmed editor/inspector path.
 
-### 9.8 Carry-over metadata
+### 9.8 Rolled-forward card presentation
 
-Carry-over label:
+After rollover commits, the Task is a normal card in the new current-day bucket.
 
-```text
-Carried over · Wed 18
-```
+Do not render:
+- `Carried over · …`;
+- `From …`;
+- originating-date reminder metadata;
+- a persisted/derived carry-over badge.
 
-not:
-```text
-From Nov 18
-```
-
-When carried-over Task has a reminder:
-
-```text
-Wed 18 · 10:00
-```
-
-Do not render only `Reminder 10:00`.
+The fact that the card moved forward is represented by its canonical date/bucket.
 
 ### 9.9 CSS replacement
 
@@ -623,7 +764,6 @@ Add:
 - `.jig-task-menu`;
 - `.jig-task-menu-panel`;
 - `.jig-task-meta-item`;
-- `.jig-task-carried-over`;
 - `.jig-drag-card-overlay`.
 
 The action panel must layer above cards and never increase card width.
@@ -757,7 +897,7 @@ Do not use raw divider-list styling as the final visual boundary. The task card 
 
 # 7. Wave 4 — Day conformance and inspector
 
-## UX-013 — Convert Day to one Attention sequence
+## UX-013 — Render Day from the canonical selected-date bucket
 
 **Audit coverage:** UI-09, UI-13  
 **Files**
@@ -765,42 +905,36 @@ Do not use raw divider-list styling as the final visual boundary. The task card 
 - `ui/src/styles.css`
 
 Delete:
-- separate `Carried over` section heading;
-- separate carry-over section border;
-- separate scheduled-date active section heading.
+- separate `Carried over` section;
+- carry-over section border;
+- `dayAttention().carried_over` rendering;
+- carry-over-only presentation branching.
 
-Build one active container:
+Use:
+
+```ts
+const active = outstandingForDate(tasks, selectedDate);
+```
+
+Render one active container:
 
 ```text
 Attention        [N tasks]
 
-[carried row]
-[carried row]
-[today row]
-[today row]
+[task card]
+[task card]
+[task card]
 ```
 
-Implementation sequence:
+The current date has already been normalized by the service rollover lifecycle.
 
-```ts
-const attention = dayAttention(tasks, selectedDate);
-const active = [
-  ...attention.carried_over.map(task => ({ task, carriedOver: true })),
-  ...attention.scheduled.map(task => ({ task, carriedOver: false })),
-];
-```
+The selected-date `DateDropZone` wraps the list so normal explicit drag/reschedule continues to work.
 
-Do not create a persisted/UI Task subtype. This local tuple/object is presentation-only.
-
-The selected-date `DateDropZone` wraps the active list so carried-over rows can still be explicitly dragged into today and rescheduled through the existing move operation.
-
-Important:
-- a carried-over row remains in its original dnd group until the user explicitly drops/moves it;
-- its displayed position in the Attention prefix does not rewrite persisted ordering.
+Do not create a second view-only ordering authority.
 
 ---
 
-## UX-014 — Implement row-level carry-over semantics
+## UX-014 — Remove obsolete carry-over-only UI semantics
 
 **Audit coverage:** UI-10, UI-11  
 **Files**
@@ -808,14 +942,17 @@ Important:
 - `ui/src/task-row.tsx`
 - `ui/src/styles.css`
 
-For each carried row:
-- pass `carriedOverFrom={task.scheduled_date}`;
-- add `jig-task-carried-over` class through a new TaskRow boolean/class prop;
-- render explicit origin text;
-- render reminder origin date + time;
-- use restrained left-edge/surface differentiation on the row only.
+Remove:
+- `carriedOverFrom` TaskRow prop if it has no other purpose;
+- `.jig-carry-over-section`;
+- `.jig-task-carried-over`;
+- `From <date>`;
+- `Carried over · <date>`;
+- reminder-origin-date formatting.
 
-Remove `.jig-carry-over-section`.
+After automatic rollover, the card is visually a normal card in its new date bucket.
+
+The reminder shows its normal current scheduled time.
 
 ---
 
@@ -964,7 +1101,8 @@ Completion time:
 - use HH:MM localized time.
 
 Scheduled date:
-- always display `Scheduled <weekday short> <day>`.
+- always display `Scheduled <weekday short> <day>` from the Task's canonical `scheduled_date` at completion;
+- do not imply that this is a pre-rollover/original date.
 
 Actions menu:
 1. Reopen
@@ -1307,10 +1445,10 @@ Assert:
 Fresh state.
 Assert Day current and today's date.
 
-### C03 — carry-over startup
+### C03 — persisted daily rollover
 Persist yesterday Task.
-Fresh load.
-Assert immediate visibility + carry-over origin + API date unchanged.
+Fresh service/UI load.
+Assert Task is visible in today's Day bucket, API `scheduled_date === today`, Week shows it in today's column, and yesterday's column no longer contains it.
 
 ### C04 — Week seven-day visibility
 Navigate Week.
@@ -1326,16 +1464,16 @@ Assert:
 - one action summary visible;
 - no visible buttons named Up/Down/Move/Edit until menu opened.
 
-### C06 — unified Day Attention
-Create yesterday + today Tasks.
-Assert:
+### C06 — unified Day Attention after rollover
+Create yesterday + today Tasks, trigger rollover, then assert:
 - one `Attention` heading;
 - no `Carried over` section heading;
-- carried row precedes today's row.
+- both Tasks belong to today's canonical sequence;
+- rolled-forward Task precedes the previously-today Task.
 
-### C07 — reminder origin
+### C07 — reminder follows rolled-forward date
 Yesterday Task with reminder.
-Assert text includes yesterday date and reminder time.
+Trigger rollover and assert API date becomes today, reminder time is unchanged, and UI shows the reminder as today's scheduled reminder with no obsolete yesterday label.
 
 ### C08 — desktop inspector
 Select Task.
@@ -1387,7 +1525,7 @@ Run representative Day/Week assertions under Light and Dark.
 Capture exactly:
 - `desktop-week-light.jpg`
 - `desktop-week-dark.jpg`
-- `desktop-day-carry-over.jpg`
+- `desktop-day-rollover.jpg`
 - `desktop-day-inspector.jpg`
 - `desktop-history.jpg`
 - `desktop-settings.jpg`
@@ -1438,7 +1576,7 @@ Must:
 - direct checkbox;
 - direct drag handle if sortable;
 - one overflow disclosure;
-- correct carry-over/reminder metadata;
+- canonical reminder metadata after rollover;
 - support selected styling;
 - stop propagation for interactive children.
 
@@ -1458,13 +1596,13 @@ Must:
 Must not:
 - use 15rem fixed columns;
 - use header Add per column;
-- duplicate carry-over into later Week dates.
+- retain stale overdue cards in prior Week buckets after rollover.
 
 ## `ui/src/day.tsx`
 
 Must:
-- one Attention sequence;
-- row-level carry-over;
+- one canonical selected-date Attention sequence;
+- no derived carry-over section;
 - completed disclosure;
 - desktop inspector;
 - narrow no-side-inspector composition.
@@ -1576,7 +1714,7 @@ No audit finding is allowed to remain without a task or an explicit preserve/no-
 Execute in this order:
 
 1. UX-001…005 — canonical docs/references.
-2. UX-006 — Day default + carry-over startup regression.
+2. UX-006 — persisted daily rollover + Day default + cross-view regression.
 3. UX-007…008 — shell/status.
 4. UX-009 — Task row/action model.
 5. UX-010…012 — Week.
@@ -1590,13 +1728,13 @@ Execute in this order:
 13. UX-030 — evidence set.
 
 ### Gate A — after UX-006
-Carry-over startup bug test green.
+Persisted rollover core/persistence/browser tests green, including Week bucket movement.
 
 ### Gate B — after UX-012
 Desktop shell + Week conformance tests green at 1440×900.
 
 ### Gate C — after UX-017
-Day Attention + inspector + carry-over semantics green.
+Day Attention + inspector + post-rollover semantics green.
 
 ### Gate D — after UX-024
 History, Settings, narrow shell, editor green.
@@ -1611,17 +1749,17 @@ Do not defer structural failures to polish.
 # 19. Release acceptance checklist
 
 1. Fresh open lands on Today / Day.
-2. Yesterday unfinished work appears immediately.
-3. Original scheduled date remains unchanged.
+2. Yesterday unfinished work is automatically moved into today's canonical bucket.
+3. API `scheduled_date` is physically changed to today; Week and Day show the same moved card in today's bucket.
 4. Desktop has left rail; no replacement top bar.
 5. Week shows all seven columns at 1440×900.
 6. Week columns show count + bottom Add.
 7. Row shows compact drag + overflow only.
 8. Day has one Attention sequence.
-9. Carry-over label is explicit and row-local.
-10. Carry-over reminder shows originating date.
+9. No derived carry-over section/label remains after rollover.
+10. Reminder time is preserved and applies to the rolled-forward scheduled date.
 11. Desktop Day inspector exists.
-12. History shows scheduled date + completion time.
+12. History shows canonical scheduled date at completion + completion time.
 13. Settings has no forbidden Git-management concepts.
 14. Narrow shell is compact and all destinations are reachable.
 15. Seven mobile dates fit at 390px.
@@ -1646,7 +1784,7 @@ Passing functional tests alone is insufficient.
 Passing screenshots alone is insufficient.
 
 The release requires both:
-- **behavioral correctness**, including prior-day continuity;
+- **behavioral correctness**, including persisted daily rollover across Week and Day;
 - **structural conformance**, including shell, density, row actions, Day inspector, History semantics and narrow composition.
 
 The implementation team should not make additional UX design choices while executing this plan. If a required Astryx primitive is unavailable, use the smallest local semantic HTML composition needed for the behavior described here and document that implementation detail; do not change the target interaction or add a new dependency without a separate architectural decision.
