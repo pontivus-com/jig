@@ -51,6 +51,12 @@ for _ in $(seq 1 "$SAMPLES"); do
     sleep 0.02
   done
 
+  # This certification intentionally performs 20 starts back-to-back.
+  # Reset only systemd's test-induced start-rate accounting so each sample
+  # measures one stopped-service startup without changing the production unit's
+  # normal StartLimit safety behavior.
+  systemctl --user reset-failed jig.service
+
   start_ns="$(date +%s%N)"
   systemctl --user start jig.service
 
