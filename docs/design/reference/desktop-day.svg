@@ -47,10 +47,12 @@
 <rect x="322" y="224" width="56" height="20" rx="10" fill="#edf4f8" stroke="none" stroke-width="1"/>
 <text x="334" y="239" class="xs" fill="#45627f" font-weight="700">4 tasks</text>
 <rect x="240" y="265" width="650" height="86" rx="8" fill="#f3f7fd" stroke="#95acd2" stroke-width="1"/>
+<rect x="240" y="265" width="4" height="86" rx="2" fill="#c48a2c" stroke="none"/>
 <rect x="250" y="279" width="16" height="16" rx="4" fill="#ffffff" stroke="#8390a1" stroke-width="1"/>
 <text x="275" y="292" class="b" fill="#9aa6b6" font-weight="700">≡</text>
 <text x="295" y="292" class="b" fill="#152238" font-weight="650">Legal — TTA workflow remediation</text>
 <text x="295" y="313" class="xs" fill="#657187">Legal App</text>
+<text x="390" y="313" class="xs" fill="#9a6b12" font-weight="700">↶ Carried over · Wed 18</text>
 <text x="778" y="313" class="xs" fill="#657187">◷ 10:00</text>
 <rect x="295" y="329" width="42" height="16" rx="8" fill="#fff0ef" stroke="none" stroke-width="1"/>
 <text x="304" y="341" class="xs" fill="#a33a34" font-weight="700">High</text>
@@ -94,6 +96,7 @@
 <text x="1141" y="264" class="b">Edit</text>
 <rect x="1216" y="240" width="150" height="36" rx="7" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
 <text x="1240" y="264" class="b">Move to date</text>
+<text x="1365" y="288" class="xs" fill="#a33a34" font-weight="700" text-anchor="end">Delete…</text>
 <line x1="945" y1="296" x2="1384" y2="296" stroke="#dfe5ee" stroke-width="1"/>
 <text x="945" y="340" class="s" fill="#657187">Context</text>
 <text x="1090" y="340" class="b" fill="#152238" font-weight="600">Legal App</text>
