@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.4 technical solution, v0.11 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, complete theme semantics, header geometry, outside dismissal, Task menu actions, date-header Add, selected-day removal, narrow seven-section composition and full weekday labels.
+**Status:** Binding v1.0.4 technical solution, v0.12 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, complete theme semantics, header geometry, outside dismissal, Task menu actions, date-header Add, selected-day removal, narrow seven-section composition, full weekday labels and reduced-chrome/icon-led presentation.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-12 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -330,7 +330,7 @@ At desktop Planner widths, the AppShell top region contains a three-zone Jig hea
 grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 ```
 
-Left zone is the Jig home affordance; right zone contains Add task, History, Settings and compact sync status; the center zone is therefore page-centered regardless of unequal side content.
+Left zone is the Jig home affordance; right zone contains Add task, an adjacent Planner/History/Settings navigation group, and compact sync status; the center zone is therefore page-centered regardless of unequal side content. Planner is explicit in this group and receives the governed neutral active-destination treatment when active.
 
 The center zone is a vertical stack:
 
@@ -339,7 +339,9 @@ The center zone is a vertical stack:
 
 The range label is not an interactive element and must not sit between the chevrons. Buttons use Astryx Button/IconButton with explicit accessible labels (“Previous week”, “Today”, “Next week”).
 
-The Planner board uses seven equal-width tracks with a product-level 160px minimum. Track **height is content-driven**; do not stretch tracks merely to equalize bottoms or anchor a lane action. Empty tracks keep only the minimum usable drop-target area. The desktop semantic breakpoint is **76rem / 1216 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and 48px total outer inset. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
+The Planner board uses seven equal-width tracks with a product-level 160px minimum. Track **height is content-driven**; do not stretch tracks merely to equalize bottoms or anchor a lane action. Empty tracks keep only the minimum usable drop-target area.
+
+The seven tracks are **layout tracks, not panel components**. Do not wrap each day in a persistent bordered/card surface. Jig CSS may use spacing plus a single subtle hairline inline divider between adjacent tracks, and may remove even that divider when responsive density makes whitespace sufficient. Do not combine lane borders, header borders and card borders into repeated parallel line work. Task cards remain the discrete interaction surfaces. The desktop semantic breakpoint is **76rem / 1216 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and 48px total outer inset. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
 
 The date column header is non-selectable and owns only date presentation plus the date-specific Add action. Render the **full weekday name** plus day number (for example `Thursday 19`) and one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. Do not abbreviate weekdays.
 
@@ -397,6 +399,15 @@ When narrow drag is not enabled, touch-operable Move up/Move down commands call 
 - The desktop board uses equal-width columns with `align-items: start`/equivalent content-driven block sizing. Each lane may have a different height.
 - Empty lanes retain a modest minimum droppable body so cross-date drag remains usable. That minimum is a drag-target usability budget, not a visual equal-height requirement.
 - Drag destination index continues to derive from the canonical outstanding sequence; variable lane height has no effect on Task ordering semantics.
+
+### 5.5.2 v1.0.4 reduced-chrome and iconography ownership
+
+- **Lane chrome:** `week.tsx`/Planner composition owns open seven-track geometry. Lane separation is whitespace plus at most one hairline divider; no boxed lane surface, perimeter border, background panel or lane shadow.
+- **Task-card chrome:** one restrained card surface is allowed because the Task is an interactive draggable/selectable unit. Use one thin border and optional low-elevation shadow from public theme roles. Do not add multiple nested borders, decorative header rules or heavy shadows.
+- **Header/navigation:** keep the established three-zone placement. The right zone owns an adjacent Planner/History/Settings navigation group plus Add/status; do not relocate navigation to a sidebar or center zone.
+- **Iconography:** use public Astryx/Lucide-compatible icons for actions/status/metadata where available. Icons are semantic aids, not decoration. Do not encode an essential state by an unlabeled icon alone; pair with text, accessible label/title, or another non-color cue as appropriate.
+- **State over chrome:** today, selected Task, priority, drag and operational status are communicated by their governed semantic color/icon/state treatment, not by adding thicker borders around containing lanes/panels.
+- **CSS ownership:** remove obsolete borders/dividers/shadows rather than overriding them with transparent values or later selectors. One visual property has one owner.
 
 ### 5.6 v1.0.4 state and interaction corrections
 
