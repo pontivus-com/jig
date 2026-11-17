@@ -720,6 +720,30 @@ The v1.0.5 verification gate must prove the corrected architecture as well as vi
 
 A green test run without these cases is not sufficient v1.0.5 certification.
 
+#### v1.0.5 architecture-compliance matrix
+
+The corrective design is intentionally presentation-local. It does not add a new domain concept, persistence representation, protocol envelope or shell subsystem.
+
+| Solution | Owning layer / boundary | Canonical semantic owner | Architectural constraint |
+|---|---|---|---|
+| JIG-105-SD-01 drag reconciliation | `ui/src/drag.tsx` interaction adapter | existing canonical Task order + existing move command | dnd-kit may sense/measure only; no shadow order, drag DTO or per-frame domain writes |
+| JIG-105-SD-02 responsive pointer drag | UI composition + dnd sensor configuration | one `SortableTaskRow` / one `DateDropZone` path | viewport must not decide capability; no touch-specific state model or second gesture framework |
+| JIG-105-SD-03 responsive Planner | UI composition + CSS geometry | one dated-section/Task renderer | breakpoint changes geometry only; no mobile Task projection or duplicate renderer |
+| JIG-105-SD-04 application navigation | UI semantic constant | one readonly destination tuple | type icon as Astryx `ExtendedIconName`; render through public Button/DropdownMenu slots; no navigation DTO or responsive copy |
+| JIG-105-SD-05 Task action menu | pure UI item builder + one `TaskActionMenu` component | canonical Task state/sequence position | use Astryx `DropdownMenuItemData`; no mobile/desktop action models |
+| JIG-105-SD-06 icon vocabulary | small UI presentation adapter over Astryx Icon | Astryx built-ins + four governed Jig namespaced keys | keys checked as `NamespacedIconName`; no second icon library/registry, no casts to `IconName` |
+| JIG-105-SD-07 compact header | Jig-owned AppShell topNav composition + scoped CSS | one header geometry owner | public Astryx controls only; no private selectors, offset hacks or second shell |
+| JIG-105-SD-08 Task surface contrast | `jig-theme.source.ts` + generated Astryx theme artifacts | one Task-surface token mapping | no raw responsive colors, no hand-edited generated theme artifacts |
+| JIG-105-SD-09 wordmark | shared `BrandHome` UI composition | canonical Jig logo assets | no alternate mobile brand component or duplicate live brand text |
+| JIG-105-SD-10 certification | architecture/browser/evidence tests | requirements/design contract | tests must prove owner singularity and observable outcomes, not encode divergent responsive behavior |
+| JIG-105-SD-11 full-bleed layout | AppShell/content composition + scoped CSS | one viewport/layout geometry owner | zero application inset; no replacement wrapper/max-width; one 73rem breakpoint |
+
+**FCIS boundary:** no v1.0.5 corrective solution requires new code in `src/core` or `src/shell`. Existing pure planning rules and canonical `TaskCommand`/move semantics remain authoritative. UI code translates pointer/navigation/menu events into existing callbacks/commands; it does not reimplement ordering, scheduling, rollover, completion or persistence semantics.
+
+**Strict typing boundary:** external/browser/dnd data is narrowed at the smallest adapter boundary with public guards/runtime checks. UI semantic constants use exported Astryx types (`ExtendedIconName`, `NamespacedIconName`, `DropdownMenuItemData`) and derived literal unions. Do not introduce `any`, `unknown as`, double casts, non-null assertions, duplicate domain shapes, DTO/ViewModel types or assertion-only compiler appeasement.
+
+**SoC / DRY boundary:** responsive differences are presentation choices only. One meaning has one owner: one Task model, one order, one Planner renderer, one destination set, one Task menu builder, one icon mapping, one Task-surface mapping and one viewport breakpoint. Drawer versus BottomSheet and desktop versus narrow header composition remain legitimate presentation-primitive differences over shared state.
+
 #### v1.0.5 traceability
 
 | Functional requirement | Technical solution |
@@ -739,7 +763,7 @@ A green test run without these cases is not sufficient v1.0.5 certification.
 
 ### 5.7 Drag, accessibility and copy discipline
 
-Use one dnd-kit drag owner around the seven desktop date tracks: one sortable task ID, dated droppables including empty dates, and exact target index. The sortable Task-card element itself is the pointer source so dragging can begin anywhere on ordinary card surface. Do not create a title/body-only handle. Checkbox/menu/reference/form controls remain genuine interactive descendants and must be rejected by pointer activation; their ordinary control behavior remains independent. Do not enable Astryx List `createReorderable` on the same rows.
+Use one dnd-kit drag owner around the seven Planner dated sections across desktop and narrow/mobile: one sortable task ID, dated droppables including empty dates, and exact target index. The sortable Task-card element itself is the pointer source so dragging can begin anywhere on ordinary card surface. Do not create a title/body-only handle. Checkbox/menu/reference/form controls remain genuine interactive descendants and must be rejected by pointer activation; their ordinary control behavior remains independent. Do not enable Astryx List `createReorderable` on the same rows.
 
 Keyboard Move up/Move down remains available on desktop and narrow layouts. Completion, Task selection, reference actions and overflow controls must not initiate dragging.
 
