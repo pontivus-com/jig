@@ -1,7 +1,7 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.3 UX/UI realization v0.7, 2026-11-17. The single responsive Planner, centered week navigator, no-sidebar application header, shared master-detail Task workspace, Astryx-first ownership, Jig Light/Dark theming and browser evidence are governed.
-**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17 and JIG-FR-01–22.
+**Status:** Binding v1.0.4 UX/UI realization v0.8, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for distinct state color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus and one directly editable Task workspace.
+**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–09 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
 
@@ -77,8 +77,8 @@ Visual rules:
 1. **Compact, low-chrome and scan-oriented.** Prefer list/row structure with subtle boundaries to decorative card stacks; no gratuitous shadows/gradients.
 2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
 3. **One primary action per active surface.** Quick Add is prominent at week level. The Task workspace has a single Save or Move action in its active edit mode. Completion uses an independently accessible checkbox/command.
-4. **Clear current date and visible focus.** Selection/current, hover, focus, and save status remain semantically distinguishable without color alone.
-5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/focus emphasis. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
+4. **Distinct state vocabulary.** Current day, selected Task, drag target and priority are different semantics and must not collapse onto one Amber fill. Current day is an exact-date, subtle neutral border/header treatment. Selected Task uses a subtle information/selection surface. Drag target uses transient accent treatment. Priority remains a narrow leading cue: High error, Normal quiet neutral, Low calm/success-family.
+5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/drag emphasis rather than the generic color for every active state. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
 6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics must remain clear in both themes without relying on color alone.
 7. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, selected date or pending form draft changes as a side effect of a breakpoint.
 8. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable, but the final production palette is the canonical Jig theme. No duplicate dark-mode structural mockup set is required.
@@ -101,11 +101,11 @@ The week range uses compact formatting without “Week of” or a separate month
 
 The board contains seven equal Monday–Sunday tracks. Each track has a 160px minimum and expands with the available desktop canvas. Date headers such as `Thu 19` are the desktop date selector.
 
-Selected date is shown with restrained header/edge emphasis. Today/current date has a separate small indicator. Drag-over has a distinct temporary treatment. Do not conflate these states.
+Desktop does not persistently color the whole selected-date column. The exact current local civil date alone receives the subtle current-day border/header treatment; the same weekday in another displayed week does not. Selected Task uses its own subtle card selection treatment. Drag-over has a separate transient treatment. Do not conflate these states.
 
 Task cards are compact and title-first. A thin leading color/accent may encode priority for scanning, but color is not the only priority signal and Normal remains visually quiet.
 
-Clicking a Task opens its detail in the non-blocking right workspace without moving it. The workspace overlays the board and never narrows/reflows the seven tracks. Edit reuses the workspace. Global Add task originates from the selected date; column Add task originates from that column.
+Clicking a Task opens the full editable Task form directly in the non-blocking right workspace without moving it. There is no separate read-only details step and no Edit indirection. The workspace overlays the board and never narrows/reflows the seven tracks. Clicking blank Planner/History content dismisses the workspace; clicking another Task retargets it. Global Add task originates from the selected date; column Add task originates from that column and opens the same full form.
 
 Remove descriptive/meta copy. The desktop interface must not display phrases such as “Week of”, “full available canvas”, “selected date view”, “Today is a shortcut”, or similar explanatory design text.
 
@@ -139,11 +139,9 @@ When narrow drag is absent, Move up/Move down provides touch ordering within the
 
 ### 4.4 Shared Task workspace
 
-There is one Task workspace with modes **view**, **edit**, **create**. Desktop renders it through a right-side non-modal Drawer; narrow/mobile renders the same state/content through BottomSheet.
+There is one Task workspace with two open semantic states: **existing Task draft** and **create draft**. Both render the same editable field hierarchy through a right-side non-modal Drawer on desktop and BottomSheet on narrow/mobile. There is no read-only view mode and no Move-to-date mode.
 
-There is no Move-to-date workspace mode. Drag owns exact direct movement; Edit scheduled date owns explicit non-drag rescheduling.
-
-The field hierarchy remains Title, Date, Context, Priority, Reminder, Reference, Notes. Save/Cancel and persistent validation errors are explicit. Responsive reflow preserves workspace mode and draft values. Permanent Delete uses AlertDialog confirmation.
+The field hierarchy is always Title, Date, Context, Priority, Reminder, Reference, Notes. Add inherits date/defaults but shows the same fields. Save/Cancel and persistent validation errors are explicit. Responsive reflow preserves the draft. Permanent Delete uses AlertDialog confirmation.
 
 ## 5. Interaction and component ownership
 
@@ -168,11 +166,11 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 
 | Case | Acceptance |
 |---|---|
-| Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task/History/Settings/sync right; no sidebar |
+| Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task/History/Settings/sync right; no sidebar; outer header height does not change across Planner/History/Settings |
 | Week navigation | Previous/Next shift displayed week and selected date exactly seven days; Today restores current date/current week; no Task mutation |
-| Week scanning | Seven readable date tracks, >=160px each in desktop mode, fluid expansion, clear selected/today/drag states |
-| Title-only creation | Global Add uses selected date; column/local Add uses originating date; only title initially required |
-| Task inspection | Click selects and opens detail without changing date/order/destination |
+| Week scanning | Seven readable date tracks, >=160px each in desktop mode, fluid expansion; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
+| Unified creation | Global Add uses selected date; column/local Add uses originating date; the full canonical Task form is visible immediately with inherited defaults and no later Edit step required |
+| Task workspace | Click selects and opens the directly editable full Task form without changing date/order/destination; no second Edit click exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
 | Responsive continuity | displayed week, selected date/task, workspace mode and unsaved draft survive Drawer↔BottomSheet change |
 | Mobile header | Jig/sync/hamburger first row; centered week range + grouped controls; seven-date strip; hamburger menu has only History/Settings and is not a drawer |
