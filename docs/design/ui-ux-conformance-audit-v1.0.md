@@ -474,9 +474,13 @@ The implementation drift is explainable from the repository state.
 
 Playwright acceptance primarily verifies behavior: drag, completion, carry-over, theme, responsive switching and failures. It does not assert the reference shell, seven-day desktop visibility, inspector composition, action density, or History metadata hierarchy.
 
-### RC-02 — “Astryx owns components” was allowed to become “generic Astryx composition is sufficient”
+### RC-02 — Astryx/Jig ownership was not enforced at the public-API boundary
 
-The design contract intended Astryx to own primitive rendering while Jig owned composition. The implementation frequently used raw `List`/`ListItem` and Button combinations as the final layout, bypassing the reference composition.
+The design contract intended Astryx to own reusable shell/navigation/component mechanics while Jig owned product-specific composition. Two opposite failures followed:
+- some surfaces treated generic Astryx `List`/`ListItem` + Button combinations as sufficient even when the governed product composition was missing;
+- later remediation compensated in the other direction by recreating shell/navigation mechanics around Astryx and overriding component anatomy to force reference geometry.
+
+The correct boundary is neither “generic library output is enough” nor “override the library until it matches.” Use the pinned Astryx public API first, then add only Jig-owned product composition and geometry.
 
 ### RC-03 — No visual-conformance review blocked release
 
@@ -486,13 +490,21 @@ Browser screenshots existed as evidence, but there was no explicit checklist com
 
 v1.0.1 correctly removed repository-management UI semantics, but the Settings SVG and parts of `ui-solution.md` were not updated simultaneously. This demonstrates why the next UI remediation must update canonical references and implementation in one governed change set.
 
+### RC-05 — The implementation plan encoded a competing shell/CSS strategy
+
+The first 1.0.2 plan correctly required a rail/canvas structure, but it prescribed a Jig-owned `.jig-shell`/`.jig-sidebar` inside `AppShell`, raw narrow navigation and CSS-driven hiding/repositioning. Pinned Astryx 0.7.13 already exposes `AppShell.sideNav`, AppShell-managed mobile navigation, `SideNav`, one main landmark and public Dialog/menu primitives. The plan therefore inverted the architectural ownership it was meant to preserve.
+
+This is a documentation/architecture defect, not a polish defect. The remediation plan must be corrected before further UI implementation, and currently landed compensating CSS must be removed rather than layered over.
+
 ## 15. Remediation priorities
 
-### P0 — Canonical repair before code
+### P0 — Canonical architecture/authority repair before code
 - correct Settings/Sync SVG and UI solution for the v1.0.1 ownership boundary;
 - remove the contradictory branch/ref disclosure from functional UX requirements;
-- define narrow primary navigation explicitly;
-- update obsolete supporting-line copy in reference assets.
+- codify the mandatory Astryx-first implementation order: AppShell/SideNav/mobileNav and other public primitives first, Jig product composition second, Jig-owned CSS last;
+- prohibit duplicate application shells/main landmarks, raw parallel navigation, private Astryx selectors/custom properties, application override cascade layers and CSS-only semantic mobile reconstruction;
+- define narrow primary navigation explicitly against the governed mobile SVG;
+- update obsolete supporting-line/carry-over copy in reference assets.
 
 ### P1 — Structural shell and primary planning surfaces
 - desktop side rail/canvas shell;
@@ -518,7 +530,7 @@ v1.0.1 correctly removed repository-management UI semantics, but the Settings SV
 The remediation must produce fresh browser evidence and an explicit side-by-side conformance review for:
 
 1. Desktop Week at the 1440×900 reference viewport.
-2. Desktop Day with carried-over work and selected-task inspector.
+2. Desktop Day after persisted rollover with one canonical Attention sequence and selected-task inspector.
 3. Desktop History with scheduled date and completion time.
 4. Corrected Desktop Settings/Sync.
 5. Mobile Day at the canonical narrow reference width.
@@ -530,6 +542,9 @@ In addition to interaction tests, acceptance must assert these structural invari
 
 - seven Week dates are simultaneously visible at the reference desktop viewport;
 - desktop primary navigation is in the governed rail, not a top-bar replacement;
+- exactly one AppShell application frame and one main landmark exist;
+- primary navigation uses Astryx SideNav/AppShell mobile-navigation public contracts rather than a parallel Jig shell/menu implementation;
+- Jig CSS does not target private Astryx selectors/custom properties, use an application override layer/`!important`, or reconstruct a different semantic hierarchy by hiding desktop DOM;
 - Week/Day task rows do not expose the full action set as simultaneous text buttons;
 - Day presents one Attention sequence;
 - rolled-forward reminder applies to the new scheduled date;
