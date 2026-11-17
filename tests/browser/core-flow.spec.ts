@@ -55,9 +55,12 @@ test("real runtime supports title-first create, completion, History and reopen",
 
   await page.getByRole("button", { name: "History", exact: true }).click();
   await expect(page.getByRole("heading", { name: "History", exact: true })).toBeVisible();
-  await expect(page.getByText("Browser acceptance task", { exact: true })).toBeVisible();
+  const historyView = page.locator(".jig-history-view");
+  await expect(
+    historyView.getByText("Browser acceptance task", { exact: true }),
+  ).toBeVisible();
 
-  const historyRow = page
+  const historyRow = historyView
     .getByText("Browser acceptance task", { exact: true })
     .locator("xpath=ancestor::li[1]");
   await historyRow
@@ -66,7 +69,9 @@ test("real runtime supports title-first create, completion, History and reopen",
   await page
     .getByRole("menuitem", { name: "Reopen", exact: true })
     .click();
-  await expect(page.getByText("Browser acceptance task", { exact: true })).toBeHidden();
+  await expect(
+    historyView.getByText("Browser acceptance task", { exact: true }),
+  ).toBeHidden();
 });
 
 test("stale revisions refetch canonical state and never blindly replay a mutation", async ({ page }) => {
