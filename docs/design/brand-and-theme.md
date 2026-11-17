@@ -238,6 +238,46 @@ The generic Astryx accent/selected mechanics may still be used inside contained 
 
 
 
+## 6.1.1 Functional palette completeness rule
+
+Jig's theme is considered complete only when every governed visual meaning has an explicit semantic role with sufficient contrast in both Light and Dark modes.
+
+The brand palette is **not** a cap on the number of usable UI colors. Ink, Amber and Paper define product identity; functional UI meaning may and should use the broader semantic families supplied by the theme system.
+
+For every new or changed UI state:
+
+1. identify the semantic meaning first;
+2. map it to an existing canonical functional family only when that family already represents the same meaning;
+3. expose a named Jig product semantic alias for repeated product-specific use;
+4. verify Light/Dark contrast and coexistence with focus, selection, priority and status states;
+5. if no existing family communicates the meaning clearly and accessibly, add a new canonical functional palette family/token set to the theme authority before implementation.
+
+It is explicitly prohibited to:
+- reuse Amber because it is the brand color;
+- reuse blue, green, red, teal or neutral merely because the desired role is visually similar;
+- encode two unrelated persistent product states with the same background/border treatment;
+- introduce raw feature-local hex values to work around a missing semantic role.
+
+### Functional family inventory for v1.0.4
+
+The current v1.0.4 interaction model requires the following complete functional set:
+
+| Family | Required semantic ownership | Availability |
+|---|---|---|
+| Ink / gray neutral | structure, ordinary borders, Normal priority, inactive/unknown state, neutral navigation | available |
+| Amber | brand, primary action, focus, transient drag/direct manipulation | available |
+| Blue / info | selected/open Task, informational state | available |
+| Teal | current-day temporal orientation | available |
+| Green / success | Local only, Synced, Low priority, positive completion affordance | available |
+| Yellow / warning | pending, retrying, caution | available |
+| Red / error | High priority, validation/save/sync errors, destructive confirmation | available |
+| Paper / surface | warm Light-mode body/layering | available |
+| Dark Ink surface scale | Dark-mode body/surface/elevation | available |
+
+**v1.0.4 palette completeness verdict:** no additional raw hue family is currently required. The existing Jig brand scales plus Astryx functional families cover every governed v1.0.4 state without semantic reuse. The implementation gap is the absence of explicit Jig product aliases in the authored theme source and the continued use of generic accent roles in legacy feature CSS.
+
+If a later requirement introduces a meaning not represented by this inventory, the theme must be extended at this authority layer rather than compressing the new meaning into one of these existing roles.
+
 ## 6.2 Canonical Jig product semantic tokens
 
 The following **Jig-owned product semantic aliases** are part of the theme contract. They are not feature-local variables and they are not a second palette. They are authored in `ui/src/jig-theme.source.ts` from the canonical Ink/Amber/Paper primitives or inherited Astryx status roles, compiled by the normal Astryx theme build, and consumed by Jig-owned composition CSS.
