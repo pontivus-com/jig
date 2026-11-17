@@ -1,13 +1,11 @@
 import {
+  BottomSheet,
   Button,
-  DateInput,
   Drawer,
   DrawerHeader,
   Layout,
   LayoutContent,
 } from "@astryxdesign/core";
-import type { ISODateString } from "@astryxdesign/core/utils";
-import { useEffect, useState } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
 import { formatCivilDate } from "./dates";
 import {
@@ -16,7 +14,7 @@ import {
 } from "./task-editor";
 import { TaskInspector } from "./task-inspector";
 
-export type TaskWorkspaceMode = "view" | "edit" | "create" | "move";
+export type TaskWorkspaceMode = "view" | "edit" | "create";
 
 export interface TaskWorkspaceContentProps {
   readonly mode: TaskWorkspaceMode;
@@ -30,7 +28,6 @@ export interface TaskWorkspaceContentProps {
   readonly onModeChange: (mode: TaskWorkspaceMode | null) => void;
   readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
-  readonly onMove: (task: Task, destinationDate: string) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
 }
@@ -47,30 +44,9 @@ export function TaskWorkspaceContent({
   onModeChange,
   onDraftChange,
   onSave,
-  onMove,
   onDelete,
   onToggleComplete,
 }: TaskWorkspaceContentProps): React.ReactElement {
-  if (mode === "move" && task !== null) {
-    return (
-      <TaskMovePanel
-        task={task}
-        externalError={externalError}
-        isSaving={isSaving}
-        surface={surface}
-        showHeading={showHeading}
-        onCancel={() => onModeChange("view")}
-        onMove={async (destinationDate) => {
-          const moved = await onMove(task, destinationDate);
-          if (moved) {
-            onModeChange("view");
-          }
-          return moved;
-        }}
-      />
-    );
-  }
-
   if (mode === "create" || mode === "edit") {
     const editorTask = mode === "edit" ? task : null;
     return (
@@ -102,97 +78,41 @@ export function TaskWorkspaceContent({
       showHeading={showHeading}
       onToggleComplete={onToggleComplete}
       onEdit={() => onModeChange("edit")}
-      onMoveToDate={() => onModeChange("move")}
       onDelete={onDelete}
     />
   );
 }
 
-function TaskMovePanel({
-  task,
-  externalError,
-  isSaving,
-  surface,
-  showHeading,
-  onCancel,
-  onMove,
-}: Readonly<{
-  task: Task;
-  externalError: string | null;
-  isSaving: boolean;
-  surface: "docked" | "drawer";
-  showHeading: boolean;
-  onCancel: () => void;
-  onMove: (destinationDate: string) => Promise<boolean>;
-}>): React.ReactElement {
-  const [destinationDate, setDestinationDate] = useState(task.scheduled_date);
-
-  useEffect(() => {
-    setDestinationDate(task.scheduled_date);
-  }, [task.id, task.scheduled_date]);
-
-  return (
-    <section
-      className={[
-        "jig-task-inspector",
-        "jig-task-editor-surface",
-        surface === "drawer" ? "jig-task-inspector-drawer" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      aria-label={`Move task ${task.title}`}
-    >
-      {showHeading ? (
-        <div className="jig-task-inspector-heading">
-          <p className="jig-eyebrow">Move task</p>
-          <h2>{task.title}</h2>
-        </div>
-      ) : null}
-
-      {externalError === null ? null : (
-        <div className="jig-form-error" role="alert">
-          {externalError}
-        </div>
-      )}
-
-      <DateInput
-        label="Destination date"
-        value={destinationDate as ISODateString}
-        onChange={(value) => {
-          if (value !== undefined) {
-            setDestinationDate(value);
-          }
-        }}
-        isRequired
-        weekStartsOn="mon"
-      />
-
-      <p className="jig-secondary-copy">
-        Move to date appends the task on that date using the exact-position
-        move operation. Editing the task date uses priority-guided insertion.
-      </p>
-
-      <div className="jig-editor-primary-actions">
-        <Button
-          label="Cancel"
-          variant="secondary"
-          onClick={onCancel}
-          isDisabled={isSaving}
-        />
-        <Button
-          label="Move task"
-          variant="primary"
-          isLoading={isSaving}
-          onClick={() => {
-            void onMove(destinationDate);
-          }}
-        />
-      </div>
-    </section>
-  );
+function workspaceTitle(
+  mode: TaskWorkspaceMode,
+  task: Task | null,
+): string {
+  if (mode === "create") {
+    return "Add task";
+  }
+  if (mode === "edit") {
+    return "Edit task";
+  }
+  return task?.title ?? "Task details";
 }
 
-export interface TaskWorkspaceDrawerProps
+function workspaceSubtitle(
+  mode: TaskWorkspaceMode,
+  task: Task | null,
+  initiatingDate: string,
+): string | undefined {
+  const date = mode === "create" ? initiatingDate : task?.scheduled_date;
+  if (date === undefined) {
+    return undefined;
+  }
+  return formatCivilDate(date, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+export interface TaskWorkspaceOverlayProps
   extends Omit<
     TaskWorkspaceContentProps,
     "surface" | "showHeading" | "mode"
@@ -211,34 +131,13 @@ export function TaskWorkspaceDrawer({
   onModeChange,
   onDraftChange,
   onSave,
-  onMove,
   onDelete,
   onToggleComplete,
   onClose,
-}: TaskWorkspaceDrawerProps): React.ReactElement {
+}: TaskWorkspaceOverlayProps): React.ReactElement {
   const effectiveMode = mode ?? "view";
-  const title =
-    effectiveMode === "create"
-      ? "Add task"
-      : effectiveMode === "edit"
-        ? "Edit task"
-        : effectiveMode === "move"
-          ? "Move task"
-          : (task?.title ?? "Task details");
-  const subtitle =
-    effectiveMode === "create"
-      ? formatCivilDate(initiatingDate, {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        })
-      : task === null
-        ? undefined
-        : formatCivilDate(task.scheduled_date, {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          });
+  const title = workspaceTitle(effectiveMode, task);
+  const subtitle = workspaceSubtitle(effectiveMode, task, initiatingDate);
 
   return (
     <Drawer
@@ -283,7 +182,6 @@ export function TaskWorkspaceDrawer({
               onModeChange={onModeChange}
               onDraftChange={onDraftChange}
               onSave={onSave}
-              onMove={onMove}
               onDelete={onDelete}
               onToggleComplete={onToggleComplete}
             />
@@ -291,5 +189,72 @@ export function TaskWorkspaceDrawer({
         }
       />
     </Drawer>
+  );
+}
+
+export function TaskWorkspaceBottomSheet({
+  mode,
+  task,
+  initiatingDate,
+  draft,
+  externalError,
+  isSaving,
+  onModeChange,
+  onDraftChange,
+  onSave,
+  onDelete,
+  onToggleComplete,
+  onClose,
+}: TaskWorkspaceOverlayProps): React.ReactElement {
+  const effectiveMode = mode ?? "view";
+  const title = workspaceTitle(effectiveMode, task);
+  const subtitle = workspaceSubtitle(effectiveMode, task, initiatingDate);
+
+  return (
+    <BottomSheet
+      isOpen={mode !== null}
+      onOpenChange={(open) => {
+        if (!open && !isSaving) {
+          onClose();
+        }
+      }}
+      label={title}
+      height={effectiveMode === "view" ? "capped" : "tall"}
+      hasScrim={false}
+      purpose={effectiveMode === "view" ? "info" : "form"}
+      padding={4}
+    >
+      <div className="jig-task-sheet-header">
+        <div>
+          <strong>{title}</strong>
+          {subtitle === undefined ? null : <span>{subtitle}</span>}
+        </div>
+        <Button
+          label="Close"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (!isSaving) {
+              onClose();
+            }
+          }}
+        />
+      </div>
+      <TaskWorkspaceContent
+        mode={effectiveMode}
+        task={task}
+        initiatingDate={initiatingDate}
+        draft={draft}
+        externalError={externalError}
+        isSaving={isSaving}
+        surface="drawer"
+        showHeading={false}
+        onModeChange={onModeChange}
+        onDraftChange={onDraftChange}
+        onSave={onSave}
+        onDelete={onDelete}
+        onToggleComplete={onToggleComplete}
+      />
+    </BottomSheet>
   );
 }
