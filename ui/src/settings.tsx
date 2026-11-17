@@ -154,6 +154,7 @@ export function SettingsView({
                 <Button
                   label="Sync now"
                   variant="secondary"
+                  width={190}
                   isLoading={isOperating}
                   onClick={() => {
                     void onSync();
