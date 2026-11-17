@@ -1,7 +1,7 @@
 import {
   List,
 } from "@astryxdesign/core";
-import type { Task } from "../../src/core/task";
+import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { TaskRow } from "./task-row";
 
@@ -12,6 +12,8 @@ export interface PlannerTaskListProps {
   readonly onSelectTask: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
+  readonly onSetPriority: (task: Task, priority: Priority) => Promise<boolean>;
+  readonly onDelete: (task: Task) => void;
   readonly onMove: (
     taskId: string,
     destinationDate: string,
@@ -26,6 +28,8 @@ export function PlannerTaskList({
   onSelectTask,
   onEdit,
   onToggleComplete,
+  onSetPriority,
+  onDelete,
   onMove,
 }: PlannerTaskListProps): React.ReactElement {
   const outstanding = outstandingForDate(tasks, selectedDate);
@@ -46,6 +50,8 @@ export function PlannerTaskList({
             void onToggleComplete(task);
           }}
           onEdit={() => onEdit(task)}
+          onSetPriority={(priority) => { void onSetPriority(task, priority); }}
+          onDelete={() => onDelete(task)}
           {...(index > 0
             ? {
                 onMoveUp: () => {
