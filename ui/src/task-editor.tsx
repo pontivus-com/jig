@@ -299,7 +299,7 @@ export function TaskEditor({
                   label="Cancel"
                   variant="secondary"
                   size={isNarrow ? "lg" : "md"}
-                  width={isNarrow ? "100%" : undefined}
+                  {...(isNarrow ? { width: "100%" } : {})}
                   onClick={() => onOpenChange(false)}
                   isDisabled={isSaving}
                 />
@@ -308,7 +308,7 @@ export function TaskEditor({
                   label={task === null ? "Add task" : "Save"}
                   variant="primary"
                   size={isNarrow ? "lg" : "md"}
-                  width={isNarrow ? "100%" : undefined}
+                  {...(isNarrow ? { width: "100%" } : {})}
                   isLoading={isSaving}
                 />
               </div>
