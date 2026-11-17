@@ -143,7 +143,7 @@ describe("architecture compliance", () => {
         }),
         expect.objectContaining({
           path: "ui/src/task-row.tsx",
-          text: "const dragSourceRef = sortable.sourceRef as Ref<HTMLDivElement>;",
+          text: "const dragHandleRef = sortable.handleRef as Ref<HTMLDivElement>;",
         }),
       ]),
     );
