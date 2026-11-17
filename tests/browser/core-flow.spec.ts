@@ -60,7 +60,7 @@ test("real runtime supports title-first create, completion, History and reopen",
     .getByText("Browser acceptance task", { exact: true })
     .locator("xpath=ancestor::li[1]");
   await historyRow
-    .locator('summary[aria-label="Actions for Browser acceptance task"]')
+    .getByRole("button", { name: "Actions for Browser acceptance task" })
     .click();
   await historyRow
     .getByRole("button", { name: "Reopen", exact: true })
