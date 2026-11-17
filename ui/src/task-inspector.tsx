@@ -75,6 +75,7 @@ export function TaskInspector({
           label="Delete…"
           variant="ghost"
           size="sm"
+          className="jig-inspector-delete"
           onClick={() => onDelete(task)}
         />
       </div>
@@ -125,6 +126,20 @@ export function TaskInspector({
           </div>
         )}
       </dl>
+
+      <div className="jig-task-inspector-summary">
+        <strong>
+          Scheduled{" "}
+          {formatCivilDate(task.scheduled_date, {
+            weekday: "short",
+            day: "numeric",
+          })}
+          {task.reminder_time === null
+            ? ""
+            : ` · ${formatReminderTime(task.reminder_time)}`}
+        </strong>
+        <span>Rolled-forward cards use their current scheduled date</span>
+      </div>
     </aside>
   );
 }
