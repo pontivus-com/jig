@@ -190,7 +190,7 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 |---|---|
 | Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task/History/Settings/sync right; no sidebar; outer header height does not change across Planner/History/Settings |
 | Week navigation | Previous/Next shift displayed week exactly seven days; Today restores the current week; no selected-day state and no Task mutation |
-| Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; track height is content-driven; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
+| Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; track height is content-driven; headers use full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
 | Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
 | Task workspace | Click selects and opens the directly editable full Task form without changing date/order/destination; no second Edit click exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
@@ -202,7 +202,7 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Completion/History | completing removes from Planner; History remains inspectable/reopenable |
 | Daily rollover | same canonical Task appears in current-date Planner bucket on desktop and narrow |
 | Delete | cancel is no-op; confirm permanently removes Task; Git round trip preserves absence |
-| Theme/color | System/Light/Dark retain hierarchy; priority accent remains readable without relying on color alone |
+| Theme/color | System/Light/Dark implement the canonical component/state matrix: today teal, selected Task info-blue, drag/focus Amber, High red, Normal neutral, Low/healthy green, warning yellow, unknown neutral; no unrelated states collapse to one treatment |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
 
 Final production evidence is the running Astryx UI in Playwright/browser screenshots. Reference SVGs govern structure, not pixel-perfect library anatomy.
