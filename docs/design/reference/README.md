@@ -11,6 +11,8 @@ Key corrections encoded in the references:
 - Save truth and repository synchronization truth are visually distinct; repository failures appear only as a generic sync issue, never as a Jig-level Git divergence/conflict workflow.
 - `History` and `Settings / Sync` have explicit visual contracts.
 - Existing Tasks expose confirmed permanent deletion; Jig has no trash/soft-delete/undo layer and relies on Git history for recovery when a prior exported version exists.
+- History is the governed lightweight completion record; the reference does not add context-filter or sort-control workflows that are absent from the product/functional/UI contracts.
+- Failure-state surfaces do not add a standalone `Copy diagnostics` workflow; troubleshooting detail remains within the governed diagnostics/status boundary.
 - Priority is visually secondary and never implies automatic resorting.
 - The design is compact, low-chrome, title/date-first, and compatible with the stated Astryx Neutral direction.
 
