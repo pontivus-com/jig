@@ -2,7 +2,7 @@ import {
   Button,
   List,
 } from "@astryxdesign/core";
-import type { Task } from "../../src/core/task";
+import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
 import { formatCivilDate, todayCivilDate } from "./dates";
@@ -18,6 +18,8 @@ export interface WeekViewProps {
   readonly onAdd: (date: string) => void;
   readonly onEdit: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
+  readonly onSetPriority: (task: Task, priority: Priority) => Promise<boolean>;
+  readonly onDelete: (task: Task) => void;
   readonly onMove: (
     taskId: string,
     destinationDate: string,
@@ -32,6 +34,8 @@ function WeekTaskRow({
   onSelect,
   onEdit,
   onToggleComplete,
+  onSetPriority,
+  onDelete,
   onMove,
 }: Readonly<{
   task: Task;
@@ -40,6 +44,8 @@ function WeekTaskRow({
   onSelect: (task: Task) => void;
   onEdit: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
+  onSetPriority: (task: Task, priority: Priority) => Promise<boolean>;
+  onDelete: (task: Task) => void;
   onMove: WeekViewProps["onMove"];
 }>): React.ReactElement {
   const position = task.position ?? 0;
@@ -56,6 +62,8 @@ function WeekTaskRow({
         void onToggleComplete(task);
       }}
       onEdit={() => onEdit(task)}
+      onSetPriority={(priority) => { void onSetPriority(task, priority); }}
+      onDelete={() => onDelete(task)}
       {...(position > 0
         ? {
             onMoveUp: () => {
@@ -84,6 +92,8 @@ export function WeekView({
   onAdd,
   onEdit,
   onToggleComplete,
+  onSetPriority,
+  onDelete,
   onMove,
 }: WeekViewProps): React.ReactElement {
   const today = todayCivilDate();
@@ -147,6 +157,8 @@ export function WeekView({
                         onSelect={onSelectTask}
                         onEdit={onEdit}
                         onToggleComplete={onToggleComplete}
+                        onSetPriority={onSetPriority}
+                        onDelete={onDelete}
                         onMove={onMove}
                       />
                     ))}
