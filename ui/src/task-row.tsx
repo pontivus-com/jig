@@ -179,7 +179,6 @@ export function TaskRow({
   onEdit,
   onMoveUp,
   onMoveDown,
-  onMoveToDate,
 }: TaskRowProps): React.ReactElement {
   const completed = task.completed_at !== null;
 
