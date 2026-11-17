@@ -534,7 +534,8 @@ Remove layout mode as a drag capability switch.
    - mouse/pen: 5px distance threshold;
    - touch: approximately 250ms delay with 5px tolerance so vertical page scrolling remains usable until drag intent is established.
 6. Checkbox/menu/reference/form controls remain genuine interactive descendants and are protected by dnd-kit's interactive-element activation behavior plus existing pointer propagation boundaries.
-7. Same-day Move up/down and Edit date remain non-drag alternatives using the same canonical commands.
+7. A pointer sequence that activates drag must not subsequently execute the ListItem selection/open action on release. Ordinary press/release that never activates drag remains the one Task-selection gesture. This is verified in the browser rather than implemented with a second manual pointer-state machine.
+8. Same-day Move up/down and Edit date remain non-drag alternatives using the same canonical commands.
 
 No touch-specific ordering model, gesture framework or second DnD library is permitted.
 
