@@ -108,9 +108,8 @@ describe("UI ownership architecture", () => {
 
     expect(rawSpacing).toEqual([
       "padding: 20px;",
-      "gap: 30px;",
       "gap: var(--spacing-7) 30px;",
-      "padding: 0 calc(var(--spacing-3) + var(--spacing-0-5)) calc(5rem + env(safe-area-inset-bottom, 0px));",
+      "padding: var(--spacing-3) var(--spacing-3) calc(5rem + env(safe-area-inset-bottom, 0px));",
     ]);
   });
 
@@ -146,43 +145,74 @@ describe("UI ownership architecture", () => {
     expect(verifyWorkflow).toContain("bun run theme:check");
   });
 
-  it("uses Astryx as the application shell and navigation owner", () => {
+  it("uses one AppShell with the governed v1.0.3 header and responsive owner", () => {
     const app = source("ui/src/app.tsx");
+    const header = source("ui/src/planner-header.tsx");
+    const layoutMode = source("ui/src/use-layout-mode.ts");
+    const styles = source("ui/src/styles.css");
 
     expect(app).toContain("<AppShell");
-    expect(app).toContain("sideNav={primarySideNav}");
-    expect(app).toContain("mobileNav={{");
-    expect(app).toContain('breakpoint: "md"');
-    expect(app).toContain("useAppShellMobile");
-    expect(app).not.toContain("matchMedia");
-    expect(app).not.toContain("NARROW_MEDIA");
-    expect(app).toContain("<SideNav");
-    expect(app).toContain("<SideNavItem");
-    expect(app).not.toContain('className="jig-shell"');
-    expect(app).not.toContain('className="jig-sidebar"');
-    expect(app).not.toContain("<details");
-    expect(app).not.toContain("mobileNav={false}");
+    expect(app).toContain("topNav={");
+    expect(app).toContain("mobileNav={false}");
+    expect(app).not.toContain("<SideNav");
+    expect(app).not.toContain("<SideNavItem");
+    expect(app).not.toContain("useAppShellMobile");
+    expect(app).not.toContain('destination: "day"');
+    expect(app).not.toContain('destination: "week"');
+    expect(app).toContain('useState<Destination>("planner")');
+
+    expect(header).toContain("Planner home");
+    expect(header).toContain("Previous week");
+    expect(header).toContain("Today");
+    expect(header).toContain("Next week");
+    expect(header).toContain("DropdownMenu");
+    expect(header).toContain('presentation="popover"');
+    expect(header).toContain('"History"');
+    expect(header).toContain('"Settings"');
+
+    expect(layoutMode).toContain(
+      'DESKTOP_LAYOUT_MEDIA_QUERY = "(min-width: 76rem)"',
+    );
+    expect(layoutMode).toContain("window.matchMedia");
+    for (const [path, content] of authoredUiSources()) {
+      if (path !== "ui/src/use-layout-mode.ts") {
+        expect(content, path).not.toContain("window.matchMedia");
+      }
+    }
+
+    expect(styles).toContain("@media (max-width: 75.999rem)");
+    expect(styles).not.toContain("47.999rem");
+    expect(styles).not.toContain(".jig-primary-nav");
+    expect(styles).not.toContain(".jig-mobile-destination-trigger");
   });
 
-  it("uses public Astryx menu, layout and master-detail workspace contracts", () => {
+  it("keeps Planner and Task workspace state singular and uses public Astryx surfaces", () => {
     const app = source("ui/src/app.tsx");
+    const header = source("ui/src/planner-header.tsx");
+    const planner = source("ui/src/planner.tsx");
+    const dateStrip = source("ui/src/date-strip.tsx");
     const taskRow = source("ui/src/task-row.tsx");
     const history = source("ui/src/history.tsx");
     const settings = source("ui/src/settings.tsx");
     const editor = source("ui/src/task-editor.tsx");
     const workspace = source("ui/src/task-workspace.tsx");
     const week = source("ui/src/week.tsx");
-    const day = source("ui/src/day.tsx");
+
+    expect(app).toContain("interface PlannerState");
+    expect(app).toContain("type TaskWorkspaceState");
+    expect(app).toContain('{ readonly mode: "closed" }');
+    expect(app).toContain('{ readonly mode: "view"; readonly taskId: string }');
+    expect(app).not.toContain("useState<TaskWorkspaceMode");
+    expect(app).not.toContain("setSelectedTaskId");
+    expect(app).not.toContain("setWorkspaceDate");
+    expect(app).not.toContain("setWorkspaceDraft");
 
     expect(taskRow).toContain("DropdownMenu");
-    expect(taskRow).not.toContain("jig-task-menu-panel");
+    expect(taskRow).not.toContain("Move to date");
     expect(history).toContain("DropdownMenu");
-    expect(history).not.toContain("jig-task-menu-panel");
     expect(settings).toContain("<Section");
     expect(settings).toContain("<VStack");
     expect(editor).not.toContain("<Dialog");
-    expect(editor).toContain("FieldLabel");
-    expect(editor).toContain("isGroupLabel");
     expect(workspace).toContain("<Drawer");
     expect(workspace).toContain("<BottomSheet");
     expect(workspace).toContain("hasScrim={false}");
@@ -190,20 +220,15 @@ describe("UI ownership architecture", () => {
     expect(workspace).not.toContain('"move"');
     expect(workspace).toContain("<DrawerHeader");
     expect(workspace).toContain("<Layout");
-    expect(app).not.toContain("MoveTaskDialog");
-    expect(app).not.toContain("TaskEditor");
-    expect(app).toContain('icon: "calendar"');
-    expect(app).toContain('icon: "viewColumns"');
-    expect(app).toContain('icon: "clock"');
-    expect(app).toContain('icon: "wrench"');
-    expect(app).toContain("defaultIsCollapsed: true");
-    expect(app).toContain("<TaskWorkspaceBottomSheet");
-    expect(app.indexOf('{ destination: "day"')).toBeLessThan(
-      app.indexOf('{ destination: "week"'),
-    );
-    expect(week).toContain('elevation="med"');
-    expect(day).toContain('elevation="med"');
+
+    expect(header).toContain("jig-header-temporal");
+    expect(planner).toContain("<WeekView");
+    expect(planner).toContain("<DateStrip");
+    expect(dateStrip).not.toContain("weekDates");
+    expect(week).not.toContain("Week of");
+    expect(week).not.toContain("Today");
+    expect(week).not.toContain("Quick add");
+    expect(week).not.toContain("DateStrip");
     expect(source("ui/src/task-inspector.tsx")).not.toContain("Move to date");
-    expect(source("ui/src/task-row.tsx")).not.toContain("Move to date");
   });
 });
