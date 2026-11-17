@@ -3,17 +3,16 @@ import {
   List,
   ListItem,
 } from "@astryxdesign/core";
-import type { ReactNode } from "react";
 import type { Task } from "../../src/core/task";
 import { historyByCompletionDate } from "../../src/core/planning";
 import { formatCivilDate } from "./dates";
 
 export interface HistoryViewProps {
   readonly tasks: readonly Task[];
+  readonly onSelect: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
   readonly onReopen: (task: Task) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
-  readonly statusControl: ReactNode;
 }
 
 function completionTime(task: Task): string {
@@ -28,11 +27,13 @@ function completionTime(task: Task): string {
 
 function HistoryTaskRow({
   task,
+  onSelect,
   onEdit,
   onReopen,
   onDelete,
 }: Readonly<{
   task: Task;
+  onSelect: (task: Task) => void;
   onEdit: (task: Task) => void;
   onReopen: (task: Task) => Promise<boolean>;
   onDelete: (task: Task) => void;
@@ -40,8 +41,9 @@ function HistoryTaskRow({
   return (
     <ListItem
       itemKey={task.id}
-      className="jig-history-task-row"
+      className={`jig-history-task-row jig-task-priority-${task.priority.toLowerCase()}`}
       align="first-line"
+      onClick={() => onSelect(task)}
       startContent={
         <span className="jig-history-complete-indicator" aria-hidden="true">
           ✓
@@ -110,10 +112,10 @@ function HistoryTaskRow({
 
 export function HistoryView({
   tasks,
+  onSelect,
   onEdit,
   onReopen,
   onDelete,
-  statusControl,
 }: HistoryViewProps): React.ReactElement {
   const timeZone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -126,7 +128,6 @@ export function HistoryView({
           <h1>History</h1>
           <p>Completed work grouped by actual completion date</p>
         </div>
-        {statusControl}
       </div>
 
       {groups.length === 0 ? (
@@ -157,6 +158,7 @@ export function HistoryView({
                   <HistoryTaskRow
                     key={task.id}
                     task={task}
+                    onSelect={onSelect}
                     onEdit={onEdit}
                     onReopen={onReopen}
                     onDelete={onDelete}

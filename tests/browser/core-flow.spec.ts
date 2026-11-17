@@ -9,38 +9,60 @@ test.beforeEach(async ({ page }) => {
 
 async function navigateTo(
   page: Page,
-  destination: "Week" | "Day" | "History" | "Settings",
+  destination: "History" | "Settings",
 ): Promise<void> {
-  const navigation = page
-    .locator(".jig-primary-nav")
-    .getByRole("button", { name: destination, exact: true });
-  if (await navigation.isVisible()) {
-    await navigation.click();
+  const direct = page.getByRole("button", {
+    name: destination,
+    exact: true,
+  });
+  if (await direct.isVisible()) {
+    await direct.click();
     return;
   }
 
-  await page.locator(".jig-mobile-destination-trigger").click();
+  await page.getByRole("button", { name: "Open navigation menu" }).click();
   await page
-    .locator(".jig-primary-nav")
-    .getByRole("button", { name: destination, exact: true })
+    .getByRole("menuitem", { name: destination, exact: true })
+    .click();
+}
+
+async function openGlobalAdd(page: Page): Promise<void> {
+  const desktopAdd = page
+    .locator(".jig-header-right")
+    .getByRole("button", { name: "Add task", exact: true });
+  if (await desktopAdd.isVisible()) {
+    await desktopAdd.click();
+    return;
+  }
+
+  await page
+    .getByRole("button", { name: "Add task", exact: true })
+    .last()
     .click();
 }
 
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
-  await page.getByRole("button", { name: /Add task$/ }).first().click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Title").fill(title);
-  await dialog.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  await openGlobalAdd(page);
+  const workspace = page.locator('section[aria-label="Add task"]');
+  await expect(workspace).toBeVisible();
+  await workspace.getByLabel("Title").fill(title);
+  await workspace.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(workspace).toBeHidden();
   await expect(
     page.locator(".jig-task-card").filter({ hasText: title }).first(),
   ).toBeVisible();
+
+  const detail = page.getByRole("dialog", { name: title });
+  if (await detail.isVisible()) {
+    await detail.getByRole("button", { name: "Close" }).click();
+    await expect(detail).toBeHidden();
+  }
 }
 
 test("real runtime supports title-first create, completion, History and reopen", async ({ page }) => {
-  await expect(
-    page.getByRole("button", { name: "Day", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: "Planner home" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Day", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Week", exact: true })).toHaveCount(0);
 
   await addTitleOnlyTask(page, "Browser acceptance task");
   await page.getByLabel("Complete Browser acceptance task").click();
@@ -54,9 +76,12 @@ test("real runtime supports title-first create, completion, History and reopen",
 
   await page.getByRole("button", { name: "History", exact: true }).click();
   await expect(page.getByRole("heading", { name: "History", exact: true })).toBeVisible();
-  await expect(page.getByText("Browser acceptance task", { exact: true })).toBeVisible();
+  const historyView = page.locator(".jig-history-view");
+  await expect(
+    historyView.getByText("Browser acceptance task", { exact: true }),
+  ).toBeVisible();
 
-  const historyRow = page
+  const historyRow = historyView
     .getByText("Browser acceptance task", { exact: true })
     .locator("xpath=ancestor::li[1]");
   await historyRow
@@ -65,15 +90,18 @@ test("real runtime supports title-first create, completion, History and reopen",
   await page
     .getByRole("menuitem", { name: "Reopen", exact: true })
     .click();
-  await expect(page.getByText("Browser acceptance task", { exact: true })).toBeHidden();
+  await expect(
+    historyView.getByText("Browser acceptance task", { exact: true }),
+  ).toBeHidden();
 });
 
 test("stale revisions refetch canonical state and never blindly replay a mutation", async ({ page }) => {
   await addTitleOnlyTask(page, "Stale view seed");
 
-  await page.getByRole("button", { name: /Add task$/ }).first().click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Title").fill("Must not replay");
+  await openGlobalAdd(page);
+  const workspace = page.getByRole("dialog", { name: "Add task" });
+  await expect(workspace).toBeVisible();
+  await workspace.getByLabel("Title").fill("Must not replay");
 
   await page.evaluate(async () => {
     const state = await fetch("/api/v1/tasks").then((response) => response.json()) as {
@@ -104,8 +132,10 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
     if (!response.ok) throw new Error("concurrent mutation failed");
   });
 
-  await dialog.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(dialog.getByText("This view was out of date.", { exact: false })).toBeVisible();
+  await workspace.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(
+    page.getByText("This view was out of date.", { exact: false }).first(),
+  ).toBeVisible({ timeout: 5_000 });
   const tasks = await page.evaluate(async () => {
     const state = await fetch("/api/v1/tasks").then((response) => response.json()) as {
       tasks: Array<{ title: string }>;
@@ -115,17 +145,19 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   expect(tasks).toContain("Concurrent canonical task");
   expect(tasks.filter((title) => title === "Must not replay")).toHaveLength(0);
 
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
+  await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
 });
 
-test("responsive reflow preserves an open editor draft and appearance remains presentation-only", async ({ page }) => {
-  await page.getByRole("button", { name: /Add task$/ }).first().click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Title").fill("Draft survives reflow");
+test("responsive reflow preserves an open workspace draft and appearance remains presentation-only", async ({ page }) => {
+  await openGlobalAdd(page);
+  const desktopWorkspace = page.getByRole("dialog", { name: "Add task" });
+  await desktopWorkspace.getByLabel("Title").fill("Draft survives reflow");
 
   await page.setViewportSize({ width: 640, height: 900 });
-  await expect(dialog.getByLabel("Title")).toHaveValue("Draft survives reflow");
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
+  const narrowWorkspace = page.getByRole("dialog", { name: "Add task" });
+  await expect(narrowWorkspace).toBeVisible();
+  await expect(narrowWorkspace.getByLabel("Title")).toHaveValue("Draft survives reflow");
+  await narrowWorkspace.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
   await navigateTo(page, "Settings");
@@ -167,7 +199,7 @@ test("System, Light and Dark use the canonical Jig theme and remain presentation
     fetch("/api/v1/tasks").then((response) => response.json()),
   );
 
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await navigateTo(page, "Settings");
   await expect(
     page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();

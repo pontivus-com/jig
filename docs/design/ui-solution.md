@@ -1,60 +1,48 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1 UX/UI realization v0.5, 2026-11-17. Functional structure, Astryx-first component/layout ownership, Option A branding, Jig Light/Dark theming and browser evidence are governed.
-**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–22.
+**Status:** Binding v1.0.3 UX/UI realization v0.7, 2026-11-17. The single responsive Planner, centered week navigator, no-sidebar application header, shared master-detail Task workspace, Astryx-first ownership, Jig Light/Dark theming and browser evidence are governed.
+**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
-**Purpose:** Turn the accepted early mobile/day/week/editor mockups into a versioned interface baseline while distinguishing layout intent from noncanonical visual decoration.
+**Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
 
 ## 1. Source mockups and governed reference assets
 
-The original design exploration used the temporary product name **Day**. It established the correct interaction direction: date-first weekly calendar/board, selected-day focus, compact title-first tasks, optional context/priority/reminder, drag handles, one task editor and a small completed region. The product's name is **Jig**.
+The early design exploration used the temporary product name **Day** and separate Day/Week destinations. Those assets remain provenance only. The v1.0.3 review supersedes that navigation model with one responsive Planner.
 
-The current repository includes seven **versioned SVG structural references**. The original four screens are corrected reconstructions of the approved Day-labelled layouts; History, Settings/Sync and save/sync failure states were added to close the Jig screen contract. Together these references govern structure, hierarchy, density and representative visual character. They are rendered in light mode for review and do not imply a light-only product or require duplicate dark-mode mockups.
+The binding structural references for this batch are:
 
 | Governing artifact | Screen | Structural meaning |
 |---|---|---|
-| ![Desktop week](reference/desktop-week.svg) | [Desktop weekly planner](reference/desktop-week.svg) | Primary seven-day scheduled-date board and visible cross-column movement targets |
-| ![Desktop day](reference/desktop-day.svg) | [Desktop day view](reference/desktop-day.svg) | Selected-date canonical attention list after persisted rollover, completed group and selected task details |
-| ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history grouped by actual completion date |
-| ![Desktop settings and sync](reference/desktop-settings-sync.svg) | [Desktop settings/sync](reference/desktop-settings-sync.svg) | Repository, service, appearance and synchronization controls |
-| ![Mobile day](reference/mobile-day.svg) | [Mobile narrow day](reference/mobile-day.svg) | Compact date strip and one attention list at narrow widths |
-| ![Mobile editor](reference/mobile-editor.svg) | [Mobile edit surface](reference/mobile-editor.svg) | One bounded task editor with explicit Save/Cancel and destructive Delete for an existing Task |
-| ![Save and sync states](reference/sync-failure-states.svg) | [Save/sync states](reference/sync-failure-states.svg) | Honest local-save and Git synchronization state/failure presentation |
+| ![Desktop Planner v1.0.3](reference/desktop-planner-v1.0.3.svg) | [Desktop Planner](reference/desktop-planner-v1.0.3.svg) | No sidebar; Jig home at left; page-centered week range above grouped Previous/Today/Next controls; Add task/History/Settings/sync at right; seven fluid date tracks |
+| ![Mobile Planner v1.0.3](reference/mobile-planner-v1.0.3.svg) | [Mobile/narrow Planner](reference/mobile-planner-v1.0.3.svg) | Jig/sync/hamburger application row, centered week range + grouped week controls, seven-date strip, selected-date Task list |
+| ![Narrow Task workspace](reference/mobile-editor.svg) | [Narrow Task workspace](reference/mobile-editor.svg) | BottomSheet Task workspace; permanent Delete confirmation remains separate |
+| ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history; uses the same top application navigation |
+| ![Desktop settings and sync](reference/desktop-settings-sync.svg) | [Desktop settings/sync](reference/desktop-settings-sync.svg) | Appearance, notification and operational status/settings |
+| ![Save and sync states](reference/sync-failure-states.svg) | [Save/sync states](reference/sync-failure-states.svg) | Honest local-save and repository synchronization feedback |
 
-### Original screenshot provenance
+The older `desktop-week.svg`, `desktop-week-task-drawer.svg`, `desktop-day.svg` and `mobile-day.svg` are historical design inputs after this revision. They must not be used to reintroduce a sidebar, Day/Week destinations, a Day completed section, a split date-navigation model, or a right-side mobile Drawer.
 
-The original raster files inspected when this design was authored were:
-
-| Original filename | SHA-256 | Screen mapping |
-|---|---|---|
-| `day_by_pontivus_weekly_planner.png` | `f7ec8d8a105fa232d21958a74c58df36061b043fe3cd62469ec0ed9f486a7119` | desktop-week |
-| `day_planning_dashboard_jan_23.png` | `086dc27cda6b89e5db1a62ed582da316c373dbfb7177de932ee32c414d01ef7f` | desktop-day |
-| `day_by_pontivus_planner.png` | `d0a9e2d0316dc950d44cf03220006676995213087a415f72af138b037ea8a270` | mobile-day |
-| `day_task_editor_mockup.png` | `d1bbaaedd185060673f4bff146585d17b92e17d6a49745fef958ca9bf04e5ea1` | mobile-editor |
-
-The original PNG bytes are **not** yet stored in the repository; their hashes and corresponding governed SVG reconstructions are recorded here so the sources can be verified and imported later if desired. Do not substitute an unrelated stock image or relabel the originals as Jig production screenshots. The versioned SVG files define the current reviewed **structural** baseline; pixel-perfect final rendering must be certified from the running Astryx UI.
+The original raster provenance recorded in repository history remains useful for traceability, but those images are not production screenshots or current structural authority.
 
 ## 2. Information architecture
 
-The initial desktop IA has exactly **Week**, **Day**, **History**, and **Settings** as meaningful destinations. **Today** is a shortcut that selects the current local civil date within Day, not a separate destination. A separate **Board** destination is redundant: Week already is the dated Kanban board. The original mockups' Plan/Day/Board duplicates are not required screens.
+Jig has one primary destination: **Planner**. Planner is implicit Home and therefore does not appear as a redundant navigation item.
 
-- **Week** is the principal weekly planning/rearrangement surface: Monday–Sunday buckets, current/selected date emphasis, per-day ordered outstanding tasks, quick-add scoped to each date and cross-day drop targets. Long days scroll without losing date headings.
-- **Day** is the default operational entry surface, initially selecting the current local civil date. It shows one canonical outstanding sequence for that date after daily rollover, then a compact Completed group and on-demand task detail. The Today shortcut selects the current local civil date; changing selection itself never reschedules tasks.
-- **History** is a lightweight dated list grouped by actual completion date, not a dashboard. Each completed row shows the Task's canonical scheduled date at completion plus actual completion time, and has an explicit open/actions affordance so the same Task can be reopened or permanently deleted after confirmation.
-- **Settings** exposes theme, browser-notification permission/support state, configured repository path as read-only context, coarse synchronization state/action, service health, local database health, portable-data/repository-adapter health and diagnostics. It does not expose repository migration, remote-name configuration, branch/ref/worktree state, Git history/merge/conflict workflows, or developer tooling.
-- **No separately persisted boards, projects or queues.** Context is a short optional Task label and may be displayed or used as a filter, not an independent domain.
+The only secondary destinations are **History** and **Settings**.
+
+- Clicking the Jig product mark/wordmark returns to Planner.
+- Desktop exposes History and Settings directly in the right side of the global header.
+- Narrow/mobile exposes the same two destinations through a compact hamburger menu/popover.
+- There is no desktop SideNav, mobile navigation drawer, separate Day destination, separate Week destination, or Board destination.
+- Today is a temporal shortcut inside Planner, not a destination.
+
+Planner owns one `displayed week + selected date` presentation state. Desktop renders all seven outstanding date sequences at once. Narrow/mobile renders the same seven dates as a strip and shows only the selected date's outstanding sequence. Completed Tasks are absent from Planner and live in History.
 
 ### Onboarding and installed lifecycle
 
-The app's very first interaction is the **one-script installer** described in [Technical solution §3.1](../architecture/technical-solution.md). The script selects and validates the personal Git repository and configures the `jig` command + local background service. The user then opens the existing service with `jig` and immediately reaches Day on the current local civil date; Week remains one navigation action away. There is **no repeated onboarding wizard on every run**.
+The app's first interaction remains the one-script installer described in the technical solution. After installation, `jig` opens the Planner on the current local date/current week. No repeated onboarding wizard is introduced.
 
-A compact, always-available status control must truthfully distinguish:
-- **Saved locally / Synced:** latest local edits are committed to SQLite and the repository integration boundary reports the latest exported snapshot synchronized.
-- **Sync pending / Retrying:** local data is safe; export or repository synchronization is still outstanding.
-- **Local only:** no remote is configured; local DB and local Jig repository records continue normally.
-- **Sync issue:** repository synchronization cannot currently complete, but successful local Task saves remain safe.
-
-The UI does **not** classify the cause as divergence, merge conflict, branch state or another Git-topology concept, and it provides no Jig conflict-resolution workflow. Diagnostics may expose the underlying repository-adapter error for troubleshooting, but repository reconciliation happens with external Git tooling. The UI must not present an ordinary local edit as synchronized until the repository boundary reports success. A failed local save is a different, workflow-critical state and is displayed near the edited Task.
+A compact always-available synchronization indicator truthfully distinguishes synchronized, pending/retrying, local-only and sync-issue outcomes. The UI never exposes Git topology as Planner state.
 
 ## 3. Visual language
 
@@ -74,19 +62,21 @@ Theme ownership is singular:
 The visual reference does **not** authorize bypassing the component architecture. Implementation order is mandatory:
 
 1. this UI solution and the governed SVGs define product structure, hierarchy, density and genuine structural dimensions;
-2. pinned Astryx public APIs define application shell, navigation, responsive shell behavior, list/field/dialog/button anatomy, spacing mechanics and semantic styling;
-3. Jig React composition supplies only product-specific structures such as seven dated Week buckets, the Day attention/inspector relationship and Settings information grouping;
+2. pinned Astryx public APIs define application shell, navigation, responsive shell behavior, list/field/button/link/drawer/dialog anatomy, spacing mechanics and semantic styling;
+3. Jig React composition supplies only product-specific structures such as the three-zone Planner header, seven dated Planner buckets, narrow date strip/list, shared Task workspace and Settings information grouping;
 4. Jig CSS supplies only the remaining Jig-owned geometry and consumes public Astryx tokens;
 5. browser geometry assertions and screenshots verify the implementation; they do not justify private overrides or compensating layout rules.
 
-The pinned Astryx `AppShell` is the application frame. Use its `sideNav`/mobile-navigation contract and the public `SideNav` family for primary destinations. Do not place another complete shell inside AppShell, duplicate the main landmark, or reproduce library-owned responsive navigation with raw parallel chrome.
+The pinned Astryx `AppShell` is the application frame, but v1.0.3 deliberately omits `sideNav` and disables the AppShell automatic mobile drawer. Use the `topNav` slot plus public Astryx Button/IconButton/DropdownMenu or Popover primitives for the approved Jig header. Do not place another complete shell inside AppShell or duplicate the main landmark.
+
+The desktop header is one Jig-owned three-zone composition: Jig Home at left, the centered Planner temporal centerpiece, and Add task/History/Settings/synchronization state at right. The center must remain optically/page centered despite unequal side-zone widths. History and Settings use semantic icons plus accessible labels; there is no SideNav.
 
 CSS may set the governed product-level dimensions needed to reproduce the structural references, but must not reshape Astryx internals. No Jig rule may rely on an undocumented/private Astryx selector, DOM child structure, StyleX detail or private custom property. Do not use an application-owned high-priority cascade layer, `!important`, or selector escalation to win against the library. The application must also not synthesize Astryx compiler/runtime markers such as `__built` or manually replace the documented theme-build pipeline; those belong only to Astryx-generated artifacts. If a public Astryx primitive cannot realize a governed requirement, document that incompatibility and use the smallest Jig-owned semantic composition built from public Astryx leaves/tokens.
 
 Visual rules:
 1. **Compact, low-chrome and scan-oriented.** Prefer list/row structure with subtle boundaries to decorative card stacks; no gratuitous shadows/gradients.
 2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
-3. **One primary action per active surface.** Quick Add is prominent at week level. A task detail editor has a single Save control. Completion uses an independently accessible checkbox/command.
+3. **One primary action per active surface.** Quick Add is prominent at week level. The Task workspace has a single Save or Move action in its active edit mode. Completion uses an independently accessible checkbox/command.
 4. **Clear current date and visible focus.** Selection/current, hover, focus, and save status remain semantically distinguishable without color alone.
 5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/focus emphasis. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
 6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics must remain clear in both themes without relying on color alone.
@@ -95,92 +85,112 @@ Visual rules:
 
 ## 4. Screen specifications
 
-### 4.1 Desktop Week
+### 4.1 Desktop Planner
 
-Header: “Week of [date range]”, previous/next controls, Today shortcut, optional lightweight context filter, Quick Add. The week has seven calendar-date columns using stable local civil dates (Monday-start). Each date has title/date, outstanding count, ordered task rows, a date-specific Add task entry and a visible droppable region even when empty.
+The approved desktop composition is the v1.0.3 reference.
 
-Task row: one completion control, title, optional context, exceptional priority marker, optional reminder time, drag handle, and a clear open/edit affordance; no fixed time slot, duration, status progression or nested subtask view. A current selected date is indicated in header and border; a selected Task can open editor/detail without changing its relative order.
+**Header:** one compact full-width application header with three zones.
 
-Dnd-kit owns sortable IDs, pointer/touch sensors and drop targets; Astryx owns row appearance. A dragged Task moves to the **exact destination/date/position** where dropped, not a priority-based recalculation. Cancellation restores the prior view. Save failure restores/marks pending the committed order visibly.
+- **Left:** Jig product mark/home affordance.
+- **Center:** active week range on the first line, for example **16–22 Nov 2026**. Directly beneath it is a grouped **Previous week chevron · Today · Next week chevron** row. The range never sits between the arrows.
+- **Right:** **Add task**, **History**, **Settings**, compact synchronization state.
 
-The original mockup's additional Board link, excessive Normal badges, green cards and weekly progress metrics are **not MVP authority**; omit them unless separately designed after functional validation.
+The temporal centerpiece is centered on the page, not merely centered in the leftover space between left/right controls.
 
-### 4.2 Desktop Day
+The week range uses compact formatting without “Week of” or a separate month title. Previous/Next shift by exactly seven days while preserving selected weekday; Today selects the current local date/current week.
 
-A date strip permits switching selected days. The attention list shows the canonical outstanding sequence scheduled for the selected date after service-owned daily rollover. No derived carry-over prefix or originating-date badge is rendered. Completed is compact and separately expandable. An optional right-hand inspector shows the selected Task, title, context, priority, reminder, reference, note and actions to complete/reopen, edit, move date or Delete; Delete is destructive and requires confirmation before mutation.
+The board contains seven equal Monday–Sunday tracks. Each track has a 160px minimum and expands with the available desktop canvas. Date headers such as `Thu 19` are the desktop date selector.
 
-Day view and Week view query the **same Task**; opening the inspector does not create a second editable Task object. Preserve position changes and reload state. Reminder delivery uses one browser-side eligibility calculation: visible page → Astryx toast; hidden/open page with granted browser notification permission → browser Notification. A reminder never becomes a work item.
+Selected date is shown with restrained header/edge emphasis. Today/current date has a separate small indicator. Drag-over has a distinct temporary treatment. Do not conflate these states.
 
-### 4.3 Mobile narrow Day
+Task cards are compact and title-first. A thin leading color/accent may encode priority for scanning, but color is not the only priority signal and Normal remains visually quiet.
 
-Below the single application-owned **48rem / 768 CSS px** breakpoint, render a deliberate narrow composition rather than the desktop Day DOM with selective CSS hiding.
+Clicking a Task opens its detail in the non-blocking right workspace without moving it. The workspace overlays the board and never narrows/reflows the seven tracks. Edit reuses the workspace. Global Add task originates from the selected date; column Add task originates from that column.
 
-The governed 414×900 hierarchy is:
+Remove descriptive/meta copy. The desktop interface must not display phrases such as “Week of”, “full available canvas”, “selected date view”, “Today is a shortcut”, or similar explanatory design text.
 
-1. framed application surface with Jig identity and synchronization status in the first header band;
-2. compact destination control showing **Day** on the left and the **Today** shortcut on the right;
-3. seven simultaneously visible dates;
-4. selected-date title/context;
-5. one canonical **Attention** sequence;
-6. compact Completed content when present;
-7. persistent Quick Add in the governed thumb-reachable position.
+### 4.2 Desktop History and Settings
 
-All four destinations remain reachable through the compact Astryx/AppShell mobile-navigation path. Do not add a separate full-width desktop toolbar below this hierarchy. Previous/Next need not form an additional row when the seven-date strip already provides direct date selection.
+History and Settings retain the same global application-header language. Their active destination is clear without reintroducing a sidebar.
 
-Preserve prominent title-first task cards, touch-sized checkbox and action targets, whole-card drag where supported and a non-drag move-to-date command. Quick Add must not obscure the final task or reminder feedback. The desktop sidebar, desktop Day heading/toolbar and desktop inspector are not mounted in the narrow Day composition.
+On History, selecting a completed Task opens the same right-side Task workspace while History remains active. Settings has no Planner week navigator because week controls operate only on Planner state. Clicking Jig returns to Planner and preserves the session's Planner date/week state.
 
-Desktop MVP requires responsive semantic continuity and basic mobile-sized layout validation. It does **not** require installation as a self-contained phone app, native Git commands or background push notifications.
+### 4.3 Narrow/mobile Planner
 
-### 4.4 Mobile/editor composition
+Below the technical 76rem semantic breakpoint, render a deliberate narrow Planner composition rather than hiding desktop pieces with CSS.
 
-Task creation defaults to **title only** and the initiating date; no forced priority, reminder, time estimate or context. The Task draft/form state is singular across responsive changes. The field hierarchy is Title, Date, Context, Priority, Reminder, Reference, Notes.
+The top hierarchy is:
 
-Use Astryx Dialog through its supported public API for the presentation appropriate to the active layout mode. Desktop uses the bounded editor treatment. Narrow mode must select a public Astryx dialog/presentation configuration that naturally produces the governed 414×980 editor hierarchy and reachable actions; do not mount a desktop dialog and resize/reposition its private internals with CSS. If the pinned public Dialog API cannot meet the governed narrow contract, document that exact incompatibility before using the smallest Jig-owned host around the same Astryx form controls.
+1. Jig product mark/home on the left; compact sync state plus hamburger on the right;
+2. centered active week range;
+3. grouped Previous/Today/Next controls immediately beneath the range;
+4. seven-date horizontal strip;
+5. compact selected-date heading and optional Task count;
+6. selected-date outstanding Task list;
+7. prominent Add task touch action outside the constrained header.
 
-Use explicit Save/Cancel, persistent form errors on invalid data or server refusal, and preserve the active draft while the screen is reflowed or while a user inspects another date unless they explicitly confirm discarding edits. For an existing Task, expose a visually subordinate destructive **Delete task…** action; activating it opens an explicit confirmation and only confirmation invokes deletion. Creation mode has no Delete action. Date editing applies priority-guided insertion, whereas a drag drop uses the exact drop index. Changing priority does not rearrange the task.
+Do not render `Day`, `Week`, `Attention`, `Your ordered plan`, `selected date view`, or other labels that restate the visible hierarchy.
+
+The hamburger opens a compact menu/popover containing only History and Settings. It is not a drawer.
+
+Task view/create/edit uses a BottomSheet rising from the bottom. Create initially asks only for title and inherits the selected/originating date. Edit exposes optional fields. Delete confirmation remains the sole blocking Task dialog.
+
+When narrow drag is absent, Move up/Move down provides touch ordering within the date and Edit date provides cross-date rescheduling.
+
+### 4.4 Shared Task workspace
+
+There is one Task workspace with modes **view**, **edit**, **create**. Desktop renders it through a right-side non-modal Drawer; narrow/mobile renders the same state/content through BottomSheet.
+
+There is no Move-to-date workspace mode. Drag owns exact direct movement; Edit scheduled date owns explicit non-drag rescheduling.
+
+The field hierarchy remains Title, Date, Context, Priority, Reminder, Reference, Notes. Save/Cancel and persistent validation errors are explicit. Responsive reflow preserves workspace mode and draft values. Permanent Delete uses AlertDialog confirmation.
 
 ## 5. Interaction and component ownership
 
 | UI concern | Canonical owner |
 |---|---|
-| Application frame and responsive primary navigation | Astryx AppShell + public SideNav/mobile-navigation APIs; Jig owns destination state, not shell mechanics |
-| Buttons, icon buttons, links, menus/popovers, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
-| Sortable rows, drop zones, drag overlays, keyboard drag, pointer/touch gesture lifecycle | @dnd-kit/react only; do not activate Astryx List createReorderable on the same row |
-| Week/date bucket composition, Day selected-date sequence, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
-| Scheduled date, ordering, daily rollover, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
-| Task reads/writes and generic repository synchronization status | Bun service with SQLite plus isolated repository integration adapter |
-| Reminder due eligibility and presentation while browser is open | One browser-side timer/eligibility monitor + Astryx useToast + browser Notification API; no background sender/service worker |
+| Application frame | Astryx AppShell with no SideNav and no automatic mobile drawer |
+| Global/header controls | Astryx Button/IconButton plus DropdownMenu or Popover mechanics; Jig owns only three-zone/centered geometry |
+| Planner temporal state | Jig pure presentation state: displayed week start + selected date |
+| Lists, labels, fields, alerts, toasts, semantic theme | Astryx published primitives |
+| Desktop Task workspace | Astryx non-modal right Drawer |
+| Narrow Task workspace | Astryx BottomSheet rising from the bottom |
+| Sortable rows/drop zones | @dnd-kit/react only |
+| Planner seven-track composition, narrow date strip/list, Task workspace content | small Jig React composition |
+| Scheduled date/order/rollover/complete/reopen/delete/identity | pure Jig planning core |
+| Task reads/writes and repository synchronization state | Bun service + SQLite + repository adapter |
 
-CSS ownership follows the same table. Jig may style its own page/region/card wrappers and public root classes it supplies, but it does not style descendants that belong to an Astryx component. Reusable action/navigation mechanics use Astryx Button/IconButton/Link rather than raw `<button>`/`<a>` plus local reset/focus/press CSS, unless a documented public-API incompatibility requires the smallest semantic fallback. Governed outer dimensions may use explicit values; ordinary spacing, radius, typography and control sizing use Astryx public tokens/props. Where desktop and narrow information hierarchy differs, React selects the correct composition at the one semantic breakpoint; CSS is reserved for pure reflow/density inside that composition. Superseded rules are deleted rather than counteracted later in the stylesheet.
+Jig CSS owns only the page-centered header grid, seven Planner tracks, narrow composition, drag state and restrained Task priority accent. It consumes public Astryx tokens/roles and must not target private component internals.
 
-Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the same canonical Task operation as a drag. The drag handle must not swallow checkbox clicks, link navigation or editor opening. Avoid duplicate focus stops on the ListItem's clickable layer and nested controls; verify Astryx + dnd-kit with actual Playwright browser interaction.
+Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. The drag handle must not swallow completion, Task selection, link or menu activation.
 
 ## 6. Required browser/UX validation
 
 | Case | Acceptance |
 |---|---|
-| Week scanning | Seven readable dates with distinct current/selected state and no horizontal overflow of individual task titles |
-| Title-only creation | Adds into originating date in a minimum interaction |
-| Priority default | Newly created task inserted by functional priority law, existing manual sequence untouched |
-| Same-day drag | Exact chosen position persists after reload |
-| Cross-day drag | Destination and position persist, source loses item, empty date works |
-| Midday edits | Metadata/priority edits preserve manual ordering |
-| Completion | Task leaves active list, keeps scheduled date and actual completion time/history |
-| Daily rollover | Earlier unfinished Task is automatically moved into the current local date by changing `scheduled_date`; the same moved card appears in the current bucket in Week and Day |
-| Delete | Cancelled confirmation makes no mutation; confirmed deletion removes outstanding/completed Task from all current views and remains deleted after reload/Git round trip |
-| Responsive reflow | No loss of selected date, task, open editor draft or outstanding modifications |
-| Keyboard and touch | No hover-only essential actions; non-drag alternatives and visible focus |
-| Reminder | Visible page => one dismissible toast; hidden/open + granted permission => one browser Notification; permission requested only by explicit user action; no claim when browser closed |
-| Local save failure | User sees specific unresolved error, not fake save success |
-| Auto-sync lifecycle | Service can save/sync with browser closed; header/settings convey local/synced/pending/local-only/sync-issue truth without Git divergence/conflict semantics |
-| Offline use | Editing remains available, Git retries later without blocking |
-| Theme parity | System/Light/Dark are all supported; representative Week, Day, editor, Settings and error/status states retain equivalent hierarchy, contrast and non-color semantics in Light and Dark |
-| Resource discipline | Responsive reopen and low-idle service measured as part of installer certification |
+| Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task/History/Settings/sync right; no sidebar |
+| Week navigation | Previous/Next shift displayed week and selected date exactly seven days; Today restores current date/current week; no Task mutation |
+| Week scanning | Seven readable date tracks, >=160px each in desktop mode, fluid expansion, clear selected/today/drag states |
+| Title-only creation | Global Add uses selected date; column/local Add uses originating date; only title initially required |
+| Task inspection | Click selects and opens detail without changing date/order/destination |
+| Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
+| Responsive continuity | displayed week, selected date/task, workspace mode and unsaved draft survive Drawer↔BottomSheet change |
+| Mobile header | Jig/sync/hamburger first row; centered week range + grouped controls; seven-date strip; hamburger menu has only History/Settings and is not a drawer |
+| Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
+| Same/cross-day drag | exact chosen position/date persists; empty destination works |
+| Narrow ordering | Move up/down works without introducing a second order representation |
+| Completion/History | completing removes from Planner; History remains inspectable/reopenable |
+| Daily rollover | same canonical Task appears in current-date Planner bucket on desktop and narrow |
+| Delete | cancel is no-op; confirm permanently removes Task; Git round trip preserves absence |
+| Theme/color | System/Light/Dark retain hierarchy; priority accent remains readable without relying on color alone |
+| Save/sync feedback | local failure is explicit; synchronization state remains operational and truthful |
 
-Use actual approved Astryx and dnd-kit versions in Playwright for final UI evidence; these SVGs alone do not certify pixel fidelity or interaction. Archive browser screenshots from these tests in the repository when implementation begins; they supersede early concept art only after review.
+Final production evidence is the running Astryx UI in Playwright/browser screenshots. Reference SVGs govern structure, not pixel-perfect library anatomy.
 
 ## 7. Design change control
 
-The seven versioned SVGs in `docs/design/reference/` remain the structural baseline for layout, interaction hierarchy and density. Production color, logo use and Light/Dark behavior are governed centrally by [Brand and theme system](brand-and-theme.md); no duplicate dark structural SVG set is required. When an interaction changes, update this document and the relevant SVG together. If only runtime appearance changes to correct Astryx component parity, update implementation and browser evidence without inventing a second canonical visual-token contract.
+The v1.0.3 Planner references and this document supersede earlier Day/Week/sidebar structure. When an interaction hierarchy changes, update this document and the corresponding v1.0.3 reference SVG together.
 
-Do not refer to the previous Day branding as a current product identity. Do not use project-specific task details as content that Jig must store; they exist only as illustrative samples. An implementation plan must link to this document and to [Technical solution](../architecture/technical-solution.md).
+Production color/logo/theme behavior remains governed by [Brand and theme system](brand-and-theme.md). The accepted priority color cue is a restrained scanning aid, not a second status system and never the sole semantic carrier.
+
+Implementation plans must link to this document, [Planning workbench functional design](../requirements/planning-workbench.md), and [Technical solution](../architecture/technical-solution.md). No implementation may cite historical Day/Week reference assets to reintroduce removed destinations, SideNav, a mobile drawer or a mobile right-side Drawer.

@@ -14,13 +14,12 @@ export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
-  readonly dragHandleRef?: Ref<HTMLDivElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
-  readonly onMoveToDate?: (() => void) | undefined;
 }
 
 function isSafeWebReference(value: string): boolean {
@@ -97,13 +96,11 @@ function TaskActionMenu({
   onEdit,
   onMoveUp,
   onMoveDown,
-  onMoveToDate,
 }: Readonly<{
   task: Task;
   onEdit: () => void;
   onMoveUp?: (() => void) | undefined;
   onMoveDown?: (() => void) | undefined;
-  onMoveToDate?: (() => void) | undefined;
 }>): React.ReactElement {
   const items = [
     {
@@ -111,15 +108,6 @@ function TaskActionMenu({
       label: "Edit",
       onClick: onEdit,
     },
-    ...(onMoveToDate === undefined
-      ? []
-      : [
-          {
-            id: "move-date",
-            label: "Move to date…",
-            onClick: onMoveToDate,
-          },
-        ]),
     ...(onMoveUp === undefined
       ? []
       : [
@@ -167,7 +155,10 @@ export function TaskCardPreview({
   task,
 }: Readonly<{ task: Task }>): React.ReactElement {
   return (
-    <div className="jig-task-card jig-drag-card-overlay" aria-hidden="true">
+    <div
+      className={`jig-task-card jig-task-priority-${task.priority.toLowerCase()} jig-drag-card-overlay`}
+      aria-hidden="true"
+    >
       <div className="jig-task-card-preview-row">
         <span className="jig-task-card-preview-checkbox">□</span>
         <span className="jig-task-drag-handle" aria-hidden="true">
@@ -191,7 +182,6 @@ export function TaskRow({
   onEdit,
   onMoveUp,
   onMoveDown,
-  onMoveToDate,
 }: TaskRowProps): React.ReactElement {
   const completed = task.completed_at !== null;
 
@@ -199,8 +189,10 @@ export function TaskRow({
     <ListItem
       {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
+      {...(onSelect === undefined ? {} : { onClick: onSelect })}
       className={[
         "jig-task-card",
+        `jig-task-priority-${task.priority.toLowerCase()}`,
         isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
       ]
@@ -209,11 +201,7 @@ export function TaskRow({
       isSelected={isSelected}
       align="first-line"
       startContent={
-        <span
-          className="jig-task-card-leading"
-          onPointerDown={stopPointer}
-          onClick={(event) => event.stopPropagation()}
-        >
+        <span className="jig-task-card-leading">
           <CheckboxInput
             label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
             isLabelHidden
@@ -221,30 +209,22 @@ export function TaskRow({
             onChange={onToggleComplete}
             size="sm"
           />
+          {completed ? null : (
+            <span
+              {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
+              className="jig-task-drag-handle"
+              aria-hidden="true"
+              title="Drag task"
+              onClick={(event) => event.stopPropagation()}
+            >
+              ≡
+            </span>
+          )}
         </span>
       }
       label={
-        <div
-          {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
-          className="jig-task-body"
-          {...(completed ? {} : { tabIndex: 0 })}
-          {...(onSelect === undefined
-            ? {}
-            : {
-                onClick: onSelect,
-                onFocus: onSelect,
-              })}
-        >
+        <div className="jig-task-body">
           <div className="jig-task-title-row">
-            {completed ? null : (
-              <span
-                className="jig-task-drag-handle"
-                aria-hidden="true"
-                title="Drag task"
-              >
-                ≡
-              </span>
-            )}
             <span
               className={
                 completed
@@ -264,7 +244,6 @@ export function TaskRow({
           onEdit={onEdit}
           {...(onMoveUp === undefined ? {} : { onMoveUp })}
           {...(onMoveDown === undefined ? {} : { onMoveDown })}
-          {...(onMoveToDate === undefined ? {} : { onMoveToDate })}
         />
       }
     />
@@ -296,7 +275,7 @@ export function SortableTaskRow({
       {...rowProps}
       task={task}
       rowRef={sortable.ref as Ref<HTMLLIElement>}
-      dragHandleRef={sortable.handleRef as Ref<HTMLDivElement>}
+      dragHandleRef={sortable.handleRef as Ref<HTMLSpanElement>}
     />
   );
 }

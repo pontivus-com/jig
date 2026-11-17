@@ -6,7 +6,6 @@ export interface TaskInspectorProps {
   readonly task: Task | null;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onEdit: (task: Task) => void;
-  readonly onMoveToDate: (task: Task) => void;
   readonly onDelete: (task: Task) => void;
 }
 
@@ -23,26 +22,23 @@ export function TaskInspector({
   task,
   onToggleComplete,
   onEdit,
-  onMoveToDate,
   onDelete,
 }: TaskInspectorProps): React.ReactElement {
   if (task === null) {
     return (
-      <aside className="jig-task-inspector jig-task-inspector-empty">
+      <aside
+        className="jig-task-inspector jig-task-inspector-empty jig-task-inspector-drawer"
+      >
         <p>Select a task to inspect its details.</p>
       </aside>
     );
   }
 
   return (
-    <aside className="jig-task-inspector" aria-label={`Task details for ${task.title}`}>
-      <div className="jig-task-inspector-heading">
-        <div>
-          <p className="jig-eyebrow">Selected task</p>
-          <h2>{task.title}</h2>
-        </div>
-      </div>
-
+    <aside
+      className="jig-task-inspector jig-task-inspector-drawer"
+      aria-label={`Task details for ${task.title}`}
+    >
       <div className="jig-task-inspector-actions">
         <Button
           label={task.completed_at === null ? "✓ Mark complete" : "Reopen"}
@@ -57,12 +53,6 @@ export function TaskInspector({
           variant="ghost"
           size="sm"
           onClick={() => onEdit(task)}
-        />
-        <Button
-          label="Move to date"
-          variant="ghost"
-          size="sm"
-          onClick={() => onMoveToDate(task)}
         />
         <Button
           label="Delete…"
@@ -82,7 +72,13 @@ export function TaskInspector({
         )}
         <div>
           <dt>Priority</dt>
-          <dd>{task.priority.toLowerCase()}</dd>
+          <dd>
+            <span
+              className={`jig-priority-label jig-priority-${task.priority.toLowerCase()}`}
+            >
+              {task.priority.toLowerCase()}
+            </span>
+          </dd>
         </div>
         {task.reminder_time === null ? null : (
           <div>
@@ -134,7 +130,6 @@ export function TaskInspector({
             ? ""
             : ` · ${formatReminderTime(task.reminder_time)}`}
         </strong>
-        <span>Rolled-forward cards use their current scheduled date</span>
       </div>
     </aside>
   );

@@ -1,61 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-label="Jig History canonical reference">
-<style>text{font-family:Inter,Arial,Helvetica,sans-serif}.t{fill:#152238}.m{fill:#657187}.muted{fill:#8a96a8}.h1{font-size:26px;font-weight:700}.h2{font-size:18px;font-weight:700}.b{font-size:13px;font-weight:600}.s{font-size:11px;font-weight:500}.xs{font-size:10px;font-weight:500}</style>
-<rect x="0" y="0" width="1440" height="900" rx="0" fill="#f6f8fb" stroke="none" stroke-width="1"/>
-<rect x="20" y="20" width="190" height="860" rx="12" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<text x="42" y="58" class="h1">Jig</text>
-<text x="42" y="80" class="s">Schedules attention</text>
-<line x1="30" y1="98" x2="200" y2="98" stroke="#dfe5ee" stroke-width="1"/>
-<text x="48" y="120" class="b" fill="#41516a" font-weight="500">Week</text>
-<text x="48" y="170" class="b" fill="#41516a" font-weight="500">Day</text>
-<rect x="30" y="193" width="170" height="40" rx="7" fill="#edf3ff" stroke="none" stroke-width="1"/>
-<text x="48" y="220" class="b" fill="#244b91" font-weight="700">History</text>
-<text x="48" y="270" class="b" fill="#41516a" font-weight="500">Settings</text>
-<line x1="30" y1="320" x2="200" y2="320" stroke="#dfe5ee" stroke-width="1"/>
-<text x="42" y="350" class="s" fill="#7b8799">Planning data</text>
-<text x="42" y="370" class="xs" fill="#9aa5b5">Personal Git repository</text>
-<text x="240" y="58" class="h1">History</text>
-<text x="240" y="82" class="s">Completed work grouped by actual completion date</text>
-<rect x="1230" y="34" width="180" height="40" rx="20" fill="#edf7f3" stroke="#dce3ec" stroke-width="1"/>
-<circle cx="1250" cy="54" r="5" fill="#2c765f" stroke="none" stroke-width="1"/>
-<text x="1265" y="59" class="s" fill="#2c765f" font-weight="700">Synced</text>
-<text x="240" y="160" class="h2">Friday, 20 November</text>
-<text x="240" y="183" class="s" fill="#657187">3 completed</text>
-<rect x="240" y="205" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<rect x="255" y="225" width="16" height="16" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
-<text x="258" y="238" class="xs" fill="#fff" font-weight="700">✓</text>
-<text x="286" y="233" class="b" fill="#152238" font-weight="650">Legal — TTA workflow remediation</text>
-<text x="286" y="253" class="xs" fill="#657187">Legal App · Scheduled Thu 19</text>
-<text x="1340" y="235" class="s" fill="#657187" text-anchor="end">10:42</text>
-<text x="1380" y="235" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
-<rect x="240" y="287" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<rect x="255" y="307" width="16" height="16" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
-<text x="258" y="320" class="xs" fill="#fff" font-weight="700">✓</text>
-<text x="286" y="315" class="b" fill="#152238" font-weight="650">Review outstanding fixes</text>
-<text x="286" y="335" class="xs" fill="#657187">Legal · Scheduled Fri 20</text>
-<text x="1340" y="317" class="s" fill="#657187" text-anchor="end">13:18</text>
-<text x="1380" y="317" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
-<rect x="240" y="369" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<rect x="255" y="389" width="16" height="16" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
-<text x="258" y="402" class="xs" fill="#fff" font-weight="700">✓</text>
-<text x="286" y="397" class="b" fill="#152238" font-weight="650">Prepare next week</text>
-<text x="286" y="417" class="xs" fill="#657187">Order · Scheduled Fri 20</text>
-<text x="1340" y="399" class="s" fill="#657187" text-anchor="end">16:06</text>
-<text x="1380" y="399" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
-<text x="240" y="469" class="h2">Thursday, 19 November</text>
-<text x="240" y="492" class="s" fill="#657187">2 completed</text>
-<rect x="240" y="513" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<rect x="255" y="533" width="16" height="16" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
-<text x="258" y="546" class="xs" fill="#fff" font-weight="700">✓</text>
-<text x="286" y="541" class="b" fill="#152238" font-weight="650">Daily standup</text>
-<text x="286" y="561" class="xs" fill="#657187">Team · Scheduled Thu 19</text>
-<text x="1340" y="543" class="s" fill="#657187" text-anchor="end">09:12</text>
-<text x="1380" y="543" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
-<rect x="240" y="595" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<rect x="255" y="615" width="16" height="16" rx="4" fill="#2c765f" stroke="#2c765f" stroke-width="1"/>
-<text x="258" y="628" class="xs" fill="#fff" font-weight="700">✓</text>
-<text x="286" y="623" class="b" fill="#152238" font-weight="650">Update release notes</text>
-<text x="286" y="643" class="xs" fill="#657187">Order · Scheduled Thu 19</text>
-<text x="1340" y="625" class="s" fill="#657187" text-anchor="end">17:31</text>
-<text x="1380" y="625" class="s" fill="#7c889a" font-weight="700" text-anchor="end">•••</text>
-<text x="240" y="820" class="s" fill="#657187">History is a record of completion, not a productivity dashboard.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-label="Jig History canonical reference — compact navigation rail"><style>text{font-family:Inter,Arial,Helvetica,sans-serif}.h1{font-size:26px;font-weight:700}.h2{font-size:18px;font-weight:700}.b{font-size:13px;font-weight:600}.s{font-size:11px;font-weight:500}.xs{font-size:10px;font-weight:500}</style><rect width="1440" height="900" fill="#f6f8fb"/><rect x="20" y="20" width="112" height="860" rx="12" fill="#fff" stroke="#dce3ec"/>
+<text x="76" y="58" class="h2" text-anchor="middle" fill="#152238">Jig</text>
+<rect x="28" y="74" width="96" height="42" rx="7" fill="transparent"/>
+<text x="42" y="100" class="b" fill="#657187">▣</text>
+<text x="62" y="100" class="s" fill="#41516a" font-weight="600">Day</text>
+<rect x="28" y="124" width="96" height="42" rx="7" fill="transparent"/>
+<text x="42" y="150" class="b" fill="#657187">▥</text>
+<text x="62" y="150" class="s" fill="#41516a" font-weight="600">Week</text>
+<rect x="28" y="174" width="96" height="42" rx="7" fill="#fff3d6"/>
+<text x="42" y="200" class="b" fill="#9a5a00">◷</text>
+<text x="62" y="200" class="s" fill="#9a5a00" font-weight="700">History</text>
+<rect x="28" y="224" width="96" height="42" rx="7" fill="transparent"/>
+<text x="42" y="250" class="b" fill="#657187">⚙</text>
+<text x="62" y="250" class="s" fill="#41516a" font-weight="600">Settings</text>
+<text x="149" y="58" class="h1">History</text><text x="149" y="82" class="s" fill="#657187">Completed work grouped by actual completion date</text>
+<rect x="1230" y="34" width="180" height="40" rx="20" fill="#edf7f3" stroke="#dce3ec"/><text x="1265" y="59" class="s" fill="#2c765f">● Synced</text>
+<text x="149" y="160" class="h2">Friday, 20 November</text><text x="149" y="183" class="s" fill="#657187">3 completed</text>
+<rect x="149" y="205" width="1261" height="70" rx="8" fill="#fff" stroke="#dce3ec"/><rect x="164" y="225" width="16" height="16" rx="4" fill="#2c765f"/><text x="195" y="233" class="b">Legal — TTA workflow remediation</text><text x="195" y="253" class="xs" fill="#657187">Scheduled context · completed at actual time</text><text x="1380" y="235" class="s" fill="#657187" text-anchor="end">•••</text><rect x="149" y="287" width="1261" height="70" rx="8" fill="#fff" stroke="#dce3ec"/><rect x="164" y="307" width="16" height="16" rx="4" fill="#2c765f"/><text x="195" y="315" class="b">Review outstanding fixes</text><text x="195" y="335" class="xs" fill="#657187">Scheduled context · completed at actual time</text><text x="1380" y="317" class="s" fill="#657187" text-anchor="end">•••</text><rect x="149" y="369" width="1261" height="70" rx="8" fill="#fff" stroke="#dce3ec"/><rect x="164" y="389" width="16" height="16" rx="4" fill="#2c765f"/><text x="195" y="397" class="b">Prepare next week</text><text x="195" y="417" class="xs" fill="#657187">Scheduled context · completed at actual time</text><text x="1380" y="399" class="s" fill="#657187" text-anchor="end">•••</text>
+<text x="149" y="485" class="h2">Thursday, 19 November</text><text x="149" y="508" class="s" fill="#657187">2 completed</text>
+<rect x="149" y="530" width="1261" height="70" rx="8" fill="#fff" stroke="#dce3ec"/><text x="195" y="558" class="b">Daily standup</text><text x="1380" y="560" class="s" fill="#657187" text-anchor="end">•••</text><rect x="149" y="612" width="1261" height="70" rx="8" fill="#fff" stroke="#dce3ec"/><text x="195" y="640" class="b">Update release notes</text><text x="1380" y="642" class="s" fill="#657187" text-anchor="end">•••</text>
 </svg>

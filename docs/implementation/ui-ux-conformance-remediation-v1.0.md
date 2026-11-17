@@ -1,6 +1,6 @@
 # Jig 1.0.2 UX/UI conformance remediation — implementation plan v1.0
 
-**Status:** Implementation-ready bug-fix plan, amended 2026-11-17 with mandatory Astryx/CSS architecture correction.  
+**Status:** Historical v1.0.2 implementation authority. The v1.0.3 [master-detail workspace correction](v1.0.3-master-detail-workspace.md) supersedes this document's 190px rail, fixed Week-width and Task Dialog/editor presentation requirements; unrelated v1.0.2 requirements remain historical evidence.  
 **Target release:** 1.0.2  
 **Date:** 2026-11-17  
 **Governing audit:** [UX/UI conformance audit v1.0](../design/ui-ux-conformance-audit-v1.0.md)  

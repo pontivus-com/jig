@@ -4,6 +4,21 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Changed
+
+- v1.0.3 replaces separate Day/Week destinations with one responsive Planner: seven fluid dated tracks on desktop and the same seven-date state as a selected-date list on narrow/mobile.
+- Replaced the persistent SideNav/mobile drawer with one compact application header: Jig is Planner/Home, History and Settings are the only secondary destinations, and the active week range is page-centered above Previous/Today/Next controls.
+- Unified Task view/create/edit around one contextual state owner: desktop uses a non-modal right Astryx Drawer and narrow/mobile uses Astryx BottomSheet while preserving unsaved drafts across responsive reflow.
+- Quick Add/Add task initially captures only title and inherits the selected/originating date; Edit owns explicit non-drag date rescheduling.
+- Desktop Planner consumes the available canvas with seven 160px-minimum tracks at the governed 76rem desktop threshold and uses restrained, consistent priority cues across Planner, History and Task detail.
+
+### Fixed
+
+- Task click/tap now selects and inspects only; direct desktop movement remains drag-and-drop and same-day Move up/down remains the non-drag ordering alternative.
+- Removed the separate Move-to-date workspace/action and the standalone Day completed section; completed Tasks leave Planner and remain inspectable/reopenable in History.
+- Previous/Next move the displayed week and selected date by exactly seven civil days, Today restores the current local date/week, and local-midnight revalidation preserves an explicitly selected non-today date.
+- Removed superseded Day/Week/sidebar UI copy, dormant presentation code and stale browser/architecture assertions.
+
 ## [1.0.2] - 2026-11-17
 
 ### Changed

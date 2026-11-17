@@ -54,7 +54,7 @@ async function createTask(
   });
 }
 
-test("unfinished prior-day cards roll into today across Day and Week", async ({
+test("unfinished prior-day cards roll into today in the canonical Planner", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -62,9 +62,6 @@ test("unfinished prior-day cards roll into today across Day and Week", async ({
   await createTask(page, "Rollover contract", yesterday);
   await page.reload();
 
-  await expect(
-    page.getByRole("button", { name: "Day", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
   await expect(
     page
       .locator(".jig-task-card")
@@ -78,7 +75,6 @@ test("unfinished prior-day cards roll into today across Day and Week", async ({
     )
     .toBe(today);
 
-  await page.getByRole("button", { name: "Week", exact: true }).click();
   const todayColumn = page.locator(`[data-date="${today}"]`);
   await expect(
     todayColumn.getByText("Rollover contract", { exact: true }),
@@ -165,18 +161,18 @@ test("priority edits preserve established manual order", async ({
     .map((task) => task.id);
 
   await runTaskAction(page, "Priority edited task", "Edit");
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible({ timeout: 5_000 });
-  const highPriority = dialog.getByRole("radio", {
+  const workspace = page.locator('section[aria-label="Edit task Priority edited task"]');
+  await expect(workspace).toBeVisible({ timeout: 5_000 });
+  const highPriority = workspace.getByRole("radio", {
     name: "High",
     exact: true,
   });
   await highPriority.click({ timeout: 5_000 });
   await expect(highPriority).toHaveAttribute("aria-checked", "true");
-  await dialog
+  await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click({ timeout: 5_000 });
-  await expect(dialog).toBeHidden({ timeout: 5_000 });
+  await expect(workspace).toBeHidden({ timeout: 5_000 });
 
   expect((await taskByTitle(page, "Priority edited task")).priority).toBe(
     "HIGH",
@@ -203,16 +199,16 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   await page.reload();
 
   await runTaskAction(page, "Editable metadata task", "Edit");
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Context").fill("Client Alpha");
-  await dialog
+  const workspace = page.locator('section[aria-label="Edit task Editable metadata task"]');
+  await workspace.getByLabel("Context").fill("Client Alpha");
+  await workspace
     .getByLabel("Reference")
     .fill("../matters/client-alpha");
-  await dialog.getByLabel("Notes").fill("Prepare clause comments.");
-  await dialog
+  await workspace.getByLabel("Notes").fill("Prepare clause comments.");
+  await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
-  await expect(dialog).toBeHidden();
+  await expect(workspace).toBeHidden();
 
   const edited = await taskByTitle(page, "Editable metadata task");
   expect(edited.context).toBe("Client Alpha");
@@ -220,7 +216,38 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   expect(edited.note).toBe("Prepare clause comments.");
 });
 
-test("real pointer drag moves a Task across dated Week drop zones", async ({
+test("Planner date inspection does not retarget or discard an active edit draft", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Draft identity contract", today);
+  await page.reload();
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await runTaskAction(page, "Draft identity contract", "Edit");
+  const workspace = page.locator(
+    'section[aria-label="Edit task Draft identity contract"]',
+  );
+  await expect(workspace).toBeVisible();
+  await workspace.getByLabel("Title").fill("Unsaved draft identity");
+
+  await page
+    .locator('.jig-week-strip-date:not([aria-current="date"])')
+    .first()
+    .click();
+
+  await expect(workspace).toBeVisible();
+  await expect(workspace.getByLabel("Title")).toHaveValue(
+    "Unsaved draft identity",
+  );
+  await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  expect((await taskByTitle(page, "Draft identity contract")).title).toBe(
+    "Draft identity contract",
+  );
+});
+
+test("real pointer drag moves a Task across dated Planner drop zones", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -230,7 +257,6 @@ test("real pointer drag moves a Task across dated Week drop zones", async ({
 
   await createTask(page, "Pointer drag contract", today);
   await page.reload();
-  await page.getByRole("button", { name: "Week", exact: true }).click();
 
   const card = await taskCard(page, "Pointer drag contract");
   const destination = page.locator(
@@ -239,7 +265,8 @@ test("real pointer drag moves a Task across dated Week drop zones", async ({
   await expect(card).toBeVisible();
   await expect(destination).toBeVisible();
 
-  const sourceBox = await card.boundingBox();
+  const dragHandle = card.locator(".jig-task-drag-handle");
+  const sourceBox = await dragHandle.boundingBox();
   const destinationBox = await destination.boundingBox();
   expect(sourceBox).not.toBeNull();
   expect(destinationBox).not.toBeNull();
@@ -313,10 +340,14 @@ test("deletion requires confirmation and removes the canonical Task", async ({
   await createTask(page, "Delete contract task", today);
   await page.reload();
 
-  await runTaskAction(page, "Delete contract task", "Edit");
-  const editor = page.getByRole("dialog");
-  await editor
-    .getByRole("button", { name: "Delete task…" })
+  const deleteCard = await taskCard(page, "Delete contract task");
+  await deleteCard.click();
+  const inspector = page.getByRole("dialog", {
+    name: "Delete contract task",
+  });
+  await expect(inspector).toBeVisible();
+  await inspector
+    .getByRole("button", { name: "Delete…", exact: true })
     .click();
 
   const confirmation = page.getByRole("alertdialog");
@@ -343,18 +374,13 @@ test("deletion requires confirmation and removes the canonical Task", async ({
     .toBe(false);
 });
 
-test("narrow Week reflows to one selected attention list and Today is a Day shortcut", async ({
+test("narrow Planner reflows to one selected-date list and Today remains a shortcut", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
   await createTask(page, "Narrow selected task", today);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator(".jig-mobile-destination-trigger").click();
-  await page
-    .locator(".jig-primary-nav")
-    .getByRole("button", { name: "Week", exact: true })
-    .click();
 
   await expect(page.locator(".jig-week-board")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
@@ -366,15 +392,14 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(page.locator(".jig-mobile-destination-trigger")).toHaveText(
-    /Day/,
-  );
   await expect(
     page
       .locator(".jig-task-card")
       .filter({ hasText: "Narrow selected task" })
       .first(),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Day", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Week", exact: true })).toHaveCount(0);
 });
 
 test("reduced motion preserves non-drag movement semantics", async ({
@@ -409,7 +434,7 @@ test("reduced motion preserves non-drag movement semantics", async ({
   ).toHaveCSS("transition-property", "none");
 });
 
-test("long Week columns keep sticky date controls reachable while tasks scroll", async ({
+test("long Planner columns keep sticky date controls reachable while tasks scroll", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -417,7 +442,6 @@ test("long Week columns keep sticky date controls reachable while tasks scroll",
     await createTask(page, `Long list task ${index + 1}`, today);
   }
   await page.reload();
-  await page.getByRole("button", { name: "Week", exact: true }).click();
 
   const column = page.locator(`[data-date="${today}"]`);
   await expect(column).toBeVisible();

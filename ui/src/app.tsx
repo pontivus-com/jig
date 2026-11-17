@@ -4,13 +4,8 @@ import {
   Banner,
   Button,
   LayerProvider,
-  SideNav,
-  SideNavItem,
-  useAppShellMobile,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
-import jigLogoLightUrl from "../../assets/jig-logo.svg";
-import jigLogoDarkUrl from "../../assets/jig-logo-on-dark.svg";
 import {
   useCallback,
   useEffect,
@@ -19,15 +14,21 @@ import {
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
   addCivilDays,
-  completedForScheduledDate,
-  outstandingForDate,
+  startOfWeekMonday,
+  weekDates,
 } from "../../src/core/planning";
-import type { CanonicalState } from "../../src/shell/sqlite";
+import type {
+  CanonicalState,
+  CommandResult,
+} from "../../src/shell/sqlite";
 import type {
   Diagnostics,
   ServiceStatus,
 } from "../../src/shell/http";
-import { DayView } from "./day";
+import {
+  draftFor,
+  type TaskDraft,
+} from "./task-editor";
 import { HistoryView } from "./history";
 import {
   isStaleRevision,
@@ -37,25 +38,58 @@ import {
   submitTaskCommand,
   triggerSync,
 } from "./http";
+import { Planner } from "./planner";
+import {
+  PlannerHeader,
+  type Destination,
+} from "./planner-header";
 import { ReminderMonitor } from "./reminder";
 import {
   SettingsView,
   type ThemePreference,
 } from "./settings";
 import {
-  MoveTaskDialog,
-  TaskEditor,
-} from "./task-editor";
-import {
+  formatPlannerWeekRange,
   millisecondsUntilNextLocalDay,
   todayCivilDate,
 } from "./dates";
-import { WeekView } from "./week";
+import {
+  TaskWorkspaceBottomSheet,
+  TaskWorkspaceDrawer,
+  type TaskWorkspaceMode,
+} from "./task-workspace";
+import { useLayoutMode } from "./use-layout-mode";
 import { jigTheme } from "./jig.js";
 
-type Destination = "week" | "day" | "history" | "settings";
+interface PlannerState {
+  readonly displayedWeekStart: string;
+  readonly selectedDate: string;
+}
+
+type TaskWorkspaceState =
+  | { readonly mode: "closed" }
+  | { readonly mode: "view"; readonly taskId: string }
+  | {
+      readonly mode: "edit";
+      readonly taskId: string;
+      readonly draft: TaskDraft;
+    }
+  | {
+      readonly mode: "create";
+      readonly originatingDate: string;
+      readonly draft: TaskDraft;
+    };
 
 const THEME_STORAGE_KEY = "jig-theme";
+
+function initialPlannerState(): PlannerState {
+  const today = todayCivilDate();
+  return {
+    displayedWeekStart: startOfWeekMonday(today),
+    selectedDate: today,
+  };
+}
+
 function savedThemePreference(): ThemePreference {
   try {
     const value = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -86,76 +120,17 @@ function repositoryStatusLabel(status: ServiceStatus | null): string {
   }
 }
 
-function destinationLabel(destination: Destination): string {
-  switch (destination) {
-    case "week":
-      return "Week";
-    case "day":
-      return "Day";
-    case "history":
-      return "History";
-    case "settings":
-      return "Settings";
-  }
-}
-
-function ResponsiveFrame({
-  destination,
-  statusControl,
-  onToday,
-  children,
-}: Readonly<{
-  destination: Destination;
-  statusControl: React.ReactNode;
-  onToday: () => void;
-  children: (isNarrow: boolean) => React.ReactNode;
-}>): React.ReactElement {
-  const { isMobile, openMobileNav } = useAppShellMobile();
-
-  return (
-    <div className="jig-content-frame">
-      {isMobile ? (
-        <>
-          <header className="jig-mobile-header">
-            <span className="jig-mobile-brand">Jig</span>
-            {statusControl}
-          </header>
-          <div className="jig-mobile-surface-nav">
-            <Button
-              label={destinationLabel(destination)}
-              variant="ghost"
-              size="sm"
-              endContent={<span aria-hidden="true">⌄</span>}
-              onClick={openMobileNav}
-              className="jig-mobile-destination-trigger"
-            />
-            {destination === "day" || destination === "week" ? (
-              <Button
-                label="Today"
-                variant="secondary"
-                size="sm"
-                onClick={onToday}
-                className="jig-mobile-today-control"
-              />
-            ) : null}
-          </div>
-        </>
-      ) : null}
-      <div className="jig-content">{children(isMobile)}</div>
-    </div>
-  );
-}
-
-function ResponsiveTaskEditor(
-  props: Omit<React.ComponentProps<typeof TaskEditor>, "isNarrow">,
-): React.ReactElement {
-  const { isMobile } = useAppShellMobile();
-  return <TaskEditor {...props} isNarrow={isMobile} />;
+function workspaceTaskId(state: TaskWorkspaceState): string | null {
+  return state.mode === "view" || state.mode === "edit"
+    ? state.taskId
+    : null;
 }
 
 export function App(): React.ReactElement {
-  const [destination, setDestination] = useState<Destination>("day");
-  const [selectedDate, setSelectedDate] = useState(todayCivilDate);
+  const layoutMode = useLayoutMode();
+  const [destination, setDestination] = useState<Destination>("planner");
+  const [plannerState, setPlannerState] =
+    useState<PlannerState>(initialPlannerState);
   const [observedToday, setObservedToday] = useState(todayCivilDate);
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
@@ -165,23 +140,13 @@ export function App(): React.ReactElement {
   const [isOperating, setIsOperating] = useState(false);
   const [themePreference, setThemePreference] =
     useState<ThemePreference>(savedThemePreference);
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editorTaskId, setEditorTaskId] = useState<string | null>(null);
-  const [editorDate, setEditorDate] = useState(selectedDate);
-  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [workspace, setWorkspace] = useState<TaskWorkspaceState>({
+    mode: "closed",
+  });
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
 
   const tasks = canonical?.tasks ?? [];
-  const editorTask =
-    editorTaskId === null
-      ? null
-      : tasks.find((task) => task.id === editorTaskId) ?? null;
-  const moveTask =
-    moveTaskId === null
-      ? null
-      : tasks.find((task) => task.id === moveTaskId) ?? null;
+  const selectedTaskId = workspaceTaskId(workspace);
   const selectedTask =
     selectedTaskId === null
       ? null
@@ -190,7 +155,7 @@ export function App(): React.ReactElement {
     deleteTaskId === null
       ? null
       : tasks.find((task) => task.id === deleteTaskId) ?? null;
-
+  const displayedDates = weekDates(plannerState.displayedWeekStart);
 
   const refreshCanonical = useCallback(async (): Promise<void> => {
     const next = await readCanonicalTasks();
@@ -244,8 +209,13 @@ export function App(): React.ReactElement {
         return false;
       }
 
-      setSelectedDate((current) =>
-        current === observedToday ? nextToday : current,
+      setPlannerState((current) =>
+        current.selectedDate === observedToday
+          ? {
+              displayedWeekStart: startOfWeekMonday(nextToday),
+              selectedDate: nextToday,
+            }
+          : current,
       );
       setObservedToday(nextToday);
 
@@ -294,44 +264,25 @@ export function App(): React.ReactElement {
     };
   }, [observedToday, refreshCanonical]);
 
-  useEffect(() => {
-    if (destination !== "day" || canonical === null) {
-      return;
-    }
-
-    const candidates = [
-      ...outstandingForDate(tasks, selectedDate),
-      ...completedForScheduledDate(tasks, selectedDate),
-    ];
-    if (
-      selectedTaskId !== null &&
-      candidates.some((task) => task.id === selectedTaskId)
-    ) {
-      return;
-    }
-    setSelectedTaskId(candidates[0]?.id ?? null);
-  }, [canonical, destination, selectedDate, selectedTaskId, tasks]);
-
   const runCommand = useCallback(
-    async (command: TaskCommand): Promise<boolean> => {
+    async (command: TaskCommand): Promise<CommandResult | null> => {
       if (canonical === null || isOperating) {
-        return false;
+        return null;
       }
 
       setOperationError(null);
       setIsOperating(true);
       try {
-        await submitTaskCommand(command, canonical.revision);
+        const result = await submitTaskCommand(command, canonical.revision);
         try {
           await refreshCanonical();
         } catch (refreshError) {
           setOperationError(
             `Saved locally, but Jig could not refresh the view: ${errorMessage(refreshError)}. Reload the application.`,
           );
-          return true;
         }
         void readStatus().then(setStatus).catch(() => undefined);
-        return true;
+        return result;
       } catch (error) {
         if (isStaleRevision(error)) {
           try {
@@ -342,11 +293,11 @@ export function App(): React.ReactElement {
           setOperationError(
             "This view was out of date. Jig reloaded canonical Tasks; review your change and submit it again.",
           );
-          return false;
+          return null;
         }
 
         setOperationError(errorMessage(error));
-        return false;
+        return null;
       } finally {
         setIsOperating(false);
       }
@@ -355,12 +306,22 @@ export function App(): React.ReactElement {
   );
 
   const toggleComplete = useCallback(
-    async (task: Task): Promise<boolean> =>
-      runCommand(
-        task.completed_at === null
-          ? { type: "complete", task_id: task.id }
-          : { type: "reopen", task_id: task.id },
-      ),
+    async (task: Task): Promise<boolean> => {
+      const changed =
+        (await runCommand(
+          task.completed_at === null
+            ? { type: "complete", task_id: task.id }
+            : { type: "reopen", task_id: task.id },
+        )) !== null;
+      if (changed) {
+        setWorkspace((current) =>
+          workspaceTaskId(current) === task.id
+            ? { mode: "closed" }
+            : current,
+        );
+      }
+      return changed;
+    },
     [runCommand],
   );
 
@@ -370,33 +331,106 @@ export function App(): React.ReactElement {
       destinationDate: string,
       destinationIndex: number,
     ): Promise<boolean> =>
-      runCommand({
+      (await runCommand({
         type: "move",
         task_id: taskId,
         destination_date: destinationDate,
         destination_index: destinationIndex,
-      }),
+      })) !== null,
     [runCommand],
   );
 
-  const openCreate = useCallback((date: string): void => {
-    setEditorTaskId(null);
-    setEditorDate(date);
+  const selectTask = useCallback((task: Task): void => {
     setOperationError(null);
-    setEditorOpen(true);
+    setWorkspace({ mode: "view", taskId: task.id });
+  }, []);
+
+  const openCreate = useCallback((date: string): void => {
+    setPlannerState((current) => ({
+      ...current,
+      selectedDate: date,
+    }));
+    setOperationError(null);
+    setWorkspace({
+      mode: "create",
+      originatingDate: date,
+      draft: draftFor(null, date),
+    });
   }, []);
 
   const openEdit = useCallback((task: Task): void => {
-    setEditorTaskId(task.id);
-    setEditorDate(task.scheduled_date);
     setOperationError(null);
-    setEditorOpen(true);
+    setWorkspace({
+      mode: "edit",
+      taskId: task.id,
+      draft: draftFor(task, task.scheduled_date),
+    });
   }, []);
 
-  const openMoveToDate = useCallback((task: Task): void => {
-    setMoveTaskId(task.id);
-    setOperationError(null);
-    setMoveDialogOpen(true);
+  const saveWorkspace = useCallback(
+    async (command: TaskCommand): Promise<boolean> => {
+      const result = await runCommand(command);
+      if (result === null || !("task" in result)) {
+        return false;
+      }
+      setWorkspace({ mode: "view", taskId: result.task.id });
+      return true;
+    },
+    [runCommand],
+  );
+
+  const closeWorkspace = useCallback((): void => {
+    setWorkspace({ mode: "closed" });
+  }, []);
+
+  const changeWorkspaceMode = useCallback(
+    (mode: TaskWorkspaceMode | null): void => {
+      setWorkspace((current) => {
+        if (mode === null) {
+          return { mode: "closed" };
+        }
+
+        if (mode === "view") {
+          return current.mode === "view" || current.mode === "edit"
+            ? { mode: "view", taskId: current.taskId }
+            : current;
+        }
+
+        if (mode === "edit") {
+          if (current.mode !== "view" && current.mode !== "edit") {
+            return current;
+          }
+          const task = tasks.find((candidate) => candidate.id === current.taskId);
+          return task === undefined
+            ? current
+            : {
+                mode: "edit",
+                taskId: task.id,
+                draft: draftFor(task, task.scheduled_date),
+              };
+        }
+
+        return current;
+      });
+    },
+    [tasks],
+  );
+
+  const changeWorkspaceDraft = useCallback((draft: TaskDraft): void => {
+    setWorkspace((current) => {
+      if (current.mode === "edit") {
+        return { ...current, draft };
+      }
+      if (current.mode === "create") {
+        return { ...current, draft };
+      }
+      return current;
+    });
+  }, []);
+
+  const navigateDestination = useCallback((next: Destination): void => {
+    setDestination(next);
+    setWorkspace({ mode: "closed" });
   }, []);
 
   const changeTheme = useCallback((value: ThemePreference): void => {
@@ -428,16 +462,35 @@ export function App(): React.ReactElement {
     }
   }, [isOperating, refreshOperationalState]);
 
-  const navigateDate = (amount: number): void => {
-    setSelectedDate((current) => addCivilDays(current, amount));
-  };
+  const previousWeek = useCallback((): void => {
+    setPlannerState((current) => ({
+      displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
+      selectedDate: addCivilDays(current.selectedDate, -7),
+    }));
+  }, []);
 
-  const goToToday = (stayInWeek: boolean): void => {
-    setSelectedDate(todayCivilDate());
-    if (!stayInWeek) {
-      setDestination("day");
-    }
-  };
+  const nextWeek = useCallback((): void => {
+    setPlannerState((current) => ({
+      displayedWeekStart: addCivilDays(current.displayedWeekStart, 7),
+      selectedDate: addCivilDays(current.selectedDate, 7),
+    }));
+  }, []);
+
+  const goToToday = useCallback((): void => {
+    const today = todayCivilDate();
+    setPlannerState({
+      displayedWeekStart: startOfWeekMonday(today),
+      selectedDate: today,
+    });
+  }, []);
+
+  const selectDate = useCallback((date: string): void => {
+    setPlannerState((current) =>
+      weekDates(current.displayedWeekStart).includes(date)
+        ? { ...current, selectedDate: date }
+        : current,
+    );
+  }, []);
 
   const repositoryStatus = status?.repository_status ?? "unknown";
   const statusControl = (
@@ -446,51 +499,13 @@ export function App(): React.ReactElement {
       variant="ghost"
       size="sm"
       icon={<span className="jig-status-dot" aria-hidden="true" />}
-      onClick={() => setDestination("settings")}
+      onClick={() => navigateDestination("settings")}
       className={`jig-status-control jig-status-${repositoryStatus}`}
     />
   );
 
-  const primarySideNav = (
-    <SideNav
-      className="jig-primary-nav"
-      aria-label="Primary"
-      header={
-        <div className="jig-nav-brand" aria-label="Jig">
-          <span className="jig-brand-logo-wrap" aria-hidden="true">
-            <img
-              className="jig-brand-logo jig-brand-logo-light"
-              src={jigLogoLightUrl}
-              alt=""
-            />
-            <img
-              className="jig-brand-logo jig-brand-logo-dark"
-              src={jigLogoDarkUrl}
-              alt=""
-            />
-          </span>
-          <span className="jig-brand-tagline">Schedules attention</span>
-        </div>
-      }
-      footer={
-        <div className="jig-nav-context">
-          <span>Planning data</span>
-          <small>Personal Git repository</small>
-        </div>
-      }
-    >
-      {(["week", "day", "history", "settings"] as const).map((item) => (
-        <SideNavItem
-          key={item}
-          label={destinationLabel(item)}
-          isSelected={destination === item}
-          onClick={() => setDestination(item)}
-        />
-      ))}
-    </SideNav>
-  );
-
-  const durableBanner = operationError !== null ? (
+  const durableBanner =
+    operationError !== null && workspace.mode === "closed" ? (
     <Banner
       status="error"
       title="Jig could not complete the operation"
@@ -518,144 +533,140 @@ export function App(): React.ReactElement {
     />
   ) : null;
 
-  const renderContent = (isNarrow: boolean): React.ReactNode => canonical === null ? (
-    <div className="jig-loading">
-      <h1>Jig</h1>
-      {loadError === null ? (
-        <p>Loading local planning data…</p>
-      ) : (
-        <>
-          <Banner
-            status="error"
-            title="Jig could not load local planning data"
-            description={loadError}
-            collapsible={false}
-          />
-          <Button
-            label="Retry"
-            variant="primary"
-            onClick={() => {
-              void load();
-            }}
-          />
-        </>
-      )}
-    </div>
-  ) : destination === "week" ? (
-    <WeekView
-      tasks={tasks}
-      selectedDate={selectedDate}
-      isNarrow={isNarrow}
-      onSelectDate={setSelectedDate}
-      onPrevious={() => navigateDate(-7)}
-      onToday={() => goToToday(false)}
-      onNext={() => navigateDate(7)}
-      statusControl={isNarrow ? null : statusControl}
-      onAdd={openCreate}
-      onEdit={openEdit}
-      onMoveToDate={openMoveToDate}
-      onToggleComplete={toggleComplete}
-      onMove={moveTaskExact}
-    />
-  ) : destination === "day" ? (
-    <DayView
-      tasks={tasks}
-      selectedDate={selectedDate}
-      isNarrow={isNarrow}
-      onSelectDate={setSelectedDate}
-      onToday={() => goToToday(false)}
-      statusControl={isNarrow ? null : statusControl}
-      selectedTask={selectedTask}
-      onSelectTask={(task) => setSelectedTaskId(task.id)}
-      onDelete={(task) => setDeleteTaskId(task.id)}
-      onAdd={openCreate}
-      onEdit={openEdit}
-      onMoveToDate={openMoveToDate}
-      onToggleComplete={toggleComplete}
-      onMove={moveTaskExact}
-    />
-  ) : destination === "history" ? (
-    <HistoryView
-      tasks={tasks}
-      onEdit={openEdit}
-      onReopen={toggleComplete}
-      onDelete={(task) => setDeleteTaskId(task.id)}
-      statusControl={isNarrow ? null : statusControl}
-    />
-  ) : (
-    <SettingsView
-      themePreference={themePreference}
-      status={status}
-      diagnostics={diagnostics}
-      operationError={operationError}
-      isOperating={isOperating}
-      onThemePreferenceChange={changeTheme}
-      onSync={syncNow}
-      statusControl={isNarrow ? null : statusControl}
-    />
-  );
+  const workspaceMode: TaskWorkspaceMode | null =
+    workspace.mode === "closed" ? null : workspace.mode;
+  const workspaceDate =
+    workspace.mode === "create"
+      ? workspace.originatingDate
+      : selectedTask?.scheduled_date ?? plannerState.selectedDate;
+  const workspaceDraft =
+    workspace.mode === "edit" || workspace.mode === "create"
+      ? workspace.draft
+      : draftFor(selectedTask, workspaceDate);
 
+  const content =
+    canonical === null ? (
+      <div className="jig-loading">
+        <h1>Jig</h1>
+        {loadError === null ? (
+          <p>Loading local planning data…</p>
+        ) : (
+          <>
+            <Banner
+              status="error"
+              title="Jig could not load local planning data"
+              description={loadError}
+              collapsible={false}
+            />
+            <Button
+              label="Retry"
+              variant="primary"
+              onClick={() => {
+                void load();
+              }}
+            />
+          </>
+        )}
+      </div>
+    ) : destination === "planner" ? (
+      <Planner
+        tasks={tasks}
+        displayedDates={displayedDates}
+        selectedDate={plannerState.selectedDate}
+        layoutMode={layoutMode}
+        selectedTask={selectedTask}
+        onSelectDate={selectDate}
+        onSelectTask={selectTask}
+        onAdd={openCreate}
+        onEdit={openEdit}
+        onToggleComplete={toggleComplete}
+        onMove={moveTaskExact}
+      />
+    ) : destination === "history" ? (
+      <HistoryView
+        tasks={tasks}
+        onSelect={selectTask}
+        onEdit={openEdit}
+        onReopen={toggleComplete}
+        onDelete={(task) => setDeleteTaskId(task.id)}
+      />
+    ) : (
+      <SettingsView
+        themePreference={themePreference}
+        status={status}
+        diagnostics={diagnostics}
+        operationError={operationError}
+        isOperating={isOperating}
+        onThemePreferenceChange={changeTheme}
+        onSync={syncNow}
+      />
+    );
 
+  const workspaceSurface =
+    destination === "settings" ? null : layoutMode === "narrow" ? (
+      <TaskWorkspaceBottomSheet
+        mode={workspaceMode}
+        task={workspace.mode === "create" ? null : selectedTask}
+        initiatingDate={workspaceDate}
+        draft={workspaceDraft}
+        externalError={operationError}
+        isSaving={isOperating}
+        onModeChange={changeWorkspaceMode}
+        onDraftChange={changeWorkspaceDraft}
+        onSave={saveWorkspace}
+        onDelete={(task) => setDeleteTaskId(task.id)}
+        onToggleComplete={toggleComplete}
+        onClose={closeWorkspace}
+      />
+    ) : (
+      <TaskWorkspaceDrawer
+        mode={workspaceMode}
+        task={workspace.mode === "create" ? null : selectedTask}
+        initiatingDate={workspaceDate}
+        draft={workspaceDraft}
+        externalError={operationError}
+        isSaving={isOperating}
+        onModeChange={changeWorkspaceMode}
+        onDraftChange={changeWorkspaceDraft}
+        onSave={saveWorkspace}
+        onDelete={(task) => setDeleteTaskId(task.id)}
+        onToggleComplete={toggleComplete}
+        onClose={closeWorkspace}
+      />
+    );
 
   return (
     <Theme theme={jigTheme} mode={themePreference}>
       <LayerProvider>
         <AppShell
           className="jig-app-shell"
-          sideNav={primarySideNav}
-          mobileNav={{
-            breakpoint: "md",
-            hasToggle: false,
-          }}
+          topNav={
+            <PlannerHeader
+              destination={destination}
+              layoutMode={layoutMode}
+              weekLabel={formatPlannerWeekRange(
+                plannerState.displayedWeekStart,
+              )}
+              statusControl={statusControl}
+              onHome={() => navigateDestination("planner")}
+              onPreviousWeek={previousWeek}
+              onToday={goToToday}
+              onNextWeek={nextWeek}
+              onAdd={() => openCreate(plannerState.selectedDate)}
+              onNavigate={navigateDestination}
+            />
+          }
+          mobileNav={false}
           banner={durableBanner ?? undefined}
           contentPadding={0}
           height="fill"
           variant="section"
         >
-          <ResponsiveFrame
-            destination={destination}
-            statusControl={statusControl}
-            onToday={() => goToToday(false)}
-          >
-            {renderContent}
-          </ResponsiveFrame>
-
-          <ResponsiveTaskEditor
-            isOpen={editorOpen}
-            task={editorTask}
-            initiatingDate={editorDate}
-            externalError={operationError}
-            isSaving={isOperating}
-            onOpenChange={setEditorOpen}
-            onSave={runCommand}
-            onDelete={(taskId) =>
-              runCommand({ type: "delete", task_id: taskId })
-            }
-          />
+          <div className="jig-content-frame">
+            <div className="jig-content">{content}</div>
+          </div>
+          {workspaceSurface}
         </AppShell>
-
-        <MoveTaskDialog
-          task={moveTask}
-          isOpen={moveDialogOpen}
-          initialDate={moveTask?.scheduled_date ?? selectedDate}
-          isSaving={isOperating}
-          error={operationError}
-          onOpenChange={setMoveDialogOpen}
-          onMove={async (destinationDate) => {
-            if (moveTask === null) {
-              return false;
-            }
-            const destinationIndex = outstandingForDate(
-              tasks,
-              destinationDate,
-            ).filter((task) => task.id !== moveTask.id).length;
-            return moveTaskExact(
-              moveTask.id,
-              destinationDate,
-              destinationIndex,
-            );
-          }}
-        />
 
         <AlertDialog
           isOpen={deleteTask !== null}
@@ -682,9 +693,14 @@ export function App(): React.ReactElement {
               type: "delete",
               task_id: deleteTask.id,
             });
-            if (deleted) {
+            if (deleted !== null) {
+              const deletedId = deleteTask.id;
               setDeleteTaskId(null);
-              setSelectedTaskId(null);
+              setWorkspace((current) =>
+                workspaceTaskId(current) === deletedId
+                  ? { mode: "closed" }
+                  : current,
+              );
             }
           }}
         />

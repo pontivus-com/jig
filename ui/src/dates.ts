@@ -1,3 +1,4 @@
+import { addCivilDays } from "../../src/core/planning";
 import { assertCivilDate } from "../../src/core/task";
 
 export function todayCivilDate(now = new Date()): string {
@@ -45,4 +46,27 @@ export function formatReminderTime(value: string): string {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+
+export function formatPlannerWeekRange(displayedWeekStart: string): string {
+  assertCivilDate(displayedWeekStart);
+  const end = addCivilDays(displayedWeekStart, 6);
+
+  const startMonth = formatCivilDate(displayedWeekStart, { month: "short" });
+  const endMonth = formatCivilDate(end, { month: "short" });
+  const startYear = formatCivilDate(displayedWeekStart, { year: "numeric" });
+  const endYear = formatCivilDate(end, { year: "numeric" });
+  const startDay = formatCivilDate(displayedWeekStart, { day: "numeric" });
+  const endDay = formatCivilDate(end, { day: "numeric" });
+
+  if (startYear !== endYear) {
+    return `${startDay} ${startMonth} ${startYear}–${endDay} ${endMonth} ${endYear}`;
+  }
+
+  if (startMonth !== endMonth) {
+    return `${startDay} ${startMonth}–${endDay} ${endMonth} ${endYear}`;
+  }
+
+  return `${startDay}–${endDay} ${endMonth} ${endYear}`;
 }

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-label="Jig v1.0.3 desktop Planner structural reference">
+<style>
+text{font-family:Inter,Arial,sans-serif;fill:#152238}.h1{font-size:25px;font-weight:700}.h2{font-size:18px;font-weight:700}.b{font-size:13px;font-weight:600}.s{font-size:11px;font-weight:500}.muted{fill:#657187}.accent{fill:#4f39c8}.line{stroke:#dce3ec;stroke-width:1}
+</style>
+<rect width="1440" height="900" fill="#f7f8fb"/>
+<rect x="0" y="0" width="1440" height="94" fill="#fff" class="line"/>
+<!-- left home -->
+<rect x="28" y="24" width="34" height="34" rx="8" fill="#4f39c8"/><text x="45" y="48" text-anchor="middle" fill="#fff" class="b">✓</text>
+<text x="76" y="50" class="h1">Jig</text>
+<!-- centered week centerpiece -->
+<text x="720" y="28" text-anchor="middle" class="h2">16–22 Nov 2026</text>
+<rect x="630" y="39" width="42" height="38" rx="9" fill="#fff" class="line"/><text x="651" y="64" text-anchor="middle" class="h2">‹</text>
+<rect x="680" y="39" width="80" height="38" rx="9" fill="#fff" class="line"/><text x="720" y="64" text-anchor="middle" class="b">Today</text>
+<rect x="768" y="39" width="42" height="38" rx="9" fill="#fff" class="line"/><text x="789" y="64" text-anchor="middle" class="h2">›</text>
+<!-- right actions -->
+<rect x="930" y="25" width="122" height="44" rx="10" fill="#4f39c8"/><text x="991" y="52" text-anchor="middle" fill="#fff" class="b">+  Add task</text>
+<text x="1084" y="51" class="b">◷  History</text><text x="1188" y="51" class="b">⚙  Settings</text>
+<circle cx="1335" cy="46" r="9" fill="#2c765f"/><text x="1352" y="51" class="b">Synced</text>
+<!-- seven columns -->
+<g transform="translate(12,112)">
+<rect x="0" y="0" width="139" height="742" rx="12" fill="#fff" stroke="#dce3ec"/>
+ <text x="69.5" y="29" text-anchor="middle" class="b">Mon</text>
+ <text x="69.5" y="58" text-anchor="middle" class="h1">16</text>
+ <text x="69.5" y="84" text-anchor="middle" class="s muted">3 tasks</text>
+ <rect x="145" y="0" width="139" height="742" rx="12" fill="#fff" stroke="#dce3ec"/>
+ <text x="214.5" y="29" text-anchor="middle" class="b">Tue</text>
+ <text x="214.5" y="58" text-anchor="middle" class="h1">17</text>
+ <text x="214.5" y="84" text-anchor="middle" class="s muted">4 tasks</text>
+ <rect x="290" y="0" width="139" height="742" rx="12" fill="#fff" stroke="#dce3ec"/>
+ <text x="359.5" y="29" text-anchor="middle" class="b">Wed</text>
+ <text x="359.5" y="58" text-anchor="middle" class="h1">18</text>
+ <text x="359.5" y="84" text-anchor="middle" class="s muted">3 tasks</text>
+ <rect x="435" y="0" width="139" height="742" rx="12" fill="#f1efff" stroke="#7766df"/>
+ <text x="504.5" y="29" text-anchor="middle" class="b">Thu</text>
+ <text x="504.5" y="58" text-anchor="middle" class="h1">19</text>
+ <text x="504.5" y="84" text-anchor="middle" class="s muted">4 tasks</text>
+ <line x1="447" y1="98" x2="562" y2="98" stroke="#4f39c8" stroke-width="3"/><rect x="580" y="0" width="139" height="742" rx="12" fill="#fff" stroke="#dce3ec"/>
+ <text x="649.5" y="29" text-anchor="middle" class="b">Fri</text>
+ <text x="649.5" y="58" text-anchor="middle" class="h1">20</text>
+ <text x="649.5" y="84" text-anchor="middle" class="s muted">2 tasks</text>
+ <rect x="725" y="0" width="139" height="742" rx="12" fill="#fff" stroke="#dce3ec"/>
+ <text x="794.5" y="29" text-anchor="middle" class="b">Sat</text>
+ <text x="794.5" y="58" text-anchor="middle" class="h1">21</text>
+ <text x="794.5" y="84" text-anchor="middle" class="s muted">1 task</text>
+ <rect x="870" y="0" width="139" height="742" rx="12" fill="#fff" stroke="#dce3ec"/>
+ <text x="939.5" y="29" text-anchor="middle" class="b">Sun</text>
+ <text x="939.5" y="58" text-anchor="middle" class="h1">22</text>
+ <text x="939.5" y="84" text-anchor="middle" class="s muted">2 tasks</text>
+ 
+<!-- representative task cards -->
+<g>
+<rect x="10" y="112" width="119" height="74" rx="9" fill="#fff" class="line"/><rect x="15" y="126" width="4" height="35" rx="2" fill="#e24b3b"/><text x="26" y="139" class="b">Review contract</text><text x="26" y="157" class="b">draft</text><text x="26" y="177" class="s muted">◷ 10:00</text>
+<rect x="155" y="112" width="119" height="62" rx="9" fill="#fff" class="line"/><rect x="160" y="126" width="4" height="30" rx="2" fill="#e24b3b"/><text x="171" y="139" class="b">Prepare</text><text x="171" y="157" class="b">presentation</text>
+<rect x="300" y="112" width="119" height="62" rx="9" fill="#fff" class="line"/><rect x="305" y="126" width="4" height="30" rx="2" fill="#e24b3b"/><text x="316" y="139" class="b">Complete</text><text x="316" y="157" class="b">analysis</text>
+<rect x="445" y="112" width="119" height="62" rx="9" fill="#fff" stroke="#4f39c8" stroke-width="2"/><rect x="450" y="126" width="4" height="30" rx="2" fill="#e24b3b"/><text x="461" y="147" class="b">Finalize agreement</text>
+<rect x="445" y="184" width="119" height="62" rx="9" fill="#fff" class="line"/><rect x="450" y="198" width="4" height="30" rx="2" fill="#d79b27"/><text x="461" y="219" class="b">Update risk register</text>
+<rect x="590" y="112" width="119" height="74" rx="9" fill="#fff" class="line"/><rect x="595" y="126" width="4" height="35" rx="2" fill="#e24b3b"/><text x="606" y="139" class="b">Client review</text><text x="606" y="157" class="b">meeting</text><text x="606" y="177" class="s muted">◷ 11:00</text>
+</g>
+<rect x="12" y="690" width="115" height="38" rx="9" fill="#fff" stroke="#dce3ec"/><text x="69.5" y="714" text-anchor="middle" class="b" fill="#152238">+ Add task</text><rect x="157" y="690" width="115" height="38" rx="9" fill="#fff" stroke="#dce3ec"/><text x="214.5" y="714" text-anchor="middle" class="b" fill="#152238">+ Add task</text><rect x="302" y="690" width="115" height="38" rx="9" fill="#fff" stroke="#dce3ec"/><text x="359.5" y="714" text-anchor="middle" class="b" fill="#152238">+ Add task</text><rect x="447" y="690" width="115" height="38" rx="9" fill="#e9e5ff" stroke="#dce3ec"/><text x="504.5" y="714" text-anchor="middle" class="b" fill="#4f39c8">+ Add task</text><rect x="592" y="690" width="115" height="38" rx="9" fill="#fff" stroke="#dce3ec"/><text x="649.5" y="714" text-anchor="middle" class="b" fill="#152238">+ Add task</text><rect x="737" y="690" width="115" height="38" rx="9" fill="#fff" stroke="#dce3ec"/><text x="794.5" y="714" text-anchor="middle" class="b" fill="#152238">+ Add task</text><rect x="882" y="690" width="115" height="38" rx="9" fill="#fff" stroke="#dce3ec"/><text x="939.5" y="714" text-anchor="middle" class="b" fill="#152238">+ Add task</text>
+</g>
+<!-- right workspace -->
+<rect x="1034" y="94" width="406" height="806" fill="#fff" stroke="#dce3ec"/>
+<text x="1064" y="150" class="h1">Finalize agreement</text><text x="1400" y="128" text-anchor="end" class="h2">×</text>
+<line x1="1060" y1="186" x2="1414" y2="186" stroke="#e5e9ef"/>
+<text x="1064" y="226" class="b">Scheduled</text><text x="1252" y="226" class="b">Thu, 19 Nov 2026</text>
+<text x="1064" y="274" class="b">Priority</text><rect x="1250" y="250" width="148" height="36" rx="8" fill="#fff" class="line"/><circle cx="1268" cy="268" r="5" fill="#e24b3b"/><text x="1282" y="273" class="b">High</text>
+<text x="1064" y="322" class="b">Reminder</text><text x="1252" y="322" class="b muted">—</text>
+<text x="1064" y="370" class="b">Reference</text><text x="1252" y="370" class="b muted">—</text>
+<line x1="1060" y1="402" x2="1414" y2="402" stroke="#e5e9ef"/>
+<text x="1064" y="445" class="b">Notes</text><rect x="1060" y="462" width="354" height="98" rx="9" fill="#fafbfc" class="line"/><text x="1078" y="492" class="b">Complete final review and prepare</text><text x="1078" y="513" class="b">the agreement for signature.</text>
+<rect x="1060" y="818" width="82" height="42" rx="9" fill="#fff" class="line"/><text x="1101" y="844" text-anchor="middle" class="b">✎  Edit</text>
+<rect x="1250" y="818" width="118" height="42" rx="9" fill="#fff" stroke="#7766df"/><text x="1309" y="844" text-anchor="middle" class="b" fill="#4f39c8">✓ Complete</text>
+<rect x="1378" y="818" width="38" height="42" rx="9" fill="#fff" stroke="#e24b3b"/><text x="1397" y="844" text-anchor="middle" class="b" fill="#e24b3b">⌫</text>
+</svg>
