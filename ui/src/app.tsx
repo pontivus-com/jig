@@ -588,7 +588,6 @@ export function App(): React.ReactElement {
         onEdit={openEdit}
         onReopen={toggleComplete}
         onDelete={(task) => setDeleteTaskId(task.id)}
-        statusControl={null}
       />
     ) : (
       <SettingsView
@@ -599,7 +598,6 @@ export function App(): React.ReactElement {
         isOperating={isOperating}
         onThemePreferenceChange={changeTheme}
         onSync={syncNow}
-        statusControl={null}
       />
     );
 
