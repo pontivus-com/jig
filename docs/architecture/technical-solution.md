@@ -490,6 +490,15 @@ The published v1.0.4 code contains several responsive semantic forks that explai
 
 These are presentation/interaction ownership defects. No Task schema, core movement rule, SQLite, HTTP, Git-sync, reminder, installer or release-tool redesign is required.
 
+The complete narrow/mobile architecture review also identifies boundaries that are already correct and must **not** be over-refactored:
+
+- `TaskActionMenu` is already the single Planner/History Task overflow-menu component. v1.0.5 strengthens its typed item builder and parity tests; it does not introduce a replacement menu abstraction.
+- `TaskWorkspaceContent` is already shared. Desktop Drawer versus narrow BottomSheet is a legitimate responsive presentation-primitive split over the same workspace state/content and remains.
+- `HistoryView` and `SettingsView` are not separate mobile implementations; the same components reflow through CSS.
+- `useLayoutMode` remains justified for the two genuine composition differences above (header anatomy and Drawer/BottomSheet). It must not decide Task capabilities or semantic item sets.
+- TypeScript is already configured with `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Existing assertions in date/HTTP parsers are preceded by runtime validation and are boundary-local; dnd ref assertions are isolated third-party interop. v1.0.5 removes the obsolete `dragHandleRef` assertion with the handle itself, but does not create a broad type-refactor unrelated to the defects.
+
+
 #### JIG-105-SD-01 — React-owned crash-free drag
 
 **Functional owner:** JIG-105-FR-01.
