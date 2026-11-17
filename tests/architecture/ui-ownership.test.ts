@@ -108,7 +108,6 @@ describe("UI ownership architecture", () => {
 
     expect(rawSpacing).toEqual([
       "padding: 20px;",
-      "margin-inline-end: 30px;",
       "gap: 30px;",
       "gap: var(--spacing-7) 30px;",
       "padding: 0 calc(var(--spacing-3) + var(--spacing-0-5)) calc(5rem + env(safe-area-inset-bottom, 0px));",
@@ -165,11 +164,13 @@ describe("UI ownership architecture", () => {
     expect(app).not.toContain("mobileNav={false}");
   });
 
-  it("uses public Astryx menu, layout and responsive dialog contracts", () => {
+  it("uses public Astryx menu, layout and master-detail workspace contracts", () => {
+    const app = source("ui/src/app.tsx");
     const taskRow = source("ui/src/task-row.tsx");
     const history = source("ui/src/history.tsx");
     const settings = source("ui/src/settings.tsx");
     const editor = source("ui/src/task-editor.tsx");
+    const workspace = source("ui/src/task-workspace.tsx");
     const week = source("ui/src/week.tsx");
     const day = source("ui/src/day.tsx");
 
@@ -179,10 +180,22 @@ describe("UI ownership architecture", () => {
     expect(history).not.toContain("jig-task-menu-panel");
     expect(settings).toContain("<Section");
     expect(settings).toContain("<VStack");
-    expect(editor).toContain('variant={isNarrow ? "fullscreen" : "standard"}');
-    expect(editor).toContain("endContent={");
+    expect(editor).not.toContain("<Dialog");
     expect(editor).toContain("FieldLabel");
     expect(editor).toContain("isGroupLabel");
+    expect(workspace).toContain("<Drawer");
+    expect(workspace).toContain("hasScrim={false}");
+    expect(workspace).toContain("<DrawerHeader");
+    expect(workspace).toContain("<Layout");
+    expect(app).not.toContain("MoveTaskDialog");
+    expect(app).not.toContain("TaskEditor");
+    expect(app).toContain('icon: "calendar"');
+    expect(app).toContain('icon: "viewColumns"');
+    expect(app).toContain('icon: "clock"');
+    expect(app).toContain('icon: "wrench"');
+    expect(app.indexOf('{ destination: "day"')).toBeLessThan(
+      app.indexOf('{ destination: "week"'),
+    );
     expect(week).toContain('elevation="med"');
     expect(day).toContain('elevation="med"');
   });
