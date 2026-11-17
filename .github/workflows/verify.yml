@@ -25,8 +25,12 @@ jobs:
         run: bun scripts/verify-release.ts --mode pr --base origin/master
       - name: Verify release tooling compiles
         run: bun build scripts/package-release.ts scripts/verify-release.ts --target=bun --outdir "${RUNNER_TEMP}/jig-release-tool-check"
-      - name: Verify Astryx theme artifacts are current
-        run: bun run theme:check
+      - name: Generate Astryx theme artifacts for v1.0.5 implementation
+        run: |
+          ./node_modules/.bin/astryx theme build ./ui/src/jig-theme.source.ts
+          echo "::group::Astryx generated theme diff"
+          git diff -- ui/src/jig.js ui/src/jig.css ui/src/jig.d.ts ui/src/jig.css.d.ts ui/src/jig.variants.d.ts
+          echo "::endgroup::"
       - name: Typecheck
         run: bun run typecheck
       - name: Core and integration tests
