@@ -861,6 +861,17 @@ Community palette values are copied once into committed theme-authoring constant
 - Catppuccin: https://catppuccin.com/palette/ and https://github.com/catppuccin/palette — Latte is the light flavor; Mocha is the darkest/original dark flavor; palette repository is MIT.
 - Tokyo Night: https://github.com/folke/tokyonight.nvim — use its Night palette and official Day transformation; upstream repository is Apache-2.0.
 
+**Reviewed provenance snapshot (2026-11-18):**
+
+| Family | Reviewed authority |
+|---|---|
+| Gruvbox | `colors/gruvbox.vim` blob `66246fba24fd49eeb50dd833094d272f0bbab640`; README blob `008de69c071f2b783b8822739e0d6258dbde18c4`. The source itself defaults `gruvbox_contrast_light` and `gruvbox_contrast_dark` to `medium`. |
+| Dracula | `content/spec.mdx` blob `34a22aa05be158b5524a7355c8e39f548a877e8a`, defining Dracula Classic + Alucard Classic and its accessibility requirements. |
+| Solarized | canonical README/palette blob `d18ee9450251ea1b9a02ebd4d6fce022df9eb5e4`, including the exact base/accent values and Light/Dark rebase. |
+| Nord | official Colors and Palettes documentation, site version `v0.23.0` as reviewed on 2026-11-18; use the documented `nord0..nord15` semantic palette, not a third-party port. |
+| Catppuccin | official `palette.json` version `1.8.0`, blob `2a5d25cb0b00033bb049d11ab12c8bed478bf4e8`; select Latte and Mocha only. |
+| Tokyo Night | `storm.lua` blob `dfba7a1b2277628e6a9b87ad4a1dad8387b4d2f6`, `night.lua` blob `09ea61be78bf57946bf429de17973ceff19e8195`, and `day.lua` blob `653a12e652ea3a5756e50e071a01da528818c356`. Author the resulting Day/Night constants into Jig; do not execute Lua or fetch upstream at runtime/build time. |
+
 **Theme build and loading.** Every Jig-owned theme source is compiled ahead of time with the pinned `@astryxdesign/cli@0.7.13`; runtime code imports built theme objects only. Extend `theme:check` to enumerate the explicit 14-source manifest and run the CLI `--check` for each Jig-owned compiled theme. Generated CSS for all fourteen themes is imported once before Jig composition CSS; its `data-astryx-theme` scoping means inactive themes do not paint the application. Do not dynamically inject unbuilt themes at runtime and do not create one stylesheet of feature-level overrides per theme.
 
 **No plugin subsystem.** v1.0.6 has no arbitrary JSON theme import, user-authored palette loader, marketplace, runtime theme discovery or external theme API.
