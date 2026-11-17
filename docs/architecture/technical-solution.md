@@ -363,10 +363,14 @@ grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 
 Left zone is the Jig home affordance; right zone contains Add task, an adjacent Planner/History/Settings navigation group, and compact sync status; the center zone is therefore page-centered regardless of unequal side content. Planner is explicit in this group and receives the governed neutral active-destination treatment when active.
 
-The center zone is a vertical stack:
+For v1.0.5 the center zone is one inline temporal group, superseding the earlier vertical stack:
 
-1. active week range text;
-2. a single grouped control row: Previous-week chevron, Today, Next-week chevron.
+1. Previous-week IconButton;
+2. compact active week range text;
+3. Next-week IconButton;
+4. Today Button/IconButton with an accessible label.
+
+The range remains informational. The one-row group is the only geometry compatible with the governed 44px header without clipping, private overrides or absolute-position compensation.
 
 The range label is not an interactive element and must not sit between the chevrons. Buttons use Astryx Button/IconButton with explicit accessible labels (“Previous week”, “Today”, “Next week”).
 
@@ -626,9 +630,9 @@ The header is a thin application bar, not a second surface/card.
 
 - Desktop header background resolves to the same application/body background as the surrounding shell. Do not use `--color-background-surface`, muted gray fill, radius, shadow or framed container for the header.
 - One `border-block-end: var(--border-width) solid var(--color-border)` is the only persistent header chrome.
-- Existing semantics remain on the bar: canonical Jig Home wordmark at left; centered Planner week range + Previous/Today/Next; Add task + Planner/History/Settings + synchronization state at right.
+- Existing semantics remain on the bar: canonical Jig Home wordmark at left; one centered inline temporal group `Previous · compact week range · Next · Today`; Add task + Planner/History/Settings + synchronization state at right.
 - Desktop: target rendered height ~44px, hard maximum `2.75rem` — approximately half the shipped v1.0.4 `5.5rem` minimum. Use compact token padding and `sm` controls; do not preserve excess vertical breathing room.
-- Narrow: target rendered height ~56px, hard maximum `3.5rem` — approximately half the shipped v1.0.4 `7rem` minimum. Use compact token gaps and `sm` Astryx controls; it follows the same flat-background/hairline principle.
+- Narrow: target rendered height ~56px, hard maximum `3.5rem` — approximately half the shipped v1.0.4 `7rem` minimum. Render one row: compact complete Jig wordmark, Previous, compact range, Next, Today, Add, compact sync state and hamburger. Use `sm`/icon-only Astryx controls where horizontal density requires it, with accessible labels/tooltips; it follows the same flat-background/hairline principle.
 - Planner/History/Settings share the same outer height within each layout.
 - Remove the 5.5rem/7rem minimums and replace them with the explicit 2.75rem/3.5rem maxima rather than offsetting them with negative margins or private Astryx overrides.
 - The shared destination definition supplies visible semantic icons to desktop Buttons and narrow menu items; header flattening must not remove any action, label, icon or state.
