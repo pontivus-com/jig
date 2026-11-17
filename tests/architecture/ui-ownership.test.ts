@@ -25,6 +25,9 @@ describe("UI ownership architecture", () => {
     expect(app).toContain("<AppShell");
     expect(app).toContain("sideNav={primarySideNav}");
     expect(app).toContain("mobileNav={{");
+    expect(app).toContain("useAppShellMobile");
+    expect(app).not.toContain("matchMedia");
+    expect(app).not.toContain("NARROW_MEDIA");
     expect(app).toContain("<SideNav");
     expect(app).toContain("<SideNavItem");
     expect(app).not.toContain('className="jig-shell"');
