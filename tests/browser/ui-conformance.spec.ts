@@ -422,12 +422,13 @@ test("mobile editor uses the governed 414×980 framed hierarchy", async ({
     expectNear(frame.height, 956);
   }
 
-  const title = await page.getByLabel("Title").boundingBox();
-  const date = await page.getByLabel("Date").boundingBox();
-  const context = await page.getByLabel("Context").boundingBox();
-  const reminder = await page.getByLabel("Reminder").boundingBox();
-  const reference = await page.getByLabel("Reference").boundingBox();
-  const notes = await page.getByLabel("Notes").boundingBox();
+  const editor = page.locator(".jig-editor-mobile-frame");
+  const title = await editor.getByLabel("Title", { exact: true }).first().boundingBox();
+  const date = await editor.getByLabel("Date", { exact: true }).first().boundingBox();
+  const context = await editor.getByLabel("Context", { exact: true }).first().boundingBox();
+  const reminder = await editor.getByLabel("Reminder", { exact: true }).first().boundingBox();
+  const reference = await editor.getByLabel("Reference", { exact: true }).first().boundingBox();
+  const notes = await editor.getByLabel("Notes", { exact: true }).first().boundingBox();
   const fields = [title, date, context, reminder, reference, notes];
   expect(fields.every((box) => box !== null)).toBe(true);
   if (fields.every((box) => box !== null)) {
