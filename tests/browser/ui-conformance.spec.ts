@@ -1,3 +1,4 @@
+import { mkdir, rename } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import {
   apiCommand,
@@ -393,4 +394,183 @@ test("History keeps its destination active while using the same editable workspa
   await expect(page.getByRole("dialog", { name: "History detail contract" })).toBeVisible();
   await expect(page.getByRole("button", { name: "History", exact: true }))
     .toHaveAttribute("aria-current", "page");
+});
+
+
+const V104_EVIDENCE_OUTPUT = "v1.0.4-evidence-output";
+const V104_REMOTE = "/tmp/jig-playwright-remote.git";
+const V104_OFFLINE_REMOTE = "/tmp/jig-playwright-remote.offline.git";
+
+async function captureV104(page: Page, name: string): Promise<void> {
+  await page.screenshot({
+    path: `${V104_EVIDENCE_OUTPUT}/${name}.png`,
+    fullPage: true,
+    animations: "disabled",
+  });
+}
+
+async function repositoryStatusForEvidence(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const response = await fetch("/api/v1/status");
+    if (!response.ok) {
+      throw new Error(`GET /status failed: ${response.status}`);
+    }
+    const body = (await response.json()) as { repository_status: string };
+    return body.repository_status;
+  });
+}
+
+test("temporary v1.0.4 visual evidence capture", async ({ page }) => {
+  test.setTimeout(90_000);
+  await mkdir(V104_EVIDENCE_OUTPUT, { recursive: true });
+
+  const today = await browserCivilDate(page);
+  const tomorrow = await browserCivilDate(page, 1);
+  const inTwoDays = await browserCivilDate(page, 2);
+
+  await apiCommand(page, {
+    type: "create",
+    title: "Review contract changes",
+    scheduled_date: today,
+    priority: "HIGH",
+    context: "Client Alpha",
+    reminder_time: "10:30",
+    reference: "https://example.com/matter/alpha",
+    note: null,
+  });
+  await apiCommand(page, {
+    type: "create",
+    title: "Prepare implementation notes",
+    scheduled_date: today,
+    priority: "NORMAL",
+    context: "Jig",
+    reminder_time: null,
+    reference: null,
+    note: "Keep the functional core boundary explicit.",
+  });
+  await apiCommand(page, {
+    type: "create",
+    title: "Follow up with counsel",
+    scheduled_date: tomorrow,
+    priority: "LOW",
+    context: "Client Alpha",
+    reminder_time: null,
+    reference: null,
+    note: null,
+  });
+  await apiCommand(page, {
+    type: "create",
+    title: "Archive completed brief",
+    scheduled_date: inTwoDays,
+    priority: "NORMAL",
+    context: null,
+    reminder_time: null,
+    reference: null,
+    note: null,
+  });
+
+  await page.reload();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await captureV104(page, "desktop-planner-light");
+
+  await page.getByText("Prepare implementation notes", { exact: true }).click();
+  const taskWorkspace = page.getByRole("dialog", {
+    name: "Prepare implementation notes",
+  });
+  await expect(taskWorkspace).toBeVisible();
+  await captureV104(page, "desktop-planner-task-drawer");
+  await taskWorkspace.getByRole("button", { name: "Close", exact: true }).click();
+
+  const dragCard = page
+    .getByText("Review contract changes", { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  const dragBody = dragCard.locator(".jig-task-body");
+  const destination = page.locator(`[data-date="${tomorrow}"]`);
+  const sourceBox = await dragBody.boundingBox();
+  const destinationBox = await destination.boundingBox();
+  if (sourceBox === null || destinationBox === null) {
+    throw new Error("Evidence drag geometry unavailable");
+  }
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    destinationBox.x + destinationBox.width / 2,
+    destinationBox.y + Math.min(120, destinationBox.height / 2),
+    { steps: 12 },
+  );
+  await captureV104(page, "desktop-planner-drag-target");
+  await page.mouse.up();
+
+  await page.evaluate(() => localStorage.setItem("jig-theme", "dark"));
+  await page.reload();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await captureV104(page, "desktop-planner-dark");
+
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await captureV104(page, "desktop-history");
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await captureV104(page, "desktop-settings");
+
+  await page.evaluate(() => localStorage.setItem("jig-theme", "light"));
+  await page.reload();
+  await page.getByRole("button", { name: "Planner", exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await captureV104(page, "mobile-planner");
+
+  await page.getByText("Prepare implementation notes", { exact: true }).click();
+  const bottomSheet = page.getByRole("dialog", {
+    name: "Prepare implementation notes",
+  });
+  await expect(bottomSheet).toBeVisible();
+  await captureV104(page, "mobile-task-bottom-sheet");
+  await bottomSheet.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await rename(V104_REMOTE, V104_OFFLINE_REMOTE);
+  try {
+    await apiCommand(page, {
+      type: "create",
+      title: "Locally safe during outage",
+      scheduled_date: today,
+      priority: "NORMAL",
+      context: null,
+      reminder_time: null,
+      reference: null,
+      note: null,
+    });
+    await expect
+      .poll(() => repositoryStatusForEvidence(page), { timeout: 10_000 })
+      .toMatch(/^(retrying|sync-issue)$/);
+    await page.reload();
+    await captureV104(page, "sync-issue");
+  } finally {
+    await rename(V104_OFFLINE_REMOTE, V104_REMOTE);
+  }
+
+  await page.getByText("Prepare implementation notes", { exact: true }).click();
+  const failureWorkspace = page.getByRole("dialog", {
+    name: "Prepare implementation notes",
+  });
+  await expect(failureWorkspace).toBeVisible();
+  await page.route("**/api/v1/commands", async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Evidence local save failure" }),
+    });
+  });
+  await failureWorkspace.getByLabel("Notes").fill(
+    "This change must not persist.",
+  );
+  await failureWorkspace
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await expect(failureWorkspace.getByRole("alert")).toContainText(
+    "Evidence local save failure",
+  );
+  await captureV104(page, "local-save-failure");
 });
