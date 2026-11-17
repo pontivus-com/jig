@@ -26,14 +26,23 @@ function weekHeading(dates: readonly string[], fallback: string): string {
     return `Week of ${firstDay}–${lastDay} ${lastMonth}`;
   }
 
-  return `Week of ${formatCivilDate(first, {
+  const firstLabel = formatCivilDate(first, {
     month: "short",
     day: "numeric",
-  })} – ${formatCivilDate(last, {
-    month: "short",
-    day: "numeric",
-    year: firstYear === lastYear ? undefined : "numeric",
-  })}`;
+  });
+  const lastLabel =
+    firstYear === lastYear
+      ? formatCivilDate(last, {
+          month: "short",
+          day: "numeric",
+        })
+      : formatCivilDate(last, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+
+  return `Week of ${firstLabel} – ${lastLabel}`;
 }
 import { DateStrip } from "./date-strip";
 import { SortableTaskRow } from "./task-row";
