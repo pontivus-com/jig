@@ -6,6 +6,7 @@ import {
   LayerProvider,
   SideNav,
   SideNavItem,
+  useAppShellMobile,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
 import jigLogoLightUrl from "../../assets/jig-logo.svg";
@@ -55,8 +56,6 @@ import { jigTheme } from "./theme";
 type Destination = "week" | "day" | "history" | "settings";
 
 const THEME_STORAGE_KEY = "jig-theme";
-const NARROW_MEDIA = "(max-width: 47.999rem)";
-
 function savedThemePreference(): ThemePreference {
   try {
     const value = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -64,22 +63,6 @@ function savedThemePreference(): ThemePreference {
   } catch {
     return "system";
   }
-}
-
-function useNarrowLayout(): boolean {
-  const [isNarrow, setIsNarrow] = useState(
-    () => window.matchMedia(NARROW_MEDIA).matches,
-  );
-
-  useEffect(() => {
-    const media = window.matchMedia(NARROW_MEDIA);
-    const update = (): void => setIsNarrow(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-
-  return isNarrow;
 }
 
 function errorMessage(error: unknown): string {
@@ -116,6 +99,60 @@ function destinationLabel(destination: Destination): string {
   }
 }
 
+function ResponsiveFrame({
+  destination,
+  statusControl,
+  onToday,
+  children,
+}: Readonly<{
+  destination: Destination;
+  statusControl: React.ReactNode;
+  onToday: () => void;
+  children: (isNarrow: boolean) => React.ReactNode;
+}>): React.ReactElement {
+  const { isMobile, openMobileNav } = useAppShellMobile();
+
+  return (
+    <div className="jig-content-frame">
+      {isMobile ? (
+        <>
+          <header className="jig-mobile-header">
+            <span className="jig-mobile-brand">Jig</span>
+            {statusControl}
+          </header>
+          <div className="jig-mobile-surface-nav">
+            <Button
+              label={destinationLabel(destination)}
+              variant="ghost"
+              size="sm"
+              endContent={<span aria-hidden="true">⌄</span>}
+              onClick={openMobileNav}
+              className="jig-mobile-destination-trigger"
+            />
+            {destination === "day" || destination === "week" ? (
+              <Button
+                label="Today"
+                variant="secondary"
+                size="sm"
+                onClick={onToday}
+                className="jig-mobile-today-control"
+              />
+            ) : null}
+          </div>
+        </>
+      ) : null}
+      <div className="jig-content">{children(isMobile)}</div>
+    </div>
+  );
+}
+
+function ResponsiveTaskEditor(
+  props: Omit<React.ComponentProps<typeof TaskEditor>, "isNarrow">,
+): React.ReactElement {
+  const { isMobile } = useAppShellMobile();
+  return <TaskEditor {...props} isNarrow={isMobile} />;
+}
+
 export function App(): React.ReactElement {
   const [destination, setDestination] = useState<Destination>("day");
   const [selectedDate, setSelectedDate] = useState(todayCivilDate);
@@ -135,8 +172,6 @@ export function App(): React.ReactElement {
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const isNarrow = useNarrowLayout();
 
   const tasks = canonical?.tasks ?? [];
   const editorTask =
@@ -448,43 +483,11 @@ export function App(): React.ReactElement {
           key={item}
           label={destinationLabel(item)}
           isSelected={destination === item}
-          onClick={() => {
-            setDestination(item);
-            setMobileNavOpen(false);
-          }}
+          onClick={() => setDestination(item)}
         />
       ))}
     </SideNav>
   );
-
-  const mobileHeader = isNarrow ? (
-    <header className="jig-mobile-header">
-      <span className="jig-mobile-brand">Jig</span>
-      {statusControl}
-    </header>
-  ) : null;
-
-  const mobileSurfaceNav = isNarrow ? (
-    <div className="jig-mobile-surface-nav">
-      <Button
-        label={destinationLabel(destination)}
-        variant="ghost"
-        size="sm"
-        endContent={<span aria-hidden="true">⌄</span>}
-        onClick={() => setMobileNavOpen(true)}
-        className="jig-mobile-destination-trigger"
-      />
-      {destination === "day" || destination === "week" ? (
-        <Button
-          label="Today"
-          variant="secondary"
-          size="sm"
-          onClick={() => goToToday(false)}
-          className="jig-mobile-today-control"
-        />
-      ) : null}
-    </div>
-  ) : null;
 
   const durableBanner = operationError !== null ? (
     <Banner
@@ -514,7 +517,7 @@ export function App(): React.ReactElement {
     />
   ) : null;
 
-  const content = canonical === null ? (
+  const renderContent = (isNarrow: boolean): React.ReactNode => canonical === null ? (
     <div className="jig-loading">
       <h1>Jig</h1>
       {loadError === null ? (
@@ -604,34 +607,33 @@ export function App(): React.ReactElement {
           mobileNav={{
             breakpoint: "md",
             hasToggle: false,
-            isOpen: mobileNavOpen,
-            onOpenChange: setMobileNavOpen,
           }}
           banner={durableBanner ?? undefined}
           contentPadding={0}
           height="fill"
           variant="section"
         >
-          <div className="jig-content-frame">
-            {mobileHeader}
-            {mobileSurfaceNav}
-            <div className="jig-content">{content}</div>
-          </div>
-        </AppShell>
+          <ResponsiveFrame
+            destination={destination}
+            statusControl={statusControl}
+            onToday={() => goToToday(false)}
+          >
+            {renderContent}
+          </ResponsiveFrame>
 
-        <TaskEditor
-          isOpen={editorOpen}
-          isNarrow={isNarrow}
-          task={editorTask}
-          initiatingDate={editorDate}
-          externalError={operationError}
-          isSaving={isOperating}
-          onOpenChange={setEditorOpen}
-          onSave={runCommand}
-          onDelete={(taskId) =>
-            runCommand({ type: "delete", task_id: taskId })
-          }
-        />
+          <ResponsiveTaskEditor
+            isOpen={editorOpen}
+            task={editorTask}
+            initiatingDate={editorDate}
+            externalError={operationError}
+            isSaving={isOperating}
+            onOpenChange={setEditorOpen}
+            onSave={runCommand}
+            onDelete={(taskId) =>
+              runCommand({ type: "delete", task_id: taskId })
+            }
+          />
+        </AppShell>
 
         <MoveTaskDialog
           task={moveTask}
