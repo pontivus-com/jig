@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.4 UX/UI realization v0.11, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for complete state-color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus, one directly editable Task workspace, date-header Add, no selected-day state, stacked narrow week composition, full weekday labels, explicit Planner/History/Settings top navigation and a reduced-chrome visual treatment.
+**Status:** Binding v1.0.5 UX/UI realization v0.12, 2026-11-17. It preserves the v1.0.4 single-Planner structure while correcting published v1.0.4 defects in drag stability, required narrow/mobile drag, compact header density, semantic icon/menu normalization, Task-card surface contrast and responsive rendering parity.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–12 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
@@ -157,7 +157,57 @@ The hamburger opens a compact menu/popover containing only History and Settings.
 
 Task create/edit uses a BottomSheet rising from the bottom. Existing Tasks open directly into the full editable field surface. Add uses the same full field surface with its derived or explicit originating date and canonical defaults. Delete confirmation remains the sole blocking Task dialog.
 
-When narrow drag is absent, Move up/Move down provides touch ordering within the date and Edit date provides cross-date rescheduling.
+Narrow/mobile supports the same direct card-body drag semantics as desktop using touch/pen/mouse input. Move up/Move down remains the non-drag accessibility alternative within the date, and Edit date remains the explicit non-drag cross-date rescheduling path.
+
+
+### 4.3.1 v1.0.5 narrow/mobile parity correction
+
+The v1.0.4 published narrow composition did not meet the intended parity standard. v1.0.5 makes the following presentation requirements explicit:
+
+- **Same Task surface:** narrow/mobile Task cards use the same semantic Task-surface and border tokens as desktop. Responsive CSS may increase touch height/spacing but must not replace the Task surface with the page/section background.
+- **Same direct manipulation:** outstanding Task cards are sortable on narrow/mobile. Touch drag uses the same body activator and canonical exact-position move semantics as desktop.
+- **Normalized application controls:** the narrow application band uses the canonical complete Jig wordmark, compact sync state, semantic Add icon and semantic hamburger icon with one consistent icon size/hit-area system.
+- **Normalized menu:** the hamburger opens the Astryx compact popover/menu with History and Settings only. Where the public menu API supports leading content, both items use the same semantic destination icon vocabulary as desktop and retain text labels. No legacy drawer, raw Unicode stand-ins or mixed icon styles are permitted.
+- **Same Task metadata/action iconography:** reminder, reference/copy, completion, overflow and status meanings do not disappear or switch representation merely because the layout is narrow.
+- **Same state vocabulary:** today, Task selection, priority, focus, drag and operational status use the same semantic aliases as desktop.
+- **Same visual legibility:** card/canvas contrast must remain clearly visible in both Light and Dark. The mobile renderer is a reflow, not a separate visual theme.
+
+### 4.3.2 v1.0.5 compact header and Task-card legibility
+
+The published v1.0.4 header is visually too tall. Stability and compactness are separate requirements.
+
+- Desktop outer header target: approximately **60–64 CSS px**, maximum **4rem**.
+- Narrow Planner outer header target: maximum approximately **6rem**, preserving touch-sized controls.
+- Planner/History/Settings remain equal in outer height within the same layout.
+- Reduce padding/min-height at the owning Jig header rules; do not use offsets, negative margins or private Astryx selectors.
+- The centered Planner temporal region remains two lines on desktop: range, then Previous/Today/Next.
+- The narrow hierarchy remains brand/status/menu, range, controls, but with compact token spacing.
+
+Task-card legibility uses one cross-responsive surface contract:
+
+- Light canvas: Paper 100; Task surface: White with emphasized neutral border.
+- Dark canvas: Ink 950; Task surface: **Ink 800 raised neutral**, not the v1.0.4 Ink 900 surface that visually collapses into the canvas.
+- Selected/drag/focus/priority cues remain separate semantic layers and do not replace the base surface distinction.
+- The same surface values apply to desktop and narrow/mobile.
+
+### 4.3.3 v1.0.5 semantic icon normalization
+
+Use Astryx 0.7.13 public semantic icons as the only reusable icon language. The production UI must visibly normalize at least:
+
+- Previous/Next week chevrons;
+- global Add and every date-header Add;
+- Planner, History and Settings destination affordances;
+- mobile hamburger;
+- Task overflow menu;
+- reminder clock;
+- reference external-link/copy affordance;
+- completion check;
+- repository success/warning/error/info status.
+
+Essential meaning retains accessible text/labels. Raw `+`, `•••`, `≡` or other Unicode stand-ins are not used where the public Astryx registry already provides the semantic icon. If Astryx lacks a required semantic icon, retain text rather than adding another icon package.
+
+The header brand uses the canonical complete horizontal Jig wordmark asset. Do not compose the standalone J mark beside live “Jig” text.
+
 
 ### 4.4 Shared Task workspace
 
@@ -195,14 +245,14 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Task workspace | Click selects and opens the directly editable full Task form without changing date/order/destination; no second Edit click exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
 | Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
-| Mobile header | Jig/sync/hamburger first row; centered week range + grouped controls; seven dated Task sections follow; hamburger menu has only History/Settings and is not a drawer |
+| Mobile header/menu | compact Jig/sync/Add/hamburger application band; centered week range + grouped controls; seven dated Task sections follow; hamburger menu has History/Settings only, uses normalized semantic icons/text, and is not a drawer |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
-| Same/cross-day drag | exact chosen position/date persists; empty destination works |
+| Same/cross-day drag | desktop and narrow/mobile card-body drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
 | Narrow ordering | Move up/down works without introducing a second order representation |
 | Completion/History | completing removes from Planner; History remains inspectable/reopenable |
 | Daily rollover | same canonical Task appears in current-date Planner bucket on desktop and narrow |
 | Delete | cancel is no-op; confirm permanently removes Task; Git round trip preserves absence |
-| Theme/color | System/Light/Dark implement the canonical component/state matrix: today teal, selected Task info-blue, drag/focus Amber, High red, Normal neutral, Low/healthy green, warning yellow, unknown neutral; no unrelated states collapse to one treatment |
+| Theme/color/card legibility | System/Light/Dark implement the canonical component/state matrix and Task-card surface contract on desktop and narrow: today teal, selected Task info-blue, drag/focus Amber, High red, Normal neutral, Low/healthy green, warning yellow, unknown neutral; base Task cards remain visibly separated from the Planner canvas |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
 
 Final production evidence is the running Astryx UI in Playwright/browser screenshots. Reference SVGs govern structure, not pixel-perfect library anatomy.
