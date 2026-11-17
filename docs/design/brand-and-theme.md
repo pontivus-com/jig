@@ -410,7 +410,7 @@ The application header must use the canonical complete horizontal Jig wordmark a
 
 Narrow/mobile is not an alternate icon system: it uses the same semantic icon meaning, size family and state color as desktop, with only touch sizing/layout changing.
 
-Astryx 0.7.13 has no built-in Add/plus semantic name. Jig therefore owns exactly one namespaced extension icon key, `jig:add`, implemented as a bundled 24×24 inline fallback and resolved through Astryx `getExtendedIcon`/`Icon`. This is an extension of the Astryx registry, not a second icon system or dependency. No other custom Jig glyph is introduced while an appropriate built-in semantic name exists.
+Astryx 0.7.13 has no true semantic names for Add, History, Edit or Delete. Jig therefore owns exactly four namespaced extension keys — `jig:add`, `jig:history`, `jig:edit`, `jig:delete` — as bundled 24×24 inline fallbacks resolved through Astryx `getExtendedIcon`/`Icon`. This extends the Astryx registry; it is not a second icon system or dependency. No custom Jig glyph is introduced where an appropriate built-in Astryx semantic name exists.
 
 
 ## 7. Theme implementation contract
