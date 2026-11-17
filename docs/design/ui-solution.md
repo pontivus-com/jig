@@ -79,6 +79,26 @@ Visual rules:
 3. **One primary mutation per active form.** Add task is prominent at Planner level. The editable Task workspace has Save as its primary form action; completion/reopen and Delete remain independent Task commands rather than alternate form modes.
 4. **Distinct state vocabulary.** Current day, selected Task, drag target and priority are different semantics and must not collapse onto one Amber fill. Current day is an exact-date, subtle neutral border/header treatment. Selected Task uses a subtle information/selection surface. Drag target uses transient accent treatment. Priority remains a narrow leading cue: High error, Normal quiet neutral, Low calm/success-family.
 5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/drag emphasis rather than the generic color for every active state. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
+
+#### v1.0.4 state appearance matrix
+
+| UI state | Appearance contract |
+|---|---|
+| Desktop exact current day | subtle cool-neutral column/header border + stronger date typography; no Amber fill |
+| Desktop selected Planner date | no persistent whole-column color; selectedDate remains operational state only |
+| Narrow/mobile selected date | compact selected date control may use the ordinary accent treatment because it directly controls the visible date list |
+| Selected Task | cool Ink/neutral tinted card surface + emphasized neutral border; no Amber selection fill |
+| Task High priority | narrow error/red leading cue; explicit High label where shown |
+| Task Normal priority | quiet Ink/neutral leading cue; no loud badge |
+| Task Low priority | narrow calm success/green leading cue; explicit Low label where shown |
+| Drag source/target | transient Amber/accent outline/overlay only during direct manipulation |
+| Keyboard focus | Amber focus ring only; does not change the persistent state color |
+| Active History/Settings destination | quiet neutral active treatment, not the selected-Task or drag-target treatment |
+| Local only / Synced | restrained success family, distinguished by label |
+| Pending/retrying | warning family |
+| Sync/save error | error family |
+| Unknown status | neutral grey |
+
 6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics must remain clear in both themes without relying on color alone.
 7. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, selected date or pending form draft changes as a side effect of a breakpoint.
 8. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable, but the final production palette is the canonical Jig theme. No duplicate dark-mode structural mockup set is required.
