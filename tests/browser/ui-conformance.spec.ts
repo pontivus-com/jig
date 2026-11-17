@@ -102,7 +102,9 @@ test("Task cards expose content, grip and one overflow affordance without action
   ).toBeHidden();
 
   await card
-    .locator('summary[aria-label="Actions for Card interaction contract"]')
+    .getByRole("button", {
+      name: "Actions for Card interaction contract",
+    })
     .click();
   await expect(
     card.getByRole("button", { name: "Edit", exact: true }),
