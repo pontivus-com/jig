@@ -72,7 +72,13 @@ export function TaskInspector({
         )}
         <div>
           <dt>Priority</dt>
-          <dd>{task.priority.toLowerCase()}</dd>
+          <dd>
+            <span
+              className={`jig-priority-label jig-priority-${task.priority.toLowerCase()}`}
+            >
+              {task.priority.toLowerCase()}
+            </span>
+          </dd>
         </div>
         {task.reminder_time === null ? null : (
           <div>
