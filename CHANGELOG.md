@@ -4,6 +4,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-11-17
+
 ### Changed
 
 - v1.0.3 replaces separate Day/Week destinations with one responsive Planner: seven fluid dated tracks on desktop and the same seven-date state as a selected-date list on narrow/mobile.
