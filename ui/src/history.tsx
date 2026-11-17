@@ -41,7 +41,7 @@ function HistoryTaskRow({
   return (
     <ListItem
       itemKey={task.id}
-      className="jig-history-task-row"
+      className={`jig-history-task-row jig-task-priority-${task.priority.toLowerCase()}`}
       align="first-line"
       onClick={() => onSelect(task)}
       startContent={
