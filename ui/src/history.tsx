@@ -127,13 +127,10 @@ export function HistoryView({
 
   return (
     <div className="jig-history-view">
-      <div className="jig-view-heading">
+      <div className="jig-reference-heading">
         <div>
-          <p className="jig-eyebrow">History</p>
-          <h1>Completed work</h1>
-          <p className="jig-secondary-copy">
-            Grouped by when the task was actually completed.
-          </p>
+          <h1>History</h1>
+          <p>Completed work grouped by actual completion date</p>
         </div>
       </div>
 
