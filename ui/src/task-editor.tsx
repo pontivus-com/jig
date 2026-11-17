@@ -1,9 +1,6 @@
 import {
-  AlertDialog,
   Button,
   DateInput,
-  Dialog,
-  DialogHeader,
   SegmentedControl,
   SegmentedControlItem,
   TextArea,
@@ -68,7 +65,7 @@ function commandForDraft(
   if (task === null) {
     return {
       type: "create",
-      title: draft.title,
+      title: draft.title.trim(),
       scheduled_date: draft.scheduledDate,
       priority: draft.priority,
       context: optionalText(draft.context),
@@ -83,7 +80,7 @@ function commandForDraft(
     type: "edit",
     task_id: task.id,
     changes: {
-      title: draft.title,
+      title: draft.title.trim(),
       scheduled_date: draft.scheduledDate,
       priority: draft.priority,
       context: optionalText(draft.context),
@@ -96,43 +93,37 @@ function commandForDraft(
 }
 
 export interface TaskEditorProps {
-  readonly isOpen: boolean;
-  readonly isNarrow: boolean;
   readonly task: Task | null;
   readonly initiatingDate: string;
   readonly externalError: string | null;
   readonly isSaving: boolean;
-  readonly onOpenChange: (isOpen: boolean) => void;
+  readonly showHeading?: boolean;
+  readonly surface?: "docked" | "drawer";
+  readonly onCancel: () => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
-  readonly onDelete: (taskId: string) => Promise<boolean>;
 }
 
 export function TaskEditor({
-  isOpen,
-  isNarrow,
   task,
   initiatingDate,
   externalError,
   isSaving,
-  onOpenChange,
+  showHeading = true,
+  surface = "docked",
+  onCancel,
   onSave,
-  onDelete,
 }: TaskEditorProps): React.ReactElement {
   const [draft, setDraft] = useState<TaskDraft>(() =>
     draftFor(task, initiatingDate),
   );
   const [localError, setLocalError] = useState<string | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const priorityGroupId = useId();
   const priorityLabelId = useId();
 
   useEffect(() => {
-    if (isOpen) {
-      setDraft(draftFor(task, initiatingDate));
-      setLocalError(null);
-      setDeleteOpen(false);
-    }
-  }, [isOpen, task?.id, initiatingDate]);
+    setDraft(draftFor(task, initiatingDate));
+    setLocalError(null);
+  }, [task?.id, initiatingDate]);
 
   const update = <K extends keyof TaskDraft>(
     key: K,
@@ -152,304 +143,156 @@ export function TaskEditor({
     }
 
     setLocalError(null);
-    const saved = await onSave(commandForDraft(task, draft));
-    if (saved) {
-      onOpenChange(false);
-    }
+    await onSave(commandForDraft(task, draft));
   };
 
   return (
-    <>
-      <Dialog
-        isOpen={isOpen}
-        onOpenChange={isSaving ? () => undefined : onOpenChange}
-        purpose="form"
-        variant={isNarrow ? "fullscreen" : "standard"}
-        width="38rem"
-        maxHeight="90dvh"
-        padding={isNarrow ? 0 : 4}
-      >
-        <div
-          className={
-            isNarrow
-              ? "jig-editor jig-editor-mobile-frame"
-              : "jig-editor"
-          }
-        >
-          <DialogHeader
-            title={task === null ? "Add task" : "Edit task"}
-            subtitle={formatCivilDate(
-              task?.scheduled_date ?? initiatingDate,
-              {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              },
-            )}
-            endContent={
-              isNarrow ? (
-                <Button
-                  type="button"
-                  label="Cancel"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => onOpenChange(false)}
-                  isDisabled={isSaving}
-                />
-              ) : undefined
-            }
-            {...(!isNarrow && !isSaving ? { onOpenChange } : {})}
-          />
-
-          <form
-            className="jig-editor-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submit();
-            }}
-          >
-            {(localError ?? externalError) === null ? null : (
-              <div className="jig-form-error" role="alert">
-                {localError ?? externalError}
-              </div>
-            )}
-
-            <TextInput
-              label="Title"
-              value={draft.title}
-              onChange={(value) => update("title", value)}
-              isRequired
-              hasAutoFocus
-              width="100%"
-            />
-
-            <DateInput
-              label="Date"
-              value={draft.scheduledDate as ISODateString}
-              onChange={(value) =>
-                update("scheduledDate", value ?? draft.scheduledDate)
-              }
-              isRequired
-              weekStartsOn="mon"
-            />
-
-            <TextInput
-              label="Context"
-              value={draft.context}
-              onChange={(value) => update("context", value)}
-              isOptional
-              width="100%"
-              placeholder="Project, client, or place"
-            />
-
-            <div className="jig-editor-group-field">
-              <FieldLabel
-                label="Priority"
-                inputID={priorityGroupId}
-                labelID={priorityLabelId}
-                isGroupLabel
-              />
-              <SegmentedControl
-                id={priorityGroupId}
-                aria-labelledby={priorityLabelId}
-                label="Priority"
-                value={draft.priority}
-                onChange={(value) => update("priority", value as Priority)}
-                layout="fill"
-              >
-                <SegmentedControlItem value="HIGH" label="High" />
-                <SegmentedControlItem value="NORMAL" label="Normal" />
-                <SegmentedControlItem value="LOW" label="Low" />
-              </SegmentedControl>
-            </div>
-
-            <TimeInput
-              label="Reminder"
-              value={
-                draft.reminderTime.length === 0
-                  ? undefined
-                  : (draft.reminderTime as ISOTimeString)
-              }
-              onChange={(value) =>
-                update("reminderTime", value ?? "")
-              }
-              isOptional
-              hasClear
-            />
-
-            <TextInput
-              label="Reference"
-              value={draft.reference}
-              onChange={(value) => update("reference", value)}
-              isOptional
-              width="100%"
-              placeholder="https://… or a path/locator to copy"
-            />
-
-            <TextArea
-              label="Notes"
-              value={draft.note}
-              onChange={(value) => update("note", value)}
-              isOptional
-              rows={4}
-            />
-
-            {task === null ? null : (
-              <>
-                <div className="jig-editor-date-behavior">
-                  <strong>Date change behavior</strong>
-                  <span>
-                    Changing date uses priority-guided insertion. Dragging uses
-                    the exact drop position.
-                  </span>
-                </div>
-                <div className="jig-editor-destructive-row">
-                  <Button
-                    type="button"
-                    label="Delete task…"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteOpen(true)}
-                    isDisabled={isSaving}
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="jig-editor-actions">
-              <div className="jig-editor-primary-actions">
-                <Button
-                  type="button"
-                  label="Cancel"
-                  variant="secondary"
-                  size={isNarrow ? "lg" : "md"}
-                  {...(isNarrow ? { width: "100%" } : {})}
-                  onClick={() => onOpenChange(false)}
-                  isDisabled={isSaving}
-                />
-                <Button
-                  type="submit"
-                  label={task === null ? "Add task" : "Save"}
-                  variant="primary"
-                  size={isNarrow ? "lg" : "md"}
-                  {...(isNarrow ? { width: "100%" } : {})}
-                  isLoading={isSaving}
-                />
-              </div>
-            </div>
-          </form>
-        </div>
-      </Dialog>
-
-      {task === null ? null : (
-        <AlertDialog
-          isOpen={deleteOpen}
-          onOpenChange={isSaving ? () => undefined : setDeleteOpen}
-          title="Delete task?"
-          description="This permanently removes the task from current Jig data. Git history may still contain an earlier exported snapshot."
-          actionLabel="Delete task"
-          cancelLabel="Cancel"
-          actionVariant="destructive"
-          isActionLoading={isSaving}
-          onAction={async () => {
-            const deleted = await onDelete(task.id);
-            if (deleted) {
-              setDeleteOpen(false);
-              onOpenChange(false);
-            }
-          }}
-        />
-      )}
-    </>
-  );
-}
-
-export interface MoveTaskDialogProps {
-  readonly task: Task | null;
-  readonly isOpen: boolean;
-  readonly initialDate: string;
-  readonly isSaving: boolean;
-  readonly error: string | null;
-  readonly onOpenChange: (isOpen: boolean) => void;
-  readonly onMove: (destinationDate: string) => Promise<boolean>;
-}
-
-export function MoveTaskDialog({
-  task,
-  isOpen,
-  initialDate,
-  isSaving,
-  error,
-  onOpenChange,
-  onMove,
-}: MoveTaskDialogProps): React.ReactElement {
-  const [destinationDate, setDestinationDate] = useState(initialDate);
-
-  useEffect(() => {
-    if (isOpen) {
-      setDestinationDate(initialDate);
-    }
-  }, [isOpen, initialDate, task?.id]);
-
-  if (task === null) {
-    return <></>;
-  }
-
-  return (
-    <Dialog
-      isOpen={isOpen}
-      onOpenChange={isSaving ? () => undefined : onOpenChange}
-      purpose="form"
-      width={420}
-      padding={4}
+    <section
+      className={[
+        "jig-task-inspector",
+        "jig-task-editor-surface",
+        surface === "drawer" ? "jig-task-inspector-drawer" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label={task === null ? "Add task" : `Edit task ${task.title}`}
     >
-      <div className="jig-move-dialog">
-        <DialogHeader
-          title="Move task to date"
-          subtitle={task.title}
-          {...(isSaving ? {} : { onOpenChange })}
-        />
-        {error === null ? null : (
+      {showHeading ? (
+        <div className="jig-task-inspector-heading">
+          <p className="jig-eyebrow">
+            {task === null ? "New task" : "Editing task"}
+          </p>
+          <h2>{task === null ? "Add task" : task.title}</h2>
+          <p className="jig-secondary-copy">
+            {formatCivilDate(task?.scheduled_date ?? initiatingDate, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+      ) : null}
+
+      <form
+        className="jig-editor-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        {(localError ?? externalError) === null ? null : (
           <div className="jig-form-error" role="alert">
-            {error}
+            {localError ?? externalError}
           </div>
         )}
+
+        <TextInput
+          label="Title"
+          value={draft.title}
+          onChange={(value) => update("title", value)}
+          isRequired
+          hasAutoFocus
+          width="100%"
+        />
+
         <DateInput
-          label="Destination date"
-          value={destinationDate as ISODateString}
-          onChange={(value) => {
-            if (value !== undefined) {
-              setDestinationDate(value);
-            }
-          }}
+          label="Date"
+          value={draft.scheduledDate as ISODateString}
+          onChange={(value) =>
+            update("scheduledDate", value ?? draft.scheduledDate)
+          }
           isRequired
           weekStartsOn="mon"
         />
-        <p className="jig-secondary-copy">
-          The task will be appended to the selected date using the same exact-position move operation as drag and drop.
-        </p>
-        <div className="jig-editor-primary-actions">
-          <Button
-            label="Cancel"
-            variant="secondary"
-            onClick={() => onOpenChange(false)}
-            isDisabled={isSaving}
+
+        <TextInput
+          label="Context"
+          value={draft.context}
+          onChange={(value) => update("context", value)}
+          isOptional
+          width="100%"
+          placeholder="Project, client, or place"
+        />
+
+        <div className="jig-editor-group-field">
+          <FieldLabel
+            label="Priority"
+            inputID={priorityGroupId}
+            labelID={priorityLabelId}
+            isGroupLabel
           />
-          <Button
-            label="Move task"
-            variant="primary"
-            isLoading={isSaving}
-            onClick={() => {
-              void onMove(destinationDate).then((moved) => {
-                if (moved) {
-                  onOpenChange(false);
-                }
-              });
-            }}
-          />
+          <SegmentedControl
+            id={priorityGroupId}
+            aria-labelledby={priorityLabelId}
+            label="Priority"
+            value={draft.priority}
+            onChange={(value) => update("priority", value as Priority)}
+            layout="fill"
+          >
+            <SegmentedControlItem value="HIGH" label="High" />
+            <SegmentedControlItem value="NORMAL" label="Normal" />
+            <SegmentedControlItem value="LOW" label="Low" />
+          </SegmentedControl>
         </div>
-      </div>
-    </Dialog>
+
+        <TimeInput
+          label="Reminder"
+          value={
+            draft.reminderTime.length === 0
+              ? undefined
+              : (draft.reminderTime as ISOTimeString)
+          }
+          onChange={(value) => update("reminderTime", value ?? "")}
+          isOptional
+          hasClear
+        />
+
+        <TextInput
+          label="Reference"
+          value={draft.reference}
+          onChange={(value) => update("reference", value)}
+          isOptional
+          width="100%"
+          placeholder="https://… or a path/locator to copy"
+        />
+
+        <TextArea
+          label="Notes"
+          value={draft.note}
+          onChange={(value) => update("note", value)}
+          isOptional
+          rows={4}
+        />
+
+        {task === null ? null : (
+          <div className="jig-editor-date-behavior">
+            <strong>Date change behavior</strong>
+            <span>
+              Changing date uses priority-guided insertion. Dragging uses the
+              exact drop position.
+            </span>
+          </div>
+        )}
+
+        <div className="jig-editor-actions">
+          <div className="jig-editor-primary-actions">
+            <Button
+              type="button"
+              label="Cancel"
+              variant="secondary"
+              onClick={onCancel}
+              isDisabled={isSaving}
+            />
+            <Button
+              type="submit"
+              label={task === null ? "Add task" : "Save"}
+              variant="primary"
+              isLoading={isSaving}
+            />
+          </div>
+        </div>
+      </form>
+    </section>
   );
 }
