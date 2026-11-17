@@ -3,6 +3,7 @@ import {
   AppShell,
   Banner,
   Button,
+  Icon,
   LayerProvider,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
@@ -14,17 +15,16 @@ import {
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
   addCivilDays,
+  defaultAddDate,
   startOfWeekMonday,
   weekDates,
 } from "../../src/core/planning";
 import type {
   CanonicalState,
   CommandResult,
-} from "../../src/shell/sqlite";
-import type {
   Diagnostics,
   ServiceStatus,
-} from "../../src/shell/http";
+} from "../../src/protocol";
 import {
   draftFor,
   type TaskDraft,
@@ -44,7 +44,9 @@ import {
   type Destination,
 } from "./planner-header";
 import { ReminderMonitor } from "./reminder";
+import { repositoryStatusPresentation } from "./repository-status";
 import {
+  isThemePreference,
   SettingsView,
   type ThemePreference,
 } from "./settings";
@@ -56,29 +58,15 @@ import {
 import {
   TaskWorkspaceBottomSheet,
   TaskWorkspaceDrawer,
-  type TaskWorkspaceMode,
+  type TaskWorkspacePresentation,
+  type TaskWorkspaceState,
 } from "./task-workspace";
 import { useLayoutMode } from "./use-layout-mode";
 import { jigTheme } from "./jig.js";
 
 interface PlannerState {
   readonly displayedWeekStart: string;
-  readonly selectedDate: string;
 }
-
-type TaskWorkspaceState =
-  | { readonly mode: "closed" }
-  | { readonly mode: "view"; readonly taskId: string }
-  | {
-      readonly mode: "edit";
-      readonly taskId: string;
-      readonly draft: TaskDraft;
-    }
-  | {
-      readonly mode: "create";
-      readonly originatingDate: string;
-      readonly draft: TaskDraft;
-    };
 
 const THEME_STORAGE_KEY = "jig-theme";
 
@@ -86,14 +74,13 @@ function initialPlannerState(): PlannerState {
   const today = todayCivilDate();
   return {
     displayedWeekStart: startOfWeekMonday(today),
-    selectedDate: today,
   };
 }
 
 function savedThemePreference(): ThemePreference {
   try {
     const value = window.localStorage.getItem(THEME_STORAGE_KEY);
-    return value === "light" || value === "dark" ? value : "system";
+    return isThemePreference(value) ? value : "system";
   } catch {
     return "system";
   }
@@ -103,27 +90,8 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function repositoryStatusLabel(status: ServiceStatus | null): string {
-  switch (status?.repository_status) {
-    case "local-only":
-      return "Local only";
-    case "pending":
-      return "Sync pending";
-    case "retrying":
-      return "Retrying";
-    case "synchronized":
-      return "Synced";
-    case "sync-issue":
-      return "Sync issue";
-    default:
-      return "Status";
-  }
-}
-
 function workspaceTaskId(state: TaskWorkspaceState): string | null {
-  return state.mode === "view" || state.mode === "edit"
-    ? state.taskId
-    : null;
+  return state.mode === "task" ? state.taskId : null;
 }
 
 export function App(): React.ReactElement {
@@ -209,12 +177,12 @@ export function App(): React.ReactElement {
         return false;
       }
 
+      const previousCurrentWeek = startOfWeekMonday(observedToday);
+      const nextCurrentWeek = startOfWeekMonday(nextToday);
       setPlannerState((current) =>
-        current.selectedDate === observedToday
-          ? {
-              displayedWeekStart: startOfWeekMonday(nextToday),
-              selectedDate: nextToday,
-            }
+        current.displayedWeekStart === previousCurrentWeek &&
+        previousCurrentWeek !== nextCurrentWeek
+          ? { displayedWeekStart: nextCurrentWeek }
           : current,
       );
       setObservedToday(nextToday);
@@ -340,30 +308,31 @@ export function App(): React.ReactElement {
     [runCommand],
   );
 
+  const setPriority = useCallback(
+    async (task: Task, priority: Task["priority"]): Promise<boolean> =>
+      (await runCommand({
+        type: "edit",
+        task_id: task.id,
+        changes: { priority },
+      })) !== null,
+    [runCommand],
+  );
+
   const selectTask = useCallback((task: Task): void => {
     setOperationError(null);
-    setWorkspace({ mode: "view", taskId: task.id });
+    setWorkspace({
+      mode: "task",
+      taskId: task.id,
+      draft: draftFor(task, task.scheduled_date),
+    });
   }, []);
 
   const openCreate = useCallback((date: string): void => {
-    setPlannerState((current) => ({
-      ...current,
-      selectedDate: date,
-    }));
     setOperationError(null);
     setWorkspace({
       mode: "create",
       originatingDate: date,
       draft: draftFor(null, date),
-    });
-  }, []);
-
-  const openEdit = useCallback((task: Task): void => {
-    setOperationError(null);
-    setWorkspace({
-      mode: "edit",
-      taskId: task.id,
-      draft: draftFor(task, task.scheduled_date),
     });
   }, []);
 
@@ -373,7 +342,11 @@ export function App(): React.ReactElement {
       if (result === null || !("task" in result)) {
         return false;
       }
-      setWorkspace({ mode: "view", taskId: result.task.id });
+      setWorkspace({
+        mode: "task",
+        taskId: result.task.id,
+        draft: draftFor(result.task, result.task.scheduled_date),
+      });
       return true;
     },
     [runCommand],
@@ -383,49 +356,12 @@ export function App(): React.ReactElement {
     setWorkspace({ mode: "closed" });
   }, []);
 
-  const changeWorkspaceMode = useCallback(
-    (mode: TaskWorkspaceMode | null): void => {
-      setWorkspace((current) => {
-        if (mode === null) {
-          return { mode: "closed" };
-        }
-
-        if (mode === "view") {
-          return current.mode === "view" || current.mode === "edit"
-            ? { mode: "view", taskId: current.taskId }
-            : current;
-        }
-
-        if (mode === "edit") {
-          if (current.mode !== "view" && current.mode !== "edit") {
-            return current;
-          }
-          const task = tasks.find((candidate) => candidate.id === current.taskId);
-          return task === undefined
-            ? current
-            : {
-                mode: "edit",
-                taskId: task.id,
-                draft: draftFor(task, task.scheduled_date),
-              };
-        }
-
-        return current;
-      });
-    },
-    [tasks],
-  );
-
   const changeWorkspaceDraft = useCallback((draft: TaskDraft): void => {
-    setWorkspace((current) => {
-      if (current.mode === "edit") {
-        return { ...current, draft };
-      }
-      if (current.mode === "create") {
-        return { ...current, draft };
-      }
-      return current;
-    });
+    setWorkspace((current) =>
+      current.mode === "task" || current.mode === "create"
+        ? { ...current, draft }
+        : current,
+    );
   }, []);
 
   const navigateDestination = useCallback((next: Destination): void => {
@@ -465,42 +401,35 @@ export function App(): React.ReactElement {
   const previousWeek = useCallback((): void => {
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
-      selectedDate: addCivilDays(current.selectedDate, -7),
     }));
   }, []);
 
   const nextWeek = useCallback((): void => {
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, 7),
-      selectedDate: addCivilDays(current.selectedDate, 7),
     }));
   }, []);
 
   const goToToday = useCallback((): void => {
-    const today = todayCivilDate();
     setPlannerState({
-      displayedWeekStart: startOfWeekMonday(today),
-      selectedDate: today,
+      displayedWeekStart: startOfWeekMonday(todayCivilDate()),
     });
   }, []);
 
-  const selectDate = useCallback((date: string): void => {
-    setPlannerState((current) =>
-      weekDates(current.displayedWeekStart).includes(date)
-        ? { ...current, selectedDate: date }
-        : current,
-    );
-  }, []);
-
-  const repositoryStatus = status?.repository_status ?? "unknown";
+  const repositoryStatus = repositoryStatusPresentation(status);
   const statusControl = (
     <Button
-      label={repositoryStatusLabel(status)}
+      label={repositoryStatus.label}
       variant="ghost"
       size="sm"
-      icon={<span className="jig-status-dot" aria-hidden="true" />}
+      icon={
+        <Icon
+          icon={repositoryStatus.icon}
+          color={repositoryStatus.iconColor}
+        />
+      }
       onClick={() => navigateDestination("settings")}
-      className={`jig-status-control jig-status-${repositoryStatus}`}
+      className={`jig-status-control jig-status-${repositoryStatus.key}`}
     />
   );
 
@@ -533,16 +462,39 @@ export function App(): React.ReactElement {
     />
   ) : null;
 
-  const workspaceMode: TaskWorkspaceMode | null =
-    workspace.mode === "closed" ? null : workspace.mode;
-  const workspaceDate =
-    workspace.mode === "create"
-      ? workspace.originatingDate
-      : selectedTask?.scheduled_date ?? plannerState.selectedDate;
-  const workspaceDraft =
-    workspace.mode === "edit" || workspace.mode === "create"
-      ? workspace.draft
-      : draftFor(selectedTask, workspaceDate);
+  const workspacePresentation: TaskWorkspacePresentation | null =
+    workspace.mode === "closed"
+      ? null
+      : workspace.mode === "create"
+        ? {
+            mode: "create",
+            originatingDate: workspace.originatingDate,
+            draft: workspace.draft,
+          }
+        : selectedTask === null
+          ? null
+          : {
+              mode: "task",
+              task: selectedTask,
+              draft: workspace.draft,
+            };
+
+  const dismissWorkspaceFromContent = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>): void => {
+      if (workspace.mode === "closed") {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(".jig-task-card, .jig-history-task-row, .jig-task-menu")
+      ) {
+        return;
+      }
+      closeWorkspace();
+    },
+    [closeWorkspace, workspace.mode],
+  );
 
   const content =
     canonical === null ? (
@@ -572,22 +524,23 @@ export function App(): React.ReactElement {
       <Planner
         tasks={tasks}
         displayedDates={displayedDates}
-        selectedDate={plannerState.selectedDate}
         layoutMode={layoutMode}
         selectedTask={selectedTask}
-        onSelectDate={selectDate}
         onSelectTask={selectTask}
         onAdd={openCreate}
-        onEdit={openEdit}
+        onEdit={selectTask}
         onToggleComplete={toggleComplete}
+        onSetPriority={setPriority}
+        onDelete={(task) => setDeleteTaskId(task.id)}
         onMove={moveTaskExact}
       />
     ) : destination === "history" ? (
       <HistoryView
         tasks={tasks}
         onSelect={selectTask}
-        onEdit={openEdit}
+        onEdit={selectTask}
         onReopen={toggleComplete}
+        onSetPriority={setPriority}
         onDelete={(task) => setDeleteTaskId(task.id)}
       />
     ) : (
@@ -605,13 +558,9 @@ export function App(): React.ReactElement {
   const workspaceSurface =
     destination === "settings" ? null : layoutMode === "narrow" ? (
       <TaskWorkspaceBottomSheet
-        mode={workspaceMode}
-        task={workspace.mode === "create" ? null : selectedTask}
-        initiatingDate={workspaceDate}
-        draft={workspaceDraft}
+        workspace={workspacePresentation}
         externalError={operationError}
         isSaving={isOperating}
-        onModeChange={changeWorkspaceMode}
         onDraftChange={changeWorkspaceDraft}
         onSave={saveWorkspace}
         onDelete={(task) => setDeleteTaskId(task.id)}
@@ -620,13 +569,9 @@ export function App(): React.ReactElement {
       />
     ) : (
       <TaskWorkspaceDrawer
-        mode={workspaceMode}
-        task={workspace.mode === "create" ? null : selectedTask}
-        initiatingDate={workspaceDate}
-        draft={workspaceDraft}
+        workspace={workspacePresentation}
         externalError={operationError}
         isSaving={isOperating}
-        onModeChange={changeWorkspaceMode}
         onDraftChange={changeWorkspaceDraft}
         onSave={saveWorkspace}
         onDelete={(task) => setDeleteTaskId(task.id)}
@@ -652,7 +597,14 @@ export function App(): React.ReactElement {
               onPreviousWeek={previousWeek}
               onToday={goToToday}
               onNextWeek={nextWeek}
-              onAdd={() => openCreate(plannerState.selectedDate)}
+              onAdd={() =>
+                openCreate(
+                  defaultAddDate(
+                    plannerState.displayedWeekStart,
+                    todayCivilDate(),
+                  ),
+                )
+              }
               onNavigate={navigateDestination}
             />
           }
@@ -663,7 +615,12 @@ export function App(): React.ReactElement {
           variant="section"
         >
           <div className="jig-content-frame">
-            <div className="jig-content">{content}</div>
+            <div
+              className="jig-content"
+              onPointerDown={dismissWorkspaceFromContent}
+            >
+              {content}
+            </div>
           </div>
           {workspaceSurface}
         </AppShell>

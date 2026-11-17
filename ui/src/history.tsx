@@ -1,17 +1,19 @@
 import {
-  DropdownMenu,
+  Icon,
   List,
   ListItem,
 } from "@astryxdesign/core";
-import type { Task } from "../../src/core/task";
+import type { Priority, Task } from "../../src/core/task";
 import { historyByCompletionDate } from "../../src/core/planning";
 import { formatCivilDate } from "./dates";
+import { TaskActionMenu } from "./task-row";
 
 export interface HistoryViewProps {
   readonly tasks: readonly Task[];
   readonly onSelect: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
   readonly onReopen: (task: Task) => Promise<boolean>;
+  readonly onSetPriority: (task: Task, priority: Priority) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
 }
 
@@ -30,12 +32,14 @@ function HistoryTaskRow({
   onSelect,
   onEdit,
   onReopen,
+  onSetPriority,
   onDelete,
 }: Readonly<{
   task: Task;
   onSelect: (task: Task) => void;
   onEdit: (task: Task) => void;
   onReopen: (task: Task) => Promise<boolean>;
+  onSetPriority: (task: Task, priority: Priority) => Promise<boolean>;
   onDelete: (task: Task) => void;
 }>): React.ReactElement {
   return (
@@ -46,7 +50,7 @@ function HistoryTaskRow({
       onClick={() => onSelect(task)}
       startContent={
         <span className="jig-history-complete-indicator" aria-hidden="true">
-          ✓
+          <Icon icon="check" color="success" />
         </span>
       }
       label={<span className="jig-task-title">{task.title}</span>}
@@ -68,42 +72,17 @@ function HistoryTaskRow({
           <time dateTime={task.completed_at ?? undefined}>
             {completionTime(task)}
           </time>
-          <div
-            className="jig-task-menu"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <DropdownMenu
-              button={{
-                label: `Actions for ${task.title}`,
-                icon: <span aria-hidden="true">•••</span>,
-                isIconOnly: true,
-                variant: "ghost",
-                size: "sm",
-                className: "jig-task-menu-trigger",
-              }}
-              items={[
-                {
-                  id: "reopen",
-                  label: "Reopen",
-                  onClick: () => {
-                    void onReopen(task);
-                  },
-                },
-                {
-                  id: "edit",
-                  label: "Edit",
-                  onClick: () => onEdit(task),
-                },
-                {
-                  id: "delete",
-                  label: "Delete…",
-                  onClick: () => onDelete(task),
-                },
-              ]}
-              placement="below"
-              alignment="end"
-            />
-          </div>
+          <TaskActionMenu
+            task={task}
+            onEdit={() => onEdit(task)}
+            onToggleComplete={() => {
+              void onReopen(task);
+            }}
+            onSetPriority={(priority) => {
+              void onSetPriority(task, priority);
+            }}
+            onDelete={() => onDelete(task)}
+          />
         </div>
       }
     />
@@ -115,6 +94,7 @@ export function HistoryView({
   onSelect,
   onEdit,
   onReopen,
+  onSetPriority,
   onDelete,
 }: HistoryViewProps): React.ReactElement {
   const timeZone =
@@ -161,6 +141,7 @@ export function HistoryView({
                     onSelect={onSelect}
                     onEdit={onEdit}
                     onReopen={onReopen}
+                    onSetPriority={onSetPriority}
                     onDelete={onDelete}
                   />
                 ))}

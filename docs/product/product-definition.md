@@ -32,8 +32,8 @@ Illustrative item: **Thursday — Legal app: TTA workflow remediation**. Jig own
 
 An operator must be able to:
 
-1. plan tomorrow, today, or any selected date by adding lightweight items;
-2. review an entire week and the selected day's attention list, with unfinished earlier-day items automatically rolled into the current day's bucket by updating their scheduled date;
+1. plan today or any date in the displayed week by adding lightweight items directly to that date, with the scheduled date always editable in the Task form;
+2. review an entire week as seven dated sequences, with narrow/mobile reflowing those same seven dates vertically rather than introducing a selected-day subview; unfinished earlier-day items automatically roll into the current day's bucket by updating their scheduled date;
 3. change the order of items at any point using drag-and-drop;
 4. move work to another date without losing it;
 5. optionally mark importance and set a reminder, without estimating duration;

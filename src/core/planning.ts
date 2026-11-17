@@ -134,8 +134,14 @@ export function assertTaskSet(tasks: readonly Task[]): void {
     ids.add(task.id);
 
     if (task.completed_at === null) {
+      if (task.position === null) {
+        throw new PlanningError(
+          "INVALID_OPERATION",
+          `Outstanding Task ${task.id} is missing its position`,
+        );
+      }
       const positions = positionsByDate.get(task.scheduled_date) ?? [];
-      positions.push(task.position as number);
+      positions.push(task.position);
       positionsByDate.set(task.scheduled_date, positions);
     }
   }
@@ -586,19 +592,33 @@ export function addCivilDays(
   ].join("-");
 }
 
-export function startOfWeekMonday(civilDate: string): string {
+export function weekdayOffsetFromMonday(civilDate: string): number {
   assertCivilDate(civilDate);
   const [yearText, monthText, dayText] = civilDate.split("-");
   const date = new Date(
     Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText)),
   );
   const dayOfWeek = date.getUTCDay();
-  const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  return addCivilDays(civilDate, -daysSinceMonday);
+  return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 }
 
-export function weekDates(selectedDate: string): readonly string[] {
-  const monday = startOfWeekMonday(selectedDate);
+export function startOfWeekMonday(civilDate: string): string {
+  return addCivilDays(civilDate, -weekdayOffsetFromMonday(civilDate));
+}
+
+export function defaultAddDate(
+  displayedWeekStart: string,
+  currentLocalDate: string,
+): string {
+  assertCivilDate(displayedWeekStart, "displayed_week_start");
+  return addCivilDays(
+    displayedWeekStart,
+    weekdayOffsetFromMonday(currentLocalDate),
+  );
+}
+
+export function weekDates(displayedWeekStart: string): readonly string[] {
+  const monday = startOfWeekMonday(displayedWeekStart);
 
   return Array.from({ length: 7 }, (_, index) =>
     addCivilDays(monday, index),

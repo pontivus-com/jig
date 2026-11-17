@@ -70,19 +70,13 @@ test("already-open browser refreshes canonical state across local midnight", asy
 
   await page.clock.fastForward(60_000);
 
-  const expectedSelectedLabel = new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(tomorrow(start));
-
   await expect
     .poll(() =>
       page
-        .locator('.jig-date-heading-button[aria-current="date"]')
-        .getAttribute("aria-label"),
+        .locator(".jig-week-column-today")
+        .getAttribute("data-date"),
     )
-    .toContain(expectedSelectedLabel);
+    .toBe(nextDay);
 
   await expect(
     page
@@ -92,7 +86,7 @@ test("already-open browser refreshes canonical state across local midnight", asy
   ).toBeVisible();
 });
 
-test("local midnight refresh preserves an explicitly selected non-today date", async ({
+test("local midnight preserves an explicitly viewed non-current week", async ({
   page,
 }) => {
   const start = nearMidnight();
@@ -100,18 +94,14 @@ test("local midnight refresh preserves an explicitly selected non-today date", a
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1440, height: 900 });
 
-  await page.locator(".jig-week-strip-date").first().click();
-  const selectedBefore = await page
-    .locator('.jig-week-strip-date[aria-current="date"]')
-    .textContent();
+  await page.getByRole("button", { name: "Next week" }).click();
+  const range = page.locator(".jig-header-week-range");
+  const viewedWeek = await range.textContent();
 
   await page.clock.fastForward(60_000);
 
-  await expect
-    .poll(() =>
-      page.locator('.jig-week-strip-date[aria-current="date"]').textContent(),
-    )
-    .toBe(selectedBefore);
+  await expect(range).toHaveText(viewedWeek ?? "");
+  await expect(page.locator('[aria-current="date"]')).toHaveCount(0);
 });

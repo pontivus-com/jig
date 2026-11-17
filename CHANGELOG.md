@@ -4,6 +4,22 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Fixed
+
+- v1.0.4 restores card-body drag-and-drop with exact same-day/cross-day ordering while keeping checkbox, menu and reference controls independent.
+- Corrected current-day, selected-Task, priority, drag/focus and operational-status color collisions with governed semantic Light/Dark roles.
+- Task workspace dismissal, card-to-card retargeting, destination-invariant header geometry and complete Planner/History Task action menus now follow the binding interaction contract.
+- Removed the obsolete selected-day state, DateStrip/read-only inspector paths and duplicate desktop/narrow Task-sequence ownership.
+- Tightened architecture boundaries and runtime narrowing so the functional core remains pure, UI no longer depends on shell implementation modules, and canonical Task data is validated at repository/SQLite/HTTP boundaries.
+
+### Changed
+
+- Add and existing Task interaction now use one directly editable full field surface; global Add derives the current weekday inside the displayed week and each full weekday/date header owns an explicit date-specific `+`.
+- Narrow/mobile now presents all seven dates as stacked sections, matching the same displayed-week state as desktop.
+- Desktop navigation explicitly groups Planner, History and Settings on the right while preserving centered temporal controls.
+- Planner presentation uses an open reduced-chrome weekly canvas, content-driven lane heights, restrained Task surfaces and Astryx semantic iconography.
+- Local-only and synchronized durability states now use healthy success semantics while retaining distinct labels.
+
 ## [1.0.3] - 2026-11-17
 
 ### Changed

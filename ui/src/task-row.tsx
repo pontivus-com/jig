@@ -2,22 +2,29 @@ import {
   Button,
   CheckboxInput,
   DropdownMenu,
+  Icon,
   Link,
   ListItem,
 } from "@astryxdesign/core";
+import {
+  PointerActivationConstraints,
+  PointerSensor,
+} from "@dnd-kit/dom";
 import { useSortable } from "@dnd-kit/react/sortable";
-import type { Ref } from "react";
-import type { Task } from "../../src/core/task";
+import { useRef, type Ref } from "react";
+import type { Priority, Task } from "../../src/core/task";
 import { formatReminderTime } from "./dates";
 
 export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
-  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLDivElement> | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
+  readonly onSetPriority: (priority: Priority) => void;
+  readonly onDelete: () => void;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
 }
@@ -45,7 +52,7 @@ function TaskMetadata({
       )}
       {task.reminder_time === null ? null : (
         <span className="jig-task-meta-item jig-reminder-time">
-          <span aria-hidden="true">◷</span>{" "}
+          <Icon icon="clock" size="xsm" color="secondary" />
           {formatReminderTime(task.reminder_time)}
         </span>
       )}
@@ -77,6 +84,7 @@ function TaskMetadata({
           label="Copy reference"
           variant="ghost"
           size="sm"
+          icon={<Icon icon="copy" size="xsm" color="inherit" />}
           className="jig-copy-reference jig-task-meta-item"
           onPointerDown={stopPointer}
           onClick={(event) => {
@@ -91,41 +99,69 @@ function TaskMetadata({
   );
 }
 
-function TaskActionMenu({
+function priorityMenuItems(
+  task: Task,
+  onSetPriority: (priority: Priority) => void,
+) {
+  return ([
+    ["HIGH", "High"],
+    ["NORMAL", "Normal"],
+    ["LOW", "Low"],
+  ] as const).map(([priority, label]) => ({
+    id: `priority-${priority.toLowerCase()}`,
+    label: `Priority: ${label}`,
+    endContent:
+      task.priority === priority ? (
+        <span aria-label="Current priority">
+          <Icon icon="check" size="xsm" color="inherit" />
+        </span>
+      ) : undefined,
+    onClick: () => onSetPriority(priority),
+  }));
+}
+
+export interface TaskActionMenuProps {
+  readonly task: Task;
+  readonly onEdit: () => void;
+  readonly onToggleComplete: () => void;
+  readonly onSetPriority: (priority: Priority) => void;
+  readonly onDelete: () => void;
+  readonly onMoveUp?: (() => void) | undefined;
+  readonly onMoveDown?: (() => void) | undefined;
+}
+
+export function TaskActionMenu({
   task,
   onEdit,
+  onToggleComplete,
+  onSetPriority,
+  onDelete,
   onMoveUp,
   onMoveDown,
-}: Readonly<{
-  task: Task;
-  onEdit: () => void;
-  onMoveUp?: (() => void) | undefined;
-  onMoveDown?: (() => void) | undefined;
-}>): React.ReactElement {
+}: TaskActionMenuProps): React.ReactElement {
   const items = [
     {
       id: "edit",
-      label: "Edit",
+      label: "Open / edit",
       onClick: onEdit,
     },
+    {
+      id: task.completed_at === null ? "complete" : "reopen",
+      label: task.completed_at === null ? "Complete" : "Reopen",
+      onClick: onToggleComplete,
+    },
+    ...priorityMenuItems(task, onSetPriority),
     ...(onMoveUp === undefined
       ? []
-      : [
-          {
-            id: "move-up",
-            label: "Move up",
-            onClick: onMoveUp,
-          },
-        ]),
+      : [{ id: "move-up", label: "Move up", onClick: onMoveUp }]),
     ...(onMoveDown === undefined
       ? []
-      : [
-          {
-            id: "move-down",
-            label: "Move down",
-            onClick: onMoveDown,
-          },
-        ]),
+      : [{ id: "move-down", label: "Move down", onClick: onMoveDown }]),
+    {
+      id: "delete",
+      label: "Delete…",
+      onClick: onDelete,
+    },
   ];
 
   return (
@@ -137,7 +173,7 @@ function TaskActionMenu({
       <DropdownMenu
         button={{
           label: `Actions for ${task.title}`,
-          icon: <span aria-hidden="true">•••</span>,
+          icon: <Icon icon="moreHorizontal" color="inherit" />,
           isIconOnly: true,
           variant: "ghost",
           size: "sm",
@@ -161,11 +197,8 @@ export function TaskCardPreview({
     >
       <div className="jig-task-card-preview-row">
         <span className="jig-task-card-preview-checkbox">□</span>
-        <span className="jig-task-drag-handle" aria-hidden="true">
-          ≡
-        </span>
         <span className="jig-task-title">{task.title}</span>
-        <span className="jig-task-card-preview-menu">•••</span>
+        <Icon icon="moreHorizontal" color="secondary" />
       </div>
       <TaskMetadata task={task} />
     </div>
@@ -180,10 +213,41 @@ export function TaskRow({
   onSelect,
   onToggleComplete,
   onEdit,
+  onSetPriority,
+  onDelete,
   onMoveUp,
   onMoveDown,
 }: TaskRowProps): React.ReactElement {
   const completed = task.completed_at !== null;
+  const pointerStart = useRef<{ readonly x: number; readonly y: number } | null>(
+    null,
+  );
+
+  const bodyPointerProps =
+    onSelect === undefined || dragHandleRef === undefined
+      ? {}
+      : {
+          onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
+            pointerStart.current = { x: event.clientX, y: event.clientY };
+          },
+          onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => {
+            const start = pointerStart.current;
+            pointerStart.current = null;
+            if (start === null) {
+              return;
+            }
+            const moved = Math.hypot(
+              event.clientX - start.x,
+              event.clientY - start.y,
+            );
+            if (moved <= 4) {
+              onSelect();
+            }
+          },
+          onPointerCancel: () => {
+            pointerStart.current = null;
+          },
+        };
 
   return (
     <ListItem
@@ -209,21 +273,14 @@ export function TaskRow({
             onChange={onToggleComplete}
             size="sm"
           />
-          {completed ? null : (
-            <span
-              {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
-              className="jig-task-drag-handle"
-              aria-hidden="true"
-              title="Drag task"
-              onClick={(event) => event.stopPropagation()}
-            >
-              ≡
-            </span>
-          )}
         </span>
       }
       label={
-        <div className="jig-task-body">
+        <div
+          {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
+          {...bodyPointerProps}
+          className={completed ? "jig-task-body" : "jig-task-body jig-task-body-draggable"}
+        >
           <div className="jig-task-title-row">
             <span
               className={
@@ -242,6 +299,9 @@ export function TaskRow({
         <TaskActionMenu
           task={task}
           onEdit={onEdit}
+          onToggleComplete={onToggleComplete}
+          onSetPriority={onSetPriority}
+          onDelete={onDelete}
           {...(onMoveUp === undefined ? {} : { onMoveUp })}
           {...(onMoveDown === undefined ? {} : { onMoveDown })}
         />
@@ -268,14 +328,29 @@ export function SortableTaskRow({
     group,
     type: "jig-task",
     accept: "jig-task",
+    sensors: [
+      PointerSensor.configure({
+        activationConstraints: [
+          new PointerActivationConstraints.Distance({ value: 5 }),
+        ],
+      }),
+    ],
   });
+
+  // Keep the Astryx ListItem <li> as dnd-kit's sortable source/drop target
+  // and bind the public handle to Jig's non-interactive Task body. dnd-kit
+  // normally activates a mouse handle immediately, so this sortable explicitly
+  // requires 5px pointer movement before activation. Ordinary clicks therefore
+  // remain ListItem selection while body movement becomes drag.
+  const rowRef = sortable.ref as Ref<HTMLLIElement>;
+  const dragHandleRef = sortable.handleRef as Ref<HTMLDivElement>;
 
   return (
     <TaskRow
       {...rowProps}
       task={task}
-      rowRef={sortable.ref as Ref<HTMLLIElement>}
-      dragHandleRef={sortable.handleRef as Ref<HTMLSpanElement>}
+      rowRef={rowRef}
+      dragHandleRef={dragHandleRef}
     />
   );
 }

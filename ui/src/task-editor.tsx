@@ -7,15 +7,15 @@ import {
   TextInput,
   TimeInput,
 } from "@astryxdesign/core";
-import type { ISODateString } from "@astryxdesign/core/utils";
-import type { ISOTimeString } from "@astryxdesign/core/TimeInput";
 import { FieldLabel } from "@astryxdesign/core/Field";
 import { useId, useState } from "react";
-import type {
-  Priority,
-  Task,
-  TaskCommand,
+import {
+  isPriority,
+  type Priority,
+  type Task,
+  type TaskCommand,
 } from "../../src/core/task";
+import { asIsoDateString, asIsoTimeString } from "./dates";
 
 export interface TaskDraft {
   readonly title: string;
@@ -52,26 +52,23 @@ export function draftFor(
       };
 }
 
-function optionalText(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed;
-}
-
 export function commandForDraft(
   task: Task | null,
   draft: TaskDraft,
 ): TaskCommand {
+  const reminderTime =
+    draft.reminderTime.length === 0 ? null : draft.reminderTime;
+
   if (task === null) {
     return {
       type: "create",
-      title: draft.title.trim(),
+      title: draft.title,
       scheduled_date: draft.scheduledDate,
       priority: draft.priority,
-      context: optionalText(draft.context),
-      reference: optionalText(draft.reference),
-      note: optionalText(draft.note),
-      reminder_time:
-        draft.reminderTime.length === 0 ? null : draft.reminderTime,
+      context: draft.context,
+      reference: draft.reference,
+      note: draft.note,
+      reminder_time: reminderTime,
     };
   }
 
@@ -79,21 +76,19 @@ export function commandForDraft(
     type: "edit",
     task_id: task.id,
     changes: {
-      title: draft.title.trim(),
+      title: draft.title,
       scheduled_date: draft.scheduledDate,
       priority: draft.priority,
-      context: optionalText(draft.context),
-      reference: optionalText(draft.reference),
-      note: optionalText(draft.note),
-      reminder_time:
-        draft.reminderTime.length === 0 ? null : draft.reminderTime,
+      context: draft.context,
+      reference: draft.reference,
+      note: draft.note,
+      reminder_time: reminderTime,
     },
   };
 }
 
 export interface TaskEditorProps {
   readonly task: Task | null;
-  readonly initiatingDate: string;
   readonly draft: TaskDraft;
   readonly externalError: string | null;
   readonly isSaving: boolean;
@@ -104,7 +99,6 @@ export interface TaskEditorProps {
 
 export function TaskEditor({
   task,
-  initiatingDate,
   draft,
   externalError,
   isSaving,
@@ -139,8 +133,8 @@ export function TaskEditor({
 
   return (
     <section
-      className="jig-task-inspector jig-task-editor-surface jig-task-inspector-drawer"
-      aria-label={task === null ? "Add task" : `Edit task ${task.title}`}
+      className="jig-task-editor-surface"
+      aria-label={task === null ? "Add task" : `Task ${task.title}`}
     >
       <form
         className="jig-editor-form"
@@ -164,87 +158,80 @@ export function TaskEditor({
           width="100%"
         />
 
-        {task === null ? null : (
-          <>
-          <DateInput
-            label="Date"
-            value={draft.scheduledDate as ISODateString}
-            onChange={(value) =>
-              update("scheduledDate", value ?? draft.scheduledDate)
+        <DateInput
+          label="Date"
+          value={asIsoDateString(draft.scheduledDate)}
+          onChange={(value) => {
+            if (value !== undefined) {
+              update("scheduledDate", value);
             }
-            isRequired
-            weekStartsOn="mon"
-          />
-  
-          <TextInput
-            label="Context"
-            value={draft.context}
-            onChange={(value) => update("context", value)}
-            isOptional
-            width="100%"
-            placeholder="Project, client, or place"
-          />
-  
-          <div className="jig-editor-group-field">
-            <FieldLabel
-              label="Priority"
-              inputID={priorityGroupId}
-              labelID={priorityLabelId}
-              isGroupLabel
-            />
-            <SegmentedControl
-              id={priorityGroupId}
-              aria-labelledby={priorityLabelId}
-              label="Priority"
-              value={draft.priority}
-              onChange={(value) => update("priority", value as Priority)}
-              layout="fill"
-            >
-              <SegmentedControlItem value="HIGH" label="High" />
-              <SegmentedControlItem value="NORMAL" label="Normal" />
-              <SegmentedControlItem value="LOW" label="Low" />
-            </SegmentedControl>
-          </div>
-  
-          <TimeInput
-            label="Reminder"
-            value={
-              draft.reminderTime.length === 0
-                ? undefined
-                : (draft.reminderTime as ISOTimeString)
-            }
-            onChange={(value) => update("reminderTime", value ?? "")}
-            isOptional
-            hasClear
-          />
-  
-          <TextInput
-            label="Reference"
-            value={draft.reference}
-            onChange={(value) => update("reference", value)}
-            isOptional
-            width="100%"
-            placeholder="https://… or a path/locator to copy"
-          />
-  
-          <TextArea
-            label="Notes"
-            value={draft.note}
-            onChange={(value) => update("note", value)}
-            isOptional
-            rows={4}
-          />
-  
-  
-          </>
-        )}
+          }}
+          isRequired
+          weekStartsOn="mon"
+        />
 
-        {task === null ? (
-          <p className="jig-secondary-copy">
-            Add the title now. Date and defaults come from this planning context;
-            open Edit afterward for optional details.
-          </p>
-        ) : null}
+        <TextInput
+          label="Context"
+          value={draft.context}
+          onChange={(value) => update("context", value)}
+          isOptional
+          width="100%"
+          placeholder="Project, client, or place"
+        />
+
+        <div className="jig-editor-group-field">
+          <FieldLabel
+            label="Priority"
+            inputID={priorityGroupId}
+            labelID={priorityLabelId}
+            isGroupLabel
+          />
+          <SegmentedControl
+            id={priorityGroupId}
+            aria-labelledby={priorityLabelId}
+            label="Priority"
+            value={draft.priority}
+            onChange={(value) => {
+              if (isPriority(value)) {
+                update("priority", value);
+              }
+            }}
+            layout="fill"
+          >
+            <SegmentedControlItem value="HIGH" label="High" />
+            <SegmentedControlItem value="NORMAL" label="Normal" />
+            <SegmentedControlItem value="LOW" label="Low" />
+          </SegmentedControl>
+        </div>
+
+        <TimeInput
+          label="Reminder"
+          value={
+            draft.reminderTime.length === 0
+              ? undefined
+              : asIsoTimeString(draft.reminderTime)
+          }
+          onChange={(value) => update("reminderTime", value ?? "")}
+          isOptional
+          hasClear
+        />
+
+        <TextInput
+          label="Reference"
+          value={draft.reference}
+          onChange={(value) => update("reference", value)}
+          isOptional
+          width="100%"
+          placeholder="https://… or a path/locator to copy"
+        />
+
+        <TextArea
+          label="Notes"
+          value={draft.note}
+          onChange={(value) => update("note", value)}
+          isOptional
+          rows={4}
+        />
 
         <div className="jig-editor-actions">
           <div className="jig-editor-primary-actions">

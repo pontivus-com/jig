@@ -1,12 +1,21 @@
 import { Database } from "bun:sqlite";
 import {
   assertUuid,
-  normalizeOptionalText,
-  normalizeTitle,
+  createCanonicalTask,
   type Task,
   type TaskCommand,
   validateTask,
 } from "../core/task";
+import type {
+  CanonicalState,
+  CommandResult,
+  RepositoryStatus,
+} from "../protocol";
+export type {
+  CanonicalState,
+  CommandResult,
+  RepositoryStatus,
+} from "../protocol";
 import {
   assertTaskSet,
   completeTask,
@@ -22,13 +31,6 @@ import {
 export const SQLITE_SCHEMA_VERSION = 2;
 export const PORTABLE_FORMAT_VERSION = 1;
 
-export type RepositoryStatus =
-  | "local-only"
-  | "pending"
-  | "retrying"
-  | "synchronized"
-  | "sync-issue";
-
 export interface PersistenceMetadata {
   readonly schema_version: number;
   readonly dataset_id: string;
@@ -38,15 +40,6 @@ export interface PersistenceMetadata {
   readonly last_adopted_head: string | null;
   readonly pending_sync: boolean;
 }
-
-export interface CanonicalState {
-  readonly revision: number;
-  readonly tasks: readonly Task[];
-}
-
-export type CommandResult =
-  | { readonly revision: number; readonly task: Task }
-  | { readonly revision: number; readonly deleted_task_id: string };
 
 export class StaleRevisionError extends Error {
   readonly current_revision: number;
@@ -297,19 +290,16 @@ export function readMetadata(db: Database): PersistenceMetadata {
 }
 
 export function readTasks(db: Database): readonly Task[] {
-  const rows = db
+  const rows: readonly unknown[] = db
     .query(
       `SELECT ${TASK_COLUMNS}
        FROM task
        ORDER BY scheduled_date, completed_at IS NOT NULL, position, id`,
     )
-    .all() as Task[];
-
-  for (const task of rows) {
-    validateTask(task);
-  }
-  assertTaskSet(rows);
-  return rows;
+    .all();
+  const tasks = rows.map((row) => validateTask(row));
+  assertTaskSet(tasks);
+  return tasks;
 }
 
 export function readCanonicalState(db: Database): CanonicalState {
@@ -318,28 +308,6 @@ export function readCanonicalState(db: Database): CanonicalState {
     revision: metadata.revision,
     tasks: readTasks(db),
   };
-}
-
-function createCanonicalTask(
-  command: Extract<TaskCommand, { readonly type: "create" }>,
-  id: string,
-  now: string,
-): Task {
-  assertUuid(id);
-  return validateTask({
-    id,
-    title: normalizeTitle(command.title),
-    scheduled_date: command.scheduled_date,
-    position: 0,
-    priority: command.priority ?? "NORMAL",
-    context: normalizeOptionalText(command.context),
-    reference: normalizeOptionalText(command.reference),
-    note: normalizeOptionalText(command.note),
-    reminder_time: command.reminder_time ?? null,
-    completed_at: null,
-    created_at: now,
-    updated_at: now,
-  });
 }
 
 function executeCoreCommand(

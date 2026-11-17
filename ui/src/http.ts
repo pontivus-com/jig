@@ -6,12 +6,10 @@ import {
 import type {
   CanonicalState,
   CommandResult,
-  RepositoryStatus,
-} from "../../src/shell/sqlite";
-import type {
   Diagnostics,
+  RepositoryStatus,
   ServiceStatus,
-} from "../../src/shell/http";
+} from "../../src/protocol";
 
 declare global {
   interface Window {
@@ -195,9 +193,12 @@ export async function readDiagnostics(): Promise<Diagnostics> {
   }
 
   if (
+    typeof payload.service_healthy !== "boolean" ||
+    typeof payload.sqlite_available !== "boolean" ||
     typeof payload.sqlite_schema_version !== "number" ||
     typeof payload.repository_path !== "string" ||
-    typeof payload.portable_format_version !== "number"
+    typeof payload.portable_format_version !== "number" ||
+    typeof payload.repository_adapter_healthy !== "boolean"
   ) {
     throw new JigHttpError(
       500,
@@ -207,13 +208,12 @@ export async function readDiagnostics(): Promise<Diagnostics> {
   }
 
   return {
-    service_healthy: payload.service_healthy as boolean,
-    sqlite_available: payload.sqlite_available as boolean,
+    service_healthy: payload.service_healthy,
+    sqlite_available: payload.sqlite_available,
     sqlite_schema_version: payload.sqlite_schema_version,
     repository_path: payload.repository_path,
     portable_format_version: payload.portable_format_version,
-    repository_adapter_healthy:
-      payload.repository_adapter_healthy as boolean,
+    repository_adapter_healthy: payload.repository_adapter_healthy,
   };
 }
 

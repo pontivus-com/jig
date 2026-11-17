@@ -4,12 +4,14 @@ import {
   assertTaskSet,
   completeTask,
   createTask,
+  defaultAddDate,
   deleteTask,
   editTask,
   moveTask,
   reopenTask,
   rollForwardOutstanding,
   startOfWeekMonday,
+  weekdayOffsetFromMonday,
   weekDates,
 } from "../../src/core/planning";
 
@@ -344,6 +346,14 @@ describe("civil week helpers", () => {
       "2027-01-02",
       "2027-01-03",
     ]);
+  });
+
+  it("derives the current weekday inside any displayed week", () => {
+    expect(weekdayOffsetFromMonday("2026-11-16")).toBe(0);
+    expect(weekdayOffsetFromMonday("2026-11-22")).toBe(6);
+    expect(defaultAddDate("2026-11-16", "2026-11-19")).toBe("2026-11-19");
+    expect(defaultAddDate("2026-11-23", "2026-11-19")).toBe("2026-11-26");
+    expect(defaultAddDate("2026-12-28", "2027-01-03")).toBe("2027-01-03");
   });
 
   it("handles leap-day adjacency", () => {

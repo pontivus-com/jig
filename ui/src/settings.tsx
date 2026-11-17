@@ -10,7 +10,8 @@ import { useEffect, useState } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
-} from "../../src/shell/http";
+} from "../../src/protocol";
+import { repositoryStatusPresentation } from "./repository-status";
 import {
   browserNotificationState,
   requestBrowserNotificationPermission,
@@ -18,6 +19,10 @@ import {
 } from "./browser-notifications";
 
 export type ThemePreference = "system" | "light" | "dark";
+
+export function isThemePreference(value: unknown): value is ThemePreference {
+  return value === "system" || value === "light" || value === "dark";
+}
 
 export interface SettingsViewProps {
   readonly themePreference: ThemePreference;
@@ -27,23 +32,6 @@ export interface SettingsViewProps {
   readonly isOperating: boolean;
   readonly onThemePreferenceChange: (value: ThemePreference) => void;
   readonly onSync: () => Promise<void>;
-}
-
-function statusMessage(status: ServiceStatus | null): string {
-  switch (status?.repository_status) {
-    case "local-only":
-      return "Saved locally. Repository synchronization is not currently available.";
-    case "pending":
-      return "Saved locally. Repository synchronization is pending.";
-    case "retrying":
-      return "Saved locally. Repository synchronization is retrying.";
-    case "synchronized":
-      return "Local planning data and the configured repository are synchronized.";
-    case "sync-issue":
-      return "Local planning data is safe. Repository synchronization currently has an operational issue.";
-    default:
-      return "Repository status is unavailable.";
-  }
 }
 
 function notificationStatusMessage(
@@ -72,6 +60,7 @@ export function SettingsView({
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
     useState<BrowserNotificationState>(browserNotificationState);
+  const repositoryStatus = repositoryStatusPresentation(status);
 
   useEffect(() => {
     const refresh = (): void => {
@@ -136,7 +125,7 @@ export function SettingsView({
                   ? "Synced"
                   : "Synchronization"}
               </strong>
-              <p>{statusMessage(status)}</p>
+              <p>{repositoryStatus.message}</p>
               <dl className="jig-diagnostics">
                 <div>
                   <dt>Service</dt>
@@ -178,9 +167,11 @@ export function SettingsView({
               <SegmentedControl
                 label="Appearance"
                 value={themePreference}
-                onChange={(value) =>
-                  onThemePreferenceChange(value as ThemePreference)
-                }
+                onChange={(value) => {
+                  if (isThemePreference(value)) {
+                    onThemePreferenceChange(value);
+                  }
+                }}
                 layout="fill"
               >
                 <SegmentedControlItem value="system" label="System" />

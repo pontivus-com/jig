@@ -8,96 +8,116 @@ import {
 } from "@astryxdesign/core";
 import type { Task, TaskCommand } from "../../src/core/task";
 import { formatCivilDate } from "./dates";
-import {
-  TaskEditor,
-  type TaskDraft,
-} from "./task-editor";
-import { TaskInspector } from "./task-inspector";
+import { TaskEditor, type TaskDraft } from "./task-editor";
 
-export type TaskWorkspaceMode = "view" | "edit" | "create";
+export type TaskWorkspaceState =
+  | { readonly mode: "closed" }
+  | {
+      readonly mode: "task";
+      readonly taskId: string;
+      readonly draft: TaskDraft;
+    }
+  | {
+      readonly mode: "create";
+      readonly originatingDate: string;
+      readonly draft: TaskDraft;
+    };
 
-export interface TaskWorkspaceContentProps {
-  readonly mode: TaskWorkspaceMode;
-  readonly task: Task | null;
-  readonly initiatingDate: string;
-  readonly draft: TaskDraft;
+export type TaskWorkspacePresentation =
+  | {
+      readonly mode: "task";
+      readonly task: Task;
+      readonly draft: TaskDraft;
+    }
+  | {
+      readonly mode: "create";
+      readonly originatingDate: string;
+      readonly draft: TaskDraft;
+    };
+
+interface TaskWorkspaceContentProps {
+  readonly workspace: TaskWorkspacePresentation;
   readonly externalError: string | null;
   readonly isSaving: boolean;
-  readonly onModeChange: (mode: TaskWorkspaceMode | null) => void;
   readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
+  readonly onClose: () => void;
 }
 
-export function TaskWorkspaceContent({
-  mode,
-  task,
-  initiatingDate,
-  draft,
+function workspaceTask(
+  workspace: TaskWorkspacePresentation,
+): Task | null {
+  return workspace.mode === "task" ? workspace.task : null;
+}
+
+function TaskWorkspaceContent({
+  workspace,
   externalError,
   isSaving,
-  onModeChange,
   onDraftChange,
   onSave,
   onDelete,
   onToggleComplete,
+  onClose,
 }: TaskWorkspaceContentProps): React.ReactElement {
-  if (mode === "create" || mode === "edit") {
-    const editorTask = mode === "edit" ? task : null;
-    return (
+  const task = workspaceTask(workspace);
+
+  return (
+    <div className="jig-task-workspace-form">
       <TaskEditor
-        task={editorTask}
-        initiatingDate={initiatingDate}
-        draft={draft}
+        task={task}
+        draft={workspace.draft}
         externalError={externalError}
         isSaving={isSaving}
         onDraftChange={onDraftChange}
-        onCancel={() => onModeChange(editorTask === null ? null : "view")}
-        onSave={async (command) => {
-          const saved = await onSave(command);
-          if (saved) {
-            onModeChange("view");
-          }
-          return saved;
-        }}
+        onCancel={onClose}
+        onSave={onSave}
       />
-    );
-  }
-
-  return (
-    <TaskInspector
-      task={task}
-      onToggleComplete={onToggleComplete}
-      onEdit={() => onModeChange("edit")}
-      onDelete={onDelete}
-    />
+      {task === null ? null : (
+        <div className="jig-task-workspace-actions">
+          <Button
+            label={task.completed_at === null ? "Mark complete" : "Reopen"}
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              void onToggleComplete(task);
+            }}
+            isDisabled={isSaving}
+          />
+          <Button
+            label="Delete…"
+            variant="ghost"
+            size="sm"
+            className="jig-workspace-delete"
+            onClick={() => onDelete(task)}
+            isDisabled={isSaving}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
 function workspaceTitle(
-  mode: TaskWorkspaceMode,
-  task: Task | null,
+  workspace: TaskWorkspacePresentation,
 ): string {
-  if (mode === "create") {
-    return "Add task";
-  }
-  if (mode === "edit") {
-    return "Edit task";
-  }
-  return task?.title ?? "Task details";
+  return workspace.mode === "create" ? "Add task" : workspace.task.title;
+}
+
+function workspaceDate(
+  workspace: TaskWorkspacePresentation,
+): string {
+  return workspace.mode === "create"
+    ? workspace.originatingDate
+    : workspace.task.scheduled_date;
 }
 
 function workspaceSubtitle(
-  mode: TaskWorkspaceMode,
-  task: Task | null,
-  initiatingDate: string,
-): string | undefined {
-  const date = mode === "create" ? initiatingDate : task?.scheduled_date;
-  if (date === undefined) {
-    return undefined;
-  }
-  return formatCivilDate(date, {
+  workspace: TaskWorkspacePresentation,
+): string {
+  return formatCivilDate(workspaceDate(workspace), {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -105,35 +125,25 @@ function workspaceSubtitle(
 }
 
 export interface TaskWorkspaceOverlayProps
-  extends Omit<
-    TaskWorkspaceContentProps,
-    "mode"
-  > {
-  readonly mode: TaskWorkspaceMode | null;
-  readonly onClose: () => void;
+  extends Omit<TaskWorkspaceContentProps, "workspace"> {
+  readonly workspace: TaskWorkspacePresentation | null;
 }
 
 export function TaskWorkspaceDrawer({
-  mode,
-  task,
-  initiatingDate,
-  draft,
+  workspace,
   externalError,
   isSaving,
-  onModeChange,
   onDraftChange,
   onSave,
   onDelete,
   onToggleComplete,
   onClose,
 }: TaskWorkspaceOverlayProps): React.ReactElement {
-  const effectiveMode = mode ?? "view";
-  const title = workspaceTitle(effectiveMode, task);
-  const subtitle = workspaceSubtitle(effectiveMode, task, initiatingDate);
+  const title = workspace === null ? "Task" : workspaceTitle(workspace);
 
   return (
     <Drawer
-      isOpen={mode !== null}
+      isOpen={workspace !== null}
       onOpenChange={(open) => {
         if (!open && !isSaving) {
           onClose();
@@ -143,106 +153,100 @@ export function TaskWorkspaceDrawer({
       side="end"
       width="30rem"
       hasScrim={false}
-      purpose={effectiveMode === "view" ? "info" : "form"}
+      purpose="form"
       padding={4}
     >
-      <Layout
-        height="fill"
-        header={
-          <DrawerHeader
-            title={title}
-            subtitle={subtitle}
-            onOpenChange={() => {
-              if (!isSaving) {
-                onClose();
-              }
-            }}
-            hasDivider
-          />
-        }
-        content={
-          <LayoutContent>
-            <TaskWorkspaceContent
-              mode={effectiveMode}
-              task={task}
-              initiatingDate={initiatingDate}
-              draft={draft}
-              externalError={externalError}
-              isSaving={isSaving}
-              onModeChange={onModeChange}
-              onDraftChange={onDraftChange}
-              onSave={onSave}
-              onDelete={onDelete}
-              onToggleComplete={onToggleComplete}
+      {workspace === null ? null : (
+        <Layout
+          height="fill"
+          header={
+            <DrawerHeader
+              title={title}
+              subtitle={workspaceSubtitle(workspace)}
+              onOpenChange={() => {
+                if (!isSaving) {
+                  onClose();
+                }
+              }}
+              hasDivider
             />
-          </LayoutContent>
-        }
-      />
+          }
+          content={
+            <LayoutContent>
+              <TaskWorkspaceContent
+                workspace={workspace}
+                externalError={externalError}
+                isSaving={isSaving}
+                onDraftChange={onDraftChange}
+                onSave={onSave}
+                onDelete={onDelete}
+                onToggleComplete={onToggleComplete}
+                onClose={onClose}
+              />
+            </LayoutContent>
+          }
+        />
+      )}
     </Drawer>
   );
 }
 
 export function TaskWorkspaceBottomSheet({
-  mode,
-  task,
-  initiatingDate,
-  draft,
+  workspace,
   externalError,
   isSaving,
-  onModeChange,
   onDraftChange,
   onSave,
   onDelete,
   onToggleComplete,
   onClose,
 }: TaskWorkspaceOverlayProps): React.ReactElement {
-  const effectiveMode = mode ?? "view";
-  const title = workspaceTitle(effectiveMode, task);
-  const subtitle = workspaceSubtitle(effectiveMode, task, initiatingDate);
+  const title = workspace === null ? "Task" : workspaceTitle(workspace);
 
   return (
     <BottomSheet
-      isOpen={mode !== null}
+      isOpen={workspace !== null}
       onOpenChange={(open) => {
         if (!open && !isSaving) {
           onClose();
         }
       }}
       label={title}
-      height={effectiveMode === "view" ? "capped" : "tall"}
+      height="tall"
       hasScrim={false}
-      purpose={effectiveMode === "view" ? "info" : "form"}
+      purpose="form"
       padding={4}
     >
-      <div className="jig-task-sheet-header">
-        <div>
-          <strong>{title}</strong>
-          {subtitle === undefined ? null : <span>{subtitle}</span>}
-        </div>
-        <Button
-          label="Close"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            if (!isSaving) {
-              onClose();
-            }
-          }}
-        />
-      </div>
-      <TaskWorkspaceContent
-        mode={effectiveMode}
-        task={task}
-        initiatingDate={initiatingDate}
-        draft={draft}
-        externalError={externalError}
-        isSaving={isSaving}
-        onModeChange={onModeChange}
-        onDraftChange={onDraftChange}
-        onSave={onSave}
-        onDelete={onDelete}
-        onToggleComplete={onToggleComplete}
-      />
+      {workspace === null ? null : (
+        <>
+          <div className="jig-task-sheet-header">
+            <div>
+              <strong>{title}</strong>
+              <span>{workspaceSubtitle(workspace)}</span>
+            </div>
+            <Button
+              label="Close"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (!isSaving) {
+                  onClose();
+                }
+              }}
+            />
+          </div>
+          <TaskWorkspaceContent
+            workspace={workspace}
+            externalError={externalError}
+            isSaving={isSaving}
+            onDraftChange={onDraftChange}
+            onSave={onSave}
+            onDelete={onDelete}
+            onToggleComplete={onToggleComplete}
+            onClose={onClose}
+          />
+        </>
+      )}
     </BottomSheet>
   );
 }

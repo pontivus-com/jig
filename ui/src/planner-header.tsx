@@ -1,6 +1,8 @@
 import {
   Button,
   DropdownMenu,
+  Icon,
+  IconButton,
 } from "@astryxdesign/core";
 import type { ReactNode } from "react";
 import jigSymbolLightUrl from "../../assets/jig-symbol.svg";
@@ -19,7 +21,7 @@ export interface PlannerHeaderProps {
   readonly onToday: () => void;
   readonly onNextWeek: () => void;
   readonly onAdd: () => void;
-  readonly onNavigate: (destination: "history" | "settings") => void;
+  readonly onNavigate: (destination: Destination) => void;
 }
 
 function BrandHome({
@@ -66,28 +68,26 @@ function TemporalNavigator({
     <div className="jig-header-temporal">
       <strong className="jig-header-week-range">{weekLabel}</strong>
       <div className="jig-header-week-controls">
-        <Button
+        <IconButton
           label="Previous week"
+          icon={<Icon icon="chevronLeft" color="inherit" />}
           variant="ghost"
           size="sm"
           onClick={onPreviousWeek}
-        >
-          <span aria-hidden="true">‹</span>
-        </Button>
+        />
         <Button
           label="Today"
           variant="secondary"
           size="sm"
           onClick={onToday}
         />
-        <Button
+        <IconButton
           label="Next week"
+          icon={<Icon icon="chevronRight" color="inherit" />}
           variant="ghost"
           size="sm"
           onClick={onNextWeek}
-        >
-          <span aria-hidden="true">›</span>
-        </Button>
+        />
       </div>
     </div>
   );
@@ -100,6 +100,28 @@ function DestinationTitle({
     <strong className="jig-header-destination-title">
       {destination === "history" ? "History" : "Settings"}
     </strong>
+  );
+}
+
+function DestinationNav({
+  destination,
+  onNavigate,
+}: Readonly<
+  Pick<PlannerHeaderProps, "destination" | "onNavigate">
+>): React.ReactElement {
+  return (
+    <nav className="jig-header-destinations" aria-label="Primary">
+      {(["planner", "history", "settings"] as const).map((item) => (
+        <Button
+          key={item}
+          label={item === "planner" ? "Planner" : item === "history" ? "History" : "Settings"}
+          variant="ghost"
+          aria-current={destination === item ? "page" : undefined}
+          className={destination === item ? "jig-header-nav-active" : ""}
+          onClick={() => onNavigate(item)}
+        />
+      ))}
+    </nav>
   );
 }
 
@@ -137,19 +159,9 @@ function DesktopHeader(props: PlannerHeaderProps): React.ReactElement {
         {destination === "planner" ? (
           <Button label="Add task" variant="primary" onClick={onAdd} />
         ) : null}
-        <Button
-          label="History"
-          variant="ghost"
-          aria-current={destination === "history" ? "page" : undefined}
-          className={destination === "history" ? "jig-header-nav-active" : ""}
-          onClick={() => onNavigate("history")}
-        />
-        <Button
-          label="Settings"
-          variant="ghost"
-          aria-current={destination === "settings" ? "page" : undefined}
-          className={destination === "settings" ? "jig-header-nav-active" : ""}
-          onClick={() => onNavigate("settings")}
+        <DestinationNav
+          destination={destination}
+          onNavigate={onNavigate}
         />
         {statusControl}
       </div>
@@ -166,6 +178,7 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
     onPreviousWeek,
     onToday,
     onNextWeek,
+    onAdd,
     onNavigate,
   } = props;
 
@@ -174,12 +187,21 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
       <div className="jig-header-mobile-band">
         <BrandHome onHome={onHome} />
         <div className="jig-header-mobile-actions">
+          {destination === "planner" ? (
+            <IconButton
+              label="Add task"
+              icon={<span aria-hidden="true">+</span>}
+              variant="primary"
+              size="sm"
+              onClick={onAdd}
+            />
+          ) : null}
           {statusControl}
           <DropdownMenu
             presentation="popover"
             button={{
               label: "Open navigation menu",
-              icon: <span aria-hidden="true">☰</span>,
+              icon: <Icon icon="menu" color="inherit" />,
               isIconOnly: true,
               variant: "ghost",
               size: "sm",
@@ -190,7 +212,9 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
                 label: "History",
                 endContent:
                   destination === "history" ? (
-                    <span aria-label="Current page">✓</span>
+                    <span aria-label="Current page">
+                      <Icon icon="check" size="xsm" color="inherit" />
+                    </span>
                   ) : undefined,
                 onClick: () => onNavigate("history"),
               },
@@ -199,7 +223,9 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
                 label: "Settings",
                 endContent:
                   destination === "settings" ? (
-                    <span aria-label="Current page">✓</span>
+                    <span aria-label="Current page">
+                      <Icon icon="check" size="xsm" color="inherit" />
+                    </span>
                   ) : undefined,
                 onClick: () => onNavigate("settings"),
               },
