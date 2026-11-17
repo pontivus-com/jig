@@ -1,8 +1,10 @@
 import {
   Banner,
   Button,
+  Section,
   SegmentedControl,
   SegmentedControlItem,
+  VStack,
 } from "@astryxdesign/core";
 import { useEffect, useState, type ReactNode } from "react";
 import type {
@@ -106,11 +108,18 @@ export function SettingsView({
           aria-labelledby="planning-data-heading"
         >
           <h2 id="planning-data-heading">Planning data</h2>
-          <div className="jig-settings-card">
-            <strong>Repository</strong>
-            <p>{status?.repository_path ?? "Unavailable"}</p>
-            <small>Selected planning-data home · informational only</small>
-          </div>
+          <Section
+            className="jig-settings-card"
+            minHeight={200}
+            padding={5}
+            dividers={["top", "bottom", "start", "end"]}
+          >
+            <VStack gap={3}>
+              <strong>Repository</strong>
+              <p>{status?.repository_path ?? "Unavailable"}</p>
+              <small>Selected planning-data home · informational only</small>
+            </VStack>
+          </Section>
         </section>
 
         <section
@@ -118,28 +127,41 @@ export function SettingsView({
           aria-labelledby="sync-heading"
         >
           <h2 id="sync-heading">Synchronization</h2>
-          <div className="jig-settings-card jig-settings-sync-card">
-            <strong>{status?.repository_status === "synchronized" ? "Synced" : "Synchronization"}</strong>
-            <p>{statusMessage(status)}</p>
-            <dl className="jig-diagnostics">
-              <div>
-                <dt>Service</dt>
-                <dd>{status?.ready ? "Running" : "Unavailable"}</dd>
+          <Section
+            className="jig-settings-card jig-settings-sync-card"
+            minHeight={200}
+            padding={5}
+            dividers={["top", "bottom", "start", "end"]}
+          >
+            <VStack gap={3} height="100%">
+              <strong>
+                {status?.repository_status === "synchronized"
+                  ? "Synced"
+                  : "Synchronization"}
+              </strong>
+              <p>{statusMessage(status)}</p>
+              <dl className="jig-diagnostics">
+                <div>
+                  <dt>Service</dt>
+                  <dd>{status?.ready ? "Running" : "Unavailable"}</dd>
+                </div>
+                <div>
+                  <dt>Local save</dt>
+                  <dd>{diagnostics?.sqlite_available ? "Safe" : "Unavailable"}</dd>
+                </div>
+              </dl>
+              <div className="jig-settings-sync-action">
+                <Button
+                  label="Sync now"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onSync();
+                  }}
+                />
               </div>
-              <div>
-                <dt>Local save</dt>
-                <dd>{diagnostics?.sqlite_available ? "Safe" : "Unavailable"}</dd>
-              </div>
-            </dl>
-            <Button
-              label="Sync now"
-              variant="secondary"
-              isLoading={isOperating}
-              onClick={() => {
-                void onSync();
-              }}
-            />
-          </div>
+            </VStack>
+          </Section>
         </section>
 
         <section
@@ -147,40 +169,47 @@ export function SettingsView({
           aria-labelledby="appearance-heading"
         >
           <h2 id="appearance-heading">Appearance</h2>
-          <div className="jig-settings-card">
-            <strong>Theme</strong>
-            <SegmentedControl
-              label="Appearance"
-              value={themePreference}
-              onChange={(value) =>
-                onThemePreferenceChange(value as ThemePreference)
-              }
-              layout="fill"
-            >
-              <SegmentedControlItem value="system" label="System" />
-              <SegmentedControlItem value="light" label="Light" />
-              <SegmentedControlItem value="dark" label="Dark" />
-            </SegmentedControl>
+          <Section
+            className="jig-settings-card"
+            minHeight={130}
+            padding={5}
+            dividers={["top", "bottom", "start", "end"]}
+          >
+            <VStack gap={3}>
+              <strong>Theme</strong>
+              <SegmentedControl
+                label="Appearance"
+                value={themePreference}
+                onChange={(value) =>
+                  onThemePreferenceChange(value as ThemePreference)
+                }
+                layout="fill"
+              >
+                <SegmentedControlItem value="system" label="System" />
+                <SegmentedControlItem value="light" label="Light" />
+                <SegmentedControlItem value="dark" label="Dark" />
+              </SegmentedControl>
 
-            <div className="jig-settings-notifications">
-              <div>
-                <strong>Browser notifications</strong>
-                <p>{notificationStatusMessage(notificationState)}</p>
+              <div className="jig-settings-notifications">
+                <div>
+                  <strong>Browser notifications</strong>
+                  <p>{notificationStatusMessage(notificationState)}</p>
+                </div>
+                {notificationState === "default" ? (
+                  <Button
+                    label="Enable"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      void requestBrowserNotificationPermission().then(
+                        setNotificationState,
+                      );
+                    }}
+                  />
+                ) : null}
               </div>
-              {notificationState === "default" ? (
-                <Button
-                  label="Enable"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    void requestBrowserNotificationPermission().then(
-                      setNotificationState,
-                    );
-                  }}
-                />
-              ) : null}
-            </div>
-          </div>
+            </VStack>
+          </Section>
         </section>
 
         <section
@@ -188,7 +217,12 @@ export function SettingsView({
           aria-labelledby="diagnostics-heading"
         >
           <h2 id="diagnostics-heading">Diagnostics</h2>
-          <div className="jig-settings-card">
+          <Section
+            className="jig-settings-card"
+            minHeight={185}
+            padding={5}
+            dividers={["top", "bottom", "start", "end"]}
+          >
             <dl className="jig-diagnostics">
               <div>
                 <dt>Jig service</dt>
@@ -207,18 +241,25 @@ export function SettingsView({
                 </dd>
               </div>
             </dl>
-          </div>
+          </Section>
         </section>
       </div>
 
-      <div className="jig-local-first-note">
-        <strong>Local-first behavior</strong>
-        <p>Local planning remains usable when synchronization is unavailable.</p>
-        <p>
-          Browser notifications require explicit permission; unrelated repository
-          content is never touched.
-        </p>
-      </div>
+      <Section
+        className="jig-local-first-note"
+        variant="muted"
+        padding={5}
+        dividers={["top", "bottom", "start", "end"]}
+      >
+        <VStack gap={1.5}>
+          <strong>Local-first behavior</strong>
+          <p>Local planning remains usable when synchronization is unavailable.</p>
+          <p>
+            Browser notifications require explicit permission; unrelated repository
+            content is never touched.
+          </p>
+        </VStack>
+      </Section>
     </div>
   );
 }
