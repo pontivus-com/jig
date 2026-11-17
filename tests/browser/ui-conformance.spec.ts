@@ -87,7 +87,7 @@ test("Task cards expose content, grip and one overflow affordance without action
   await expect(card).toBeVisible();
   await expect(card.getByText("≡", { exact: true })).toBeVisible();
   await expect(
-    card.locator('summary[aria-label="Actions for Card interaction contract"]'),
+    card.getByRole("button", { name: "Actions for Card interaction contract" }),
   ).toBeVisible();
 
   await expect(card.getByText("Drag", { exact: true })).toBeHidden();
