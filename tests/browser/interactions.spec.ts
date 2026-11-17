@@ -350,9 +350,9 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   await createTask(page, "Narrow selected task", today);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
-  const destinationMenu = page.locator(".jig-mobile-destination-menu");
-  await destinationMenu.locator("summary").click();
-  await destinationMenu
+  await page.locator(".jig-mobile-destination-trigger").click();
+  await page
+    .locator(".jig-primary-nav")
     .getByRole("button", { name: "Week", exact: true })
     .click();
 
@@ -366,8 +366,8 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(destinationMenu.locator("summary")).toHaveText(
-    "Day",
+  await expect(page.locator(".jig-mobile-destination-trigger")).toHaveText(
+    /Day/,
   );
   await expect(
     page
