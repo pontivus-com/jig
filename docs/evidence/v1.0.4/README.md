@@ -9,6 +9,9 @@
 **Visual artifact:** `jig-v1.0.4-ui-evidence`, artifact ID `14317143638`  
 **Capture artifact SHA-256:** recorded by GitHub Actions for the capture archive; the reviewed artifact is the one attached to run `44059216745`.
 
+
+> **Post-release correction notice (2026-11-17):** v1.0.4 was published successfully, but subsequent direct product validation found defects not detected by this evidence set: a dnd-kit/React `removeChild` reconciliation crash during card movement, missing required narrow/mobile drag, incomplete semantic icon/menu normalization, excessive header height, insufficient Task-card/background separation, and stale narrow/mobile rendering relative to desktop. This document remains the historical record of what the v1.0.4 gates passed; it is **not** evidence that those missed requirements were satisfied. The affected acceptance contract is superseded by the v1.0.5 corrective functional/technical/UI design.
+
 ## Certification result
 
 The v1.0.4 implementation candidate passed the repository's permanent verification path:
