@@ -2,6 +2,7 @@ import {
   Button,
   CheckboxInput,
   DropdownMenu,
+  Icon,
   Link,
   ListItem,
 } from "@astryxdesign/core";
@@ -47,7 +48,7 @@ function TaskMetadata({
       )}
       {task.reminder_time === null ? null : (
         <span className="jig-task-meta-item jig-reminder-time">
-          <span aria-hidden="true">◷</span>{" "}
+          <Icon icon="clock" size="xsm" color="secondary" />
           {formatReminderTime(task.reminder_time)}
         </span>
       )}
@@ -79,6 +80,7 @@ function TaskMetadata({
           label="Copy reference"
           variant="ghost"
           size="sm"
+          icon={<Icon icon="copy" size="xsm" color="inherit" />}
           className="jig-copy-reference jig-task-meta-item"
           onPointerDown={stopPointer}
           onClick={(event) => {
@@ -93,13 +95,10 @@ function TaskMetadata({
   );
 }
 
-function PriorityMenuItems({
-  task,
-  onSetPriority,
-}: Readonly<{
-  task: Task;
-  onSetPriority: (priority: Priority) => void;
-}>) {
+function priorityMenuItems(
+  task: Task,
+  onSetPriority: (priority: Priority) => void,
+) {
   return ([
     ["HIGH", "High"],
     ["NORMAL", "Normal"],
@@ -109,13 +108,25 @@ function PriorityMenuItems({
     label: `Priority: ${label}`,
     endContent:
       task.priority === priority ? (
-        <span aria-label="Current priority">✓</span>
+        <span aria-label="Current priority">
+          <Icon icon="check" size="xsm" color="inherit" />
+        </span>
       ) : undefined,
     onClick: () => onSetPriority(priority),
   }));
 }
 
-function TaskActionMenu({
+export interface TaskActionMenuProps {
+  readonly task: Task;
+  readonly onEdit: () => void;
+  readonly onToggleComplete: () => void;
+  readonly onSetPriority: (priority: Priority) => void;
+  readonly onDelete: () => void;
+  readonly onMoveUp?: (() => void) | undefined;
+  readonly onMoveDown?: (() => void) | undefined;
+}
+
+export function TaskActionMenu({
   task,
   onEdit,
   onToggleComplete,
@@ -123,15 +134,7 @@ function TaskActionMenu({
   onDelete,
   onMoveUp,
   onMoveDown,
-}: Readonly<{
-  task: Task;
-  onEdit: () => void;
-  onToggleComplete: () => void;
-  onSetPriority: (priority: Priority) => void;
-  onDelete: () => void;
-  onMoveUp?: (() => void) | undefined;
-  onMoveDown?: (() => void) | undefined;
-}>): React.ReactElement {
+}: TaskActionMenuProps): React.ReactElement {
   const items = [
     {
       id: "edit",
@@ -143,25 +146,13 @@ function TaskActionMenu({
       label: task.completed_at === null ? "Complete" : "Reopen",
       onClick: onToggleComplete,
     },
-    ...PriorityMenuItems({ task, onSetPriority }),
+    ...priorityMenuItems(task, onSetPriority),
     ...(onMoveUp === undefined
       ? []
-      : [
-          {
-            id: "move-up",
-            label: "Move up",
-            onClick: onMoveUp,
-          },
-        ]),
+      : [{ id: "move-up", label: "Move up", onClick: onMoveUp }]),
     ...(onMoveDown === undefined
       ? []
-      : [
-          {
-            id: "move-down",
-            label: "Move down",
-            onClick: onMoveDown,
-          },
-        ]),
+      : [{ id: "move-down", label: "Move down", onClick: onMoveDown }]),
     {
       id: "delete",
       label: "Delete…",
@@ -178,7 +169,7 @@ function TaskActionMenu({
       <DropdownMenu
         button={{
           label: `Actions for ${task.title}`,
-          icon: <span aria-hidden="true">•••</span>,
+          icon: <Icon icon="moreHorizontal" color="inherit" />,
           isIconOnly: true,
           variant: "ghost",
           size: "sm",
@@ -202,11 +193,8 @@ export function TaskCardPreview({
     >
       <div className="jig-task-card-preview-row">
         <span className="jig-task-card-preview-checkbox">□</span>
-        <span className="jig-task-drag-handle" aria-hidden="true">
-          ≡
-        </span>
         <span className="jig-task-title">{task.title}</span>
-        <span className="jig-task-card-preview-menu">•••</span>
+        <Icon icon="moreHorizontal" color="secondary" />
       </div>
       <TaskMetadata task={task} />
     </div>
@@ -252,21 +240,12 @@ export function TaskRow({
             onChange={onToggleComplete}
             size="sm"
           />
-          {completed ? null : (
-            <span
-              className="jig-task-drag-handle"
-              aria-hidden="true"
-              title="Drag task"
-            >
-              ≡
-            </span>
-          )}
         </span>
       }
       label={
         <div
           {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
-          className="jig-task-body"
+          className={completed ? "jig-task-body" : "jig-task-body jig-task-body-draggable"}
         >
           <div className="jig-task-title-row">
             <span
@@ -317,12 +296,17 @@ export function SortableTaskRow({
     accept: "jig-task",
   });
 
+  // dnd-kit exposes generic HTMLElement refs; these are bound to the concrete
+  // ListItem <li> and Task body <div> at this single third-party boundary.
+  const rowRef = sortable.ref as Ref<HTMLLIElement>;
+  const dragHandleRef = sortable.handleRef as Ref<HTMLDivElement>;
+
   return (
     <TaskRow
       {...rowProps}
       task={task}
-      rowRef={sortable.ref as Ref<HTMLLIElement>}
-      dragHandleRef={sortable.handleRef as Ref<HTMLDivElement>}
+      rowRef={rowRef}
+      dragHandleRef={dragHandleRef}
     />
   );
 }
