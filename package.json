@@ -27,6 +27,6 @@
     "build": "vite build",
     "test:browser": "playwright test",
     "verify": "bun run typecheck && bun run test && bun run build && bun run test:browser",
-    "theme:check": "astryx theme build ./ui/src/jig-theme.source.ts --out ./ui/src/jig-theme.generated.css --check"
+    "theme:check": "astryx theme build ./ui/src/jig-theme.source.ts --check"
   }
 }
