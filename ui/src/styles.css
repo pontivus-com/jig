@@ -1227,7 +1227,10 @@ body {
     .jig-week-strip-date {
       width: auto;
       min-width: 0;
+      height: 56px;
       min-height: 56px;
+      max-height: 56px;
+      padding-block: 0;
       padding-inline: 2px;
     }
 
