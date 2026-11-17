@@ -5,6 +5,16 @@ import {
   type TaskCommand,
   validateTask,
 } from "../core/task";
+import type {
+  CanonicalState,
+  CommandResult,
+  RepositoryStatus,
+} from "../protocol";
+export type {
+  CanonicalState,
+  CommandResult,
+  RepositoryStatus,
+} from "../protocol";
 import {
   assertTaskSet,
   completeTask,
@@ -20,13 +30,6 @@ import {
 export const SQLITE_SCHEMA_VERSION = 2;
 export const PORTABLE_FORMAT_VERSION = 1;
 
-export type RepositoryStatus =
-  | "local-only"
-  | "pending"
-  | "retrying"
-  | "synchronized"
-  | "sync-issue";
-
 export interface PersistenceMetadata {
   readonly schema_version: number;
   readonly dataset_id: string;
@@ -36,15 +39,6 @@ export interface PersistenceMetadata {
   readonly last_adopted_head: string | null;
   readonly pending_sync: boolean;
 }
-
-export interface CanonicalState {
-  readonly revision: number;
-  readonly tasks: readonly Task[];
-}
-
-export type CommandResult =
-  | { readonly revision: number; readonly task: Task }
-  | { readonly revision: number; readonly deleted_task_id: string };
 
 export class StaleRevisionError extends Error {
   readonly current_revision: number;
