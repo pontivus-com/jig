@@ -475,6 +475,51 @@ test("outstanding Task action menus are identical at desktop and narrow widths",
   expect(await menuLabels()).toEqual(desktop);
 });
 
+test("desktop History and Settings use an 800px centered content column", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await waitForResponsiveHeader(page, 1440);
+
+  for (const destination of ["History", "Settings"] as const) {
+    await page.getByRole("button", { name: destination, exact: true }).click();
+    const selector =
+      destination === "History" ? ".jig-history-view" : ".jig-settings-view";
+    const box = await page.locator(selector).boundingBox();
+    expect(box, destination).not.toBeNull();
+    if (box !== null) {
+      expectNear(box.width, 800, 1);
+      expectNear(box.x, 320, 1);
+    }
+  }
+
+  await page.getByRole("button", { name: "Planner", exact: true }).click();
+  const planner = await page.locator(".jig-week-board").boundingBox();
+  expect(planner).not.toBeNull();
+  if (planner !== null) {
+    expectNear(planner.x, 0, 1);
+    expectNear(planner.width, 1440, 1);
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+
+  for (const destination of ["History", "Settings"] as const) {
+    await page.getByRole("button", { name: "Open navigation menu" }).click();
+    await page
+      .getByRole("menuitem", { name: new RegExp(`^${destination}`) })
+      .click();
+    const selector =
+      destination === "History" ? ".jig-history-view" : ".jig-settings-view";
+    const box = await page.locator(selector).boundingBox();
+    expect(box, destination).not.toBeNull();
+    if (box !== null) {
+      expectNear(box.x, 0, 1);
+      expectNear(box.width, 390, 1);
+    }
+  }
+});
+
 test("application frame is full-bleed and switches at the 73rem boundary", async ({
   page,
 }) => {
