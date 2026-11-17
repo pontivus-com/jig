@@ -1,10 +1,10 @@
 import {
-  Button,
   CheckboxInput,
+  DropdownMenu,
   ListItem,
 } from "@astryxdesign/core";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { useState, type Ref } from "react";
+import type { Ref } from "react";
 import type { Task } from "../../src/core/task";
 import { formatReminderTime } from "./dates";
 
@@ -102,16 +102,40 @@ function TaskActionMenu({
   onMoveDown?: (() => void) | undefined;
   onMoveToDate?: (() => void) | undefined;
 }>): React.ReactElement {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const closeAndRun = (
-    event: React.MouseEvent<HTMLElement>,
-    action: () => void,
-  ): void => {
-    event.stopPropagation();
-    setIsOpen(false);
-    action();
-  };
+  const items = [
+    {
+      id: "edit",
+      label: "Edit",
+      onClick: onEdit,
+    },
+    ...(onMoveToDate === undefined
+      ? []
+      : [
+          {
+            id: "move-date",
+            label: "Move to date…",
+            onClick: onMoveToDate,
+          },
+        ]),
+    ...(onMoveUp === undefined
+      ? []
+      : [
+          {
+            id: "move-up",
+            label: "Move up",
+            onClick: onMoveUp,
+          },
+        ]),
+    ...(onMoveDown === undefined
+      ? []
+      : [
+          {
+            id: "move-down",
+            label: "Move down",
+            onClick: onMoveDown,
+          },
+        ]),
+  ];
 
   return (
     <div
@@ -119,49 +143,19 @@ function TaskActionMenu({
       onPointerDown={stopPointer}
       onClick={(event) => event.stopPropagation()}
     >
-      <button
-        type="button"
-        className="jig-task-menu-trigger"
-        aria-label={`Actions for ${task.title}`}
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        •••
-      </button>
-      {isOpen ? (
-        <div className="jig-task-menu-panel" role="menu">
-          <Button
-            label="Edit"
-            variant="ghost"
-            size="sm"
-            onClick={(event) => closeAndRun(event, onEdit)}
-          />
-          {onMoveToDate === undefined ? null : (
-            <Button
-              label="Move to date…"
-              variant="ghost"
-              size="sm"
-              onClick={(event) => closeAndRun(event, onMoveToDate)}
-            />
-          )}
-          {onMoveUp === undefined ? null : (
-            <Button
-              label="Move up"
-              variant="ghost"
-              size="sm"
-              onClick={(event) => closeAndRun(event, onMoveUp)}
-            />
-          )}
-          {onMoveDown === undefined ? null : (
-            <Button
-              label="Move down"
-              variant="ghost"
-              size="sm"
-              onClick={(event) => closeAndRun(event, onMoveDown)}
-            />
-          )}
-        </div>
-      ) : null}
+      <DropdownMenu
+        button={{
+          label: `Actions for ${task.title}`,
+          icon: <span aria-hidden="true">•••</span>,
+          isIconOnly: true,
+          variant: "ghost",
+          size: "sm",
+          className: "jig-task-menu-trigger",
+        }}
+        items={items}
+        placement="below"
+        alignment="end"
+      />
     </div>
   );
 }
