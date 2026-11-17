@@ -1,8 +1,8 @@
 # Jig v1.0.2 browser fidelity evidence
 
-**Captured UI revision:** `170f367433ee15f3e36aa8632f2a836178207e07`  
-**Evidence archive commit:** `a0e6b44845682f514a798acf5e936e2d0e5cda79`  
-**Capture run:** GitHub Actions run #23 (`44002859507`)  
+**Captured UI revision:** `06f3cd27a11b2b9116a6b8171ef9e90f4a23d501`  
+**Evidence archive commit:** `3a6432c23571290f5b900e539d7e49e8a24b390b`  
+**Capture run:** GitHub Actions run #24 (`44007330088`)  
 **Runner:** GitHub Actions / Ubuntu / pinned Bun 1.4.4 / pinned Playwright Chromium  
 **Desktop viewport:** 1440 × 900  
 **Mobile Day viewport:** 414 × 900  
@@ -46,7 +46,7 @@ The SVGs govern structure, hierarchy, density and representative visual characte
 
 **PASS — the recaptured implementation conforms to the governed reference design without architecture exceptions.**
 
-The archived screenshots certify the captured UI revision above, including the final public-API fidelity corrections: the semantic status marker uses the public Astryx `Button.icon` slot and the narrow editor's top-right Cancel action uses `DialogHeader.endContent`. The temporary capture harness/workflow were removed after archival; those removals do not alter production UI output.
+The archived screenshots certify the captured UI revision above after the final Astryx architecture remediation. The implementation uses the built Neutral theme entry, precompiles the custom Jig theme through Astryx's public `generateThemeCSS()` contract, uses public `Section` / `VStack` / Button elevation and sizing APIs where Astryx owns the mechanic, and keeps ordinary non-structural CSS on public Astryx tokens. The temporary capture harness/workflow are removed after archival; those removals do not alter production UI output.
 
 Verified structural budgets include:
 
@@ -92,7 +92,10 @@ Visual fidelity is not permitted to waive architectural ownership. The final imp
 - Astryx `SideNav` / `SideNavItem` as navigation owner;
 - `useAppShellMobile()` as the sole responsive-layout authority;
 - explicit desktop/narrow React composition rather than duplicate DOM plus CSS hiding;
-- Astryx `DropdownMenu`, Dialog, List, FieldLabel, SegmentedControl and Button public contracts;
+- Astryx `DropdownMenu`, Dialog, List, FieldLabel, SegmentedControl, Section, VStack and Button public contracts;
+- built-theme consumption through `@astryxdesign/theme-neutral/built` plus generated Jig theme CSS;
+- all Astryx global CSS variables consumed by Jig resolve against the pinned 0.7.13 public token inventory;
+- ordinary typography, radius, motion and interior-spacing values use Astryx public tokens/props, with raw dimensions limited to governed structural budgets;
 - no `.astryx-*` selectors;
 - no private `--_*` variables;
 - no `!important`;
@@ -100,7 +103,7 @@ Visual fidelity is not permitted to waive architectural ownership. The final imp
 - no negative-margin/transform screenshot alignment;
 - no reintroduced custom task-menu or mobile-navigation subsystem.
 
-These invariants are enforced by `tests/architecture/ui-ownership.test.ts` and the permanent browser-conformance suite.
+These invariants are enforced by `tests/architecture/ui-ownership.test.ts`, including public-token validation and governed raw-spacing allowlisting, and by the permanent browser-conformance suite.
 
 ## Failure-state evidence
 
