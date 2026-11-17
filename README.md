@@ -34,9 +34,8 @@ Jig is a local-first just-in-time daily planner for one person's lightweight
 intentions across projects and obligations.
 
 The Week view gives each date an explicit ordered list. Day keeps the selected
-date focused while unfinished earlier work remains visibly carried over without
-silently changing its original scheduled date. History keeps completed work
-inspectable. Optional priority, context, references, notes and reminder time add
+date focused while unfinished prior-day work is persistently rolled into the
+current local date. History keeps completed work inspectable. Optional priority, context, references, notes and reminder time add
 just enough detail without creating another workflow system.
 
 The actual project, issue, WorkItem or document remains authoritative in its own
@@ -47,7 +46,7 @@ sits in the day, whether it is complete, and whether a reminder is due.**
 
 1. **Put an intention on a date.** Title and date are enough; everything else is optional.
 2. **Order the day explicitly.** Drag or use non-drag movement controls. Priority can assist initial placement but never silently reorders an established plan.
-3. **Let unfinished work stay visible.** Earlier outstanding Tasks appear as carry-over on later Day views while retaining their original scheduled date.
+3. **Roll unfinished work forward.** On the local day boundary, unfinished earlier Tasks are persistently moved into the current date so Day, Week, restart and synchronization agree on the same plan.
 4. **Save locally first.** SQLite commits the planning change immediately. Repository export/synchronization happens independently in the background.
 5. **Keep Git mechanics outside the planner.** Jig synchronizes only Jig-owned portable data and reports coarse local/pending/synchronized/sync-issue outcomes. Repository acquisition, topology, signing, credentials and reconciliation remain ordinary Git responsibilities.
 
@@ -100,17 +99,17 @@ jig uninstall       # remove runtime/configuration; preserve repo planning data
 
 ## Release status
 
-Jig **1.0.0** is the first stable release. The v1 implementation is complete
-and certified against JIG-FR-01–22. Archived evidence covers
-core/persistence/repository behavior, real-browser interaction,
-installer/service lifecycle, trust boundaries and resource/readiness limits.
+Jig **1.0.2** is the current release candidate. The v1 implementation remains
+certified against JIG-FR-01–22, with v1.0.2 adding persisted daily rollover,
+refined reminder delivery, re-certified Astryx UX/UI architecture and a stricter
+release-validity contract.
 
 Release publication remains PR-bound and immutable: the merged release commit is
-re-verified before the `v1.0.0` tag and Linux x64/arm64 assets are published.
+re-verified before the `v1.0.2` tag and Linux x64/arm64 assets are published.
 
-- [v1 certification evidence](docs/evidence/v1/README.md)
-- [release process and asset contract](docs/releases/README.md)
-- [v1.0.0 release notes](docs/releases/v1.0.0.md)
+- [v1.0.2 browser fidelity evidence](docs/evidence/v1.0.2/README.md)
+- [release process, validity contract and asset matrix](docs/releases/README.md)
+- [v1.0.2 release notes](docs/releases/v1.0.2.md)
 - [changelog](CHANGELOG.md)
 
 ## Documentation
