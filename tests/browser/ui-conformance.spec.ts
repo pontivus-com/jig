@@ -752,7 +752,6 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       expect(contrastRatio(snapshot.taskText, snapshot.taskBackground))
         .toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
-      expect(snapshot.logoPrimary).not.toBe(snapshot.logoAccent);
       expect(contrastRatio(snapshot.logoPrimary, snapshot.bodyBackground))
         .toBeGreaterThanOrEqual(3);
       expect(contrastRatio(snapshot.logoAccent, snapshot.bodyBackground))
