@@ -479,7 +479,7 @@ export function App(): React.ReactElement {
           label="Today"
           variant="secondary"
           size="sm"
-          onClick={() => goToToday(destination === "week")}
+          onClick={() => goToToday(false)}
           className="jig-mobile-today-control"
         />
       ) : null}
@@ -544,7 +544,7 @@ export function App(): React.ReactElement {
       isNarrow={isNarrow}
       onSelectDate={setSelectedDate}
       onPrevious={() => navigateDate(-7)}
-      onToday={() => goToToday(true)}
+      onToday={() => goToToday(false)}
       onNext={() => navigateDate(7)}
       statusControl={isNarrow ? null : statusControl}
       onAdd={openCreate}
