@@ -1,9 +1,9 @@
 import {
-  Button,
+  DropdownMenu,
   List,
   ListItem,
 } from "@astryxdesign/core";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { Task } from "../../src/core/task";
 import { historyByCompletionDate } from "../../src/core/planning";
 import { formatCivilDate } from "./dates";
@@ -37,8 +37,6 @@ function HistoryTaskRow({
   onReopen: (task: Task) => Promise<boolean>;
   onDelete: (task: Task) => void;
 }>): React.ReactElement {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
     <ListItem
       itemKey={task.id}
@@ -64,51 +62,41 @@ function HistoryTaskRow({
           <time dateTime={task.completed_at ?? undefined}>
             {completionTime(task)}
           </time>
-          <div className="jig-task-menu" onClick={(event) => event.stopPropagation()}>
-            <button
-              type="button"
-              className="jig-task-menu-trigger"
-              aria-label={`Actions for ${task.title}`}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              onClick={(event) => {
-                event.stopPropagation();
-                setMenuOpen((current) => !current);
+          <div
+            className="jig-task-menu"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <DropdownMenu
+              button={{
+                label: `Actions for ${task.title}`,
+                icon: <span aria-hidden="true">•••</span>,
+                isIconOnly: true,
+                variant: "ghost",
+                size: "sm",
+                className: "jig-task-menu-trigger",
               }}
-            >
-              •••
-            </button>
-            {menuOpen ? (
-              <div className="jig-task-menu-panel" role="menu">
-                <Button
-                  label="Reopen"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setMenuOpen(false);
+              items={[
+                {
+                  id: "reopen",
+                  label: "Reopen",
+                  onClick: () => {
                     void onReopen(task);
-                  }}
-                />
-                <Button
-                  label="Edit"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onEdit(task);
-                  }}
-                />
-                <Button
-                  label="Delete…"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onDelete(task);
-                  }}
-                />
-              </div>
-            ) : null}
+                  },
+                },
+                {
+                  id: "edit",
+                  label: "Edit",
+                  onClick: () => onEdit(task),
+                },
+                {
+                  id: "delete",
+                  label: "Delete…",
+                  onClick: () => onDelete(task),
+                },
+              ]}
+              placement="below"
+              alignment="end"
+            />
           </div>
         </div>
       }
