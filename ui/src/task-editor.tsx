@@ -10,7 +10,7 @@ import {
 import type { ISODateString } from "@astryxdesign/core/utils";
 import type { ISOTimeString } from "@astryxdesign/core/TimeInput";
 import { FieldLabel } from "@astryxdesign/core/Field";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import type {
   Priority,
   Task,
@@ -18,7 +18,7 @@ import type {
 } from "../../src/core/task";
 import { formatCivilDate } from "./dates";
 
-interface TaskDraft {
+export interface TaskDraft {
   readonly title: string;
   readonly scheduledDate: string;
   readonly priority: Priority;
@@ -28,7 +28,7 @@ interface TaskDraft {
   readonly reminderTime: string;
 }
 
-function draftFor(
+export function draftFor(
   task: Task | null,
   initiatingDate: string,
 ): TaskDraft {
@@ -58,7 +58,7 @@ function optionalText(value: string): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
-function commandForDraft(
+export function commandForDraft(
   task: Task | null,
   draft: TaskDraft,
 ): TaskCommand {
@@ -95,10 +95,12 @@ function commandForDraft(
 export interface TaskEditorProps {
   readonly task: Task | null;
   readonly initiatingDate: string;
+  readonly draft: TaskDraft;
   readonly externalError: string | null;
   readonly isSaving: boolean;
   readonly showHeading?: boolean;
   readonly surface?: "docked" | "drawer";
+  readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onCancel: () => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
 }
@@ -106,30 +108,24 @@ export interface TaskEditorProps {
 export function TaskEditor({
   task,
   initiatingDate,
+  draft,
   externalError,
   isSaving,
   showHeading = true,
   surface = "docked",
+  onDraftChange,
   onCancel,
   onSave,
 }: TaskEditorProps): React.ReactElement {
-  const [draft, setDraft] = useState<TaskDraft>(() =>
-    draftFor(task, initiatingDate),
-  );
   const [localError, setLocalError] = useState<string | null>(null);
   const priorityGroupId = useId();
   const priorityLabelId = useId();
-
-  useEffect(() => {
-    setDraft(draftFor(task, initiatingDate));
-    setLocalError(null);
-  }, [task?.id, initiatingDate]);
 
   const update = <K extends keyof TaskDraft>(
     key: K,
     value: TaskDraft[K],
   ): void => {
-    setDraft((current) => ({ ...current, [key]: value }));
+    onDraftChange({ ...draft, [key]: value });
   };
 
   const submit = async (): Promise<void> => {
