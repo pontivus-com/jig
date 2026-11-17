@@ -585,8 +585,8 @@ test("temporary v1.0.4 visual evidence capture", async ({ page }) => {
   await failureWorkspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
-  await expect(failureWorkspace.getByRole("alert")).toContainText(
-    "Evidence local save failure",
-  );
+  await expect(
+    failureWorkspace.getByText("Evidence local save failure", { exact: true }),
+  ).toBeVisible();
   await captureV104(page, "local-save-failure");
 });
