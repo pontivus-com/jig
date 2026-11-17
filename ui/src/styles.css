@@ -39,7 +39,9 @@ body {
   min-width: 0;
   min-height: 100%;
   padding: var(--spacing-3) var(--spacing-3) var(--spacing-5);
-}  .jig-app-header {
+}
+
+  .jig-app-header {
     width: 100%;
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-container);
@@ -562,6 +564,11 @@ body {
     background: var(--color-error-muted);
   }
 
+  .jig-priority-normal {
+    color: var(--color-text-accent);
+    background: var(--color-accent-muted);
+  }
+
   .jig-priority-low {
     color: var(--color-text-info);
     background: var(--color-info-muted);
@@ -601,6 +608,11 @@ body {
     width: auto;
     min-width: 0;
     min-height: 56px;
+  }
+
+  .jig-date-today:not(.jig-date-selected) {
+    box-shadow: inset 0 0 0 calc(2 * var(--border-width)) var(--color-accent);
+    font-weight: var(--font-weight-bold);
   }
 
   .jig-week-strip-date-content {
