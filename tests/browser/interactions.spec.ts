@@ -54,7 +54,7 @@ async function createTask(
   });
 }
 
-test("unfinished prior-day cards roll into today across Day and Week", async ({
+test("unfinished prior-day cards roll into today in the canonical Planner", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -62,9 +62,6 @@ test("unfinished prior-day cards roll into today across Day and Week", async ({
   await createTask(page, "Rollover contract", yesterday);
   await page.reload();
 
-  await expect(
-    page.getByRole("button", { name: "Day", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
   await expect(
     page
       .locator(".jig-task-card")
@@ -78,7 +75,6 @@ test("unfinished prior-day cards roll into today across Day and Week", async ({
     )
     .toBe(today);
 
-  await page.getByRole("button", { name: "Week", exact: true }).click();
   const todayColumn = page.locator(`[data-date="${today}"]`);
   await expect(
     todayColumn.getByText("Rollover contract", { exact: true }),
@@ -220,12 +216,13 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   expect(edited.note).toBe("Prepare clause comments.");
 });
 
-test("Day date inspection does not retarget or discard an active edit draft", async ({
+test("Planner date inspection does not retarget or discard an active edit draft", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
   await createTask(page, "Draft identity contract", today);
   await page.reload();
+  await page.setViewportSize({ width: 390, height: 844 });
 
   await runTaskAction(page, "Draft identity contract", "Edit");
   const workspace = page.locator(
@@ -250,7 +247,7 @@ test("Day date inspection does not retarget or discard an active edit draft", as
   );
 });
 
-test("real pointer drag moves a Task across dated Week drop zones", async ({
+test("real pointer drag moves a Task across dated Planner drop zones", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -260,7 +257,6 @@ test("real pointer drag moves a Task across dated Week drop zones", async ({
 
   await createTask(page, "Pointer drag contract", today);
   await page.reload();
-  await page.getByRole("button", { name: "Week", exact: true }).click();
 
   const card = await taskCard(page, "Pointer drag contract");
   const destination = page.locator(
@@ -346,8 +342,8 @@ test("deletion requires confirmation and removes the canonical Task", async ({
 
   const deleteCard = await taskCard(page, "Delete contract task");
   await deleteCard.click();
-  const inspector = page.getByRole("complementary", {
-    name: "Task details for Delete contract task",
+  const inspector = page.getByRole("dialog", {
+    name: "Delete contract task",
   });
   await expect(inspector).toBeVisible();
   await inspector
@@ -378,18 +374,13 @@ test("deletion requires confirmation and removes the canonical Task", async ({
     .toBe(false);
 });
 
-test("narrow Week reflows to one selected attention list and Today is a Day shortcut", async ({
+test("narrow Planner reflows to one selected-date list and Today remains a shortcut", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
   await createTask(page, "Narrow selected task", today);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator(".jig-mobile-destination-trigger").click();
-  await page
-    .locator(".jig-primary-nav")
-    .getByRole("button", { name: "Week", exact: true })
-    .click();
 
   await expect(page.locator(".jig-week-board")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
@@ -401,15 +392,14 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
-  await expect(page.locator(".jig-mobile-destination-trigger")).toHaveText(
-    /Day/,
-  );
   await expect(
     page
       .locator(".jig-task-card")
       .filter({ hasText: "Narrow selected task" })
       .first(),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Day", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Week", exact: true })).toHaveCount(0);
 });
 
 test("reduced motion preserves non-drag movement semantics", async ({
@@ -444,7 +434,7 @@ test("reduced motion preserves non-drag movement semantics", async ({
   ).toHaveCSS("transition-property", "none");
 });
 
-test("long Week columns keep sticky date controls reachable while tasks scroll", async ({
+test("long Planner columns keep sticky date controls reachable while tasks scroll", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -452,7 +442,6 @@ test("long Week columns keep sticky date controls reachable while tasks scroll",
     await createTask(page, `Long list task ${index + 1}`, today);
   }
   await page.reload();
-  await page.getByRole("button", { name: "Week", exact: true }).click();
 
   const column = page.locator(`[data-date="${today}"]`);
   await expect(column).toBeVisible();
