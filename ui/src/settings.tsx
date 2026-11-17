@@ -195,19 +195,11 @@ export function SettingsView({
                 <dd>{status?.ready ? "Healthy" : "Unavailable"}</dd>
               </div>
               <div>
-                <dt>SQLite</dt>
+                <dt>Local database</dt>
                 <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
               </div>
               <div>
                 <dt>Portable data</dt>
-                <dd>
-                  {diagnostics?.portable_format_version === undefined
-                    ? "Unavailable"
-                    : `Format v${diagnostics.portable_format_version}`}
-                </dd>
-              </div>
-              <div>
-                <dt>Repository adapter</dt>
                 <dd>
                   {diagnostics?.repository_adapter_healthy
                     ? "Healthy"
