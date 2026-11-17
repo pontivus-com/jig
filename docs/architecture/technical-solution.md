@@ -282,7 +282,7 @@ CREATE UNIQUE INDEX task_active_position
 CREATE INDEX task_completed_at ON task(completed_at);
 ~~~
 
-Technical input validation must also enforce canonical date/time formats, nonblank titles and valid IDs before SQL insertion; CHECK constraints alone do not validate those strings. SQLite schema v2 uses one app metadata table for schema version, dataset identity, monotonically increasing SQLite state revision, last exported revision, last safely adopted portable snapshot identity and durable pending-sync state. The v1 `data_ref` field is migrated away in place because Git topology is not persistence-domain state. A separate local reminder-delivery key set can suppress duplicate toasts; it is non-authoritative presentation bookkeeping and is **not included in Git exports**. SQLite lives under the selected personal repository's `.jig/local/` path and is excluded from version control; deterministic JSON records are the portable snapshot synchronized through the repository adapter.
+Technical input validation must also enforce canonical date/time formats, nonblank titles and valid IDs before SQL insertion; CHECK constraints alone do not validate those strings. SQLite schema v2 uses one app metadata table for schema version, dataset identity, monotonically increasing SQLite state revision, last exported revision, last safely adopted portable snapshot identity and durable pending-sync state. The v1 `data_ref` field is migrated away in place because Git topology is not persistence-domain state. A separate local reminder-delivery key set can suppress duplicate browser notifications; it is non-authoritative presentation bookkeeping and is **not included in Git exports**. SQLite lives under the selected personal repository's `.jig/local/` path and is excluded from version control; deterministic JSON records are the portable snapshot synchronized through the repository adapter.
 
 Apply reordering in one SQLite transaction. To satisfy the active-position uniqueness constraint while changing multiple indices, first move affected positions to distinct temporary nonconflicting values within that same transaction, then write final 0..N-1 positions. No intermediate ordering can be observed outside the transaction. If the transaction fails, the whole operation rolls back.
 
@@ -448,9 +448,9 @@ Narrow/mobile drag is enabled for the same outstanding Task rows and exact-posit
 ### 5.6 v1.0.4 state and interaction corrections
 
 - **Today identity:** derive current-day treatment only from exact local civil-date equality (`date === currentLocalDate`). No selected-day state exists, so no other weekday/column receives persistent day-selection styling.
-- **Visual state ownership:** product state follows the canonical [brand/theme state vocabulary](../design/brand-and-theme.md#61-v104-product-state-color-vocabulary). Exact-today uses the governed teal structural role; there is no selected-day visual state. Selected Task uses the governed info-blue muted surface + info border. Drag target/source uses transient Brand Amber. Priority uses High=error/red, Normal=quiet Ink/neutral, Low=success/green. Focus remains Amber and is not a selection fill. Do not reuse one accent fill for these states.
-- **Executable color contract:** Jig-owned product states consume the exact semantic aliases in brand/theme §6.2–6.4. `styles.css` must not map persistent product state directly to `--color-accent` / `--color-accent-muted`, raw `--jig-*` primitives, or arbitrary Astryx status roles. The authored aliases are added in `jig-theme.source.ts` and regenerated through the pinned Astryx CLI before certification.
-- **Component color contract:** buttons, Task cards, date headers, navigation state, form validation, destructive actions and sync statuses follow brand/theme §6.3 exactly. Component variants remain Astryx-owned; Jig CSS may only apply the product-state aliases where Astryx has no product-specific semantic state.
+- **Visual state ownership:** product state follows the canonical semantic vocabulary and JIG-106-SD-04. Exact-today uses the governed temporal/cool role; there is no selected-day visual state. Selected Task uses the governed information selection surface/border. Drag target/source uses the active theme's transient accent role. Priority uses High=error, Normal=quiet neutral/secondary and Low=success. Focus remains an independent active-theme focus/accent indication and is not a selection fill. Theme families may change hues but must not change or collapse these meanings.
+- **Executable color contract:** Jig-owned product states consume the shared `--jig-state-*`, `--jig-priority-*`, `--jig-status-*`, Task-surface and brand aliases defined by JIG-106-SD-04. `styles.css` must not use raw palette literals or branch by theme name. Persistent product state must not bypass its Jig alias merely because an Astryx generic token looks visually similar. The shared aliases are authored once and included in every compiled Jig theme wrapper/source.
+- **Component color contract:** buttons, Task cards, date headers, navigation state, form validation, destructive actions and sync statuses use Astryx component semantics plus the governed Jig product aliases. Component variants remain Astryx-owned; JIG-106-SD-04 is the current authority when earlier Jig Ink/Amber/Paper wording conflicts with multi-theme behavior.
 - **Header geometry:** the desktop app-header outer block has one stable product-level minimum height large enough for the two-line Planner temporal centerpiece; History/Settings titles occupy the same center slot without collapsing the outer header. Apply the equivalent stable-height principle in narrow composition.
 - **Outside dismissal:** the main Planner/History content owner handles pointer-down outside Task rows and closes the open workspace. Workspace portals and Task rows/actions are excluded. Destination navigation continues to close workspace explicitly.
 - **Task menu commands:** menu priority changes issue the ordinary canonical `edit` command with only priority changed; completion/reopen and delete use existing commands; movement uses the existing exact-position command. No alternate Task mutation path is introduced.
@@ -1266,14 +1266,21 @@ scripts/
   jig                       local CLI launcher and service control
 ui/
   src/
-    app.tsx                 AppShell, destination/theme state and global header
+    app.tsx                 AppShell, destination state, one root Theme and selected appearance state
+    appearance.ts           ThemePreset/AppearanceMode types, guards, local persistence and exhaustive registry
+    themes/
+      product-tokens.ts     one palette-independent Jig product semantic alias map
+      *.source.ts           Jig, seven Astryx-wrapper and six community theme authoring sources
+      built/                compiler-owned generated theme JS/CSS/declarations
+    jig-logo.tsx            one canonical inline application wordmark geometry using semantic brand tokens
     planner.tsx             shared Planner state + responsive desktop/narrow composition
     planner-header.tsx      centered week range + Previous/Today/Next + desktop/mobile header zones
     week.tsx                desktop seven-date tracks and cross-date drag composition
     task-editor.tsx         Task workspace form content for create/edit
     task-workspace.tsx      one existing/create editable workspace state rendered as desktop Drawer or narrow BottomSheet
-    reminder.tsx            browser due check + toast/Notification delivery
-    theme.css               raw Jig palette primitives only
+    browser-notifications.ts narrow Notification capability/permission adapter
+    reminder.tsx            browser due check + browser Notification delivery
+    theme.css               raw Jig default-theme palette primitives only
     styles.css              Jig-owned product composition/geometry only
 tests/
   core/
@@ -1293,7 +1300,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 |---|---|---|
 | JIG-104-FR-01 card-body drag | §5.7 one dnd-kit Sortable with row ref + body handleRef + 5px PointerSensor threshold | Real pointer drag from card body; ordinary click still selects; checkbox/menu/reference do not initiate drag |
 | JIG-104-FR-02 exact current day | §5.6 Today identity | Only exact local date gets today treatment across week navigation |
-| JIG-104-FR-03 distinct visual semantics | §5.6 + brand/theme §§6.1.1–6.4 | Today teal, selected Task info-blue, drag/focus Amber, priority/status families remain distinct in Light/Dark |
+| JIG-104-FR-03 distinct visual semantics | §5.6 + JIG-106-SD-04 | Today temporal role, selected Task information role, drag/focus active-theme accent and priority/status roles remain distinct in every selected theme and mode |
 | JIG-104-FR-04 outside dismissal | §5.6 content-owned dismissal | Blank Planner/History interaction closes; workspace/menu/dialog interaction does not |
 | JIG-104-FR-05 stable header geometry | §5.3 + §5.6 header geometry | Planner/History/Settings header bounding heights are equal at the same viewport |
 | JIG-104-FR-06 complete Task menu | §5.6 Task menu command ownership | Required actions invoke existing canonical commands; priority edit does not reorder |
@@ -1319,7 +1326,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-07 unrestricted edit | Astryx edit surface + core update | All optional fields and date edited without workflow gate |
 | JIG-FR-08 completion/reopen | Core transition + timestamp + DB | Date-scheduled completion, history query, reopen same ID |
 | JIG-FR-09 daily rollover | Pure core rollover + one SQLite transaction + service day-boundary/catch-up trigger | Earlier outstanding Tasks physically move to the current date; desktop and narrow Planner show the same moved Task in the current bucket; completed Tasks never move |
-| JIG-FR-10 reminder delivery | One browser reminder monitor + Astryx Toast + browser Notification API | Visible page => one toast; hidden/open + granted permission => one browser Notification; one shared delivery key prevents duplicates; no closed-app guarantee |
+| JIG-FR-10 reminder delivery | JIG-106-SD-06 + §6 one browser reminder monitor + browser Notification API | Granted permission => one browser/OS Notification regardless visibility/focus; no reminder Toast; one delivery key suppresses duplicates; no closed-app guarantee |
 | JIG-FR-11 external context | Reference open/copy UI | Link/path accessible; no source-content import |
 | JIG-FR-12 honest outcome | HTTP/SQLite/repository-boundary outcome and UI | Failed local save or repository sync never rendered as success |
 | JIG-FR-13 responsive continuity | One PlannerState + one TaskWorkspaceState; Drawer/BottomSheet are presentation adapters | Narrow/wide reflow preserves displayed week, selected Task/workspace state and unsaved draft |
@@ -1331,7 +1338,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-19 safe coexistence | thin repository adapter with private isolation mechanism | Unrelated staged/unstaged user content unchanged; generic sync issue never becomes planning/domain conflict state |
 | JIG-FR-20 low-friction idle | one Bun service, bounded timers/backoff | Measured low idle CPU/RSS and responsive reopen |
 | JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
-| JIG-FR-22 appearance | One Jig theme owner derived from Astryx Neutral + local preference | System/Light/Dark render equivalent hierarchy and state semantics without Task/Git mutation |
+| JIG-FR-22 appearance | JIG-106-SD-02 through SD-05 + SD-07 | One 14-preset registry + independent System/Light/Dark mode fully re-theme all governed surfaces/states and in-app branding from Settings only, without Task/Git mutation |
 
 ### 10.1 Test boundaries
 
@@ -1341,7 +1348,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 **Repository/Git integration:** Use existing-repository fixtures with unrelated dirty/staged files and normal developer Git configurations, including commit signing enabled with no Jig key. Verify automatic export/synchronization touches only Jig-owned portable data; user Git configuration is unchanged; installation/retry survives synchronization failure; existing valid Jig data is adopted; the exact v1.0.0 empty-bootstrap residue recovers safely; unknown malformed states are non-destructive; ordinary repository content remains untouched.
 
-**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: Planner startup on today/current week; centered week range above grouped Previous/Today/Next controls; exact seven-day Previous/Next behavior; Today reset; Jig-home state preservation; no desktop sidebar; explicit desktop Planner/History/Settings navigation with correct active state; reduced-chrome open seven-track board with full weekday labels and per-date +; mobile History/Settings hamburger popover with no drawer and seven stacked dated sections; same-day card-body drag, Thursday-to-Friday drag and empty-day drop; persisted daily rollover visible in both responsive Planner compositions; open-browser local-midnight revalidation; full-card drag overlay; Escape cancel; Task checkbox/link/workspace non-interference; keyboard/touch move alternatives; desktop Drawer overlays without narrowing the board; Drawer↔BottomSheet responsive switching with unsaved editor state preserved; confirmed/cancelled deletion; long-list scrolling; System/Light/Dark parity; visible-page reminder toast; hidden-page browser Notification with granted permission; permission fallback/catch-up; and durable save-error visibility.
+**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: Planner startup on today/current week; centered one-row Previous/range/Next/Today controls; exact seven-day Previous/Next behavior; Today reset; Jig-home state preservation; no desktop sidebar; explicit desktop Planner/History/Settings navigation with correct active state; reduced-chrome open seven-track board with full weekday labels and per-date +; mobile Planner/History/Settings hamburger popover with no drawer and seven stacked dated sections; same-day whole-card drag, cross-date drag and empty-day drop; persisted daily rollover visible in both responsive Planner compositions; open-browser local-midnight revalidation; full-card drag overlay; Escape cancel; Task checkbox/link/workspace non-interference; keyboard/touch move alternatives; desktop Drawer overlays without narrowing the board; Drawer↔BottomSheet responsive switching with unsaved editor state preserved; confirmed/cancelled deletion; long-list scrolling; the JIG-106 14-theme × Light/Dark/System matrix and semantic-state/contrast assertions; theme-aware inline wordmark; continuous History/Settings width on both sides of 73rem; Settings-only Theme/Appearance controls; visible/hidden and focused/unfocused browser Notification delivery with no reminder Toast; permission default/denied/unsupported behavior; duplicate suppression/catch-up; and durable save-error visibility.
 
 **Installer/service:** Non-root one-script setup in both supported target modes: an existing local repository via `--repo`, and a repository URL cloned by Git into a new/empty checkout via `--repo-url` + `--checkout`. Verify both modes converge on the same repository-validation/setup path, plus exact target selection, idempotent rerun, invalid target refusal, existing-data adoption, failed-install retry, launcher/service restart and auto-sync while the browser is closed. Repository migration/reorganization remains outside Jig.
 
@@ -1366,7 +1373,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **Repository boundary instead of a Jig Git state machine:** Jig exports/validates portable snapshots and receives only operational synchronization outcomes. Git acquisition, topology, policy, credentials, history and reconciliation stay with Git tooling and never become Jig domain/configuration/state.
 - **Astryx directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows.
 - **dnd-kit instead of Astryx same-list reordering plus custom cross-day dragging:** One coordinated drag system across all seven date columns with a single canonical move command.
-- **Browser-side reminder monitor instead of background infrastructure:** Toast while visible and browser Notification while hidden/open with granted permission, with no closed-app delivery guarantee.
+- **Browser-side reminder monitor instead of background infrastructure:** one browser Notification channel while Jig is open and permission is granted, independent of visibility/focus, with no Toast fallback and no closed-app delivery guarantee.
 - **One Task and derived views instead of multiple planning objects:** Satisfies all Task semantics without building a project manager.
 - **One Planner state instead of Day/Week destinations:** `displayedWeekStart` alone drives both the desktop seven-column board and narrow seven-section stack; responsive composition never creates another planning authority or selected-day subview.
 - **Header composition instead of SideNav:** AppShell remains the shell but omits SideNav/auto mobile drawer; Jig's small topNav composition owns the approved home/date/actions/navigation hierarchy using public Astryx leaves.
