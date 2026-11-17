@@ -1,4 +1,5 @@
 import {
+  Button,
   CheckboxInput,
   DropdownMenu,
   ListItem,
@@ -72,10 +73,11 @@ function TaskMetadata({
           Reference
         </a>
       ) : (
-        <button
-          type="button"
+        <Button
+          label="Copy reference"
+          variant="ghost"
+          size="sm"
           className="jig-copy-reference jig-task-meta-item"
-          aria-label="Copy reference"
           onPointerDown={stopPointer}
           onClick={(event) => {
             event.stopPropagation();
@@ -83,7 +85,7 @@ function TaskMetadata({
           }}
         >
           Reference
-        </button>
+        </Button>
       )}
     </div>
   );
