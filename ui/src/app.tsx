@@ -4,6 +4,7 @@ import {
   Banner,
   Button,
   Icon,
+  IconButton,
   LayerProvider,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
@@ -417,19 +418,32 @@ export function App(): React.ReactElement {
   }, []);
 
   const repositoryStatus = repositoryStatusPresentation(status);
+  const statusClassName =
+    `jig-status-control jig-status-${repositoryStatus.key}`;
+  const statusIcon = (
+    <Icon
+      icon={repositoryStatus.icon}
+      color={repositoryStatus.iconColor}
+    />
+  );
   const statusControl = (
     <Button
       label={repositoryStatus.label}
       variant="ghost"
       size="sm"
-      icon={
-        <Icon
-          icon={repositoryStatus.icon}
-          color={repositoryStatus.iconColor}
-        />
-      }
+      icon={statusIcon}
       onClick={() => navigateDestination("settings")}
-      className={`jig-status-control jig-status-${repositoryStatus.key}`}
+      className={statusClassName}
+    />
+  );
+  const compactStatusControl = (
+    <IconButton
+      label={repositoryStatus.label}
+      variant="ghost"
+      size="sm"
+      icon={statusIcon}
+      onClick={() => navigateDestination("settings")}
+      className={statusClassName}
     />
   );
 
@@ -592,6 +606,7 @@ export function App(): React.ReactElement {
                 plannerState.displayedWeekStart,
               )}
               statusControl={statusControl}
+              compactStatusControl={compactStatusControl}
               onHome={() => navigateDestination("planner")}
               onPreviousWeek={previousWeek}
               onToday={goToToday}
