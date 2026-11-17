@@ -56,36 +56,38 @@ test("capture current-head reference surfaces", async ({ page }) => {
   await page.goto("/");
   await resetCanonicalTasks(page);
 
-  const previous = await browserCivilDate(page, -1);
   const today = await browserCivilDate(page);
+  const target = await browserCivilDate(page, 2);
   const next = await browserCivilDate(page, 1);
-  const plusTwo = await browserCivilDate(page, 2);
   const plusThree = await browserCivilDate(page, 3);
+  const plusFour = await browserCivilDate(page, 4);
+  const plusFive = await browserCivilDate(page, 5);
 
-  await create(page, "Review product plan", previous, { context: "Legal" });
-  await create(page, "Legal — TTA workflow remediation", today, {
+  await create(page, "Legal — TTA workflow remediation", target, {
     priority: "HIGH",
     context: "Legal App",
     note: "Details live in the project.",
     reminder: "10:00",
   });
-  await create(page, "Review Order lifecycle changes", today, {
+  await create(page, "Review Order lifecycle changes", target, {
     context: "Order",
     reminder: "14:00",
   });
-  await create(page, "SPAN docs validation", today, {
+  await create(page, "SPAN docs validation", target, {
     priority: "LOW",
     context: "SPAN",
   });
-  await create(page, "Plan tomorrow", today, {
+  await create(page, "Plan tomorrow", target, {
     context: "Planning",
     reminder: "17:00",
   });
-  await create(page, "Review outstanding fixes", next, { context: "Legal" });
-  await create(page, "Prepare next week", next, { context: "Order" });
-  await create(page, "Reading and notes", plusTwo, { context: "Personal" });
-  await create(page, "Weekly review", plusThree, { context: "Planning" });
-  await create(page, "Daily standup", today, { context: "Team" });
+  await create(page, "Today planning seed", today, { context: "Planning" });
+  await create(page, "Prepare Jig design", next, { context: "Planning" });
+  await create(page, "Review outstanding fixes", plusThree, { context: "Legal" });
+  await create(page, "Prepare next week", plusThree, { context: "Order" });
+  await create(page, "Reading and notes", plusFour, { context: "Personal" });
+  await create(page, "Weekly review", plusFive, { context: "Planning" });
+  await create(page, "Daily standup", target, { context: "Team" });
 
   const standup = (await apiState(page)).tasks.find(
     (task) => task.title === "Daily standup",
@@ -97,11 +99,24 @@ test("capture current-head reference surfaces", async ({ page }) => {
   await page.reload();
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator(".jig-day-view")).toBeVisible();
+  await page.locator(".jig-week-strip-date").nth(3).click();
 
   const firstCard = page
     .getByText("Legal — TTA workflow remediation", { exact: true })
     .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
   await firstCard.click();
+  console.log(
+    "JIG_REFERENCE_METRICS:desktop-day:" +
+      JSON.stringify({
+        primary: await page.locator(".jig-day-primary").boundingBox(),
+        inspector: await page.locator(".jig-task-inspector").boundingBox(),
+        firstCard: await firstCard.boundingBox(),
+        completedRow: await page
+          .getByText("Daily standup", { exact: true })
+          .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]")
+          .boundingBox(),
+      }),
+  );
   await capture(page, "desktop-day-inspector");
 
   await page
@@ -130,6 +145,14 @@ test("capture current-head reference surfaces", async ({ page }) => {
     .locator(".jig-primary-nav")
     .getByRole("button", { name: "Settings", exact: true })
     .click();
+  console.log(
+    "JIG_REFERENCE_METRICS:desktop-settings:" +
+      JSON.stringify({
+        grid: await page.locator(".jig-settings-grid").boundingBox(),
+        planning: await page.locator(".jig-settings-card").nth(0).boundingBox(),
+        sync: await page.locator(".jig-settings-card").nth(1).boundingBox(),
+      }),
+  );
   await capture(page, "desktop-settings");
 
   await page
@@ -138,6 +161,25 @@ test("capture current-head reference surfaces", async ({ page }) => {
     .click();
   await page.setViewportSize({ width: 414, height: 900 });
   await expect(page.locator(".jig-mobile-header")).toBeVisible();
+  console.log(
+    "JIG_REFERENCE_METRICS:mobile-day:" +
+      JSON.stringify({
+        frame: await page.locator(".jig-content-frame").boundingBox(),
+        firstDate: await page.locator(".jig-week-strip-date").first().boundingBox(),
+        heading: await page.locator(".jig-mobile-day-heading").boundingBox(),
+        attention: await page
+          .getByRole("heading", { name: "Attention", exact: true })
+          .boundingBox(),
+        firstCard: await page
+          .getByText("Legal — TTA workflow remediation", { exact: true })
+          .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]")
+          .boundingBox(),
+        quickAdd: await page
+          .getByRole("button", { name: "Add task", exact: true })
+          .last()
+          .boundingBox(),
+      }),
+  );
   await capture(page, "mobile-day");
 
   const mobileCard = page
@@ -148,5 +190,15 @@ test("capture current-head reference surfaces", async ({ page }) => {
     .click();
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
+  await page.waitForTimeout(500);
+  console.log(
+    "JIG_REFERENCE_METRICS:mobile-editor:" +
+      JSON.stringify({
+        frame: await page.locator(".jig-editor-mobile-frame").boundingBox(),
+        title: await page.getByRole("heading", { name: "Edit task", exact: true }).boundingBox(),
+        save: await page.getByRole("button", { name: "Save", exact: true }).boundingBox(),
+        cancel: await page.getByRole("button", { name: "Cancel", exact: true }).last().boundingBox(),
+      }),
+  );
   await capture(page, "mobile-editor");
 });
