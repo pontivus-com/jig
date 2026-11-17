@@ -727,8 +727,16 @@ body {
   .jig-section-heading {
     display: flex;
     align-items: baseline;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: var(--spacing-2);
+  }
+
+  .jig-day-lists .jig-task-count {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-0-5) var(--spacing-2);
+    border-radius: 999px;
+    background: var(--color-background-muted);
   }
 
   .jig-day-scheduled-section h2,
@@ -1022,7 +1030,7 @@ body {
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 8px;
     width: 100%;
-    margin-block-end: 32px;
+    margin-block-end: var(--spacing-5);
     overflow: visible;
   }
 
@@ -1035,7 +1043,7 @@ body {
   }
 
   .jig-mobile-day-heading {
-    margin-block-end: var(--spacing-6);
+    margin-block-end: var(--spacing-5);
   }
 
   .jig-mobile-day-heading h1,
@@ -1058,7 +1066,18 @@ body {
   }
 
   .jig-task-card-list {
-    padding-inline: 0;
+    padding: var(--spacing-2) 0;
+  }
+
+  .jig-day-lists .jig-task-count {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .jig-day-lists .jig-task-count-unit,
+  .jig-completed-section .jig-task-count {
+    display: none;
   }
 
   .jig-task-card {
