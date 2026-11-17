@@ -1,7 +1,27 @@
 @import "@astryxdesign/core/reset.css";
 @import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/theme-neutral/fonts.css";
+@import "@astryxdesign/theme-butter/fonts.css";
+@import "@astryxdesign/theme-chocolate/fonts.css";
+@import "@astryxdesign/theme-gothic/fonts.css";
+@import "@astryxdesign/theme-matcha/fonts.css";
+@import "@astryxdesign/theme-stone/fonts.css";
+@import "@astryxdesign/theme-y2k/fonts.css";
 @import "./theme.css";
 @import "./jig.css";
+@import "./themes/astryx-neutral.css";
+@import "./themes/astryx-butter.css";
+@import "./themes/astryx-chocolate.css";
+@import "./themes/astryx-gothic.css";
+@import "./themes/astryx-matcha.css";
+@import "./themes/astryx-stone.css";
+@import "./themes/astryx-y2k.css";
+@import "./themes/gruvbox.css";
+@import "./themes/dracula.css";
+@import "./themes/solarized.css";
+@import "./themes/nord.css";
+@import "./themes/catppuccin.css";
+@import "./themes/tokyo-night.css";
 
 html,
 body,
@@ -134,24 +154,10 @@ body {
     flex: 0 0 auto;
   }
 
-  .jig-brand-logo {
-    position: absolute;
-    inset: 0;
+  .jig-logo {
     display: block;
     width: 100%;
     height: 100%;
-  }
-
-  .jig-brand-logo-dark {
-    display: none;
-  }
-
-  html[data-theme="dark"] .jig-brand-logo-light {
-    display: none;
-  }
-
-  html[data-theme="dark"] .jig-brand-logo-dark {
-    display: block;
   }
 
   .jig-brand-tagline,
@@ -389,6 +395,10 @@ body {
 
   .jig-task-card:hover {
     background: var(--jig-state-hover-bg);
+  }
+
+  .jig-task-card:not(.jig-task-card-selected):active {
+    background: var(--jig-state-pressed-bg);
   }
 
   .jig-task-priority-high {
@@ -776,16 +786,6 @@ body {
     margin: 10vh auto 0;
   }
 
-  @media (prefers-color-scheme: dark) {
-    html:not([data-theme]) .jig-brand-logo-light {
-      display: none;
-    }
-
-    html:not([data-theme]) .jig-brand-logo-dark {
-      display: block;
-    }
-  }
-
   @media (max-width: 72.999rem) {
     .jig-app-shell {
       margin: 0;
@@ -855,13 +855,6 @@ body {
 
     .jig-task-card {
       min-height: 88px;
-    }
-
-    .jig-history-view,
-    .jig-settings-view {
-      width: 100%;
-      max-width: none;
-      margin-inline: 0;
     }
 
     .jig-history-groups,
