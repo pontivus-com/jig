@@ -1,7 +1,7 @@
 # Jig — UI solution design and visual reference contract
 
 **Status:** Binding v1.0.4 UX/UI realization v0.8, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for distinct state color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus and one directly editable Task workspace.
-**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–10 and JIG-FR-01–22.
+**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–12 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
 
@@ -119,13 +119,13 @@ The temporal centerpiece is centered on the page, not merely centered in the lef
 
 The week range uses compact formatting without “Week of” or a separate month title. Previous/Next shift by exactly seven days while preserving selected weekday; Today selects the current local date/current week.
 
-The board contains seven equal Monday–Sunday tracks. Each track has a 160px minimum and expands with the available desktop canvas. Date headers such as `Thu 19` are the desktop date selector.
+The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. Date headers such as `Thu 19` are the desktop date selector and contain a compact `+` immediately adjacent to the day/date label for date-specific creation.
 
 Desktop does not persistently color the whole selected-date column. The exact current local civil date alone receives the subtle current-day border/header treatment; the same weekday in another displayed week does not. Selected Task uses its own subtle card selection treatment. Drag-over has a separate transient treatment. Do not conflate these states.
 
 Task cards are compact and title-first. A thin leading color/accent may encode priority for scanning, but color is not the only priority signal and Normal remains visually quiet.
 
-Clicking a Task opens the full editable Task form directly in the non-blocking right workspace without moving it. There is no separate read-only details step and no Edit indirection. The workspace overlays the board and never narrows/reflows the seven tracks. Clicking blank Planner/History content dismisses the workspace; clicking another Task retargets it. Global Add task originates from the selected date; column Add task originates from that column and opens the same full form.
+Clicking a Task opens the full editable Task form directly in the non-blocking right workspace without moving it. There is no separate read-only details step and no Edit indirection. The workspace overlays the board and never narrows/reflows the seven tracks. Clicking blank Planner/History content dismisses the workspace; clicking another Task retargets it. Global Add task originates from the selected date. Per-date Add is the compact `+` in that date header and opens the same full form for that date. The former full-width bottom-of-lane Add control does not exist.
 
 Remove descriptive/meta copy. The desktop interface must not display phrases such as “Week of”, “full available canvas”, “selected date view”, “Today is a shortcut”, or similar explanatory design text.
 
@@ -188,7 +188,7 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 |---|---|
 | Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task/History/Settings/sync right; no sidebar; outer header height does not change across Planner/History/Settings |
 | Week navigation | Previous/Next shift displayed week and selected date exactly seven days; Today restores current date/current week; no Task mutation |
-| Week scanning | Seven readable date tracks, >=160px each in desktop mode, fluid expansion; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
+| Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; track height is content-driven; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
 | Unified creation | Global Add uses selected date; column/local Add uses originating date; the full canonical Task form is visible immediately with inherited defaults and no later Edit step required |
 | Task workspace | Click selects and opens the directly editable full Task form without changing date/order/destination; no second Edit click exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
