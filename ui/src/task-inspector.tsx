@@ -6,8 +6,9 @@ export interface TaskInspectorProps {
   readonly task: Task | null;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onEdit: (task: Task) => void;
-  readonly onMoveToDate: (task: Task) => void;
   readonly onDelete: (task: Task) => void;
+  readonly showHeading?: boolean;
+  readonly surface?: "docked" | "drawer";
 }
 
 function isSafeWebReference(value: string): boolean {
@@ -23,25 +24,44 @@ export function TaskInspector({
   task,
   onToggleComplete,
   onEdit,
-  onMoveToDate,
   onDelete,
+  showHeading = true,
+  surface = "docked",
 }: TaskInspectorProps): React.ReactElement {
   if (task === null) {
     return (
-      <aside className="jig-task-inspector jig-task-inspector-empty">
+      <aside
+        className={[
+          "jig-task-inspector",
+          "jig-task-inspector-empty",
+          surface === "drawer" ? "jig-task-inspector-drawer" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         <p>Select a task to inspect its details.</p>
       </aside>
     );
   }
 
   return (
-    <aside className="jig-task-inspector" aria-label={`Task details for ${task.title}`}>
-      <div className="jig-task-inspector-heading">
-        <div>
-          <p className="jig-eyebrow">Selected task</p>
-          <h2>{task.title}</h2>
+    <aside
+      className={[
+        "jig-task-inspector",
+        surface === "drawer" ? "jig-task-inspector-drawer" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label={`Task details for ${task.title}`}
+    >
+      {showHeading ? (
+        <div className="jig-task-inspector-heading">
+          <div>
+            <p className="jig-eyebrow">Selected task</p>
+            <h2>{task.title}</h2>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="jig-task-inspector-actions">
         <Button
@@ -57,12 +77,6 @@ export function TaskInspector({
           variant="ghost"
           size="sm"
           onClick={() => onEdit(task)}
-        />
-        <Button
-          label="Move to date"
-          variant="ghost"
-          size="sm"
-          onClick={() => onMoveToDate(task)}
         />
         <Button
           label="Delete…"
