@@ -71,7 +71,7 @@ function TaskMetadata({
           onPointerDown={stopPointer}
           onClick={(event) => event.stopPropagation()}
         >
-          Reference
+          Open reference
         </Link>
       ) : (
         <Button
