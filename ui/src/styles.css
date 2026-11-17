@@ -309,6 +309,13 @@ body {
     gap: var(--spacing-1);
     cursor: grab;
   }
+  .jig-task-title-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+
 
   .jig-task-body:active {
     cursor: grabbing;
