@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1.0.5 brand and application-theme contract, amended 2026-11-17 with the v1.0.5 Task-surface contrast and cross-responsive icon/brand normalization rules.
+**Status:** Canonical v1.0.5 brand and application-theme contract, amended 2026-11-17 for Task-surface contrast, shared responsive icon semantics and canonical compact-header wordmark usage.
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, brand palette, Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -404,11 +404,13 @@ Rules:
 
 ### v1.0.5 icon and header-brand normalization
 
-The public Astryx icon registry is Jig's one reusable application icon language. Header/navigation, Add, Task metadata/actions and status controls use semantic Astryx icons where available and preserve accessible text/labels.
+The public Astryx icon registry is Jig's one reusable application icon language. Header/navigation, Add, Task metadata/actions and status controls use semantic Astryx icons where available and preserve accessible text/labels. The pinned registry supplies `viewColumns`, `checkDouble`, `wrench`, `menu`, `moreHorizontal`, `clock`, `externalLink`, `copy`, `check`, `arrowUp`, `arrowDown`, status icons and temporal chevrons.
 
 The application header must use the canonical complete horizontal Jig wordmark asset. The standalone J icon is reserved for app/favicon/icon contexts and must not be placed next to a second live “Jig” word in the header.
 
 Narrow/mobile is not an alternate icon system: it uses the same semantic icon meaning, size family and state color as desktop, with only touch sizing/layout changing.
+
+Astryx 0.7.13 has no built-in Add/plus semantic name. Jig therefore owns exactly one namespaced extension icon key, `jig:add`, implemented as a bundled 24×24 inline fallback and resolved through Astryx `getExtendedIcon`/`Icon`. This is an extension of the Astryx registry, not a second icon system or dependency. No other custom Jig glyph is introduced while an appropriate built-in semantic name exists.
 
 
 ## 7. Theme implementation contract
