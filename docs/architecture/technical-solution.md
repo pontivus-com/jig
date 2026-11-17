@@ -371,11 +371,30 @@ When narrow drag is not enabled, touch-operable Move up/Move down commands call 
 ### 5.6 v1.0.4 state and interaction corrections
 
 - **Today identity:** derive current-day treatment only from exact local civil-date equality (`date === currentLocalDate`). Never derive today's styling from weekday identity or from `selectedDate`. Desktop `selectedDate` remains operational Planner state for Add/navigation but does not receive a whole-column persistent highlight.
-- **Visual state ownership:** today uses a subtle neutral border/header treatment; selected Task uses the semantic info/selection family; drag target uses the brand/accent transient treatment; priority uses High=error, Normal=quiet neutral, Low=success/low-emphasis. Do not reuse one accent fill for all four states.
+- **Visual state ownership:** product state follows the canonical [brand/theme state vocabulary](../design/brand-and-theme.md#61-v104-product-state-color-vocabulary). Desktop exact-today uses only cool neutral structural emphasis; desktop `selectedDate` does not produce a persistent column highlight. Selected Task uses a cool Ink/neutral surface + emphasized neutral border. Drag target/source uses transient Brand Amber. Priority uses High=error, Normal=quiet Ink/neutral, Low=success. Focus remains Amber and is not a selection fill. Do not reuse one accent fill for these states.
 - **Header geometry:** the desktop app-header outer block has one stable product-level minimum height large enough for the two-line Planner temporal centerpiece; History/Settings titles occupy the same center slot without collapsing the outer header. Apply the equivalent stable-height principle in narrow composition.
 - **Outside dismissal:** the main Planner/History content owner handles pointer-down outside Task rows and closes the open workspace. Workspace portals and Task rows/actions are excluded. Destination navigation continues to close workspace explicitly.
 - **Task menu commands:** menu priority changes issue the ordinary canonical `edit` command with only priority changed; completion/reopen and delete use existing commands; movement uses the existing exact-position command. No alternate Task mutation path is introduced.
 - **Operational-status color semantics:** synchronized and local-only are both healthy durability outcomes and use restrained success-family cues while preserving distinct text labels. Pending/retrying use warning, sync issue uses error, and unknown alone uses neutral/secondary styling.
+
+
+### 5.6.1 Published v1.0.3 failure mechanisms and corrective ownership
+
+The v1.0.4 implementation must correct the failure mechanism, not merely restyle the symptom:
+
+| Reported issue | v1.0.3 mechanism | v1.0.4 technical correction |
+|---|---|---|
+| Card drag appears broken | `useSortable().handleRef` is attached only to the small `≡` span while the whole Task body displays a grab cursor; the browser test drags that tiny handle, so it certifies a different interaction than the user attempts | attach the sortable handle ref to the non-interactive Task body/title/meta region; keep checkbox/menu/reference outside the activation region; browser test must drag from card body |
+| “Every Tuesday”/same weekday is highlighted in adjacent weeks | exact-today logic is correct, but a second Amber desktop column state is applied for `date === selectedDate`; Previous/Next intentionally shift `selectedDate` by ±7 days, so the same weekday remains highlighted and is visually indistinguishable from today | remove persistent desktop selected-date column styling; exact `date === currentLocalDate` alone gets current-day structural treatment; keep selectedDate as operational state and retain visible selection only in narrow date strip |
+| Current day, selected Task and Normal priority all read yellow | CSS maps desktop selected column, selected Task card, Normal priority and drop target to `--color-accent` / `--color-accent-muted` | use the canonical state vocabulary; delete superseded accent selectors rather than layering overrides |
+| Task workspace never dismisses from blank content | workspace closes only through explicit close, navigation, completion or deletion; Planner/History content has no outside-interaction owner | content surface owns outside pointer-down dismissal, excluding Task rows/actions and workspace portals; no document-global shadow state |
+| Header jumps between Planner and History/Settings | header height is content-driven; Planner center has range + controls while secondary destination center has one title line | one stable header outer min-height per responsive layout, sized to the maximum Planner composition; destination title occupies the same center budget |
+| Task menu is incomplete | Planner row menu exposes Edit + Move up/down only; History has Reopen/Edit/Delete; priority and complete/delete are not consistently wired | one menu command model per Task state using existing edit/complete/reopen/delete/move commands; no new endpoint |
+| Existing Task requires click → details → Edit | workspace discriminant is `view | edit | create`; Task selection enters `view`, and TaskEditor create mode deliberately hides all optional fields | collapse to `closed | task(draft) | create(draft)`; selecting an existing Task constructs its draft immediately; both states render the same full TaskEditor |
+| Local-only appears ambiguous grey | CSS groups `.jig-status-local-only` with `.jig-status-unknown` | separate them: local-only = restrained success; unknown alone = neutral |
+| Regression suite missed the UX failures | drag test targets `.jig-task-drag-handle`; Add conformance test asserts Date/Context are absent; no equal-header-height, outside-dismissal, same-weekday-not-today, state-color-separation or Local-only semantic assertions exist | replace those assertions with user-interaction/browser contracts for v1.0.4 |
+
+No domain, SQLite, HTTP, Git-sync, rollover, reminder or installer change follows from these failures.
 
 ### 5.6 Drag, accessibility and copy discipline
 
