@@ -35,6 +35,116 @@ test("desktop shell uses the governed rail and Day is the initial destination", 
   ).toHaveAttribute("aria-current", "page");
 });
 
+function expectNear(actual: number, expected: number, tolerance = 2): void {
+  expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance);
+}
+
+
+test("desktop geometry matches the canonical 1440×900 reference coordinates", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const sidebar = await page.locator(".jig-sidebar").boundingBox();
+  expect(sidebar).not.toBeNull();
+  if (sidebar === null) return;
+  expectNear(sidebar.x, 20);
+  expectNear(sidebar.y, 20);
+  expectNear(sidebar.width, 190);
+  expectNear(sidebar.height, 860);
+
+  const heading = await page.locator(".jig-reference-heading").boundingBox();
+  expect(heading).not.toBeNull();
+  if (heading === null) return;
+  expectNear(heading.x, 240);
+  expectNear(heading.y, 34);
+
+  await page.getByRole("button", { name: "Week", exact: true }).click();
+  const board = await page.locator(".jig-week-board").boundingBox();
+  expect(board).not.toBeNull();
+  if (board === null) return;
+  expectNear(board.x, 240);
+  expectNear(board.y, 145);
+  expectNear(board.width, 1168);
+
+  const columns = page.locator(".jig-week-column");
+  await expect(columns).toHaveCount(7);
+  for (let index = 0; index < 7; index += 1) {
+    const box = await columns.nth(index).boundingBox();
+    expect(box).not.toBeNull();
+    if (box === null) continue;
+    expectNear(box.width, 160);
+    expectNear(box.x, 240 + index * 168);
+    expectNear(box.y, 145);
+  }
+});
+
+test("Day and Settings use the canonical desktop split geometry", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const primary = await page.locator(".jig-day-primary").boundingBox();
+  const inspector = await page.locator(".jig-task-inspector").boundingBox();
+  expect(primary).not.toBeNull();
+  expect(inspector).not.toBeNull();
+  if (primary !== null && inspector !== null) {
+    expectNear(primary.x, 240);
+    expectNear(primary.width, 650);
+    expectNear(inspector.x, 920);
+    expectNear(inspector.y, 145);
+    expectNear(inspector.width, 490);
+  }
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const cards = page.locator(".jig-settings-card");
+  await expect(cards).toHaveCount(4);
+  const planning = await cards.nth(0).boundingBox();
+  const sync = await cards.nth(1).boundingBox();
+  if (planning !== null && sync !== null) {
+    expectNear(planning.x, 240);
+    expectNear(planning.width, 560);
+    expectNear(sync.x, 830);
+    expectNear(sync.width, 580);
+  }
+});
+
+test("414px mobile geometry matches the canonical framed Day reference", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 414, height: 900 });
+
+  const main = await page.locator(".jig-main").boundingBox();
+  expect(main).not.toBeNull();
+  if (main === null) return;
+  expectNear(main.x, 12);
+  expectNear(main.y, 12);
+  expectNear(main.width, 390);
+  expectNear(main.height, 876);
+
+  const dates = page.locator(".jig-week-strip-date");
+  await expect(dates).toHaveCount(7);
+  const firstDate = await dates.first().boundingBox();
+  expect(firstDate).not.toBeNull();
+  if (firstDate !== null) {
+    expectNear(firstDate.x, 26);
+    expectNear(firstDate.width, 44, 3);
+    expectNear(firstDate.height, 56);
+  }
+
+  const quickAdd = await page
+    .getByRole("button", { name: "Add task", exact: true })
+    .last()
+    .boundingBox();
+  expect(quickAdd).not.toBeNull();
+  if (quickAdd !== null) {
+    expectNear(quickAdd.x, 318, 3);
+    expectNear(quickAdd.y, 803, 3);
+    expectNear(quickAdd.width, 62, 3);
+    expectNear(quickAdd.height, 52, 3);
+  }
+});
+
 test("Week fits seven visible columns at the canonical desktop viewport", async ({
   page,
 }) => {
