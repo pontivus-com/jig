@@ -233,7 +233,6 @@ export function TaskRow({
                 className="jig-task-drag-handle"
                 aria-hidden="true"
                 title="Drag task"
-                onPointerDown={stopPointer}
                 onClick={(event) => event.stopPropagation()}
               >
                 ≡
