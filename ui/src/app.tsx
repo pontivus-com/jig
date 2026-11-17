@@ -31,6 +31,10 @@ import type {
   ServiceStatus,
 } from "../../src/shell/http";
 import { DayView } from "./day";
+import {
+  draftFor,
+  type TaskDraft,
+} from "./task-editor";
 import { HistoryView } from "./history";
 import {
   isStaleRevision,
@@ -187,6 +191,9 @@ export function App(): React.ReactElement {
   const [workspaceMode, setWorkspaceMode] =
     useState<TaskWorkspaceMode | null>(null);
   const [workspaceDate, setWorkspaceDate] = useState(selectedDate);
+  const [workspaceDraft, setWorkspaceDraft] = useState<TaskDraft>(() =>
+    draftFor(null, todayCivilDate()),
+  );
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
 
@@ -395,6 +402,7 @@ export function App(): React.ReactElement {
 
   const openCreate = useCallback((date: string): void => {
     setWorkspaceDate(date);
+    setWorkspaceDraft(draftFor(null, date));
     setOperationError(null);
     setWorkspaceMode("create");
   }, []);
@@ -402,6 +410,7 @@ export function App(): React.ReactElement {
   const openEdit = useCallback((task: Task): void => {
     setSelectedTaskId(task.id);
     setWorkspaceDate(task.scheduled_date);
+    setWorkspaceDraft(draftFor(task, task.scheduled_date));
     setOperationError(null);
     setWorkspaceMode("edit");
   }, []);
@@ -454,6 +463,17 @@ export function App(): React.ReactElement {
       setSelectedTaskId(null);
     }
   }, [destination]);
+
+  const changeWorkspaceMode = useCallback(
+    (mode: TaskWorkspaceMode | null): void => {
+      if (mode === "edit" && selectedTask !== null) {
+        setWorkspaceDraft(draftFor(selectedTask, selectedTask.scheduled_date));
+        setWorkspaceDate(selectedTask.scheduled_date);
+      }
+      setWorkspaceMode(mode);
+    },
+    [selectedTask],
+  );
 
   const navigateDestination = useCallback((next: Destination): void => {
     setDestination(next);
@@ -628,6 +648,7 @@ export function App(): React.ReactElement {
         selectedTask={selectedTask}
         workspaceMode={workspaceMode}
         workspaceDate={workspaceDate}
+        draft={workspaceDraft}
         externalError={operationError}
         isSaving={isOperating}
         onSelectTask={selectTask}
@@ -636,7 +657,8 @@ export function App(): React.ReactElement {
         onEdit={openEdit}
         onMoveToDate={openMoveToDate}
         onWorkspaceMove={moveWorkspaceTask}
-        onWorkspaceModeChange={setWorkspaceMode}
+        onWorkspaceModeChange={changeWorkspaceMode}
+        onDraftChange={setWorkspaceDraft}
         onSave={saveWorkspace}
         onToggleComplete={toggleComplete}
         onMove={moveTaskExact}
@@ -690,9 +712,11 @@ export function App(): React.ReactElement {
             mode={workspaceMode}
             task={workspaceMode === "create" ? null : selectedTask}
             initiatingDate={workspaceDate}
+            draft={workspaceDraft}
             externalError={operationError}
             isSaving={isOperating}
-            onModeChange={setWorkspaceMode}
+            onModeChange={changeWorkspaceMode}
+            onDraftChange={setWorkspaceDraft}
             onSave={saveWorkspace}
             onMove={moveWorkspaceTask}
             onDelete={(task) => setDeleteTaskId(task.id)}
