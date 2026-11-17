@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Candidate v0.6, updated 2026-11-17 with the binding v1.0.3 single-planner interaction model, persisted daily rollover, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual mockups are an accepted starting point, not a signed component/theme specification.  
+**Status:** Candidate v0.7, updated 2026-11-17 with the binding v1.0.3 single-Planner interaction model and finalized responsive Planner header/date-navigation contract, persisted daily rollover, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual references govern interaction hierarchy and structural intent; the running Astryx UI remains the implementation evidence.  
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -53,7 +53,7 @@ The following requirements are binding for v1.0.3 and supersede any earlier Day/
 | ID | Requirement | Observable acceptance |
 |---|---|---|
 | JIG-103-FR-01 | One Planner destination | Jig exposes one planning destination. Desktop shows the seven-date weekly board; narrow/mobile shows the same Planner as a date strip plus the selected date's list. There is no separately navigable Day view. |
-| JIG-103-FR-02 | Planner is the default/home surface | Jig opens on Planner. The product mark/home affordance returns to Planner from secondary destinations without adding Planner as a redundant menu item. |
+| JIG-103-FR-02 | Planner is the default/home surface | Jig opens on Planner with the current local date selected and the week containing that date displayed. The Jig product mark/home affordance returns from secondary destinations to Planner without adding Planner as a redundant menu item. Returning home preserves the existing Planner week/date state for that session; startup initializes to today/current week. |
 | JIG-103-FR-03 | No persistent desktop sidebar | The former left navigation rail is removed. Desktop secondary navigation is folded into the top region and exposes only History and Settings, with appropriate semantic iconography. |
 | JIG-103-FR-04 | Proper mobile hamburger navigation | Mobile uses a top hamburger/menu-button pattern for secondary navigation. Opening it presents History and Settings as a compact menu/popover; it must not open a side-navigation drawer or recreate the former desktop sidebar. |
 | JIG-103-FR-05 | Task click/tap inspects; it never moves | Clicking/tapping any Task row/card selects that canonical Task and opens its details in place. The current Planner/History destination remains active. Card selection never changes scheduled date, order or destination. |
@@ -68,13 +68,14 @@ The following requirements are binding for v1.0.3 and supersede any earlier Day/
 | JIG-103-FR-14 | Responsive reflow preserves state | Crossing the responsive breakpoint while a Task workspace is open preserves selected Task, create/edit mode and unsaved draft values. Responsive composition must not create duplicate Task state or mutate canonical Task data. |
 | JIG-103-FR-15 | Completion leaves the Planner and remains inspectable | Completing a Task removes it from the outstanding Planner sequence and records its completion timestamp. Completed Tasks remain inspectable/reopenable from History; the removed standalone Day completed section is not required. |
 | JIG-103-FR-16 | Navigation is intentionally minimal | The only secondary destinations are History and Settings. Desktop exposes them directly in the top application region; mobile exposes the same two destinations through the hamburger menu. Planner remains the implicit home/default surface. |
+| JIG-103-FR-17 | Centered week navigation is the Planner temporal model | The active week date range is visually centered in the Planner header. Directly beneath that range, one grouped control row contains Previous week, Today and Next week. Previous/Next move the displayed week by exactly seven days and preserve the selected weekday by moving the selected date by the same seven days. Today selects the current local date and displays its containing week. The range label itself is informational, not an interactive separator between the three controls. |
 
 ## 4. Functional requirements
 
 | ID | Requirement | Observable acceptance |
 |---|---|---|
 | JIG-FR-01 | Create a task quickly | A title entered from a Planner date context/column creates a task on that date without requiring priority, estimate, context, or link. |
-| JIG-FR-02 | Navigate planning dates | Move between weeks, select any visible date in the Planner, and return to today without altering Task data. Narrow/mobile date selection changes only the selected Planner date. |
+| JIG-FR-02 | Navigate planning dates | Previous/Next move the Planner by one calendar week while keeping the selected weekday aligned; selecting any visible date changes only Planner selection; Today selects the current local date and its containing week. None of these navigation actions alter Task data. |
 | JIG-FR-03 | Order within a day | Drag an outstanding task to any position within its scheduled date. The new order persists across view changes and restart. |
 | JIG-FR-04 | Move between dates | Drag into another visible date/position on desktop, or explicitly edit the Task's scheduled date when a non-drag reschedule is needed. The item is moved, not copied. |
 | JIG-FR-05 | Priority-assisted insertion | On quick-add/new scheduling, priority suggests an insertion point without rearranging existing tasks. A previously manually mixed list is not silently sorted into priority groups. |
@@ -104,7 +105,7 @@ This keeps priority useful on capture without introducing a hidden automatic sch
 
 ### Completion placement
 
-Planner contains the canonical outstanding sequence only. Completing a Task removes it from Planner and records its completion timestamp. History groups completed Tasks by actual completion date and remains the canonical UI for inspecting/reopening completed work. Reopening places the same Task back into the outstanding Planner sequence on its scheduled date; any needed ordering adjustment is explicit.
+Planner contains the canonical outstanding sequence only. Completing a Task removes it from Planner and records its completion timestamp. History groups completed Tasks by actual completion date and remains the canonical UI for inspecting/reopening completed work. Reopening places the same Task back into the outstanding Planner sequence on its scheduled date at the end of that date's current outstanding order; any later ordering adjustment is explicit.
 
 ### Daily rollover and ordering
 
@@ -130,40 +131,64 @@ Completed Tasks are never rolled forward. Explicit date changes use either deskt
 
 ## 5. Desktop spatial UX — v1.0.3
 
-**Planner:** one calendar week of date buckets, with previous/next week controls, jump to today, title-first quick-add scoped to a selected/originating date, compact Task cards, clear drag handles, and obvious same-day/cross-day drop targets. The Planner fills the available main canvas; it has no fixed content max-width. Seven date columns share that width equally and remain at least 160px wide in the desktop composition.
+Desktop Planner is one wide weekly planning surface plus one global application header. There is no persistent left rail and no separate Day or Week destination.
 
-There is no standalone desktop Day destination. Selecting a date changes Planner selection/context only; it does not navigate to another page.
+**Global header hierarchy:** the header has three semantic zones and one centered temporal centerpiece.
 
-**Task details:** clicking a Planner Task selects it and opens its canonical details in a non-blocking right-side contextual workspace. Planner remains visible underneath/alongside the contextual surface. Selection itself performs no move.
+- **Left:** the Jig product mark/wordmark. It is the Planner/Home affordance.
+- **Center:** the Planner's temporal navigator. The first line is the active week range, centered on the page. Directly beneath it is one grouped control row: **Previous week chevron · Today · Next week chevron**. The date range is not placed between the buttons and is not itself a navigation control.
+- **Right:** **Add task**, **History**, **Settings**, and compact synchronization status. History and Settings are the only secondary destinations.
+- The center region remains optically/page centered even when the left and right zones have unequal widths.
 
-**Task editing/creation:** Edit replaces the right-side detail content with the full editor. Add/Quick Add uses the same right-side workspace in create mode and initially asks only for title. Save returns to the selected Task details. Cancel returns to details for an existing Task or closes create mode.
+**Week range formatting:** use compact human-readable local dates without explanatory prefixes such as “Week of”.
 
-**History:** simple dated access to completed items, not a productivity dashboard. Selecting a History Task opens the same right-side Task details workspace without changing away from History.
+- same month: `16–22 Nov 2026`;
+- different months, same year: `30 Nov–6 Dec 2026`;
+- different years: `28 Dec 2026–3 Jan 2027`.
 
-**Navigation:** there is no persistent left sidebar. Planner is the implicit home/default surface. The desktop top application region exposes only History and Settings as secondary destinations, with appropriate semantic icons. The Jig brand/home affordance returns to Planner.
+**Temporal state:** Planner maintains one visible week and one selected date. At startup, the visible week is the week containing the current local date and the selected date is today. Previous/Next shift both the visible week and selected date by exactly seven days. Today restores both to the current local date/current week. Clicking a visible date header changes only the selected date. The selected date always belongs to the displayed week.
 
-**Actions:** pointer drag-and-drop is the primary direct ordering/cross-date movement mechanism. Same-day Move up/Move down remains available as a keyboard-accessible ordering alternative. Explicit non-drag cross-date rescheduling occurs through the Edit date field. There is no separate Move-to-date workspace. Completion uses one explicit control. Delete always requires explicit destructive confirmation.
+**Planner board:** the seven Monday–Sunday date columns fill the available planning canvas equally. There is no artificial content max-width. Each column remains at least 160px wide in desktop composition. Column headers are the desktop date selector and use compact weekday/day-number formatting such as `Thu 19`; they do not repeat the full selected-date sentence elsewhere.
 
-**Visual hierarchy:** dates and work-item titles dominate; the current/selected date is clear; priority is visually modest, with high priority exceptional rather than every Normal value becoming a strong badge; reminder *time* must be recognizable as an alert and not a time block.
+**Date-state treatment:** current date, selected date, drag target and Task priority are distinct visual states. Selected-date emphasis is concentrated in the date header/column edge rather than saturating the whole column. Drag-over uses its own temporary treatment. Today may have a small independent indicator. These states must remain distinguishable without relying on color alone.
 
-**Appearance:** System, Light and Dark are mandatory presentation modes. They use the same semantic hierarchy, component structure and interaction model; theme is local presentation preference rather than Task or Git-synchronized planning state. All focus, selection, priority, completion, save and sync states remain distinguishable in both Light and Dark without relying on color alone.
+**Task scanability and color:** compact Task cards may use a restrained leading accent/color cue to improve scanning. If color encodes Task priority, the mapping is singular and consistent across Planner, History and Task detail, and priority remains readable through text/iconography as well as color. Normal priority must not become a visually dominant badge.
+
+**Task details:** clicking a Planner Task selects it and opens its canonical details in a non-blocking right-side workspace. The workspace overlays from the right and **must not resize, reflow or narrow the seven Planner columns**. Selection itself performs no move.
+
+**Task editing/creation:** Edit replaces workspace detail content with the full editor. Add task uses the same workspace in create mode and initially asks only for title. The global Add task originates from the currently selected date; a column-local Add task originates from that column/date and selects that date. Save returns to Task detail. Cancel returns to detail for an existing Task or closes create mode.
+
+**History:** selecting a completed Task opens the same right-side Task workspace while History remains the active destination.
+
+**Actions:** pointer drag-and-drop is the primary direct same-date ordering/cross-date movement mechanism. Same-day Move up/Move down remains a keyboard-accessible ordering alternative. Explicit non-drag cross-date rescheduling occurs through the Edit date field. There is no separate Move-to-date workspace. Delete always requires explicit destructive confirmation.
+
+**Copy discipline:** remove explanatory/meta labels that restate the interaction model. The production UI must not contain copy such as “selected date view”, “Today is a shortcut”, “Your ordered plan”, “full available canvas”, or similar implementation/design commentary. Controls, dates and Task content provide the orientation.
+
+**Appearance:** System, Light and Dark are mandatory presentation modes. They use the same semantic hierarchy, component structure and interaction model; theme is local presentation preference rather than Task or Git-synchronized planning state. Focus, selection, priority, completion, save and sync states remain distinguishable in both Light and Dark without relying on color alone.
 
 ## 6. Narrow/mobile responsive UX — v1.0.3
 
 Narrow/mobile is the same Planner and the same Task model, not a separate Day/Week product mode.
 
-- The Planner reflows to a compact horizontal seven-date strip plus the selected date's canonical outstanding Task list. Selecting a date changes the Planner date context only.
-- There is no Day destination and no Week destination in mobile navigation.
-- A top hamburger/menu button exposes only the secondary destinations **History** and **Settings**. The menu is a compact menu/popover treatment; it must not open a side-navigation drawer.
-- Tapping a Task opens its proper detail content in a non-blocking BottomSheet rising from the bottom.
-- Add/Quick Add and Edit reuse that same BottomSheet. Create mode initially asks only for title; Edit exposes the full optional Task fields.
-- Touch-sized controls are required. Direct drag ordering may be unavailable on narrow/mobile; the Edit date field provides explicit cross-date rescheduling and same-day ordering controls remain available where needed.
-- Responsive reflow between desktop and narrow/mobile preserves selected Task, workspace mode and unsaved draft state.
-- Task creation/editing is never a centered/fullscreen modal. Permanent Delete confirmation remains blocking.
-- The same work item does not become a separate mobile data/lifecycle shape.
-- No full background/scheduled mobile notification requirement is introduced.
+The header deliberately recomposes rather than squeezing the desktop header into one row:
 
-The earlier mockups used the working Day/Week split to validate relationships. For v1.0.3 that navigation split is superseded by the single responsive Planner contract above. Their colors, card shadows, navigation duplicates, and illustrative URLs/dates are **not** normative visual design or live data.
+1. **Application band:** Jig product mark/home affordance on the left; compact synchronization status and a hamburger/menu button on the right.
+2. **Planner temporal centerpiece:** the active week range centered on its own line, with the grouped **Previous week chevron · Today · Next week chevron** row directly beneath it.
+3. **Seven-date strip:** all seven dates for the displayed week, with the selected date clearly indicated. Selecting a date changes only Planner selection.
+4. **Selected-date orientation:** one compact full-date heading (for example `Thursday 19 November`) with an optional outstanding Task count; the Task list starts immediately below. Do not add redundant “Day”, “Attention”, “Your ordered plan”, “selected date view”, or similar labels.
+5. **Task list and Add:** the selected date's canonical outstanding sequence. Add task remains a prominent touch action but need not occupy the already-constrained application/header band.
+
+The hamburger opens a compact menu/popover containing only **History** and **Settings**. It must not open a side-navigation drawer or recreate the former sidebar.
+
+Tapping a Task opens its proper detail content in a non-blocking **BottomSheet rising from the bottom**. Add task and Edit reuse the same BottomSheet and the same Task workspace state. Create mode initially asks only for title; Edit exposes the full optional Task fields.
+
+Touch-sized controls are required. Direct drag ordering may be unavailable on narrow/mobile. When drag is unavailable, touch-operable Move up/Move down commands provide same-day ordering and the Edit scheduled-date field provides explicit cross-date rescheduling. These commands mutate the same canonical order/date state as desktop interactions; there is no mobile-specific ordering model.
+
+Responsive reflow between desktop and narrow/mobile preserves displayed week, selected date, selected Task, workspace mode and unsaved draft state. A Task workspace that is open as a desktop right overlay becomes the mobile BottomSheet, and vice versa, without duplicating Task/draft state.
+
+Task creation/editing is never a centered/fullscreen modal. Permanent Delete confirmation remains blocking. No full background/scheduled mobile notification requirement is introduced.
+
+The earlier Day/Week mockups remain historical design inputs only. Their separate destinations, sidebar/navigation duplication, completed-in-Day section, illustrative URLs/dates and explanatory labels are superseded by this v1.0.3 contract.
 
 ## 7. Feedback and notification interaction
 
@@ -185,7 +210,7 @@ The earlier mockups used the working Day/Week split to validate relationships. F
 8. **Responsive continuity:** narrow and wide layouts represent the same Planner state, selected Task, Task-workspace mode and values, without a Day/Week destination split, destination switching caused by selection or loss of edits.
 9. **Daily rollover:** leave a Thursday Task outstanding and advance the local day to Friday. Jig changes the Task's canonical `scheduled_date` to Friday, moves the same card into Friday's Planner bucket, and removes it from Thursday. Desktop and narrow/mobile Planner presentations show the same moved Task. If Jig is inactive across multiple days, the outstanding Task catches up directly to the current local date. Existing reminder time-of-day is preserved.
 10. **Deletion:** choose Delete on an outstanding or completed Task, cancel the confirmation once with no change, then confirm; the Task is removed from Jig and the next portable Git snapshot records its absence. No in-app trash or restore is offered.
-11. **Single Planner navigation:** launch Jig on desktop and mobile. Planner is the default. Desktop has no left navigation rail; only History and Settings appear in the top region. Mobile hamburger contains only History and Settings and does not open a side drawer.
+11. **Single Planner navigation and centered temporal controls:** launch Jig on desktop and mobile. Planner is the default. Desktop has no left navigation rail; the Jig mark is Home, History and Settings are the only secondary destinations, and the centered week range sits above a grouped Previous/Today/Next row. Previous/Next move by seven days while preserving selected weekday; Today selects the current date/current week. Mobile presents the same temporal centerpiece below its application band, and its hamburger contains only History and Settings.
 12. **Inspect without moving:** click/tap a Task. Its details open in the right-side desktop workspace or bottom mobile sheet while its scheduled date/order and current destination remain unchanged.
 13. **Quick Add:** invoke Add/Quick Add from a date context. Only Title is initially required/visible for capture; the Task is created on the originating date with canonical defaults and can then be edited for optional metadata.
 14. **Movement semantics:** drag a desktop Task within/between date columns and observe exact-position movement. Click/tap alone never moves it. Change scheduled date through Edit and observe non-drag rescheduling without a separate Move-to-date surface.
