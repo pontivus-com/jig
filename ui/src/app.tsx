@@ -401,13 +401,14 @@ export function App(): React.ReactElement {
     }
   };
 
+  const repositoryStatus = status?.repository_status ?? "unknown";
   const statusControl = (
     <Button
       label={repositoryStatusLabel(status)}
       variant="ghost"
       size="sm"
       onClick={() => setDestination("settings")}
-      className="jig-status-control"
+      className={`jig-status-control jig-status-${repositoryStatus}`}
     />
   );
 
