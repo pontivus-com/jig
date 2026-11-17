@@ -689,11 +689,6 @@ body {
     align-content: start;
   }
 
-  .jig-task-inspector-heading h2,
-  .jig-task-inspector-heading p {
-    margin-block-start: 0;
-  }
-
   .jig-task-inspector-actions {
     display: flex;
     flex-wrap: wrap;
@@ -903,25 +898,6 @@ body {
   .jig-editor-group-field {
     display: grid;
     gap: var(--spacing-1);
-  }
-
-  .jig-editor-date-behavior {
-    display: grid;
-    gap: var(--spacing-1);
-    padding: var(--spacing-3);
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-element);
-    background: var(--color-background-muted);
-  }
-
-  .jig-editor-date-behavior strong {
-    font-size: var(--font-size-sm);
-  }
-
-  .jig-editor-date-behavior span {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    line-height: var(--text-heading-2-leading);
   }
 
   .jig-editor-actions {
