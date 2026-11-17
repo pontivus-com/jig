@@ -154,6 +154,15 @@ export function communityColorTokens(
     "--color-text-error": readable(palette.error, palette.textPrimary),
     "--color-on-error-muted": readable(palette.error, palette.textPrimary),
 
+    "--color-icon-info": "var(--color-text-info)",
+    "--color-icon-success": "var(--color-text-success)",
+    "--color-icon-warning": "var(--color-text-warning)",
+    "--color-icon-error": "var(--color-text-error)",
+    "--color-border-info": "var(--color-text-info)",
+    "--color-border-success": "var(--color-text-success)",
+    "--color-border-warning": "var(--color-text-warning)",
+    "--color-border-error": "var(--color-text-error)",
+
     "--color-border": pairMap(
       palette.textPrimary,
       (color, index) => mix(color, palette.body[index], 16),
