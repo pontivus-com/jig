@@ -43,7 +43,9 @@ The SVGs govern structure, hierarchy, density and representative visual characte
 
 ## Fidelity verdict
 
-**PASS — the current implementation conforms to the governed reference design without architecture exceptions.**
+**CAPTURED REVISION PASS; CURRENT BRANCH PENDING FINAL RECAPTURE.**
+
+The archived screenshots certify the captured UI revision above. Subsequent fidelity corrections were made through public Astryx APIs: the semantic status marker now uses the public `Button.icon` slot and the narrow editor's top-right Cancel action uses `DialogHeader.endContent` instead of the generic close-icon presentation. These are architecture-conforming changes, but they alter visible output and therefore require a final screenshot recapture before release.
 
 Verified structural budgets include:
 
@@ -73,7 +75,9 @@ The reference set itself contained stale or contradictory details. These were co
 
 - obsolete `Just-in-time planning` supporting copy was replaced by canonical `Schedules attention`;
 - Settings diagnostics were aligned to the governed shell contract: Jig service, Local database and Portable data health;
-- no invented `Run diagnostics` action was added because the shell contract owns no such workflow.
+- no invented `Run diagnostics` action was added because the shell contract owns no such workflow;
+- unsupported History `All contexts` / `Newest first` controls were removed from the SVG because no higher authority defines those workflows;
+- unsupported failure-state `Copy diagnostics` action was removed from the SVG rather than inventing a new troubleshooting workflow.
 
 Where the corrected Settings SVG contains illustrative vertical coordinates that cannot be treated simultaneously as literal geometry, `ui-solution.md` topology and the governed 560/580 split take precedence. No compensating CSS was introduced.
 
