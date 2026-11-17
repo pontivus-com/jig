@@ -7,6 +7,7 @@
       "dependencies": {
         "@astryxdesign/core": "0.7.13",
         "@astryxdesign/theme-neutral": "0.7.13",
+        "@dnd-kit/dom": "0.5.3",
         "@dnd-kit/react": "0.5.3",
         "@stylexjs/stylex": "0.19.1",
         "react": "19.3.1",

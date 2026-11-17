@@ -6,6 +6,10 @@ import {
   Link,
   ListItem,
 } from "@astryxdesign/core";
+import {
+  PointerActivationConstraints,
+  PointerSensor,
+} from "@dnd-kit/dom";
 import { useSortable } from "@dnd-kit/react/sortable";
 import type { Ref } from "react";
 import type { Priority, Task } from "../../src/core/task";
@@ -304,12 +308,20 @@ export function SortableTaskRow({
     group,
     type: "jig-task",
     accept: "jig-task",
+    sensors: [
+      PointerSensor.configure({
+        activationConstraints: [
+          new PointerActivationConstraints.Distance({ value: 5 }),
+        ],
+      }),
+    ],
   });
 
-  // Keep the Astryx ListItem <li> as dnd-kit's sortable source/drop target,
-  // but bind the activation handle to Jig's non-interactive Task body. The
-  // body therefore starts pointer drag while checkbox/menu/reference controls
-  // remain independent ListItem children and never become drag activators.
+  // Keep the Astryx ListItem <li> as dnd-kit's sortable source/drop target
+  // and bind the public handle to Jig's non-interactive Task body. dnd-kit
+  // normally activates a mouse handle immediately, so this sortable explicitly
+  // requires 5px pointer movement before activation. Ordinary clicks therefore
+  // remain ListItem selection while body movement becomes drag.
   const rowRef = sortable.ref as Ref<HTMLLIElement>;
   const dragHandleRef = sortable.handleRef as Ref<HTMLDivElement>;
 
