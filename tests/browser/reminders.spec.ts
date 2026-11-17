@@ -98,7 +98,9 @@ test("visible due reminder uses the in-app toast and not browser Notification", 
   await page.clock.fastForward(60_000);
 
   await expect(
-    page.getByText("Reminder: Visible reminder", { exact: true }),
+    page
+      .getByRole("region", { name: "Notifications" })
+      .getByText("Reminder: Visible reminder", { exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
