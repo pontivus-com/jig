@@ -329,31 +329,8 @@ body {
     background: var(--color-background-muted);
   }
 
-  .jig-date-heading-button,
-  .jig-week-strip-date,
-  .jig-copy-reference {
-    appearance: none;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-  }
-
   .jig-date-heading-button {
-    display: flex;
     min-width: 0;
-    align-items: center;
-    padding: var(--spacing-1) 0;
-    border-radius: var(--radius-element);
-    font-size: var(--font-size-sm);
-  }
-
-  .jig-date-heading-button:focus-visible,
-  .jig-week-strip-date:focus-visible,
-  .jig-copy-reference:focus-visible {
-    outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
-    outline-offset: var(--focus-outline-offset);
   }
 
   .jig-empty-column,
@@ -540,15 +517,8 @@ body {
     white-space: nowrap;
   }
 
-  .jig-copy-reference,
   .jig-task-meta a {
-    appearance: none;
-    border: 0;
-    padding: 0;
-    background: transparent;
     color: inherit;
-    font: inherit;
-    cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 0.15em;
   }
@@ -580,24 +550,18 @@ body {
 
   .jig-week-strip-date {
     position: relative;
-    display: flex;
     width: 80px;
     min-height: 56px;
+  }
+
+  .jig-week-strip-date-content {
+    display: flex;
+    min-width: 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: var(--spacing-1);
-    padding: var(--spacing-1);
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-element);
-    background: var(--color-background-surface);
-  }
-
-  .jig-week-strip-date.jig-date-selected {
-    border-color: var(--color-accent);
-    background: var(--color-accent);
-    color: var(--color-on-accent);
-    outline: none;
+    white-space: normal;
   }
 
   .jig-history-view,
@@ -1033,7 +997,10 @@ body {
     min-width: 0;
     height: 56px;
     min-height: 56px;
-    padding: 0 var(--spacing-0-5);
+  }
+
+  .jig-week-strip-date-content {
+    font-size: var(--font-size-sm);
   }
 
   .jig-mobile-day-heading {
