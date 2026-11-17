@@ -153,29 +153,59 @@ export function WeekView({
 
   return (
     <div className="jig-week-view">
-      <div className="jig-view-heading">
+      <div className="jig-reference-heading">
         <div>
-          <p className="jig-eyebrow">Week</p>
           <h1>
+            Week of{" "}
             {formatCivilDate(dates[0] ?? selectedDate, {
-              month: "short",
               day: "numeric",
             })}
-            {" – "}
+            {"–"}
             {formatCivilDate(dates[6] ?? selectedDate, {
-              month: "short",
+              month: "long",
               day: "numeric",
-              year: "numeric",
             })}
           </h1>
+          <p>Plan attention across the week · drag to an exact position</p>
         </div>
-        <div className="jig-view-actions">
-          <Button label="Previous" variant="ghost" size="sm" onClick={onPrevious} />
-          <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
-          <Button label="Next" variant="ghost" size="sm" onClick={onNext} />
-          {statusControl}
+        {statusControl}
+      </div>
+
+      <div className="jig-week-toolbar">
+        <div className="jig-month-navigation">
           <Button
-            label="Add task"
+            label="‹"
+            aria-label="Previous week"
+            variant="ghost"
+            size="sm"
+            className="jig-date-step"
+            onClick={onPrevious}
+          />
+          <strong>
+            {formatCivilDate(selectedDate, {
+              month: "long",
+              year: "numeric",
+            })}
+          </strong>
+          <Button
+            label="›"
+            aria-label="Next week"
+            variant="ghost"
+            size="sm"
+            className="jig-date-step"
+            onClick={onNext}
+          />
+        </div>
+        <div className="jig-reference-toolbar-actions">
+          <Button
+            label="Today"
+            variant="secondary"
+            size="sm"
+            className="jig-today-control"
+            onClick={onToday}
+          />
+          <Button
+            label="+ Quick add"
             variant="primary"
             onClick={() => onAdd(selectedDate)}
           />
@@ -206,15 +236,9 @@ export function WeekView({
                       onClick={() => onSelectDate(date)}
                       aria-current={date === selectedDate ? "date" : undefined}
                     >
-                      <span className="jig-weekday-line">
-                        <span>{formatCivilDate(date, { weekday: "short" })}</span>
-                        {date === today ? <small>Today</small> : null}
-                      </span>
                       <strong id={`week-date-${date}`}>
-                        {formatCivilDate(date, {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {formatCivilDate(date, { weekday: "short" })}{" "}
+                        {formatCivilDate(date, { day: "numeric" })}
                       </strong>
                     </button>
                     <span className="jig-task-count" aria-label={`${dateTasks.length} outstanding tasks`}>
