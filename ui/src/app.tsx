@@ -9,8 +9,8 @@ import {
   useAppShellMobile,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
-import jigLogoLightUrl from "../../assets/jig-logo.svg";
-import jigLogoDarkUrl from "../../assets/jig-logo-on-dark.svg";
+import jigSymbolLightUrl from "../../assets/jig-symbol.svg";
+import jigSymbolDarkUrl from "../../assets/jig-symbol-on-dark.svg";
 import {
   useCallback,
   useEffect,
@@ -54,6 +54,7 @@ import {
   todayCivilDate,
 } from "./dates";
 import {
+  TaskWorkspaceBottomSheet,
   TaskWorkspaceDrawer,
   type TaskWorkspaceMode,
 } from "./task-workspace";
@@ -161,7 +162,7 @@ function ResponsiveFrame({
   );
 }
 
-function ResponsiveTaskWorkspaceDrawer({
+function ResponsiveTaskWorkspace({
   destination,
   ...props
 }: Readonly<
@@ -173,7 +174,11 @@ function ResponsiveTaskWorkspaceDrawer({
   if (!isMobile && destination === "day") {
     return <></>;
   }
-  return <TaskWorkspaceDrawer {...props} />;
+  return isMobile ? (
+    <TaskWorkspaceBottomSheet {...props} />
+  ) : (
+    <TaskWorkspaceDrawer {...props} />
+  );
 }
 
 export function App(): React.ReactElement {
@@ -428,13 +433,6 @@ export function App(): React.ReactElement {
     setWorkspaceMode("edit");
   }, []);
 
-  const openMoveToDate = useCallback((task: Task): void => {
-    setSelectedTaskId(task.id);
-    setWorkspaceDate(task.scheduled_date);
-    setOperationError(null);
-    setWorkspaceMode("move");
-  }, []);
-
   const saveWorkspace = useCallback(
     async (command: TaskCommand): Promise<boolean> => {
       const result = await runCommand(command);
@@ -448,26 +446,6 @@ export function App(): React.ReactElement {
       return true;
     },
     [runCommand],
-  );
-
-  const moveWorkspaceTask = useCallback(
-    async (task: Task, destinationDate: string): Promise<boolean> => {
-      const destinationIndex = outstandingForDate(tasks, destinationDate)
-        .filter((candidate) => candidate.id !== task.id)
-        .length;
-      const moved = await moveTaskExact(
-        task.id,
-        destinationDate,
-        destinationIndex,
-      );
-      if (moved) {
-        setWorkspaceDate(destinationDate);
-        setSelectedDate(destinationDate);
-        setWorkspaceMode("view");
-      }
-      return moved;
-    },
-    [moveTaskExact, tasks],
   );
 
   const closeWorkspace = useCallback((): void => {
@@ -550,17 +528,18 @@ export function App(): React.ReactElement {
     <SideNav
       className="jig-primary-nav"
       aria-label="Primary"
+      collapsible={{ defaultIsCollapsed: true, hasButton: false }}
       header={
         <div className="jig-nav-brand" aria-label="Jig">
           <span className="jig-brand-logo-wrap" aria-hidden="true">
             <img
               className="jig-brand-logo jig-brand-logo-light"
-              src={jigLogoLightUrl}
+              src={jigSymbolLightUrl}
               alt=""
             />
             <img
               className="jig-brand-logo jig-brand-logo-dark"
-              src={jigLogoDarkUrl}
+              src={jigSymbolDarkUrl}
               alt=""
             />
           </span>
@@ -646,7 +625,6 @@ export function App(): React.ReactElement {
         onSelectTask={selectTask}
         onAdd={openCreate}
         onEdit={openEdit}
-        onMoveToDate={openMoveToDate}
         onToggleComplete={toggleComplete}
         onMove={moveTaskExact}
       />
@@ -668,8 +646,6 @@ export function App(): React.ReactElement {
         onDelete={(task) => setDeleteTaskId(task.id)}
         onAdd={openCreate}
         onEdit={openEdit}
-        onMoveToDate={openMoveToDate}
-        onWorkspaceMove={moveWorkspaceTask}
         onWorkspaceModeChange={changeWorkspaceMode}
         onDraftChange={setWorkspaceDraft}
         onSave={saveWorkspace}
@@ -679,6 +655,7 @@ export function App(): React.ReactElement {
     ) : destination === "history" ? (
       <HistoryView
         tasks={tasks}
+        onSelect={selectTask}
         onEdit={openEdit}
         onReopen={toggleComplete}
         onDelete={(task) => setDeleteTaskId(task.id)}
@@ -720,7 +697,7 @@ export function App(): React.ReactElement {
             {renderContent}
           </ResponsiveFrame>
 
-          <ResponsiveTaskWorkspaceDrawer
+          <ResponsiveTaskWorkspace
             destination={destination}
             mode={workspaceMode}
             task={workspaceMode === "create" ? null : selectedTask}
@@ -731,7 +708,6 @@ export function App(): React.ReactElement {
             onModeChange={changeWorkspaceMode}
             onDraftChange={setWorkspaceDraft}
             onSave={saveWorkspace}
-            onMove={moveWorkspaceTask}
             onDelete={(task) => setDeleteTaskId(task.id)}
             onToggleComplete={toggleComplete}
             onClose={closeWorkspace}
