@@ -501,6 +501,7 @@ test("temporary v1.0.4 visual evidence capture", async ({ page }) => {
     destinationBox.y + Math.min(120, destinationBox.height / 2),
     { steps: 12 },
   );
+  await expect(destination).toHaveClass(/jig-date-drop-zone-active/);
   await captureV104(page, "desktop-planner-drag-target");
   await page.mouse.up();
 
@@ -508,6 +509,15 @@ test("temporary v1.0.4 visual evidence capture", async ({ page }) => {
   await page.reload();
   await page.setViewportSize({ width: 1440, height: 900 });
   await captureV104(page, "desktop-planner-dark");
+
+  const archiveTask = (await apiState(page)).tasks.find(
+    (task) => task.title === "Archive completed brief",
+  );
+  if (archiveTask === undefined) {
+    throw new Error("History evidence Task unavailable");
+  }
+  await apiCommand(page, { type: "complete", task_id: archiveTask.id });
+  await page.reload();
 
   await page.getByRole("button", { name: "History", exact: true }).click();
   await captureV104(page, "desktop-history");
@@ -563,9 +573,9 @@ test("temporary v1.0.4 visual evidence capture", async ({ page }) => {
       body: JSON.stringify({ error: "Evidence local save failure" }),
     });
   });
-  await failureWorkspace.getByLabel("Notes").fill(
-    "This change must not persist.",
-  );
+  await failureWorkspace
+    .getByRole("textbox", { name: /Notes/ })
+    .fill("This change must not persist.");
   await failureWorkspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
