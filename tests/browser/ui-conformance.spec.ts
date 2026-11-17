@@ -17,18 +17,21 @@ test("desktop shell uses the governed rail and Day is the initial destination", 
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  await expect(page.locator(".jig-sidebar")).toBeVisible();
+  await expect(page.locator(".jig-primary-nav")).toBeVisible();
   await expect(page.locator(".jig-topbar")).toHaveCount(0);
+  await expect(page.locator(".jig-shell")).toHaveCount(0);
+  await expect(page.locator(".jig-sidebar")).toHaveCount(0);
+  await expect(page.locator("main")).toHaveCount(1);
   for (const destination of ["Week", "Day", "History", "Settings"]) {
     await expect(
-      page.locator(".jig-sidebar").getByRole("button", {
+      page.locator(".jig-primary-nav").getByRole("button", {
         name: destination,
         exact: true,
       }),
     ).toBeVisible();
   }
   await expect(
-    page.locator(".jig-sidebar").getByRole("button", {
+    page.locator(".jig-primary-nav").getByRole("button", {
       name: "Day",
       exact: true,
     }),
@@ -45,7 +48,7 @@ test("desktop geometry matches the canonical 1440×900 reference coordinates", a
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  const sidebar = await page.locator(".jig-sidebar").boundingBox();
+  const sidebar = await page.locator(".jig-primary-nav").boundingBox();
   expect(sidebar).not.toBeNull();
   if (sidebar === null) return;
   expectNear(sidebar.x, 20);
@@ -114,7 +117,7 @@ test("414px mobile geometry matches the canonical framed Day reference", async (
 }) => {
   await page.setViewportSize({ width: 414, height: 900 });
 
-  const main = await page.locator(".jig-main").boundingBox();
+  const main = await page.locator(".jig-content-frame").boundingBox();
   expect(main).not.toBeNull();
   if (main === null) return;
   expectNear(main.x, 12);
@@ -128,6 +131,7 @@ test("414px mobile geometry matches the canonical framed Day reference", async (
   expect(firstDate).not.toBeNull();
   if (firstDate !== null) {
     expectNear(firstDate.x, 26);
+    expectNear(firstDate.y, 108, 3);
     expectNear(firstDate.width, 44, 3);
     expectNear(firstDate.height, 56);
   }
@@ -202,14 +206,14 @@ test("Task cards expose content, grip and one overflow affordance without action
 
   await expect(card.getByText("Drag", { exact: true })).toBeHidden();
   await expect(
-    card.getByRole("button", { name: "Edit", exact: true }),
-  ).toBeHidden();
+    page.getByRole("menuitem", { name: "Edit", exact: true }),
+  ).toHaveCount(0);
   await expect(
-    card.getByRole("button", { name: "Move up", exact: true }),
-  ).toBeHidden();
+    page.getByRole("menuitem", { name: "Move up", exact: true }),
+  ).toHaveCount(0);
   await expect(
-    card.getByRole("button", { name: "Move down", exact: true }),
-  ).toBeHidden();
+    page.getByRole("menuitem", { name: "Move down", exact: true }),
+  ).toHaveCount(0);
 
   await card
     .getByRole("button", {
@@ -217,7 +221,7 @@ test("Task cards expose content, grip and one overflow affordance without action
     })
     .click();
   await expect(
-    card.getByRole("button", { name: "Edit", exact: true }),
+    page.getByRole("menuitem", { name: "Edit", exact: true }),
   ).toBeVisible();
 });
 
@@ -300,17 +304,20 @@ test("narrow shell keeps all destinations reachable and the seven-date strip fit
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 
-  await expect(page.locator(".jig-sidebar")).toBeHidden();
+  await expect(page.locator(".jig-primary-nav")).toBeHidden();
   await expect(page.locator(".jig-mobile-header")).toBeVisible();
+  await expect(page.locator(".jig-mobile-surface-nav")).toBeVisible();
+  await expect(page.locator(".jig-mobile-destination-menu")).toHaveCount(0);
+  await expect(page.locator(".jig-day-toolbar")).toHaveCount(0);
+  await expect(page.locator(".jig-task-inspector")).toHaveCount(0);
 
-  const destination = page.locator(".jig-mobile-destination-menu");
-  await destination.locator("summary").click();
+  await page.locator(".jig-mobile-destination-trigger").click();
   for (const label of ["Week", "Day", "History", "Settings"]) {
     await expect(
-      destination.getByRole("button", { name: label, exact: true }),
+      page.getByRole("button", { name: label, exact: true }),
     ).toBeVisible();
   }
-  await destination.locator("summary").click();
+  await page.getByRole("button", { name: "Day", exact: true }).last().click();
 
   const strip = page.locator(".jig-week-strip");
   await expect(strip.locator(".jig-week-strip-date")).toHaveCount(7);
