@@ -248,13 +248,13 @@ The field hierarchy is always Title, Date, Context, Priority, Reminder, Referenc
 
 Jig CSS owns only the page-centered header grid, seven Planner tracks, narrow composition, drag state and restrained Task priority accent. It consumes public Astryx tokens/roles and must not target private component internals.
 
-Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop, the non-interactive card body is the pointer drag activation region; completion checkbox, Task action menu and reference controls must remain independently operable and must not initiate drag.
+Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop and narrow/mobile, the sortable Task card itself is the pointer source across the whole ordinary card surface; completion checkbox, Task action menu, reference and other genuine interactive descendants remain independently operable and must not initiate drag. No title/body-only handle exists.
 
 ## 6. Required browser/UX validation
 
 | Case | Acceptance |
 |---|---|
-| Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task + adjacent Planner/History/Settings + sync right; no sidebar; active destination clear; outer header height does not change across Planner/History/Settings |
+| Header composition | edge-to-edge flat bar; Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task + adjacent icon-bearing Planner/History/Settings + sync right; no sidebar; active destination clear; desktop <=44px, narrow <=56px, and outer height does not change across Planner/History/Settings |
 | Week navigation | Previous/Next shift displayed week exactly seven days; Today restores the current week; no selected-day state and no Task mutation |
 | Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; content-driven heights; open lanes with whitespace/hairline separation rather than boxed panels; full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
 | Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
@@ -262,6 +262,7 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
 | Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
 | Mobile header/menu | compact Jig/sync/Add/hamburger application band; centered week range + grouped controls; seven dated Task sections follow; hamburger menu contains the same Planner/History/Settings destination set as desktop from one semantic owner, uses normalized semantic icons/text, and is not a drawer |
+| Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
 | Same/cross-day drag | desktop and narrow/mobile card-body drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
 | Narrow drag/order | touch card-body drag supports same-date/cross-date/empty-date movement through the same sortable/drop owners as desktop; Move up/down remains a non-drag alternative without a second order representation |
