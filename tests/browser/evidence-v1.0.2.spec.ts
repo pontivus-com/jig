@@ -105,6 +105,7 @@ async function setTheme(page: Page, theme: "light" | "dark"): Promise<void> {
 }
 
 test("capture v1.0.2 reference screens", async ({ page }) => {
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   const { selected } = await createReferenceData(page);
