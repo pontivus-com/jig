@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.4 technical solution, v0.10 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, visual-state semantics, header geometry, outside dismissal and Task menu actions.
+**Status:** Binding v1.0.4 technical solution, v0.11 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, complete theme semantics, header geometry, outside dismissal, Task menu actions, date-header Add, selected-day removal, narrow seven-section composition and full weekday labels.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-12 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -264,7 +264,7 @@ Implementation order is mandatory:
 
 1. the product definition and planning-workbench contract define information hierarchy, interactions and structural budgets;
 2. pinned Astryx public APIs define shell, button/menu, list, form, Drawer, BottomSheet, AlertDialog, field, feedback and theme mechanics;
-3. Jig React composition defines the Planner header, seven-date Planner, narrow selected-date list and Task workspace content/state;
+3. Jig React composition defines the Planner header, seven-date Planner, narrow seven-section stack and Task workspace content/state;
 4. Jig CSS styles only Jig-owned geometry using public Astryx tokens/roles;
 5. Playwright and reviewed screenshots verify the result and must not drive private-library overrides.
 
@@ -294,7 +294,7 @@ type PlannerState = {
 }
 ```
 
-Initialize both from the browser's current local civil date. Implement the navigation operations as pure calendar transforms:
+Initialize `displayedWeekStart` from the browser's current local civil date. Implement the navigation operations as pure calendar transforms:
 
 - `previousWeek()`: subtract seven calendar days from `displayedWeekStart`;
 - `nextWeek()`: add seven calendar days to `displayedWeekStart`;
@@ -341,7 +341,7 @@ The range label is not an interactive element and must not sit between the chevr
 
 The Planner board uses seven equal-width tracks with a product-level 160px minimum. Track **height is content-driven**; do not stretch tracks merely to equalize bottoms or anchor a lane action. Empty tracks keep only the minimum usable drop-target area. The desktop semantic breakpoint is **76rem / 1216 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and 48px total outer inset. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
 
-The date column header is non-selectable and owns only date presentation plus the date-specific Add action. Render the date label/number plus one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. `+` opens the unified create draft for that explicit date. Exact today/current date and drag-over remain separate states; there is no selected-day state.
+The date column header is non-selectable and owns only date presentation plus the date-specific Add action. Render the **full weekday name** plus day number (for example `Thursday 19`) and one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. Do not abbreviate weekdays. `+` opens the unified create draft for that explicit date. Exact today/current date and drag-over remain separate states; there is no selected-day state.
 
 Task cards may render a thin leading priority accent for rapid scanning. The visual mapping is singular across Planner/History/detail and derived from theme roles, never hard-coded literals. Priority text/icon semantics remain available so color is not the sole carrier. Normal priority is visually quieter than High.
 
@@ -373,8 +373,10 @@ The top region has:
 1. application row: Jig home affordance left; compact sync state plus hamburger right;
 2. centered week range;
 3. grouped Previous/Today/Next control row directly below the range;
-4. seven-date horizontal strip;
-5. one selected-date heading/count followed immediately by that date's outstanding Task list.
+4. seven vertically stacked dated sections for the displayed week;
+5. each section header uses the full weekday name + day number + compact `+`, followed immediately by that date's outstanding Task list.
+
+There is no date strip, selected-date heading or selected-day list.
 
 The hamburger uses Astryx `DropdownMenu` or `Popover` mechanics and contains only History and Settings. Do not use AppShell MobileNav/SideNav or a side drawer.
 
@@ -386,7 +388,7 @@ When narrow drag is not enabled, touch-operable Move up/Move down commands call 
 
 ### 5.5.1 v1.0.4 date-header Add and lane geometry
 
-- `week.tsx` owns the compact per-date header Add control because it already owns the seven dated tracks. No date-selection callback exists.
+- the shared dated-section/header composition owns the compact per-date Add control for both desktop tracks and narrow stacked sections. No date-selection callback exists; weekday labels use the full names Monday–Sunday.
 - The control is an Astryx IconButton/Button leaf; Jig owns only its placement beside the date label.
 - The header Add handler uses the same canonical App callback as global Add, supplying the explicit originating date. It does not create another command path.
 - Remove the existing `.jig-week-add-task` footer action and any CSS/grid rules whose sole purpose is pinning that action to the bottom.
