@@ -22,7 +22,7 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
       - name: Capture v1.0.4 governed UI states
-        run: bunx playwright test tests/browser/v1.0.4-evidence.spec.ts
+        run: bunx --bun playwright test tests/browser/v1.0.4-evidence.spec.ts
       - name: Upload v1.0.4 evidence
         if: always()
         uses: actions/upload-artifact@v4
