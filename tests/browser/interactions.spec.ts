@@ -250,11 +250,14 @@ test("real pointer drag moves a Task across dated Planner drop zones", async ({
     sourceBox.y + sourceBox.height / 2 + 8,
     { steps: 3 },
   );
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
   await page.mouse.move(
     destinationBox.x + destinationBox.width / 2,
     destinationBox.y + Math.min(120, destinationBox.height / 2),
     { steps: 12 },
   );
+  await expect(destination).toHaveClass(/jig-date-drop-zone-active/);
   await page.mouse.up();
 
   await expect
