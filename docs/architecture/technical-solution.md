@@ -257,11 +257,21 @@ Use prepared statements and explicit transactions. WAL may be enabled for local 
 
 ## 5. Astryx UI composition and responsive behavior
 
-Consume the public Astryx components directly; do not import Order's internal Workbench* modules or duplicate their lifecycle semantics. Use the canonical Jig theme from [Brand and theme system](../design/brand-and-theme.md), derived from Astryx Neutral and mapped only through public semantic roles. One application theme owner **must** support System/Light/Dark. System follows the browser/platform color preference; an explicit Light or Dark choice overrides it locally. Browser visual preference is presentation state, not Task state, and is not exported to Git. The same semantic roles, structure and interaction hierarchy must remain valid in both themes; no parallel dark-mode component tree or hard-coded per-feature palette is permitted.
+Consume the pinned Astryx **public** APIs directly; do not import Order's internal Workbench* modules or duplicate their lifecycle semantics. Astryx is the first implementation authority for reusable UI mechanics. The required order is:
+
+1. product/functional/UI reference defines the user-visible outcome and governed structural geometry;
+2. pinned Astryx public APIs define shell, navigation, layout, list, form, dialog, field, feedback and responsive mechanics;
+3. Jig React composition defines only product-specific regions that Astryx does not already own;
+4. Jig CSS styles only Jig-owned composition, using public Astryx semantic/spacing/radius/type tokens;
+5. Playwright and screenshot evidence verify the result and must not drive compensating CSS.
+
+Use the canonical Jig theme from [Brand and theme system](../design/brand-and-theme.md), derived from Astryx Neutral and mapped only through public semantic roles. One application theme owner **must** support System/Light/Dark. System follows the browser/platform color preference; an explicit Light or Dark choice overrides it locally. Browser visual preference is presentation state, not Task state, and is not exported to Git. The same semantic roles, structure and interaction hierarchy must remain valid in both themes; no parallel dark-mode component tree or hard-coded per-feature palette is permitted.
+
+The pinned Astryx 0.7.13 `AppShell` is the outermost application frame and already owns the `sideNav`, responsive mobile-navigation and main-content regions. `SideNav` is the public navigation primitive and can be sized/configured through its supported public API. Jig must therefore **not** mount a second complete application shell inside `AppShell`, recreate responsive navigation as raw parallel chrome, or add a second `<main>` landmark. Product-specific Week/Day/History/Settings composition belongs inside the one AppShell main region.
 
 | Jig region | Astryx foundation | Jig-specific part |
 |---|---|---|
-| App frame | AppShell, Layout, Grid/Stack | Minimal Week / Day / History navigation |
+| App frame | AppShell + SideNav/mobileNav public APIs; Layout/Stack for sub-page regions | Destination state and governed rail/canvas geometry only; no second application shell or navigation implementation |
 | Week planner | Grid/Stack, List/ListItem, Button/IconButton | Seven dated columns; visible droppable column areas |
 | Day planner | Task cards, section heading, Button | Current selected-date outstanding sequence + completed query after daily rollover |
 | Capture/editor | TextInput, TextArea, Selector or SegmentedControl, DateInput, TimeInput, Dialog/FormLayout; destructive confirmation uses Astryx's destructive/alert-dialog primitive | Task field rules, save/admission and confirmed deletion |
@@ -278,9 +288,9 @@ Keyboard alternative: expose Move up, Move down and Move to date actions with de
 
 Desktop: Day/current date is the default operational entry surface; Week remains the principal seven-day planning/rearrangement surface. Week shows Tasks only on their canonical scheduled dates after rollover, so an unfinished yesterday card physically appears in today's Week bucket once rollover commits. Day detail is one selected date's outstanding sequence plus compact completed section. Do **not** add a duplicate generic Board destination: Week is the Kanban surface.
 
-Mobile-first composition uses one application-owned breakpoint at **48rem / 768 CSS px**. Below it, present a compact horizontal week strip and one date's list rather than seven tiny columns; at or above it, use the desktop Week/Day compositions. Preserve the exact selected Task and in-progress editor across the breakpoint. Use touch-sized targets and a move-to-date alternative. Standalone phone installation, native filesystem and on-device Git are future implementation work, not promises of this desktop runtime. Components consume this one shell-level layout mode and must not invent independent semantic breakpoints.
+Mobile-first composition uses one application-owned semantic breakpoint at **48rem / 768 CSS px**. Configure the pinned AppShell/mobile-navigation behavior to the same semantic boundary rather than implementing a competing breakpoint system. Below it, render the deliberate narrow product composition: compact application navigation, horizontal seven-date strip and one date's list; at or above it, render the desktop Week/Day composition. When the information hierarchy materially differs, make the choice in React from the one shared layout-mode state. Do not mount desktop chrome and then hide/reposition fragments with CSS to manufacture the narrow hierarchy. Preserve the exact selected Task and in-progress editor across the breakpoint. Use touch-sized targets and a move-to-date alternative. Standalone phone installation, native filesystem and on-device Git are future implementation work, not promises of this desktop runtime.
 
-Presentation rules: consistent spacing and density, one primary action, accessible focus distinct from selection, restrained priority signaling, text labels with semantic status, no hover-only essential action, and reduced-motion compliance. Any custom CSS exists only for Jig-specific calendar columns, drag indicators and responsive composition and consumes verified public Astryx tokens.
+Presentation rules: consistent spacing and density, one primary action, accessible focus distinct from selection, restrained priority signaling, text labels with semantic status, no hover-only essential action, and reduced-motion compliance. Custom CSS exists only for **Jig-owned** geometry such as dated Week tracks, Day/Settings product grids, drag/drop state and reference-specific frame budgets. Preserve Astryx's published reset/core/theme ordering, but do not add a Jig cascade layer whose purpose is to outrank Astryx internals. Do not use `!important`, private/undocumented Astryx selectors/custom properties, or selectors that reshape Astryx component anatomy. Structural pixel dimensions are allowed only where the governed UI reference establishes the product-level budget; interior spacing, radii, typography and ordinary component sizing use Astryx public tokens and props. When composition changes, delete superseded rules rather than stacking corrective overrides.
 
 ## 6. Browser reminders
 
@@ -456,7 +466,8 @@ ui/
     day.tsx                 day and completed composition
     task-editor.tsx         title-first quick add and bounded edit
     reminder.tsx            browser due check + toast/Notification delivery
-    theme.css               Jig-specific board/layout roles only
+    theme.css               raw Jig palette primitives only
+    styles.css              Jig-owned product composition/geometry only
 tests/
   core/
   persistence/
