@@ -216,13 +216,25 @@ Astryx continues to own spacing, sizing, typography mechanics, component structu
 
 ### CSS composition
 
-`ui/src/styles.css` imports:
+`ui/src/styles.css` preserves the published Astryx stylesheet ordering:
 
 1. Astryx reset;
 2. Astryx core;
 3. Jig palette primitives.
 
-All Jig layout rules then use semantic tokens. There is no per-screen color palette and no Light/Dark duplication in feature CSS.
+That ordering establishes the library/theme foundation; it is **not** permission for Jig to create a competing override layer.
+
+Jig CSS follows these rules:
+
+- style only Jig-owned composition and root classes supplied intentionally by Jig;
+- consume public Astryx semantic, spacing, radius and typography tokens;
+- never target undocumented Astryx descendants, generated StyleX structure or private custom properties;
+- never add a Jig high-priority cascade layer, `!important`, or selector escalation to reshape an Astryx component;
+- use explicit pixel values only for governed product-level structural budgets; use Astryx tokens/public props for ordinary interior spacing, radii, typography and control sizing;
+- keep each layout property under one rule owner and delete superseded declarations rather than cancelling them with later overrides;
+- use CSS media queries for pure reflow/density only; when the semantic hierarchy differs between desktop and narrow layouts, React/AppShell composition changes at the one application breakpoint.
+
+There is no per-screen color palette, no Light/Dark duplication in feature CSS and no second styling architecture beside Astryx.
 
 ### Theme owner
 
@@ -285,6 +297,8 @@ Do not:
 - create screen-specific brand palettes;
 - use Brand Amber for warning merely because warning is also yellow/orange;
 - add a second theme owner or CSS override layer that bypasses `jigTheme`;
+- depend on private/undocumented Astryx selectors, internal DOM structure, generated StyleX details or private CSS custom properties;
+- use `!important` or specificity escalation to force library components into a different anatomy;
 - copy raw palette values into feature styles.
 
 ## 10. Verification and change control
