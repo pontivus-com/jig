@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Corrected binding desktop MVP technical solution, v0.7 (2026-11-16), with the v1.0.1 authority-boundary correction: automatic Git synchronization remains required, while repository acquisition, topology, policy and reconciliation remain Git responsibilities rather than Jig product/application responsibilities.
+**Status:** Corrected binding desktop MVP technical solution, v0.8 (2026-11-17), including the v1.0.1 Git authority-boundary correction and the v1.0.2 Astryx-first UI/CSS ownership correction.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
