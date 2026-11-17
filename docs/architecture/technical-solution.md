@@ -525,7 +525,8 @@ Remove layout mode as a drag capability switch.
 1. `Planner` no longer passes `enableDrag`.
 2. `WeekView` always owns one `TaskDragProvider`; every dated section is always one `DateDropZone`.
 3. `PlannerTaskList` always renders one `SortableTaskRow` for outstanding Tasks; remove the `isSortable` branch and plain-row mobile fallback.
-4. Use the pinned `PointerSensor` for mouse, touch and pen with pointer-specific activation constraints:
+4. Remove `dragHandleRef`, `bodyPointerProps` and `pointerStart` from `TaskRow`. The Astryx `ListItem` click path remains the one selection owner; dnd-kit owns drag activation on the whole sortable row.
+5. Use the pinned `PointerSensor` for mouse, touch and pen with pointer-specific activation constraints:
    - mouse/pen: 5px distance threshold;
    - touch: approximately 250ms delay with 5px tolerance so vertical page scrolling remains usable until drag intent is established.
 6. Checkbox/menu/reference/form controls remain genuine interactive descendants and are protected by dnd-kit's interactive-element activation behavior plus existing pointer propagation boundaries.
@@ -558,7 +559,7 @@ Define the navigation semantics once and render them through desktop and narrow 
 
 1. In `planner-header.tsx` (or one smaller adjacent UI module if extraction improves readability), define one immutable typed destination tuple containing:
    - `planner / Planner / viewColumns`;
-   - `history / History / checkDouble`;
+   - `history / History / jig:history`;
    - `settings / Settings / wrench`.
 2. Derive the exported `Destination` union from that tuple rather than separately maintaining a union and item arrays.
 3. Desktop `DestinationNav` maps that tuple to Astryx Buttons.
