@@ -264,7 +264,7 @@ export function WeekView({
                   </header>
 
                   {dateTasks.length === 0 ? null : (
-                    <List density="compact" edge="flush" className="jig-task-card-list">
+                    <List density="compact" edge="padded" className="jig-task-card-list">
                       {dateTasks.map((task) => (
                         <WeekTaskRow
                           key={task.id}
