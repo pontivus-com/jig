@@ -1,5 +1,5 @@
-import { defineTheme } from "@astryxdesign/core/theme";
-import { neutralTheme } from "@astryxdesign/theme-neutral";
+import { defineTheme, type DefinedTheme } from "@astryxdesign/core/theme";
+import { neutralTheme } from "@astryxdesign/theme-neutral/built";
 
 /**
  * Jig's Astryx semantic theme.
@@ -8,7 +8,7 @@ import { neutralTheme } from "@astryxdesign/theme-neutral";
  * those brand primitives to the public Astryx semantic roles used by every
  * component and Jig composition.
  */
-export const jigTheme = defineTheme({
+export const jigThemeSource = defineTheme({
   name: "jig",
   extends: neutralTheme,
   tokens: {
@@ -124,3 +124,16 @@ export const jigTheme = defineTheme({
       "inset 0 0 0 2px light-dark(color-mix(in srgb, var(--jig-amber-700) 55%, transparent), color-mix(in srgb, var(--jig-amber-500) 55%, transparent))",
   },
 });
+
+
+/**
+ * Production theme object.
+ *
+ * Vite precompiles jigThemeSource with Astryx's public generateThemeCSS()
+ * contract. Marking this resolved object as built tells <Theme> to use that
+ * stylesheet rather than injecting an equivalent runtime <style> element.
+ */
+export const jigTheme: DefinedTheme = {
+  ...jigThemeSource,
+  __built: true,
+};
