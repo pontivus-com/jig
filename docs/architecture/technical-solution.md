@@ -458,7 +458,7 @@ The v1.0.4 implementation must correct the failure mechanism, not merely restyle
 
 | Reported issue | v1.0.3 mechanism | v1.0.4 technical correction |
 |---|---|---|
-| Card drag appears broken | `useSortable().handleRef` is attached only to the small `≡` span while the whole Task body displays a grab cursor; the browser test drags that tiny handle, so it certifies a different interaction than the user attempts | use the Task row as the single sortable source/ref with **no dedicated handle**; the card body is the visible drag affordance, normal PointerSensor activation constraints preserve click-to-edit, and interactive descendants are excluded by dnd-kit; browser test must drag from card body |
+| Card drag appears broken | `useSortable().handleRef` is attached only to the small `≡` span while the whole Task body displays a grab cursor; the browser test drags that tiny handle, so it certifies a different interaction than the user attempts | use one Sortable with separate public refs: the Astryx Task row remains the sortable/droppable element and `sourceRef` binds the draggable source to the non-interactive Task body; configure **no dedicated handle**. This bypasses the Astryx row press layer for drag activation while preserving row click-to-edit and independent controls; browser test must drag from card body |
 | “Every Tuesday”/same weekday is highlighted in adjacent weeks | v1.0.3 carries `selectedDate` across Previous/Next by ±7 days and styles that date as selected, so the same weekday appears highlighted every week | delete `selectedDate` from Planner state and remove date-selection UI entirely; exact `date === currentLocalDate` alone gets persistent current-day treatment |
 | Current day, selected Task and Normal priority all read yellow | CSS maps desktop selected column, selected Task card, Normal priority and drop target to `--color-accent` / `--color-accent-muted` | use the canonical state vocabulary; delete superseded accent selectors rather than layering overrides |
 | Task workspace never dismisses from blank content | workspace closes only through explicit close, navigation, completion or deletion; Planner/History content has no outside-interaction owner | content surface owns outside pointer-down dismissal, excluding Task rows/actions and workspace portals; no document-global shadow state |
@@ -674,7 +674,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 | Requirement | Technical ownership | Required evidence |
 |---|---|---|
-| JIG-104-FR-01 card-body drag | §5.7 one dnd-kit sortable row source, no dedicated handle | Real pointer drag from card body; ordinary click still selects; checkbox/menu/reference do not initiate drag |
+| JIG-104-FR-01 card-body drag | §5.7 one dnd-kit Sortable with row target + body sourceRef, no handle | Real pointer drag from card body; ordinary click still selects; checkbox/menu/reference do not initiate drag |
 | JIG-104-FR-02 exact current day | §5.6 Today identity | Only exact local date gets today treatment across week navigation |
 | JIG-104-FR-03 distinct visual semantics | §5.6 + brand/theme §§6.1.1–6.4 | Today teal, selected Task info-blue, drag/focus Amber, priority/status families remain distinct in Light/Dark |
 | JIG-104-FR-04 outside dismissal | §5.6 content-owned dismissal | Blank Planner/History interaction closes; workspace/menu/dialog interaction does not |
