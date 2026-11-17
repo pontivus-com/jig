@@ -4,6 +4,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-11-17
+
 ### Fixed
 
 - Eliminated the cross-list dnd-kit/React reconciliation crash by keeping React/canonical Task order authoritative and suppressing optimistic DOM sorting during drag.

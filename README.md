@@ -102,18 +102,20 @@ jig uninstall       # remove runtime/configuration; preserve repo planning data
 
 ## Release status
 
-Jig **1.0.4** is the current release candidate. This patch completes the
-Planner interaction correction: one displayed-week state, full dated sections,
-reliable card-body drag, one directly editable Task workspace, complete Task
-actions, stable application-header geometry and governed semantic Light/Dark
-state treatment.
+Jig **1.0.5** is the current release candidate. This corrective patch closes the
+post-v1.0.4 interaction and presentation defects with crash-free whole-card drag,
+desktop/narrow movement parity, one shared responsive Planner/navigation/menu
+semantic path, compact edge-to-edge application chrome, governed semantic icons,
+and stronger Light/Dark Task-card separation.
 
-Release publication remains PR-bound and immutable: the merged release commit is
-re-verified before the `v1.0.4` tag and Linux x64/arm64 assets are published.
+Release publication remains PR-bound and immutable: this dedicated
+`release/v1.0.5` metadata transition is verified before merge, and the exact
+merged release commit is then re-certified by the permanent Release workflow
+before the `v1.0.5` tag and Linux x64/arm64 assets are published.
 
-- [v1.0.4 implementation evidence](docs/evidence/v1.0.4/README.md)
+- [v1.0.5 implementation evidence](docs/evidence/v1.0.5/README.md)
 - [release process, validity contract and asset matrix](docs/releases/README.md)
-- [v1.0.4 release notes](docs/releases/v1.0.4.md)
+- [v1.0.5 release notes](docs/releases/v1.0.5.md)
 - [changelog](CHANGELOG.md)
 
 ## Documentation
