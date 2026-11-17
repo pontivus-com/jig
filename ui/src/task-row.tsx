@@ -211,7 +211,24 @@ export function TaskRow({
           onClick={(event) => event.stopPropagation()}
         >
           <CheckboxInput
-            label={
+            label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
+            isLabelHidden
+            value={completed}
+            onChange={onToggleComplete}
+            size="sm"
+          />
+          {completed ? null : (
+            <span
+              className="jig-task-drag-handle"
+              aria-hidden="true"
+              title="Drag task"
+            >
+              ≡
+            </span>
+          )}
+        </span>
+      }
+      label={
         <div
           {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
           className="jig-task-body"
@@ -289,5 +306,4 @@ export function SortableTaskRow({
       dragHandleRef={sortable.handleRef as Ref<HTMLDivElement>}
     />
   );
-
 }
