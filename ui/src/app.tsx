@@ -51,7 +51,7 @@ import {
   todayCivilDate,
 } from "./dates";
 import { WeekView } from "./week";
-import { jigTheme } from "./theme";
+import { jigTheme } from "./jig.js";
 
 type Destination = "week" | "day" | "history" | "settings";
 
