@@ -5,19 +5,40 @@ import {
   resetCanonicalTasks,
 } from "./helpers";
 
+function nearMidnight(): Date {
+  const start = new Date();
+  start.setHours(23, 59, 30, 0);
+  return start;
+}
+
+function civilDate(date: Date): string {
+  return [
+    date.getFullYear().toString().padStart(4, "0"),
+    (date.getMonth() + 1).toString().padStart(2, "0"),
+    date.getDate().toString().padStart(2, "0"),
+  ].join("-");
+}
+
+function tomorrow(date: Date): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + 1);
+  return next;
+}
+
 test("already-open browser refreshes canonical state across local midnight", async ({
   page,
 }) => {
-  await page.clock.install({
-    time: new Date("2026-11-17T23:59:30"),
-  });
+  const start = nearMidnight();
+  const today = civilDate(start);
+  const nextDay = civilDate(tomorrow(start));
+  await page.clock.install({ time: start });
   await page.goto("/");
   await resetCanonicalTasks(page);
 
   await apiCommand(page, {
     type: "create",
     title: "Midnight continuity",
-    scheduled_date: "2026-11-17",
+    scheduled_date: today,
     priority: "NORMAL",
     context: null,
     reference: null,
@@ -36,7 +57,7 @@ test("already-open browser refreshes canonical state across local midnight", asy
   await apiCommand(page, {
     type: "move",
     task_id: task.id,
-    destination_date: "2026-11-18",
+    destination_date: nextDay,
     destination_index: 0,
   });
 
@@ -51,7 +72,12 @@ test("already-open browser refreshes canonical state across local midnight", asy
       const heading = page.locator(".jig-day-view .jig-view-heading h1");
       return heading.textContent();
     })
-    .toContain("November 18");
+    .toContain(
+      new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+      }).format(tomorrow(start)),
+    );
 
   await expect(
     page.getByText("Midnight continuity", { exact: true }),
@@ -61,9 +87,8 @@ test("already-open browser refreshes canonical state across local midnight", asy
 test("local midnight refresh preserves an explicitly selected non-today date", async ({
   page,
 }) => {
-  await page.clock.install({
-    time: new Date("2026-11-17T23:59:30"),
-  });
+  const start = nearMidnight();
+  await page.clock.install({ time: start });
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
