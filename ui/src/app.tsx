@@ -524,7 +524,6 @@ export function App(): React.ReactElement {
       <Planner
         tasks={tasks}
         displayedDates={displayedDates}
-        layoutMode={layoutMode}
         selectedTask={selectedTask}
         onSelectTask={selectTask}
         onAdd={openCreate}
