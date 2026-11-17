@@ -77,7 +77,7 @@ Visual rules:
 1. **Compact, low-chrome and scan-oriented.** Prefer list/row structure with subtle boundaries to decorative card stacks; no gratuitous shadows/gradients.
 2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
 3. **One primary mutation per active form.** Add task is prominent at Planner level. The editable Task workspace has Save as its primary form action; completion/reopen and Delete remain independent Task commands rather than alternate form modes.
-4. **Distinct state vocabulary.** Current day, selected Task, drag target and priority are different semantics and must not collapse onto one Amber fill. Current day is an exact-date, subtle neutral border/header treatment. Selected Task uses a subtle information/selection surface. Drag target uses transient accent treatment. Priority remains a narrow leading cue: High error, Normal quiet neutral, Low calm/success-family.
+4. **Distinct state vocabulary.** Current day, selected Task, drag target and priority are different semantics and must not collapse onto one brand/neutral family. Current day is an exact-date, subtle teal border/header treatment. Selected Task uses a subtle info-blue surface/border. Drag target uses transient Amber. Priority remains a narrow leading cue: High error/red, Normal quiet neutral, Low calm/success-green.
 5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/drag emphasis rather than the generic color for every active state. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
 
 #### v1.0.4 state appearance matrix
@@ -86,9 +86,9 @@ Visual rules:
 
 | UI state | Appearance contract |
 |---|---|
-| Desktop exact current day | subtle cool-neutral column/header border + stronger date typography; no Amber fill |
+| Desktop exact current day | subtle teal column/header border + teal date typography; no lane fill |
 | Planner selected day | **none** — day selection is not a product state in v1.0.4 |
-| Selected Task | cool Ink/neutral tinted card surface + emphasized neutral border; no Amber selection fill |
+| Selected Task | subtle info-blue muted surface + info-blue border; no Amber/teal selection fill |
 | Task High priority | narrow error/red leading cue; explicit High label where shown |
 | Task Normal priority | quiet Ink/neutral leading cue; no loud badge |
 | Task Low priority | narrow calm success/green leading cue; explicit Low label where shown |
@@ -122,7 +122,7 @@ The week range uses compact formatting without “Week of” or a separate month
 
 The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. Date headers such as `Thu 19` are non-selectable labels and contain a compact `+` immediately adjacent to the day/date label for date-specific creation.
 
-Desktop does not persistently color the whole selected-date column. The exact current local civil date alone receives the subtle current-day border/header treatment; the same weekday in another displayed week does not. Selected Task uses its own subtle card selection treatment. Drag-over has a separate transient treatment. Do not conflate these states.
+The exact current local civil date alone receives the subtle teal current-day border/header treatment; the same weekday in another displayed week does not. Selected Task uses its own subtle info-blue card selection treatment. Drag-over uses transient Amber. Priority uses red/neutral/green cues. Do not conflate these states.
 
 Task cards are compact and title-first. A thin leading color/accent may encode priority for scanning, but color is not the only priority signal and Normal remains visually quiet.
 
