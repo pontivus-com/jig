@@ -21,7 +21,7 @@ test("desktop shell uses the governed rail and Day is the initial destination", 
   await expect(page.locator(".jig-topbar")).toHaveCount(0);
   await expect(page.locator(".jig-shell")).toHaveCount(0);
   await expect(page.locator(".jig-sidebar")).toHaveCount(0);
-  await expect(page.locator("main")).toHaveCount(1);
+  await expect(page.getByRole("main")).toHaveCount(1);
   for (const destination of ["Week", "Day", "History", "Settings"]) {
     await expect(
       page.locator(".jig-primary-nav").getByRole("button", {
