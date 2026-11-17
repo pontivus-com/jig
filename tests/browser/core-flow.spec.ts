@@ -93,7 +93,8 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   await addTitleOnlyTask(page, "Stale view seed");
 
   await openGlobalAdd(page);
-  const workspace = page.locator('section[aria-label="Add task"]');
+  const workspace = page.getByRole("dialog", { name: "Add task" });
+  await expect(workspace).toBeVisible();
   await workspace.getByLabel("Title").fill("Must not replay");
 
   await page.evaluate(async () => {
@@ -126,7 +127,9 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   });
 
   await workspace.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(workspace.getByText("This view was out of date.", { exact: false })).toBeVisible();
+  await expect(
+    page.getByText("This view was out of date.", { exact: false }).first(),
+  ).toBeVisible({ timeout: 5_000 });
   const tasks = await page.evaluate(async () => {
     const state = await fetch("/api/v1/tasks").then((response) => response.json()) as {
       tasks: Array<{ title: string }>;
