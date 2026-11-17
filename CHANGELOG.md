@@ -4,6 +4,18 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Changed
+
+- Reworked Task interaction into one contextual workspace: desktop Day keeps a docked details/editor panel, while Week and narrow flows use a non-modal Astryx Drawer from the right for view, create and edit.
+- Compacted the desktop navigation rail, reordered destinations to Day → Week → History → Settings, and added Astryx semantic navigation icons.
+- Made the Week board consume the available desktop canvas while preserving a 160px minimum day-column width so task titles remain usable instead of over-wrapping.
+
+### Fixed
+
+- Week card selection now opens the selected Task details in place instead of changing planning destination/context.
+- Quick add, per-day Add task and Edit no longer open a centered Task modal; permanent Delete confirmation remains the only blocking Task dialog.
+
+
 ## [1.0.2] - 2026-11-17
 
 ### Changed
