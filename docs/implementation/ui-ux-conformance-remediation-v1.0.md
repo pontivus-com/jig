@@ -718,6 +718,12 @@ Use:
 
 The selected card may use the governed subtle selected surface/border.
 
+Component ownership is mandatory:
+- first attempt the card with Astryx `List`/`ListItem` through **public props only** for density, start/label/end content, selection and focus;
+- do not set private ListItem variables, target generated descendants, or impose a second internal grid/padding model on the Astryx row;
+- if browser proof shows that the public ListItem contract cannot produce the governed draggable-card anatomy, record that exact limitation and replace only the row host with the smallest semantic Jig `<li>`/card composition while continuing to use Astryx public `CheckboxInput`, menu/button/link primitives and semantic tokens;
+- the fallback is preferable to forcing a library component through private CSS because it leaves exactly one owner for card geometry.
+
 ### 9.3 Card content hierarchy
 
 Visible content is limited to Task information and compact affordances.
@@ -805,20 +811,14 @@ Do not change `TaskCommand` or move semantics.
 
 ### 9.7 Overflow menu
 
-Add a local `TaskActionMenu` in `task-row.tsx`.
+Add a local `TaskActionMenu` composition in `task-row.tsx`, but do not implement a second menu system.
 
-Do **not** add a dependency.
+Use the pinned Astryx public `DropdownMenu` / `DropdownMenuItem` API (or its documented public trigger/presentation contract) for trigger, focus, keyboard, dismissal and adaptive presentation. Jig owns only the Task-specific action list and callbacks.
 
-Implement with a native disclosure or the smallest Astryx-supported disclosure available:
-
-```tsx
-<details className="jig-task-menu">
-  <summary aria-label={`Actions for ${task.title}`}>•••</summary>
-  <div className="jig-task-menu-panel">
-    ...
-  </div>
-</details>
-```
+Do **not**:
+- add a dependency;
+- use raw `<details>`/custom fixed-position menu mechanics while Astryx provides the required public menu primitive;
+- style DropdownMenu private descendants or internal variables.
 
 Actions for an active Task:
 1. Edit
@@ -849,15 +849,15 @@ Remove/reduce:
 - generic full-width divider-list treatment as the card boundary;
 - title-only `.jig-drag-overlay`.
 
-Add:
+Add only Jig-owned presentation hooks that remain necessary:
 - `.jig-task-card`;
 - `.jig-task-card-selected`;
 - `.jig-task-card-dragging`;
 - `.jig-task-drag-handle`;
-- `.jig-task-menu`;
-- `.jig-task-menu-panel`;
 - `.jig-task-meta-item`;
 - `.jig-drag-card-overlay`.
+
+Do not add local menu-panel positioning/anatomy CSS when Astryx DropdownMenu owns that surface. Do not use private Astryx custom properties such as the current ListItem `--_item-*` family.
 
 The action panel must layer above cards and never increase card width.
 
