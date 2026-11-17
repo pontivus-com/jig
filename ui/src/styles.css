@@ -439,6 +439,47 @@ body {
     min-width: 2.75rem;
   }
 
+  .jig-week-column .jig-task-card {
+    gap: 4px;
+    --_item-inset-inline: 6px;
+    padding-inline: 6px;
+  }
+
+  .jig-week-column .jig-task-card-leading {
+    min-width: 20px;
+  }
+
+  .jig-week-column .jig-task-menu-trigger {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+  }
+
+  .jig-week-column .jig-task-body {
+    gap: 2px;
+  }
+
+  .jig-week-column .jig-task-title-row {
+    gap: 4px;
+  }
+
+  .jig-week-column .jig-task-title {
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .jig-week-column .jig-task-meta {
+    gap: 2px 5px;
+    font-size: 0.6875rem;
+    line-height: 1.25;
+  }
+
+  .jig-week-column .jig-task-drag-handle {
+    min-width: 12px;
+    min-height: 16px;
+    font-size: 0.6875rem;
+  }
+
   .jig-task-drag-handle {
     display: inline-flex;
     min-width: 1.2rem;
@@ -454,7 +495,9 @@ body {
   .jig-task-title {
     display: block;
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
     font-weight: 600;
   }
   .jig-task-title-completed {
@@ -609,6 +652,17 @@ body {
     grid-template-columns: minmax(0, 650px) minmax(320px, 490px);
     align-items: start;
     gap: 30px;
+  }
+
+  .jig-day-primary {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .jig-day-layout > .jig-task-inspector {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .jig-task-inspector {
@@ -1084,6 +1138,10 @@ body {
     }
 
     .jig-day-layout {
+      display: block;
+    }
+
+    .jig-day-primary {
       display: block;
     }
 
