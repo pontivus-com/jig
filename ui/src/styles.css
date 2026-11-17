@@ -415,7 +415,13 @@ body {
     cursor: default;
   }
 
-  .jig-task-card-leading,
+  .jig-task-card-leading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-0-5);
+  }
+
   .jig-task-card-preview-row {
     display: flex;
     align-items: center;
