@@ -1,6 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   apiCommand,
+  apiState,
+  browserCivilDate,
   resetCanonicalTasks,
 } from "./helpers";
 
@@ -163,4 +165,129 @@ test("notification permission is requested only from the Settings Enable action"
   expect(
     await page.evaluate(() => window.__JIG_PERMISSION_REQUESTS__ ?? 0),
   ).toBe(1);
+});
+
+
+test("hidden reminder without permission remains eligible for visible catch-up toast", async ({
+  page,
+}) => {
+  await prepareReminderPage(page, "default");
+  await apiCommand(page, {
+    type: "create",
+    title: "Catch-up reminder",
+    scheduled_date: civilDate(reminderStart()),
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "10:00",
+  });
+  await page.reload();
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "hidden",
+    });
+  });
+  await page.clock.fastForward(60_000);
+  expect(
+    await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
+  ).toEqual([]);
+
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+
+  await expect(
+    page
+      .getByRole("region", { name: "Notifications" })
+      .getByText("Reminder: Catch-up reminder", { exact: true }),
+  ).toBeVisible();
+});
+
+test("rolled-forward reminder uses today's canonical date and preserved time", async ({
+  page,
+}) => {
+  await prepareReminderPage(page, "granted");
+  const today = await browserCivilDate(page);
+  const yesterday = await browserCivilDate(page, -1);
+
+  await apiCommand(page, {
+    type: "create",
+    title: "Rolled reminder",
+    scheduled_date: yesterday,
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "10:00",
+  });
+
+  const rolled = (await apiState(page)).tasks.find(
+    (task) => task.title === "Rolled reminder",
+  );
+  expect(rolled).toBeDefined();
+  expect(rolled?.scheduled_date).toBe(today);
+  expect(rolled?.reminder_time).toBe("10:00");
+
+  await page.reload();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "hidden",
+    });
+  });
+  await page.clock.fastForward(60_000);
+
+  const calls = await page.evaluate(
+    () => window.__JIG_NOTIFICATION_CALLS__ ?? [],
+  );
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toMatchObject({
+    title: "Jig reminder",
+    body: "Rolled reminder",
+  });
+  expect(calls[0]?.tag).toContain(`${today}|10:00`);
+});
+
+test("completed Task never delivers its due reminder", async ({
+  page,
+}) => {
+  await prepareReminderPage(page, "granted");
+  const today = civilDate(reminderStart());
+  await apiCommand(page, {
+    type: "create",
+    title: "Completed reminder",
+    scheduled_date: today,
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "10:00",
+  });
+  const created = (await apiState(page)).tasks.find(
+    (task) => task.title === "Completed reminder",
+  );
+  if (created === undefined) {
+    throw new Error("completed reminder Task missing");
+  }
+  await apiCommand(page, {
+    type: "complete",
+    task_id: created.id,
+  });
+  await page.reload();
+
+  await page.clock.fastForward(60_000);
+
+  expect(
+    await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
+  ).toEqual([]);
+  await expect(
+    page.getByText("Reminder: Completed reminder", { exact: true }),
+  ).toHaveCount(0);
 });
