@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import {
+  assertUuid,
   createCanonicalTask,
   type Task,
   type TaskCommand,
