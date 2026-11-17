@@ -4,6 +4,14 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Fixed
+
+- v1.0.4 corrects Planner card drag initiation, current-day/selection/priority visual-state collisions, workspace dismissal, header-height consistency, Task action menus and the redundant view→edit Task workspace flow.
+
+### Changed
+
+- v1.0.4 unifies Add and existing Task interaction around one editable field surface with inherited defaults and no second Edit click.
+
 ## [1.0.3] - 2026-11-17
 
 ### Changed
