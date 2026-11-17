@@ -19,6 +19,10 @@ import {
 
 export type ThemePreference = "system" | "light" | "dark";
 
+export function isThemePreference(value: unknown): value is ThemePreference {
+  return value === "system" || value === "light" || value === "dark";
+}
+
 export interface SettingsViewProps {
   readonly themePreference: ThemePreference;
   readonly status: ServiceStatus | null;
@@ -178,9 +182,11 @@ export function SettingsView({
               <SegmentedControl
                 label="Appearance"
                 value={themePreference}
-                onChange={(value) =>
-                  onThemePreferenceChange(value as ThemePreference)
-                }
+                onChange={(value) => {
+                  if (isThemePreference(value)) {
+                    onThemePreferenceChange(value);
+                  }
+                }}
                 layout="fill"
               >
                 <SegmentedControlItem value="system" label="System" />

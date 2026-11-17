@@ -7,15 +7,15 @@ import {
   TextInput,
   TimeInput,
 } from "@astryxdesign/core";
-import type { ISODateString } from "@astryxdesign/core/utils";
-import type { ISOTimeString } from "@astryxdesign/core/TimeInput";
 import { FieldLabel } from "@astryxdesign/core/Field";
 import { useId, useState } from "react";
-import type {
-  Priority,
-  Task,
-  TaskCommand,
+import {
+  isPriority,
+  type Priority,
+  type Task,
+  type TaskCommand,
 } from "../../src/core/task";
+import { asIsoDateString, asIsoTimeString } from "./dates";
 
 export interface TaskDraft {
   readonly title: string;
@@ -52,26 +52,23 @@ export function draftFor(
       };
 }
 
-function optionalText(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? null : trimmed;
-}
-
 export function commandForDraft(
   task: Task | null,
   draft: TaskDraft,
 ): TaskCommand {
+  const reminderTime =
+    draft.reminderTime.length === 0 ? null : draft.reminderTime;
+
   if (task === null) {
     return {
       type: "create",
-      title: draft.title.trim(),
+      title: draft.title,
       scheduled_date: draft.scheduledDate,
       priority: draft.priority,
-      context: optionalText(draft.context),
-      reference: optionalText(draft.reference),
-      note: optionalText(draft.note),
-      reminder_time:
-        draft.reminderTime.length === 0 ? null : draft.reminderTime,
+      context: draft.context,
+      reference: draft.reference,
+      note: draft.note,
+      reminder_time: reminderTime,
     };
   }
 
@@ -79,21 +76,19 @@ export function commandForDraft(
     type: "edit",
     task_id: task.id,
     changes: {
-      title: draft.title.trim(),
+      title: draft.title,
       scheduled_date: draft.scheduledDate,
       priority: draft.priority,
-      context: optionalText(draft.context),
-      reference: optionalText(draft.reference),
-      note: optionalText(draft.note),
-      reminder_time:
-        draft.reminderTime.length === 0 ? null : draft.reminderTime,
+      context: draft.context,
+      reference: draft.reference,
+      note: draft.note,
+      reminder_time: reminderTime,
     },
   };
 }
 
 export interface TaskEditorProps {
   readonly task: Task | null;
-  readonly initiatingDate: string;
   readonly draft: TaskDraft;
   readonly externalError: string | null;
   readonly isSaving: boolean;
@@ -104,7 +99,6 @@ export interface TaskEditorProps {
 
 export function TaskEditor({
   task,
-  initiatingDate,
   draft,
   externalError,
   isSaving,
@@ -139,7 +133,7 @@ export function TaskEditor({
 
   return (
     <section
-      className="jig-task-inspector jig-task-editor-surface jig-task-inspector-drawer"
+      className="jig-task-editor-surface"
       aria-label={task === null ? "Add task" : `Task ${task.title}`}
     >
       <form
@@ -166,10 +160,12 @@ export function TaskEditor({
 
         <DateInput
           label="Date"
-          value={draft.scheduledDate as ISODateString}
-          onChange={(value) =>
-            update("scheduledDate", value ?? draft.scheduledDate)
-          }
+          value={asIsoDateString(draft.scheduledDate)}
+          onChange={(value) => {
+            if (value !== null) {
+              update("scheduledDate", value);
+            }
+          }}
           isRequired
           weekStartsOn="mon"
         />
@@ -195,7 +191,11 @@ export function TaskEditor({
             aria-labelledby={priorityLabelId}
             label="Priority"
             value={draft.priority}
-            onChange={(value) => update("priority", value as Priority)}
+            onChange={(value) => {
+              if (isPriority(value)) {
+                update("priority", value);
+              }
+            }}
             layout="fill"
           >
             <SegmentedControlItem value="HIGH" label="High" />
@@ -209,7 +209,7 @@ export function TaskEditor({
           value={
             draft.reminderTime.length === 0
               ? undefined
-              : (draft.reminderTime as ISOTimeString)
+              : asIsoTimeString(draft.reminderTime)
           }
           onChange={(value) => update("reminderTime", value ?? "")}
           isOptional
