@@ -32,6 +32,8 @@ const JIG_PRODUCT_TOKENS = new Set([
   "--jig-status-healthy-text",
   "--jig-state-hover-bg",
   "--jig-state-pressed-bg",
+  "--jig-task-surface",
+  "--jig-task-border",
 ]);
 
 function authoredUiSources(
@@ -140,7 +142,7 @@ describe("UI ownership architecture", () => {
     expect(verifyWorkflow).toContain("bun run theme:check");
   });
 
-  it("uses one AppShell and the governed explicit desktop destination group", () => {
+  it("uses one AppShell and one typed destination definition across layouts", () => {
     const app = source("ui/src/app.tsx");
     const header = source("ui/src/planner-header.tsx");
     const layoutMode = source("ui/src/use-layout-mode.ts");
@@ -150,17 +152,35 @@ describe("UI ownership architecture", () => {
     expect(app).not.toContain("<SideNav");
     expect(app).toContain('useState<Destination>("planner")');
 
-    expect(header).toContain("Planner home");
-    expect(header).toContain("DestinationNav");
-    expect(header).toContain('["planner", "history", "settings"] as const');
+    expect(header).toContain("const DESTINATIONS = [");
+    expect(header).toContain('{ id: "planner", label: "Planner"');
+    expect(header).toContain('{ id: "history", label: "History"');
+    expect(header).toContain('{ id: "settings", label: "Settings"');
+    expect(header).toContain("type Destination = (typeof DESTINATIONS)[number]");
+    expect(header).toContain("IconName");
+    expect(header).toContain("NamespacedIconName");
+    expect(header).toContain("destinationMenuItems");
     expect(header).toContain('presentation="popover"');
-    expect(header).toContain('id: "history"');
-    expect(header).toContain('id: "settings"');
-    expect(header).not.toContain('id: "planner"');
+    expect(header).toContain("items={destinationMenuItems(destination, onNavigate)}");
+    expect(header).not.toContain('items={[\n              {\n                id: "history"');
 
     expect(layoutMode).toContain(
-      'DESKTOP_LAYOUT_MEDIA_QUERY = "(min-width: 76rem)"',
+      'DESKTOP_LAYOUT_MEDIA_QUERY = "(min-width: 73rem)"',
     );
+  });
+
+  it("keeps the application frame full-bleed and header geometry governed", () => {
+    const css = source("ui/src/styles.css");
+
+    expect(css).toContain(".jig-app-shell {");
+    expect(css).toContain("padding: 0;");
+    expect(css).toContain("height: 2.75rem;");
+    expect(css).toContain("height: 3.5rem;");
+    expect(css).toContain("@media (max-width: 72.999rem)");
+    expect(css).not.toContain("@media (max-width: 75.999rem)");
+    expect(css).not.toContain(".jig-planner-narrow");
+    expect(css).not.toContain("max-width: 1170px");
+    expect(css).not.toContain("calc(5rem + env(safe-area-inset-bottom");
   });
 
   it("keeps Planner and Task workspace state singular", () => {
@@ -186,18 +206,34 @@ describe("UI ownership architecture", () => {
     expect(workspace).not.toContain('readonly mode: "view"');
 
     expect(planner).toContain("<WeekView");
+    expect(planner).not.toContain("layoutMode");
+    expect(planner).not.toContain("enableDrag");
     expect(planner).not.toContain("DateStrip");
+
+    expect(week).toContain("<TaskDragProvider");
+    expect(week).toContain("<DateDropZone");
+    expect(week).toContain('className="jig-week-board"');
     expect(week).toContain("<PlannerTaskList");
+    expect(week).not.toContain("enableDrag");
+    expect(week).not.toContain("jig-planner-narrow");
     expect(week).not.toContain("SortableTaskRow");
+
     expect(list).toContain("<SortableTaskRow");
-    expect(list).toContain("<TaskRow");
+    expect(list).not.toContain("<TaskRow");
+    expect(list).not.toContain("isSortable");
+
     expect(editor).not.toContain("optionalText");
     expect(editor).not.toContain("normalizeOptionalText");
 
     expect(taskRow).toContain("export function TaskActionMenu");
+    expect(taskRow).toContain("taskActionMenuItems");
     expect(history).toContain("<TaskActionMenu");
     expect(taskRow).toContain('icon="moreHorizontal"');
     expect(taskRow).toContain('icon="clock"');
+    expect(taskRow).not.toContain("dragHandleRef");
+    expect(taskRow).not.toContain("pointerStart");
+    expect(taskRow).not.toContain("bodyPointerProps");
+    expect(taskRow).toContain('event.pointerType === "touch"');
 
     expect(existsSync("ui/src/date-strip.tsx")).toBe(false);
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
