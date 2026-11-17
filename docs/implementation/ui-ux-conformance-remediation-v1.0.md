@@ -94,6 +94,7 @@ The pinned Astryx 0.7.13 public contract is determinate and must be used before 
 8. When desktop and narrow **semantic hierarchy** differs, choose the correct React composition from the one shared layout-mode state. CSS media queries are for pure reflow/density inside that composition, not for mounting desktop DOM and hiding/repositioning fragments into a mobile hierarchy.
 9. Each layout property has one owner. When a structure changes, delete the obsolete CSS/DOM path instead of adding a later override that cancels it.
 10. If a pinned Astryx public primitive is proven incapable of satisfying a governed reference, document the precise incompatibility first, then use the smallest Jig-owned semantic composition built from Astryx public leaves/tokens. No second UI/styling framework.
+11. Jig's custom theme authoring source is `ui/src/jig-theme.source.ts`. It extends the built Neutral theme and is compiled only by pinned `@astryxdesign/cli@0.7.13` through `astryx theme build`. Runtime code consumes the generated `ui/src/jig.js` and `ui/src/jig.css`; authored code must not set Astryx's internal `__built` marker or replace the documented compiler with local theme-generation logic. Generated artifacts are committed and CI runs `theme build --check`; source/artifact drift is a release blocker.
 
 These constraints are release blockers. Geometry tests and screenshots do not waive them.
 
@@ -1797,12 +1798,18 @@ Assert persistent + Add button visible and last task remains unobscured.
 Run representative Day/Week assertions under Light and Dark.
 
 ### C15 — library/CSS ownership guard
-Add a small source-level architecture test without a new lint dependency. It must fail if Jig UI CSS/source reintroduces:
+Add a small source-level architecture test without a new lint dependency. It must fail if Jig-authored UI CSS/source reintroduces:
 - `@layer jig` as an application override layer;
 - `!important`;
 - private custom properties matching `--_*`;
 - selectors targeting Astryx internal/generated classes;
+- deep/private Astryx package paths such as `/src`, `/dist` or `/internal`;
+- hand-authored Astryx compiler/runtime markers such as `__built` or local `generateThemeCSS` compilation;
+- unknown Astryx global token names;
+- stale `jig.js` / `jig.css` outputs relative to `jig-theme.source.ts`;
 - the removed `.jig-shell`, `.jig-sidebar` or raw `.jig-mobile-destination-menu` parallel navigation implementation.
+
+Astryx-generated `jig.js` / `jig.css` are compiler-owned and may legitimately contain Astryx internal implementation data; the guard applies the private-API prohibition to Jig-authored source and separately verifies the generated artifact header/drift contract.
 
 The guard does not replace visual tests; it protects the implementation boundary that visual tests cannot detect.
 
