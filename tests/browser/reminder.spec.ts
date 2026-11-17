@@ -9,10 +9,22 @@ import {
   taskByTitle,
 } from "./helpers";
 
-const START = new Date("2026-11-16T09:00:00.000Z");
+function reminderStart(): Date {
+  const start = new Date();
+  start.setHours(9, 0, 0, 0);
+  return start;
+}
+
+function civilDate(date: Date): string {
+  return [
+    date.getFullYear().toString().padStart(4, "0"),
+    (date.getMonth() + 1).toString().padStart(2, "0"),
+    date.getDate().toString().padStart(2, "0"),
+  ].join("-");
+}
 
 test.beforeEach(async ({ page }) => {
-  await page.clock.install({ time: START });
+  await page.clock.install({ time: reminderStart() });
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
@@ -24,7 +36,7 @@ test("due reminder fires once while open, dismisses, and edited time creates a n
   await apiCommand(page, {
     type: "create",
     title: "Timed reminder",
-    scheduled_date: "2026-11-16",
+    scheduled_date: civilDate(reminderStart()),
     priority: "NORMAL",
     context: null,
     reference: null,
@@ -76,7 +88,7 @@ test("past reminders from before the browser session are not replayed and comple
   await apiCommand(page, {
     type: "create",
     title: "Past reminder",
-    scheduled_date: "2026-11-16",
+    scheduled_date: civilDate(reminderStart()),
     priority: "NORMAL",
     context: null,
     reference: null,
@@ -86,7 +98,7 @@ test("past reminders from before the browser session are not replayed and comple
   await apiCommand(page, {
     type: "create",
     title: "Completed reminder",
-    scheduled_date: "2026-11-16",
+    scheduled_date: civilDate(reminderStart()),
     priority: "NORMAL",
     context: null,
     reference: null,
