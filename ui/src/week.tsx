@@ -11,6 +11,30 @@ import {
 import { DateDropZone, TaskDragProvider } from "./drag";
 import { DayTaskLists } from "./day";
 import { formatCivilDate, todayCivilDate } from "./dates";
+
+function weekHeading(dates: readonly string[], fallback: string): string {
+  const first = dates[0] ?? fallback;
+  const last = dates[6] ?? fallback;
+  const firstMonth = formatCivilDate(first, { month: "long" });
+  const lastMonth = formatCivilDate(last, { month: "long" });
+  const firstYear = formatCivilDate(first, { year: "numeric" });
+  const lastYear = formatCivilDate(last, { year: "numeric" });
+  const firstDay = formatCivilDate(first, { day: "numeric" });
+  const lastDay = formatCivilDate(last, { day: "numeric" });
+
+  if (firstMonth === lastMonth && firstYear === lastYear) {
+    return `Week of ${firstDay}–${lastDay} ${lastMonth}`;
+  }
+
+  return `Week of ${formatCivilDate(first, {
+    month: "short",
+    day: "numeric",
+  })} – ${formatCivilDate(last, {
+    month: "short",
+    day: "numeric",
+    year: firstYear === lastYear ? undefined : "numeric",
+  })}`;
+}
 import { DateStrip } from "./date-strip";
 import { SortableTaskRow } from "./task-row";
 
@@ -155,17 +179,7 @@ export function WeekView({
     <div className="jig-week-view">
       <div className="jig-reference-heading">
         <div>
-          <h1>
-            Week of{" "}
-            {formatCivilDate(dates[0] ?? selectedDate, {
-              day: "numeric",
-            })}
-            {"–"}
-            {formatCivilDate(dates[6] ?? selectedDate, {
-              month: "long",
-              day: "numeric",
-            })}
-          </h1>
+          <h1>{weekHeading(dates, selectedDate)}</h1>
           <p>Plan attention across the week · drag to an exact position</p>
         </div>
         {statusControl}
