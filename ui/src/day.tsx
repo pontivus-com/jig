@@ -133,8 +133,14 @@ export function DayTaskLists({
           <section aria-labelledby="day-attention-heading">
             <div className="jig-section-heading">
               <h2 id="day-attention-heading">Attention</h2>
-              <span className="jig-task-count">
-                {active.length} {active.length === 1 ? "task" : "tasks"}
+              <span
+                className="jig-task-count"
+                aria-label={`${active.length} ${active.length === 1 ? "task" : "tasks"}`}
+              >
+                <span>{active.length}</span>
+                <span className="jig-task-count-unit">
+                  {active.length === 1 ? " task" : " tasks"}
+                </span>
               </span>
             </div>
             {active.length === 0 ? (
@@ -170,8 +176,14 @@ export function DayTaskLists({
           >
             <div className="jig-section-heading">
               <h2 id="day-completed-heading">Completed</h2>
-              <span className="jig-task-count">
-                {completed.length} {completed.length === 1 ? "task" : "tasks"}
+              <span
+                className="jig-task-count"
+                aria-label={`${completed.length} ${completed.length === 1 ? "task" : "tasks"}`}
+              >
+                <span>{completed.length}</span>
+                <span className="jig-task-count-unit">
+                  {completed.length === 1 ? " task" : " tasks"}
+                </span>
               </span>
             </div>
             <List density="compact" edge="flush" className="jig-task-card-list">
