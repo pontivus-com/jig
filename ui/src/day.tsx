@@ -163,7 +163,7 @@ export function DayTaskLists({
         </DateDropZone>
 
         {completed.length === 0 ? null : (
-          <details className="jig-completed-section">
+          <details className="jig-completed-section" open>
             <summary>Completed ({completed.length})</summary>
             <List density="compact" edge="flush" className="jig-task-card-list">
               {completed.map((task) => (
@@ -204,25 +204,49 @@ export function DayView({
 }: DayViewProps): React.ReactElement {
   return (
     <div className="jig-day-view">
-      <div className="jig-view-heading">
+      <div className="jig-reference-heading jig-day-desktop-heading">
         <div>
-          <p className="jig-eyebrow">Day</p>
           <h1>
             {formatCivilDate(selectedDate, {
               weekday: "long",
               month: "long",
               day: "numeric",
-              year: "numeric",
             })}
           </h1>
+          <p>Selected date view · Today is a shortcut, not a destination</p>
         </div>
-        <div className="jig-view-actions">
-          <Button label="Previous" variant="ghost" size="sm" onClick={onPrevious} />
-          <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
-          <Button label="Next" variant="ghost" size="sm" onClick={onNext} />
-          {statusControl}
+        {statusControl}
+      </div>
+
+      <div className="jig-day-toolbar">
+        <div className="jig-date-step-group">
           <Button
-            label="Add task"
+            label="‹"
+            aria-label="Previous day"
+            variant="ghost"
+            size="sm"
+            className="jig-date-step"
+            onClick={onPrevious}
+          />
+          <Button
+            label="›"
+            aria-label="Next day"
+            variant="ghost"
+            size="sm"
+            className="jig-date-step"
+            onClick={onNext}
+          />
+        </div>
+        <div className="jig-reference-toolbar-actions">
+          <Button
+            label="Today"
+            variant="secondary"
+            size="sm"
+            className="jig-today-control"
+            onClick={onToday}
+          />
+          <Button
+            label="+ Add task"
             variant="primary"
             className="jig-header-add"
             onClick={() => onAdd(selectedDate)}
@@ -234,6 +258,17 @@ export function DayView({
         selectedDate={selectedDate}
         onSelectDate={onSelectDate}
       />
+
+      <div className="jig-mobile-day-heading">
+        <h1>
+          {formatCivilDate(selectedDate, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })}
+        </h1>
+        <p>Your ordered plan</p>
+      </div>
 
       <div className="jig-day-layout">
         <DayTaskLists
