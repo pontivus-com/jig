@@ -152,7 +152,7 @@ export function HistoryView({
                   {group.tasks.length} completed
                 </span>
               </div>
-              <List density="compact" edge="flush">
+              <List density="compact" edge="padded">
                 {group.tasks.map((task) => (
                   <HistoryTaskRow
                     key={task.id}
