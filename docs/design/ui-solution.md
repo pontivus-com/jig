@@ -14,12 +14,12 @@ The current repository includes eight **versioned SVG structural references**. T
 | Governing artifact | Screen | Structural meaning |
 |---|---|---|
 | ![Desktop week](reference/desktop-week.svg) | [Desktop weekly planner](reference/desktop-week.svg) | Compact rail plus full available planning canvas with seven fluid day tracks and visible cross-column movement targets |
-| ![Desktop Week task Drawer](reference/desktop-week-task-drawer.svg) | [Desktop Week selected-task workspace](reference/desktop-week-task-drawer.svg) | Selected Task detail/edit/create/move workspace sliding from the right without reflowing or leaving Week |
+| ![Desktop Week task Drawer](reference/desktop-week-task-drawer.svg) | [Desktop Week selected-task workspace](reference/desktop-week-task-drawer.svg) | Selected Task detail/edit/create workspace sliding from the right without reflowing or leaving Week |
 | ![Desktop day](reference/desktop-day.svg) | [Desktop day view](reference/desktop-day.svg) | Compact rail, selected-date attention list, completed group and docked right Task workspace |
 | ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history grouped by actual completion date |
 | ![Desktop settings and sync](reference/desktop-settings-sync.svg) | [Desktop settings/sync](reference/desktop-settings-sync.svg) | Repository, service, appearance and synchronization controls |
 | ![Mobile day](reference/mobile-day.svg) | [Mobile narrow day](reference/mobile-day.svg) | Compact date strip and one attention list at narrow widths |
-| ![Narrow Task workspace](reference/mobile-editor.svg) | [Narrow Task workspace](reference/mobile-editor.svg) | Right-side Drawer editor with explicit Save/Cancel; permanent Delete confirmation is separate |
+| ![Narrow Task workspace](reference/mobile-editor.svg) | [Narrow Task workspace](reference/mobile-editor.svg) | BottomSheet editor rising from the bottom with explicit Save/Cancel; permanent Delete confirmation is separate |
 | ![Save and sync states](reference/sync-failure-states.svg) | [Save/sync states](reference/sync-failure-states.svg) | Honest local-save and Git synchronization state/failure presentation |
 
 ### Original screenshot provenance
@@ -82,7 +82,7 @@ The visual reference does **not** authorize bypassing the component architecture
 
 The pinned Astryx `AppShell` is the application frame. Use its `sideNav`/mobile-navigation contract and the public `SideNav` family for primary destinations. Do not place another complete shell inside AppShell, duplicate the main landmark, or reproduce library-owned responsive navigation with raw parallel chrome.
 
-The desktop SideNav is intentionally compact: approximately **112px** at the canonical 1440px viewport, ordered **Day → Week → History → Settings**, using Astryx semantic icons `calendar`, `viewColumns`, `clock`, and `wrench`. The compact rail keeps the Jig mark but omits low-value supporting copy that would consume the reclaimed planning width. The rail width is a governed product-level structural budget; icon artwork and interaction remain Astryx-owned.
+The desktop SideNav uses Astryx's native **collapsed icon rail** by default, ordered **Day → Week → History → Settings**, using Astryx semantic icons `calendar`, `viewColumns`, `clock`, and `wrench`. Jig does not impose a competing desktop rail width; the pinned Astryx collapsed rail owns that compact geometry. A compact Jig symbol may remain in the header, while labels remain the accessible item names/tooltips.
 
 CSS may set the governed product-level dimensions needed to reproduce the structural references, but must not reshape Astryx internals. No Jig rule may rely on an undocumented/private Astryx selector, DOM child structure, StyleX detail or private custom property. Do not use an application-owned high-priority cascade layer, `!important`, or selector escalation to win against the library. The application must also not synthesize Astryx compiler/runtime markers such as `__built` or manually replace the documented theme-build pipeline; those belong only to Astryx-generated artifacts. If a public Astryx primitive cannot realize a governed requirement, document that incompatibility and use the smallest Jig-owned semantic composition built from public Astryx leaves/tokens.
 
@@ -106,7 +106,7 @@ The Week board uses the full available desktop planning canvas. Each day track h
 
 Task row: one completion control, title, optional context, exceptional priority marker, optional reminder time, drag handle, and one overflow menu; no fixed time slot, duration, status progression or nested subtask view. Clicking the card selects the Task **without changing destination** and opens the contextual Task workspace.
 
-On desktop Week the Task workspace is an Astryx `Drawer` from the inline end/right with `hasScrim={false}`. It overlays the board rather than reflowing it, so opening details/edit/create/move never narrows the seven day columns. Quick Add and date-specific Add task open create mode in that Drawer; Edit and Move to date switch the same Drawer to their respective modes.
+On desktop Week the Task workspace is an Astryx `Drawer` from the inline end/right with `hasScrim={false}`. It overlays the board rather than reflowing it, so opening details/edit/create never narrows the seven day columns. Quick Add and date-specific Add task open create mode in that Drawer; Edit and Move to date switch the same Drawer to their respective modes.
 
 Dnd-kit owns sortable IDs, pointer/touch sensors and drop targets; Astryx owns row appearance. A dragged Task moves to the **exact destination/date/position** where dropped, not a priority-based recalculation. Cancellation restores the prior view. Save failure restores/marks pending the committed order visibly.
 
@@ -114,7 +114,7 @@ The original mockup's additional Board link, excessive Normal badges, green card
 
 ### 4.2 Desktop Day
 
-A date strip permits switching selected days. The attention list shows the canonical outstanding sequence scheduled for the selected date after service-owned daily rollover. No derived carry-over prefix or originating-date badge is rendered. Completed is compact and separately expandable. Desktop Day has a persistent right-hand Task workspace. Clicking a card selects it in **view** mode; Edit, Add task and Move to date replace that workspace content with **edit**, **create** or **move** mode respectively. Save/Move returns to view with the resulting Task selected. No Task Dialog is mounted on desktop Day. Delete remains destructive and requires the existing confirmation AlertDialog before mutation.
+A date strip permits switching selected days. The attention list shows the canonical outstanding sequence scheduled for the selected date after service-owned daily rollover. No derived carry-over prefix or originating-date badge is rendered. Completed is compact and separately expandable. Desktop Day has a persistent right-hand Task workspace. Clicking a card selects it in **view** mode; Edit and Add task replace that workspace content with **edit** or **create** mode respectively. Save returns to view with the resulting Task selected. No Task Dialog is mounted on desktop Day. Delete remains destructive and requires the existing confirmation AlertDialog before mutation.
 
 Day view and Week view query the **same Task**; changing Task workspace mode does not create a second editable Task authority. Preserve position changes and reload state. Reminder delivery uses one browser-side eligibility calculation: visible page → Astryx toast; hidden/open page with granted browser notification permission → browser Notification. A reminder never becomes a work item.
 
@@ -134,7 +134,7 @@ The governed 414×900 hierarchy is:
 
 All four destinations remain reachable through the compact Astryx/AppShell mobile-navigation path. Do not add a separate full-width desktop toolbar below this hierarchy. Previous/Next need not form an additional row when the seven-date strip already provides direct date selection.
 
-Preserve prominent title-first task cards, touch-sized checkbox and action targets, whole-card drag where supported and a non-drag move-to-date command. Quick Add must not obscure the final task or reminder feedback. The desktop sidebar, desktop Day heading/toolbar and docked inspector are not mounted in the narrow Day composition. Task view/create/edit/move uses the same Astryx Drawer workspace from the inline end/right.
+Preserve prominent title-first task cards, touch-sized checkbox and action targets, and explicit drag handles where supported. Cross-date rescheduling without drag is available through the Edit date field rather than a separate move workspace. Quick Add must not obscure the final task or reminder feedback. The desktop sidebar, desktop Day heading/toolbar and docked inspector are not mounted in the narrow Day composition. Task view/create/edit uses the same Astryx Drawer workspace from the inline end/right.
 
 Desktop MVP requires responsive semantic continuity and basic mobile-sized layout validation. It does **not** require installation as a self-contained phone app, native Git commands or background push notifications.
 
@@ -142,9 +142,9 @@ Desktop MVP requires responsive semantic continuity and basic mobile-sized layou
 
 Task creation defaults to **title only** and the initiating date; no forced priority, reminder, time estimate or context. The Task draft/form state is singular across responsive changes. The field hierarchy is Title, Date, Context, Priority, Reminder, Reference, Notes.
 
-There is one Task workspace with presentation modes **view**, **edit**, **create**, and **move**. Desktop Day docks it as the right-hand master-detail panel. Desktop Week and narrow/mobile surfaces present the same content in the public Astryx `Drawer` with `hasScrim={false}`. Do not mount a centered or fullscreen Task `Dialog`, and do not recreate Drawer internals with Jig CSS. The Drawer remains the library-owned overlay/focus/close surface while Jig owns only Task-specific content.
+There is one Task workspace with presentation modes **view**, **edit**, and **create**. Desktop Day docks it as the right-hand master-detail panel. Desktop Week and narrow/mobile surfaces present the same content in the public Astryx `Drawer` with `hasScrim={false}`. Do not mount a centered or fullscreen Task `Dialog`, and do not recreate Drawer internals with Jig CSS. The Drawer remains the library-owned overlay/focus/close surface while Jig owns only Task-specific content.
 
-Use explicit Save/Cancel or Move/Cancel controls, persistent form errors on invalid data or server refusal, and preserve the active draft across responsive reflow. Date **editing** applies priority-guided insertion. The distinct **Move to date** workspace mode invokes the canonical exact-position move operation and appends to the selected destination date; drag/drop still uses the exact drop index. Changing priority does not rearrange the task.
+Use explicit Save/Cancel controls, persistent form errors on invalid data or server refusal, and preserve the active draft across responsive reflow. Create mode asks only for title and inherits the originating date/defaults. Date **editing** applies priority-guided insertion; drag/drop uses the exact drop index and is the direct visual movement path. Changing priority does not rearrange the task.
 
 Permanent Delete is available from Task detail and remains the only blocking Task dialog through Astryx `AlertDialog`. Creation/edit/move themselves never use a blocking dialog.
 
@@ -162,7 +162,7 @@ Permanent Delete is available from Task detail and remains the only blocking Tas
 
 CSS ownership follows the same table. Jig may style its own page/region/card wrappers and public root classes it supplies, but it does not style descendants that belong to an Astryx component. Reusable action/navigation mechanics use Astryx Button/IconButton/Link rather than raw `<button>`/`<a>` plus local reset/focus/press CSS, unless a documented public-API incompatibility requires the smallest semantic fallback. Governed outer dimensions may use explicit values; ordinary spacing, radius, typography and control sizing use Astryx public tokens/props. Where desktop and narrow information hierarchy differs, React selects the correct composition at the one semantic breakpoint; CSS is reserved for pure reflow/density inside that composition. Superseded rules are deleted rather than counteracted later in the stylesheet.
 
-Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the same canonical Task operation as a drag. The drag handle must not swallow checkbox clicks, link navigation or editor opening. Avoid duplicate focus stops on the ListItem's clickable layer and nested controls; verify Astryx + dnd-kit with actual Playwright browser interaction.
+Keyboard alternatives **Move up** and **Move down** preserve same-day ordering; explicit date editing provides the non-drag cross-date reschedule path. The drag handle must not swallow checkbox clicks, link navigation or editor opening. Avoid duplicate focus stops on the ListItem's clickable layer and nested controls; verify Astryx + dnd-kit with actual Playwright browser interaction.
 
 ## 6. Required browser/UX validation
 
