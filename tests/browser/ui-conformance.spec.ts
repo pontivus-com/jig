@@ -820,6 +820,140 @@ test("legacy appearance preference is honored and migrated by the next explicit 
   expect(stored).toEqual({ mode: "light", legacy: null });
 });
 
+test("due reminders always use browser Notification independent of visibility and focus", async ({
+  page,
+}) => {
+  await page.clock.install({
+    time: new Date("2030-01-07T09:00:00"),
+  });
+  await page.addInitScript(() => {
+    const notifications: Array<{
+      readonly title: string;
+      readonly body: string | undefined;
+      readonly tag: string | undefined;
+    }> = [];
+    Object.defineProperty(window, "__JIG_TEST_NOTIFICATIONS__", {
+      configurable: true,
+      value: notifications,
+    });
+
+    class JigTestNotification {
+      static permission: NotificationPermission = "granted";
+
+      static async requestPermission(): Promise<NotificationPermission> {
+        return "granted";
+      }
+
+      constructor(title: string, options?: NotificationOptions) {
+        notifications.push({
+          title,
+          body: options?.body,
+          tag: options?.tag,
+        });
+      }
+    }
+
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: JigTestNotification,
+    });
+  });
+
+  await apiCommand(page, {
+    type: "create",
+    title: "Browser notification contract",
+    scheduled_date: "2030-01-07",
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "09:01",
+  });
+  await page.reload();
+
+  const notificationCount = async (): Promise<number> =>
+    page.evaluate(() => {
+      const target = window as typeof window & {
+        __JIG_TEST_NOTIFICATIONS__?: readonly unknown[];
+      };
+      return target.__JIG_TEST_NOTIFICATIONS__?.length ?? 0;
+    });
+
+  const clearDeliveryKey = async (): Promise<void> => {
+    await page.evaluate(() => {
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith("jig-reminder-delivered:") === true) {
+          localStorage.removeItem(key);
+        }
+      }
+    });
+  };
+
+  await page.clock.fastForward(61_000);
+  await expect.poll(notificationCount).toBe(1);
+  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
+
+  await clearDeliveryKey();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(notificationCount).toBe(2);
+
+  await clearDeliveryKey();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(notificationCount).toBe(3);
+
+  await clearDeliveryKey();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hasFocus", {
+      configurable: true,
+      value: () => false,
+    });
+    window.dispatchEvent(new Event("focus"));
+  });
+  await expect.poll(notificationCount).toBe(4);
+
+  await clearDeliveryKey();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hasFocus", {
+      configurable: true,
+      value: () => true,
+    });
+    window.dispatchEvent(new Event("focus"));
+  });
+  await expect.poll(notificationCount).toBe(5);
+
+  const notifications = await page.evaluate(() => {
+    const target = window as typeof window & {
+      __JIG_TEST_NOTIFICATIONS__?: readonly {
+        readonly title: string;
+        readonly body: string | undefined;
+        readonly tag: string | undefined;
+      }[];
+    };
+    return target.__JIG_TEST_NOTIFICATIONS__ ?? [];
+  });
+  for (const notification of notifications) {
+    expect(notification.title).toBe("Jig reminder");
+    expect(notification.body).toBe("Browser notification contract");
+    expect(notification.tag).toContain("jig-reminder-delivered:");
+  }
+
+  await page.clock.fastForward(30_000);
+  await expect.poll(notificationCount).toBe(5);
+});
+
 test("History keeps its destination active while using the same editable workspace and complete menu", async ({
   page,
 }) => {
