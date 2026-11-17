@@ -268,6 +268,7 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
 | Mobile header/menu | compact Jig/sync/Add/hamburger application band; centered week range + grouped controls; seven dated Task sections follow; hamburger menu contains the same Planner/History/Settings destination set as desktop from one semantic owner, uses normalized semantic icons/text, and is not a drawer |
 | Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
+| Secondary screen measure | desktop History and Settings content <=50rem/~800px and centered; Settings two-column content does not overflow; Planner remains full-width; narrow History/Settings return to full available width |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
 | Same/cross-day drag | desktop and narrow/mobile card-body drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
 | Narrow drag/order | touch card-body drag supports same-date/cross-date/empty-date movement through the same sortable/drop owners as desktop; Move up/down remains a non-drag alternative without a second order representation |
