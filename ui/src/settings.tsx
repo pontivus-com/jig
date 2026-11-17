@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
-} from "../../src/shell/http";
+} from "../../src/protocol";
 import { repositoryStatusPresentation } from "./repository-status";
 import {
   browserNotificationState,
