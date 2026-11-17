@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding v1.0.5 functional design v0.13, amended 2026-11-17 after complete post-release review of published v1.0.4 desktop and narrow/mobile interaction paths. v1.0.5 corrects drag ownership/stability, mobile drag, responsive renderer parity, application-navigation parity, Task-menu parity, semantic icon completeness, header density, Task-card legibility and header-brand correctness. Canonical Task, persistence, rollover, reminder, repository ownership, installer and synchronization semantics are unchanged.
+**Status:** Binding v1.0.5 functional design v0.14, amended 2026-11-17 after complete post-release review of published v1.0.4 desktop and narrow/mobile interaction paths. v1.0.5 corrects drag ownership/stability, mobile drag, responsive renderer parity, application-navigation parity, Task-menu parity, semantic icon completeness, header density, Task-card legibility and header-brand correctness. Canonical Task, persistence, rollover, reminder, repository ownership, installer and synchronization semantics are unchanged.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
