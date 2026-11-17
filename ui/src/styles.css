@@ -43,13 +43,12 @@ body {
 
   .jig-app-header {
     width: 100%;
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-container);
     background: var(--color-background-surface);
   }
 
   .jig-app-header-desktop {
     display: grid;
+    min-height: 5.5rem;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: var(--spacing-4);
@@ -65,11 +64,15 @@ body {
     min-width: 0;
   }
 
-  .jig-header-right {
+  .jig-header-right,
+  .jig-header-destinations {
     display: flex;
-    justify-self: end;
     align-items: center;
     gap: var(--spacing-1);
+  }
+
+  .jig-header-right {
+    justify-self: end;
   }
 
   .jig-header-home {
@@ -111,12 +114,13 @@ body {
   }
 
   .jig-header-nav-active {
-    background: var(--color-accent-muted);
-    color: var(--color-text-accent);
+    background: var(--jig-state-nav-active-bg);
+    color: var(--jig-state-nav-active-text);
   }
 
   .jig-app-header-narrow {
     display: grid;
+    min-height: 7rem;
     gap: var(--spacing-2);
     padding: var(--spacing-2) var(--spacing-3) var(--spacing-3);
   }
@@ -213,10 +217,11 @@ body {
     background: currentColor;
   }
 
-  .jig-status-synchronized {
-    color: var(--color-text-success);
-    background: var(--color-success-muted);
-    border-color: var(--color-border-success);
+  .jig-status-synchronized,
+  .jig-status-local-only {
+    color: var(--jig-status-healthy-text);
+    background: var(--jig-status-healthy-bg);
+    border-color: var(--jig-status-healthy-border);
   }
 
   .jig-status-pending,
@@ -230,12 +235,6 @@ body {
     color: var(--color-text-error);
     background: var(--color-error-muted);
     border-color: var(--color-border-error);
-  }
-
-  .jig-status-local-only {
-    color: var(--color-text-success);
-    background: var(--color-success-muted);
-    border-color: var(--color-border-success);
   }
 
   .jig-status-unknown {
@@ -307,7 +306,7 @@ body {
   .jig-week-board {
     display: grid;
     grid-template-columns: repeat(7, minmax(10rem, 1fr));
-    gap: var(--spacing-2);
+    align-items: start;
     width: 100%;
     min-width: 0;
     padding-block-end: var(--spacing-3);
@@ -316,76 +315,64 @@ body {
   .jig-week-column {
     width: auto;
     min-width: 0;
-    height: min(680px, calc(100dvh - 200px));
     min-height: 18rem;
-    overflow: auto;
-    border: var(--border-width) solid var(--color-border);
-    border-radius: calc(var(--radius-element) + var(--border-width));
-    background: var(--color-background-surface);
+    padding-inline: var(--spacing-1);
+    background: transparent;
+  }
+
+  .jig-week-column + .jig-week-column {
+    border-inline-start: var(--border-width) solid var(--color-border);
   }
 
   .jig-week-column > section {
     display: flex;
-    min-height: 100%;
+    min-height: 18rem;
     flex-direction: column;
   }
 
-  .jig-week-column-selected {
-    border-color: var(--color-accent);
+  .jig-week-column-header {
+    display: flex;
+    min-height: 3.25rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2);
+    border-block-end: var(--border-width) solid transparent;
   }
 
-  .jig-week-column-selected .jig-week-column-header {
-    box-shadow: inset 0 calc(-2 * var(--border-width)) 0 var(--color-accent);
+  .jig-week-column-today .jig-week-column-header {
+    border-block-end-color: var(--jig-state-today-border);
   }
 
-  .jig-week-column-today .jig-date-heading-button {
-    color: var(--color-text-accent);
+  .jig-week-column-today .jig-week-date-signifier strong {
+    color: var(--jig-state-today-text);
     font-weight: var(--font-weight-bold);
   }
 
-  .jig-weekday-line {
+  .jig-week-date-signifier {
     display: flex;
+    min-width: 0;
     align-items: center;
     gap: var(--spacing-1);
   }
 
-  .jig-weekday-line small {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-xs);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .jig-week-column-header {
-    position: sticky;
-    inset-block-start: 0;
-    z-index: 1;
-    display: flex;
-    height: 50px;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-2);
-    padding: var(--spacing-2) var(--spacing-3);
-    border-block-end: var(--border-width) solid var(--color-border);
-    background: var(--color-background-muted);
-  }
-
-  .jig-date-heading-button {
+  .jig-week-date-signifier strong {
     min-width: 0;
+    white-space: nowrap;
+  }
+
+  .jig-date-add {
+    flex: 0 0 auto;
+  }
+
+  .jig-week-task-area {
+    min-height: 12rem;
   }
 
   .jig-empty-column,
   .jig-empty-state {
     padding: var(--spacing-3);
     text-align: center;
-  }
-
-  .jig-week-add-task {
-    width: calc(100% - 2 * var(--spacing-2));
-    margin: auto var(--spacing-2) var(--spacing-2);
-    justify-content: flex-start;
-    border-block-start: var(--border-width) solid var(--color-border);
-    border-radius: 0;
-    color: var(--color-text-accent);
   }
 
   .jig-task-count {
@@ -401,8 +388,9 @@ body {
   }
 
   .jig-date-drop-zone-active {
-    outline: calc(2 * var(--border-width)) dashed var(--color-accent);
+    outline: calc(2 * var(--border-width)) dashed var(--jig-state-drag-border);
     outline-offset: calc(-1 * var(--focus-outline-offset));
+    background: var(--jig-state-drag-bg);
   }
 
   .jig-task-card-list {
@@ -414,24 +402,28 @@ body {
   .jig-task-card {
     position: relative;
     min-width: 0;
-    min-height: 86px;
+    min-height: 72px;
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-element);
     background: var(--color-background-surface);
   }
 
+  .jig-task-card:hover {
+    background: var(--jig-state-hover-bg);
+  }
+
   .jig-task-priority-high {
-    border-inline-start-color: var(--color-text-error);
+    border-inline-start-color: var(--jig-priority-high);
     border-inline-start-width: calc(3 * var(--border-width));
   }
 
   .jig-task-priority-normal {
-    border-inline-start-color: var(--color-accent);
+    border-inline-start-color: var(--jig-priority-normal);
     border-inline-start-width: calc(2 * var(--border-width));
   }
 
   .jig-task-priority-low {
-    border-inline-start-color: var(--color-text-info);
+    border-inline-start-color: var(--jig-priority-low);
     border-inline-start-width: calc(2 * var(--border-width));
   }
 
@@ -439,17 +431,13 @@ body {
     display: grid;
     min-width: 0;
     gap: var(--spacing-1);
+  }
+
+  .jig-task-body-draggable {
     cursor: grab;
   }
-  .jig-task-title-row {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: var(--spacing-1);
-  }
 
-
-  .jig-task-body:active {
+  .jig-task-body-draggable:active {
     cursor: grabbing;
   }
 
@@ -460,8 +448,8 @@ body {
   }
 
   .jig-task-card-selected {
-    border-color: var(--color-accent);
-    background: var(--color-accent-muted);
+    border-color: var(--jig-state-task-selected-border);
+    background: var(--jig-state-task-selected-bg);
     outline: none;
   }
 
@@ -508,24 +496,6 @@ body {
     line-height: var(--text-heading-1-leading);
   }
 
-  .jig-week-column .jig-task-drag-handle {
-    min-width: var(--spacing-3);
-    min-height: var(--spacing-4);
-    font-size: var(--font-size-sm);
-  }
-
-  .jig-task-drag-handle {
-    display: inline-flex;
-    min-width: var(--spacing-5);
-    min-height: var(--spacing-5);
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text-secondary);
-    font-weight: var(--font-weight-bold);
-    cursor: grab;
-    user-select: none;
-  }
-
   .jig-task-title {
     display: block;
     min-width: 0;
@@ -565,21 +535,24 @@ body {
   }
 
   .jig-priority-high {
-    color: var(--color-text-error);
+    color: var(--jig-priority-high);
     background: var(--color-error-muted);
   }
 
   .jig-priority-normal {
-    color: var(--color-text-accent);
-    background: var(--color-accent-muted);
+    color: var(--jig-priority-normal);
+    background: var(--color-background-muted);
   }
 
   .jig-priority-low {
-    color: var(--color-text-info);
-    background: var(--color-info-muted);
+    color: var(--jig-priority-low);
+    background: var(--color-success-muted);
   }
 
   .jig-reminder-time {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-0-5);
     white-space: nowrap;
   }
 
@@ -599,37 +572,6 @@ body {
     color: var(--color-text-secondary);
   }
 
-  .jig-week-strip {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: var(--spacing-1);
-    width: 100%;
-    margin-block-end: var(--spacing-4);
-    overflow: visible;
-  }
-
-  .jig-week-strip-date {
-    position: relative;
-    width: auto;
-    min-width: 0;
-    min-height: 56px;
-  }
-
-  .jig-date-today:not(.jig-date-selected) {
-    box-shadow: inset 0 0 0 calc(2 * var(--border-width)) var(--color-accent);
-    font-weight: var(--font-weight-bold);
-  }
-
-  .jig-week-strip-date-content {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-1);
-    white-space: normal;
-  }
-
   .jig-history-view,
   .jig-settings-view {
     width: 100%;
@@ -640,46 +582,6 @@ body {
   .jig-planner-narrow {
     width: 100%;
     min-width: 0;
-  }
-
-  .jig-planner-selected-date-heading {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--spacing-3);
-    margin-block-end: var(--spacing-2);
-  }
-
-  .jig-planner-selected-date-heading h1 {
-    margin: 0;
-    font-size: var(--font-size-lg);
-  }
-
-  .jig-task-inspector {
-    position: sticky;
-    inset-block-start: calc(var(--spacing-3) + var(--spacing-0-5));
-    display: grid;
-    min-width: 0;
-    min-height: 680px;
-    align-content: start;
-    gap: var(--spacing-6);
-    padding: var(--spacing-6);
-    border: var(--border-width) solid var(--color-border);
-    border-radius: calc(var(--radius-element) + 2 * var(--border-width));
-    background: var(--color-background-surface);
-  }
-
-  .jig-task-inspector-empty {
-    color: var(--color-text-secondary);
-  }
-
-  .jig-task-inspector-drawer {
-    position: static;
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
   }
 
   .jig-task-sheet-header {
@@ -706,56 +608,9 @@ body {
     align-content: start;
   }
 
-  .jig-task-inspector-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-1);
-  }
-
-  .jig-task-inspector-details {
-    display: grid;
-    gap: var(--spacing-2);
-    margin: 0;
-  }
-
-  .jig-task-inspector-details > div {
-    display: grid;
-    grid-template-columns: 5rem minmax(0, 1fr);
-    gap: var(--spacing-2);
-  }
-
-  .jig-task-inspector-details dt {
-    color: var(--color-text-secondary);
-  }
-
-  .jig-task-inspector-details dd {
-    min-width: 0;
-    margin: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .jig-inspector-delete {
+  .jig-workspace-delete {
     margin-inline-start: auto;
     color: var(--color-text-error);
-  }
-
-  .jig-task-inspector-summary {
-    display: grid;
-    gap: var(--spacing-1);
-    margin-block-start: auto;
-    padding: calc(var(--spacing-3) + var(--spacing-0-5)) calc(var(--spacing-4) + var(--spacing-0-5));
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-element);
-    background: var(--color-background-muted);
-  }
-
-  .jig-task-inspector-summary strong {
-    font-size: var(--font-size-sm);
-  }
-
-  .jig-task-inspector-summary span {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
   }
 
   .jig-history-group h2,
@@ -860,17 +715,17 @@ body {
   }
 
   .jig-history-task-row.jig-task-priority-high {
-    border-inline-start-color: var(--color-text-error);
+    border-inline-start-color: var(--jig-priority-high);
     border-inline-start-width: calc(3 * var(--border-width));
   }
 
   .jig-history-task-row.jig-task-priority-normal {
-    border-inline-start-color: var(--color-accent);
+    border-inline-start-color: var(--jig-priority-normal);
     border-inline-start-width: calc(2 * var(--border-width));
   }
 
   .jig-history-task-row.jig-task-priority-low {
-    border-inline-start-color: var(--color-text-info);
+    border-inline-start-color: var(--jig-priority-low);
     border-inline-start-width: calc(2 * var(--border-width));
   }
 
@@ -881,8 +736,7 @@ body {
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-element);
-    background: var(--color-accent);
-    color: var(--color-on-accent);
+    color: var(--color-text-success);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-bold);
   }
@@ -983,20 +837,34 @@ body {
     }
 
     .jig-app-header {
-      border-radius: calc(2 * var(--radius-container));
+      border-radius: 0;
     }
 
     .jig-header-mobile-band .jig-status-control {
       min-width: 0;
     }
 
-    .jig-week-strip-date {
-      height: 56px;
-      min-height: 56px;
+    .jig-planner-narrow {
+      display: grid;
+      gap: var(--spacing-4);
     }
 
-    .jig-week-strip-date-content {
-      font-size: var(--font-size-sm);
+    .jig-planner-narrow .jig-week-column {
+      min-height: 0;
+      padding-block: var(--spacing-1) var(--spacing-3);
+      border-inline-start: 0;
+    }
+
+    .jig-planner-narrow .jig-week-column + .jig-week-column {
+      border-block-start: var(--border-width) solid var(--color-border);
+    }
+
+    .jig-planner-narrow .jig-week-column > section {
+      min-height: 0;
+    }
+
+    .jig-planner-narrow .jig-week-task-area {
+      min-height: var(--spacing-8);
     }
 
     .jig-task-card-list {
@@ -1005,19 +873,6 @@ body {
 
     .jig-task-card {
       min-height: 88px;
-    }
-
-    .jig-mobile-quick-add {
-      position: fixed;
-      z-index: 25;
-      inset-inline-end: max(34px, env(safe-area-inset-right, 0px));
-      inset-block-end: max(45px, env(safe-area-inset-bottom, 0px));
-      display: inline-flex;
-      min-width: 108px;
-      min-height: 52px;
-      align-items: center;
-      justify-content: center;
-      border-radius: calc(2 * var(--radius-container));
     }
 
     .jig-history-view,
