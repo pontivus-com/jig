@@ -55,7 +55,7 @@ body {
   display: none;
 }
 
-  .jig-sidebar-brand {
+  .jig-nav-brand {
     display: grid;
     gap: var(--spacing-1);
     padding: 8px 12px 0;
@@ -95,7 +95,7 @@ body {
   .jig-eyebrow,
   .jig-empty-column,
   .jig-empty-state,
-  .jig-sidebar-context {
+  .jig-nav-context {
     color: var(--color-text-secondary);
   }
 
@@ -103,7 +103,7 @@ body {
     font-size: 0.75rem;
   }
 
-  .jig-sidebar-context {
+  .jig-nav-context {
     display: grid;
     gap: var(--spacing-0-5);
     margin-block-start: auto;
@@ -111,7 +111,7 @@ body {
     font-size: 0.6875rem;
   }
 
-  .jig-sidebar-context small {
+  .jig-nav-context small {
     overflow-wrap: anywhere;
   }
 
