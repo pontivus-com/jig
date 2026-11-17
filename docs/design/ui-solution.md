@@ -9,16 +9,17 @@
 
 The original design exploration used the temporary product name **Day**. It established the correct interaction direction: date-first weekly calendar/board, selected-day focus, compact title-first tasks, optional context/priority/reminder, drag handles, one task editor and a small completed region. The product's name is **Jig**.
 
-The current repository includes seven **versioned SVG structural references**. The original four screens are corrected reconstructions of the approved Day-labelled layouts; History, Settings/Sync and save/sync failure states were added to close the Jig screen contract. Together these references govern structure, hierarchy, density and representative visual character. They are rendered in light mode for review and do not imply a light-only product or require duplicate dark-mode mockups.
+The current repository includes eight **versioned SVG structural references**. The original four screens are corrected reconstructions of the approved Day-labelled layouts; History, Settings/Sync and save/sync failure states were added to close the Jig screen contract. Together these references govern structure, hierarchy, density and representative visual character. They are rendered in light mode for review and do not imply a light-only product or require duplicate dark-mode mockups.
 
 | Governing artifact | Screen | Structural meaning |
 |---|---|---|
-| ![Desktop week](reference/desktop-week.svg) | [Desktop weekly planner](reference/desktop-week.svg) | Primary seven-day scheduled-date board and visible cross-column movement targets |
-| ![Desktop day](reference/desktop-day.svg) | [Desktop day view](reference/desktop-day.svg) | Selected-date canonical attention list after persisted rollover, completed group and selected task details |
+| ![Desktop week](reference/desktop-week.svg) | [Desktop weekly planner](reference/desktop-week.svg) | Compact rail plus full available planning canvas with seven fluid day tracks and visible cross-column movement targets |
+| ![Desktop Week task Drawer](reference/desktop-week-task-drawer.svg) | [Desktop Week selected-task workspace](reference/desktop-week-task-drawer.svg) | Selected Task detail/edit/create/move workspace sliding from the right without reflowing or leaving Week |
+| ![Desktop day](reference/desktop-day.svg) | [Desktop day view](reference/desktop-day.svg) | Compact rail, selected-date attention list, completed group and docked right Task workspace |
 | ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history grouped by actual completion date |
 | ![Desktop settings and sync](reference/desktop-settings-sync.svg) | [Desktop settings/sync](reference/desktop-settings-sync.svg) | Repository, service, appearance and synchronization controls |
 | ![Mobile day](reference/mobile-day.svg) | [Mobile narrow day](reference/mobile-day.svg) | Compact date strip and one attention list at narrow widths |
-| ![Mobile editor](reference/mobile-editor.svg) | [Mobile edit surface](reference/mobile-editor.svg) | One bounded task editor with explicit Save/Cancel and destructive Delete for an existing Task |
+| ![Narrow Task workspace](reference/mobile-editor.svg) | [Narrow Task workspace](reference/mobile-editor.svg) | Right-side Drawer editor with explicit Save/Cancel; permanent Delete confirmation is separate |
 | ![Save and sync states](reference/sync-failure-states.svg) | [Save/sync states](reference/sync-failure-states.svg) | Honest local-save and Git synchronization state/failure presentation |
 
 ### Original screenshot provenance
@@ -189,6 +190,6 @@ Use actual approved Astryx and dnd-kit versions in Playwright for final UI evide
 
 ## 7. Design change control
 
-The seven versioned SVGs in `docs/design/reference/` remain the structural baseline for layout, interaction hierarchy and density. Production color, logo use and Light/Dark behavior are governed centrally by [Brand and theme system](brand-and-theme.md); no duplicate dark structural SVG set is required. When an interaction changes, update this document and the relevant SVG together. If only runtime appearance changes to correct Astryx component parity, update implementation and browser evidence without inventing a second canonical visual-token contract.
+The eight versioned SVGs in `docs/design/reference/` remain the structural baseline for layout, interaction hierarchy and density. Production color, logo use and Light/Dark behavior are governed centrally by [Brand and theme system](brand-and-theme.md); no duplicate dark structural SVG set is required. When an interaction changes, update this document and the relevant SVG together. If only runtime appearance changes to correct Astryx component parity, update implementation and browser evidence without inventing a second canonical visual-token contract.
 
 Do not refer to the previous Day branding as a current product identity. Do not use project-specific task details as content that Jig must store; they exist only as illustrative samples. An implementation plan must link to this document and to [Technical solution](../architecture/technical-solution.md).
