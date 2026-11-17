@@ -1,7 +1,7 @@
 @import "@astryxdesign/core/reset.css";
 @import "@astryxdesign/core/astryx.css";
 @import "./theme.css";
-@import "./jig-theme.generated.css";
+@import "./jig.css";
 
 html,
 body,
