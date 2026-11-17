@@ -426,6 +426,7 @@ body {
   }
 
   .jig-task-card-completed {
+    min-height: 62px;
     cursor: default;
   }
 
@@ -752,6 +753,16 @@ body {
     margin-block-start: 38px;
   }
 
+  .jig-history-group-heading {
+    display: grid;
+    gap: var(--spacing-1);
+    margin-block-end: var(--spacing-4);
+  }
+
+  .jig-history-group-heading h2 {
+    margin: 0;
+  }
+
   .jig-history-group {
     padding-block: 0 4px;
     border-block-end: 0;
@@ -1052,6 +1063,10 @@ body {
 
   .jig-task-card {
     min-height: 88px;
+  }
+
+  .jig-task-card-completed {
+    min-height: 66px;
   }
 
   .jig-completed-section {
