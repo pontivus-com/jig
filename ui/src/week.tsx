@@ -56,9 +56,10 @@ export interface WeekViewProps {
   readonly onToday: () => void;
   readonly onNext: () => void;
   readonly statusControl: ReactNode;
+  readonly selectedTask: Task | null;
+  readonly onSelectTask: (task: Task) => void;
   readonly onAdd: (date: string) => void;
   readonly onEdit: (task: Task) => void;
-  readonly onMoveToDate: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onMove: (
     taskId: string,
@@ -70,15 +71,17 @@ export interface WeekViewProps {
 function WeekTaskRow({
   task,
   tasks,
+  isSelected,
+  onSelect,
   onEdit,
-  onMoveToDate,
   onToggleComplete,
   onMove,
 }: Readonly<{
   task: Task;
   tasks: readonly Task[];
+  isSelected: boolean;
+  onSelect: (task: Task) => void;
   onEdit: (task: Task) => void;
-  onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
   onMove: WeekViewProps["onMove"];
 }>): React.ReactElement {
@@ -90,6 +93,8 @@ function WeekTaskRow({
       task={task}
       index={position}
       group={task.scheduled_date}
+      isSelected={isSelected}
+      onSelect={() => onSelect(task)}
       onToggleComplete={() => {
         void onToggleComplete(task);
       }}
@@ -116,7 +121,6 @@ function WeekTaskRow({
             },
           }
         : {})}
-      onMoveToDate={() => onMoveToDate(task)}
     />
   );
 }
@@ -131,9 +135,10 @@ export function WeekView({
   onToday,
   onNext,
   statusControl,
+  selectedTask,
+  onSelectTask,
   onAdd,
   onEdit,
-  onMoveToDate,
   onToggleComplete,
   onMove,
 }: WeekViewProps): React.ReactElement {
@@ -162,8 +167,9 @@ export function WeekView({
         <DayTaskLists
           tasks={tasks}
           selectedDate={selectedDate}
+          selectedTask={selectedTask}
+          onSelectTask={onSelectTask}
           onEdit={onEdit}
-          onMoveToDate={onMoveToDate}
           onToggleComplete={onToggleComplete}
           onMove={onMove}
         />
@@ -278,8 +284,9 @@ export function WeekView({
                           key={task.id}
                           task={task}
                           tasks={tasks}
+                          isSelected={selectedTask?.id === task.id}
+                          onSelect={onSelectTask}
                           onEdit={onEdit}
-                          onMoveToDate={onMoveToDate}
                           onToggleComplete={onToggleComplete}
                           onMove={onMove}
                         />
