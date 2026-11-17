@@ -21,6 +21,8 @@ Key corrections encoded in the references:
 - Priority is visually secondary and never implies automatic resorting.
 - The design is compact, low-chrome, title/date-first, and compatible with the stated Astryx Neutral direction.
 
+The governed set includes `desktop-week.svg`, `desktop-week-task-drawer.svg`, `desktop-day.svg`, `desktop-history.svg`, `desktop-settings-sync.svg`, `mobile-day.svg`, `mobile-editor.svg`, and `sync-failure-states.svg`.
+
 These SVGs are structural design references rendered in light mode, not claims of pixel-perfect Astryx rendering or a light-only product. They govern product structure, hierarchy, density and genuine structural dimensions; they do not authorize overriding the UI library. Implementation must first use the pinned Astryx public shell/navigation/layout/component APIs, then add the smallest Jig-owned composition/CSS needed for product-specific geometry. Private Astryx selectors/custom properties, compensating cascade overrides and CSS reconstruction of the wrong semantic DOM are non-conforming even when a screenshot looks close.
 
 System/Light/Dark support is mandatory through Astryx Neutral semantic theming; duplicate dark-mode mockups are intentionally unnecessary. Final implementation must still be certified with browser screenshots and interaction tests in both Light and Dark.
