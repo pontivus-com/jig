@@ -82,6 +82,8 @@ Visual rules:
 
 #### v1.0.4 state appearance matrix
 
+**Color authority:** the exact component/state colors, Light/Dark resolved values, semantic aliases, button variants, hover/pressed/focus/disabled behavior and prohibited substitutions are governed by [Brand and theme §§6.2–6.4](brand-and-theme.md#62-canonical-jig-product-semantic-tokens). This table summarizes product meaning only; it does not authorize alternative colors.
+
 | UI state | Appearance contract |
 |---|---|
 | Desktop exact current day | subtle cool-neutral column/header border + stronger date typography; no Amber fill |
