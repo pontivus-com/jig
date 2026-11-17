@@ -90,6 +90,24 @@ test("desktop temporal centerpiece is page-centered with range above controls", 
 });
 
 test("desktop Planner uses seven fluid columns without horizontal board scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 1216, height: 900 });
+
+  const thresholdBoard = page.locator(".jig-week-board");
+  await expect(thresholdBoard.locator(".jig-week-column")).toHaveCount(7);
+  const thresholdGeometry = await thresholdBoard.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    widths: [...element.querySelectorAll<HTMLElement>(".jig-week-column")].map(
+      (column) => column.getBoundingClientRect().width,
+    ),
+  }));
+  expect(thresholdGeometry.scrollWidth).toBeLessThanOrEqual(
+    thresholdGeometry.clientWidth + 1,
+  );
+  for (const width of thresholdGeometry.widths) {
+    expect(width).toBeGreaterThanOrEqual(160);
+  }
+
   await page.setViewportSize({ width: 1440, height: 900 });
 
   const board = page.locator(".jig-week-board");
