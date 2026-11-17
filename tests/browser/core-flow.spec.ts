@@ -62,8 +62,8 @@ test("real runtime supports title-first create, completion, History and reopen",
   await historyRow
     .getByRole("button", { name: "Actions for Browser acceptance task" })
     .click();
-  await historyRow
-    .getByRole("button", { name: "Reopen", exact: true })
+  await page
+    .getByRole("menuitem", { name: "Reopen", exact: true })
     .click();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeHidden();
 });
