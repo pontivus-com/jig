@@ -46,11 +46,16 @@ import {
 } from "./planner-header";
 import { ReminderMonitor } from "./reminder";
 import { repositoryStatusPresentation } from "./repository-status";
+import { SettingsView } from "./settings";
 import {
-  isThemePreference,
-  SettingsView,
-  type ThemePreference,
-} from "./settings";
+  readAppearanceMode,
+  readThemePreset,
+  themeFor,
+  writeAppearanceMode,
+  writeThemePreset,
+  type AppearanceMode,
+  type ThemePreset,
+} from "./appearance";
 import {
   formatPlannerWeekRange,
   millisecondsUntilNextLocalDay,
@@ -63,28 +68,15 @@ import {
   type TaskWorkspaceState,
 } from "./task-workspace";
 import { useLayoutMode } from "./use-layout-mode";
-import { jigTheme } from "./jig.js";
-
 interface PlannerState {
   readonly displayedWeekStart: string;
 }
-
-const THEME_STORAGE_KEY = "jig-theme";
 
 function initialPlannerState(): PlannerState {
   const today = todayCivilDate();
   return {
     displayedWeekStart: startOfWeekMonday(today),
   };
-}
-
-function savedThemePreference(): ThemePreference {
-  try {
-    const value = window.localStorage.getItem(THEME_STORAGE_KEY);
-    return isThemePreference(value) ? value : "system";
-  } catch {
-    return "system";
-  }
 }
 
 function errorMessage(error: unknown): string {
@@ -107,8 +99,10 @@ export function App(): React.ReactElement {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [isOperating, setIsOperating] = useState(false);
-  const [themePreference, setThemePreference] =
-    useState<ThemePreference>(savedThemePreference);
+  const [themePreset, setThemePreset] =
+    useState<ThemePreset>(readThemePreset);
+  const [appearanceMode, setAppearanceMode] =
+    useState<AppearanceMode>(readAppearanceMode);
   const [workspace, setWorkspace] = useState<TaskWorkspaceState>({
     mode: "closed",
   });
@@ -370,17 +364,14 @@ export function App(): React.ReactElement {
     setWorkspace({ mode: "closed" });
   }, []);
 
-  const changeTheme = useCallback((value: ThemePreference): void => {
-    setThemePreference(value);
-    try {
-      if (value === "system") {
-        window.localStorage.removeItem(THEME_STORAGE_KEY);
-      } else {
-        window.localStorage.setItem(THEME_STORAGE_KEY, value);
-      }
-    } catch {
-      // Theme persistence is presentation-only and never affects Task state.
-    }
+  const changeThemePreset = useCallback((value: ThemePreset): void => {
+    setThemePreset(value);
+    writeThemePreset(value);
+  }, []);
+
+  const changeAppearanceMode = useCallback((value: AppearanceMode): void => {
+    setAppearanceMode(value);
+    writeAppearanceMode(value);
   }, []);
 
   const syncNow = useCallback(async (): Promise<void> => {
@@ -558,12 +549,14 @@ export function App(): React.ReactElement {
       />
     ) : (
       <SettingsView
-        themePreference={themePreference}
+        themePreset={themePreset}
+        appearanceMode={appearanceMode}
         status={status}
         diagnostics={diagnostics}
         operationError={operationError}
         isOperating={isOperating}
-        onThemePreferenceChange={changeTheme}
+        onThemePresetChange={changeThemePreset}
+        onAppearanceModeChange={changeAppearanceMode}
         onSync={syncNow}
       />
     );
@@ -594,7 +587,7 @@ export function App(): React.ReactElement {
     );
 
   return (
-    <Theme theme={jigTheme} mode={themePreference}>
+    <Theme theme={themeFor(themePreset)} mode={appearanceMode}>
       <LayerProvider>
         <AppShell
           className="jig-app-shell"
