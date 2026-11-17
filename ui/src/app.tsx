@@ -539,9 +539,6 @@ export function App(): React.ReactElement {
       onToday={() => goToToday(true)}
       onNext={() => navigateDate(7)}
       statusControl={statusControl}
-      selectedTask={selectedTask}
-      onSelectTask={(task) => setSelectedTaskId(task.id)}
-      onDelete={(task) => setDeleteTaskId(task.id)}
       onAdd={openCreate}
       onEdit={openEdit}
       onMoveToDate={openMoveToDate}
@@ -557,6 +554,9 @@ export function App(): React.ReactElement {
       onToday={() => goToToday(false)}
       onNext={() => navigateDate(1)}
       statusControl={statusControl}
+      selectedTask={selectedTask}
+      onSelectTask={(task) => setSelectedTaskId(task.id)}
+      onDelete={(task) => setDeleteTaskId(task.id)}
       onAdd={openCreate}
       onEdit={openEdit}
       onMoveToDate={openMoveToDate}
@@ -656,7 +656,7 @@ export function App(): React.ReactElement {
           }
           actionLabel="Delete task"
           cancelLabel="Cancel"
-          status="error"
+          actionVariant="destructive"
           isActionLoading={isOperating}
           onAction={async () => {
             if (deleteTask === null) {
