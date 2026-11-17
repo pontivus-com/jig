@@ -62,7 +62,10 @@ test("already-open browser refreshes canonical state across local midnight", asy
   });
 
   await expect(
-    page.getByText("Midnight continuity", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Midnight continuity" })
+      .first(),
   ).toBeVisible();
 
   await page.clock.fastForward(60_000);
@@ -80,7 +83,10 @@ test("already-open browser refreshes canonical state across local midnight", asy
     );
 
   await expect(
-    page.getByText("Midnight continuity", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Midnight continuity" })
+      .first(),
   ).toBeVisible();
 });
 
