@@ -421,6 +421,10 @@ async function repositoryStatusForEvidence(page: Page): Promise<string> {
 }
 
 test("temporary v1.0.4 visual evidence capture", async ({ page }) => {
+  test.skip(
+    process.env.JIG_CAPTURE_EVIDENCE !== "1",
+    "visual evidence capture runs only in governed evidence jobs",
+  );
   test.setTimeout(90_000);
   await mkdir(V104_EVIDENCE_OUTPUT, { recursive: true });
 
