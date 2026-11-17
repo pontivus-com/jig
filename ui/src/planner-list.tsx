@@ -81,7 +81,6 @@ function PlannerSequenceRow({
 export function PlannerTaskList({
   tasks,
   date,
-  isSortable,
   selectedTask,
   onSelectTask,
   onEdit,
