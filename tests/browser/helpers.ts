@@ -6,7 +6,7 @@ import type {
 import type {
   CanonicalState,
   CommandResult,
-} from "../../src/shell/sqlite";
+} from "../../src/protocol";
 
 export async function apiState(
   page: Page,
