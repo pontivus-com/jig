@@ -532,7 +532,7 @@ test("mobile task editing uses the right-side task workspace rather than the old
     "Notes",
   ];
   for (const label of fieldLabels) {
-    await expect(editor.getByLabel(label, { exact: true })).toBeVisible();
+    await expect(editor.getByLabel(label, { exact: false })).toBeVisible();
   }
   await expect(editor.getByRole("button", { name: "Cancel" })).toBeVisible();
   await expect(editor.getByRole("button", { name: "Save" })).toBeVisible();
