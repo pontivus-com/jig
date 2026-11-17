@@ -87,7 +87,6 @@ body {
   .jig-secondary-copy,
   .jig-task-meta,
   .jig-eyebrow,
-  .jig-empty-column,
   .jig-empty-state,
   .jig-nav-context {
     color: var(--color-text-secondary);
@@ -857,6 +856,19 @@ body {
     border: 1px solid var(--color-border);
     border-radius: 8px;
     background: var(--color-background-surface);
+  }
+
+  .jig-history-complete-indicator {
+    display: inline-flex;
+    inline-size: 1rem;
+    block-size: 1rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-element);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-size: 0.625rem;
+    font-weight: 700;
   }
 
   .jig-history-end {
