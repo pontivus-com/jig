@@ -7,17 +7,19 @@ import {
 } from "@astryxdesign/core";
 import { useSortable } from "@dnd-kit/react/sortable";
 import type { Ref } from "react";
-import type { Task } from "../../src/core/task";
+import type { Priority, Task } from "../../src/core/task";
 import { formatReminderTime } from "./dates";
 
 export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
-  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLDivElement> | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
+  readonly onSetPriority: (priority: Priority) => void;
+  readonly onDelete: () => void;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
 }
@@ -91,23 +93,57 @@ function TaskMetadata({
   );
 }
 
+function PriorityMenuItems({
+  task,
+  onSetPriority,
+}: Readonly<{
+  task: Task;
+  onSetPriority: (priority: Priority) => void;
+}>) {
+  return ([
+    ["HIGH", "High"],
+    ["NORMAL", "Normal"],
+    ["LOW", "Low"],
+  ] as const).map(([priority, label]) => ({
+    id: `priority-${priority.toLowerCase()}`,
+    label: `Priority: ${label}`,
+    endContent:
+      task.priority === priority ? (
+        <span aria-label="Current priority">✓</span>
+      ) : undefined,
+    onClick: () => onSetPriority(priority),
+  }));
+}
+
 function TaskActionMenu({
   task,
   onEdit,
+  onToggleComplete,
+  onSetPriority,
+  onDelete,
   onMoveUp,
   onMoveDown,
 }: Readonly<{
   task: Task;
   onEdit: () => void;
+  onToggleComplete: () => void;
+  onSetPriority: (priority: Priority) => void;
+  onDelete: () => void;
   onMoveUp?: (() => void) | undefined;
   onMoveDown?: (() => void) | undefined;
 }>): React.ReactElement {
   const items = [
     {
       id: "edit",
-      label: "Edit",
+      label: "Open / edit",
       onClick: onEdit,
     },
+    {
+      id: task.completed_at === null ? "complete" : "reopen",
+      label: task.completed_at === null ? "Complete" : "Reopen",
+      onClick: onToggleComplete,
+    },
+    ...PriorityMenuItems({ task, onSetPriority }),
     ...(onMoveUp === undefined
       ? []
       : [
@@ -126,6 +162,11 @@ function TaskActionMenu({
             onClick: onMoveDown,
           },
         ]),
+    {
+      id: "delete",
+      label: "Delete…",
+      onClick: onDelete,
+    },
   ];
 
   return (
@@ -180,6 +221,8 @@ export function TaskRow({
   onSelect,
   onToggleComplete,
   onEdit,
+  onSetPriority,
+  onDelete,
   onMoveUp,
   onMoveDown,
 }: TaskRowProps): React.ReactElement {
@@ -211,11 +254,9 @@ export function TaskRow({
           />
           {completed ? null : (
             <span
-              {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
               className="jig-task-drag-handle"
               aria-hidden="true"
               title="Drag task"
-              onClick={(event) => event.stopPropagation()}
             >
               ≡
             </span>
@@ -223,7 +264,10 @@ export function TaskRow({
         </span>
       }
       label={
-        <div className="jig-task-body">
+        <div
+          {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
+          className="jig-task-body"
+        >
           <div className="jig-task-title-row">
             <span
               className={
@@ -242,6 +286,9 @@ export function TaskRow({
         <TaskActionMenu
           task={task}
           onEdit={onEdit}
+          onToggleComplete={onToggleComplete}
+          onSetPriority={onSetPriority}
+          onDelete={onDelete}
           {...(onMoveUp === undefined ? {} : { onMoveUp })}
           {...(onMoveDown === undefined ? {} : { onMoveDown })}
         />
@@ -275,7 +322,7 @@ export function SortableTaskRow({
       {...rowProps}
       task={task}
       rowRef={sortable.ref as Ref<HTMLLIElement>}
-      dragHandleRef={sortable.handleRef as Ref<HTMLSpanElement>}
+      dragHandleRef={sortable.handleRef as Ref<HTMLDivElement>}
     />
   );
 }
