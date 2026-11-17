@@ -1,7 +1,7 @@
 # Jig — UI solution design and visual reference contract
 
 **Status:** Binding v1.0.3 UX/UI realization v0.7, 2026-11-17. The single responsive Planner, centered week navigator, no-sidebar application header, shared master-detail Task workspace, Astryx-first ownership, Jig Light/Dark theming and browser evidence are governed.
-**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–22.
+**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
 
