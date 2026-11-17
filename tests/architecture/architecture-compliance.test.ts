@@ -116,7 +116,11 @@ describe("architecture compliance", () => {
       content
         .split("\n")
         .map((line, index) => ({ path, line: index + 1, text: line.trim() }))
-        .filter(({ text }) => /\sas\s+[A-Z][A-Za-z0-9_<>, |\[\]]+/.test(text)),
+        .filter(
+          ({ text }) =>
+            !text.startsWith("//") &&
+            /\sas\s+[A-Z][A-Za-z0-9_<>, |\[\]]+/.test(text),
+        ),
     );
 
     expect(assertions).toEqual(
@@ -145,12 +149,8 @@ describe("architecture compliance", () => {
           path: "ui/src/task-row.tsx",
           text: "const rowRef = sortable.ref as Ref<HTMLLIElement>;",
         }),
-        expect.objectContaining({
-          path: "ui/src/task-row.tsx",
-          text: "const dragHandleRef = sortable.handleRef as Ref<HTMLDivElement>;",
-        }),
       ]),
     );
-    expect(assertions).toHaveLength(7);
+    expect(assertions).toHaveLength(6);
   });
 });
