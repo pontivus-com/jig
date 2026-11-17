@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.5 technical solution, v0.16 (2026-11-17), with ten atomic JIG-105 solution designs mapped one-to-one to the v1.0.5 functional requirements. The design removes responsive semantic duplication while preserving the canonical Task/domain/persistence/integration architecture.
+**Status:** Binding v1.0.5 technical solution, v0.17 (2026-11-17), with ten atomic JIG-105 solution designs mapped one-to-one to the v1.0.5 functional requirements. The design removes responsive semantic duplication while preserving the canonical Task/domain/persistence/integration architecture.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -372,7 +372,7 @@ The range label is not an interactive element and must not sit between the chevr
 
 The Planner board uses seven equal-width tracks with a product-level 160px minimum. Track **height is content-driven**; do not stretch tracks merely to equalize bottoms or anchor a lane action. Empty tracks keep only the minimum usable drop-target area.
 
-The seven tracks are **layout tracks, not panel components**. Do not wrap each day in a persistent bordered/card surface. Jig CSS may use spacing plus a single subtle hairline inline divider between adjacent tracks, and may remove even that divider when responsive density makes whitespace sufficient. Do not combine lane borders, header borders and card borders into repeated parallel line work. Task cards remain the discrete interaction surfaces. The desktop semantic breakpoint is **76rem / 1216 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and 48px total outer inset. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
+The seven tracks are **layout tracks, not panel components**. Do not wrap each day in a persistent bordered/card surface. Jig CSS may use spacing plus a single subtle hairline inline divider between adjacent tracks, and may remove even that divider when responsive density makes whitespace sufficient. Do not combine lane borders, header borders and card borders into repeated parallel line work. Task cards remain the discrete interaction surfaces. The desktop semantic breakpoint is **73rem / 1168 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and **zero outer viewport inset**. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
 
 The date column header is non-selectable and owns only date presentation plus the date-specific Add action. Render the **full weekday name** plus day number (for example `Thursday 19`) and one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. Do not abbreviate weekdays.
 
@@ -401,7 +401,7 @@ Permanent Delete confirmation alone uses Astryx `AlertDialog`.
 
 ### 5.5 Narrow/mobile composition
 
-Below 76rem render a deliberate narrow composition from the **same** destination, Planner state, selected Task and workspace state.
+Below 73rem render a deliberate narrow composition from the **same** destination, Planner state, selected Task and workspace state.
 
 The top region has:
 
@@ -662,6 +662,30 @@ Planner canvas remains Paper 100 / Ink 950.
 - Light/Dark asset switching uses the existing theme selectors.
 - Desktop and narrow render the same `BrandHome`; no second mobile brand component exists.
 
+#### JIG-105-SD-11 — Zero-margin full-bleed viewport composition
+
+**Functional owner:** JIG-105-FR-11.
+
+Jig has no application-level viewport gutter. The browser viewport itself is the application canvas.
+
+1. `.jig-app-shell` owns **zero** outer padding/margin at desktop and narrow widths.
+2. `.jig-content-frame` is not an inset panel: no outer border, radius, shadow, background slab or margin.
+3. `.jig-content` owns zero page-level padding on all four sides. Product/component spacing is applied by the actual semantic owners (header controls, date headers, Task lists, History groups, Settings sections, forms), not by a generic page inset.
+4. The application header spans viewport edge-to-edge and its bottom hairline reaches the full viewport width.
+5. Planner tracks consume the entire available content width. There is no artificial max-width and no left/right screen gutter.
+6. Remove the narrow page-level `calc(5rem + env(safe-area-inset-bottom))` content padding. Safe-area handling, where a specific Astryx overlay/control requires it, stays with that primitive rather than creating a permanent page margin.
+7. Removing the former 48px total desktop outer inset changes the seven-track semantic breakpoint. The minimum desktop width is now:
+   - seven tracks × 160px = 1120px;
+   - six inter-track gaps × 8px = 48px;
+   - outer viewport inset = 0px;
+   - total = **1168px = 73rem**.
+   Therefore `DESKTOP_LAYOUT_MEDIA_QUERY` becomes `(min-width: 73rem)` and the CSS narrow query becomes `max-width: 72.999rem`.
+8. No replacement wrapper may reintroduce the same inset under another class name.
+
+**Verification:** at representative desktop and narrow viewports, bounding boxes for AppShell/header/content-frame/main content start at x=0 and extend to viewport width; application shell/page-level computed margin and padding are 0 on all sides; no content-frame border/radius/shadow exists; Planner first/last tracks align with the available canvas edges; responsive mode changes at the governed 73rem boundary.
+
+---
+
 #### JIG-105-SD-10 — Certification and architecture guards
 
 **Functional owner:** JIG-105-FR-10.
@@ -704,6 +728,7 @@ A green test run without these cases is not sufficient v1.0.5 certification.
 | JIG-105-FR-08 | JIG-105-SD-08 |
 | JIG-105-FR-09 | JIG-105-SD-09 |
 | JIG-105-FR-10 | JIG-105-SD-10 |
+| JIG-105-FR-11 | JIG-105-SD-11 |
 
 
 ### 5.7 Drag, accessibility and copy discipline
