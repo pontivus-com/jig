@@ -618,18 +618,21 @@ Task menus use `jig:edit`, built-in `check` for Complete/Reopen, built-in `arrow
 
 Date/global Add use `IconButton` or Button `icon` with that semantic Jig icon. HTTP references show `externalLink`; copy references show `copy`. Essential meaning remains in accessible labels/text.
 
-#### JIG-105-SD-07 — Compact invariant header geometry
+#### JIG-105-SD-07 — Flat, compact, invariant header bar
 
 **Functional owner:** JIG-105-FR-07.
 
-The header owns a bounded product-level block size, not a content-derived oversized minimum.
+The header is a thin application bar, not a second surface/card.
 
+- Desktop header background resolves to the same application/body background as the surrounding shell. Do not use `--color-background-surface`, muted gray fill, radius, shadow or framed container for the header.
+- One `border-block-end: var(--border-width) solid var(--color-border)` is the only persistent header chrome.
+- Existing semantics remain on the bar: canonical Jig Home wordmark at left; centered Planner week range + Previous/Today/Next; Add task + Planner/History/Settings + synchronization state at right.
 - Desktop: `block-size: 4rem` maximum, with compact token padding; target rendered height 60–64px.
-- Narrow: outer rendered height <= 6rem, using compact token gaps and `sm` Astryx controls.
+- Narrow: outer rendered height <= 6rem, using compact token gaps and `sm` Astryx controls; it follows the same flat-background/hairline principle.
 - Planner/History/Settings share the same outer height within each layout.
-- Desktop temporal center stays two lines; narrow preserves application band + range + temporal controls.
 - Remove 5.5rem/7rem minimums rather than offsetting them with negative margins or private Astryx overrides.
-- Tests measure actual bounding boxes, not merely equality.
+- The shared destination definition supplies visible semantic icons to desktop Buttons and narrow menu items; header flattening must not remove any action, label, icon or state.
+- Tests measure actual bounding boxes and computed header background/border, not merely equality.
 
 #### JIG-105-SD-08 — One Task surface/contrast contract across layouts
 
