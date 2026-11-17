@@ -39,8 +39,18 @@ function isSafeWebReference(value: string): boolean {
   }
 }
 
+const DRAG_EXCLUDED_SELECTOR = '[data-jig-drag-excluded="true"]';
+
 function stopPointer(event: React.PointerEvent): void {
   event.stopPropagation();
+}
+
+function preventTaskDragActivation(event: PointerEvent): boolean {
+  const { target } = event;
+  return (
+    target instanceof Element &&
+    target.closest(DRAG_EXCLUDED_SELECTOR) !== null
+  );
 }
 
 function TaskMetadata({
@@ -70,6 +80,7 @@ function TaskMetadata({
       )}
       {task.reference === null ? null : isSafeWebReference(task.reference) ? (
         <Link
+          data-jig-drag-excluded="true"
           className="jig-task-meta-item"
           href={task.reference}
           target="_blank"
@@ -85,6 +96,7 @@ function TaskMetadata({
         </Link>
       ) : (
         <Button
+          data-jig-drag-excluded="true"
           label="Copy reference"
           variant="ghost"
           size="sm"
@@ -194,6 +206,7 @@ export function TaskActionMenu(
 
   return (
     <div
+      data-jig-drag-excluded="true"
       className="jig-task-menu"
       onPointerDown={stopPointer}
       onClick={(event) => event.stopPropagation()}
@@ -263,7 +276,10 @@ export function TaskRow({
       isSelected={isSelected}
       align="first-line"
       startContent={
-        <span className="jig-task-card-leading">
+        <span
+          className="jig-task-card-leading"
+          data-jig-drag-excluded="true"
+        >
           <CheckboxInput
             label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
             isLabelHidden
@@ -324,6 +340,7 @@ export function SortableTaskRow({
     accept: "jig-task",
     sensors: [
       PointerSensor.configure({
+        preventActivation: preventTaskDragActivation,
         activationConstraints(event) {
           return event.pointerType === "touch"
             ? [
