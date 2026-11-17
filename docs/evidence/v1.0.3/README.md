@@ -1,6 +1,6 @@
 # Jig v1.0.3 implementation evidence — single Planner
 
-**Status:** Current v1.0.3 implementation evidence. Automated certification is governed by the permanent architecture/browser suites. Final reviewed screenshot capture is required before this evidence set is marked visually complete.
+**Status:** Automated implementation certification **PASS**; reviewed screenshot capture remains open. Permanent verification passed for implementation candidate `a7a42f26695513ac13a658879b1b36f40cd56352` in GitHub Actions `Verify v1 implementation` run `44032488998`. Final reviewed screenshot capture is required before this evidence set is marked visually complete.
 
 The earlier v1.0.3 master-detail screenshots certified a superseded Day/Week/SideNav design. They have been removed from the active evidence tree on this branch and remain available only through Git history. They are **not** acceptance evidence for the binding single-Planner design.
 
@@ -14,6 +14,10 @@ The earlier v1.0.3 master-detail screenshots certified a superseded Day/Week/Sid
 - [Mobile Planner structural reference](../../design/reference/mobile-planner-v1.0.3.svg)
 
 ## Automated certification
+
+**Result:** **PASS** on implementation candidate `a7a42f26695513ac13a658879b1b36f40cd56352`, workflow run `44032488998`.
+
+The permanent workflow passed theme verification, typecheck, core/integration tests, production build, real-browser acceptance, shell syntax, and installer/lifecycle smoke.
 
 Permanent gates are:
 
