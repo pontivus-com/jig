@@ -70,17 +70,19 @@ test("already-open browser refreshes canonical state across local midnight", asy
 
   await page.clock.fastForward(60_000);
 
+  const expectedSelectedLabel = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(tomorrow(start));
+
   await expect
-    .poll(async () => {
-      const heading = page.locator(".jig-day-desktop-heading h1");
-      return heading.textContent();
-    })
-    .toContain(
-      new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        day: "numeric",
-      }).format(tomorrow(start)),
-    );
+    .poll(() =>
+      page
+        .locator('.jig-date-heading-button[aria-current="date"]')
+        .getAttribute("aria-label"),
+    )
+    .toContain(expectedSelectedLabel);
 
   await expect(
     page
@@ -98,8 +100,9 @@ test("local midnight refresh preserves an explicitly selected non-today date", a
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
+  await page.setViewportSize({ width: 390, height: 844 });
 
-  await page.locator('.jig-week-strip-date').first().click();
+  await page.locator(".jig-week-strip-date").first().click();
   const selectedBefore = await page
     .locator('.jig-week-strip-date[aria-current="date"]')
     .textContent();
