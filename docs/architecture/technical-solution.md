@@ -65,7 +65,7 @@ Use the sources below to avoid rediscovery, while preserving Jig's own domain an
 | Planner application header | Astryx AppShell topNav slot plus Layout/Stack/Button/IconButton/DropdownMenu or Popover | Reusable control mechanics, focus and menu behavior | SideNav, AppShell auto mobile drawer, or a second application shell; Jig owns the product-specific three-zone header geometry |
 | Completion | Astryx CheckboxInput | Accessible explicit completion control | Any Order lifecycle/status transition semantics |
 | Reference action | Astryx Link/Button | Safe open/copy affordance | Automatic dereferencing or project-content import |
-| Cross-date drag | Pinned `@dnd-kit/react@0.5.3` plus `@dnd-kit/dom@0.5.3` public PointerSensor constraints, then dnd-kit guides | One provider, sortable task IDs, dated droppables, drag overlay, 5px body-handle activation threshold and exact destination index | A second reorder system, custom pointer-state subsystem or priority-derived drop position |
+| Cross-date drag | Pinned `@dnd-kit/react@0.5.3` plus `@dnd-kit/dom@0.5.3` public PointerSensor constraints, then dnd-kit guides | One provider, sortable Task-card element as the pointer source, interactive-descendant exclusion, dated droppables, drag overlay, input-aware activation threshold and exact destination index | A second reorder system, custom pointer-state subsystem, title/body-only drag handle or priority-derived drop position |
 | SQLite | Bun 1.4.4 SQLite API | Prepared statements, explicit transactions and WAL behavior used by the schema in §4.3 | ORM/repository abstraction |
 | Git integration | Standard Git CLI through Bun argument-array subprocess | the minimum scoped operations required to synchronize Jig-owned portable records while leaving unrelated repository state untouched | repository provisioning, user Git policy/configuration, topology management, reconciliation, Git libraries, shell interpolation or Jig-level merge/conflict workflow |
 | HTTP/service | Bun 1.4.4 runtime APIs + §3.2 of this document | Loopback serving, static UI, canonical command admission and write-token checks | A second transport model, external server framework or DTO layer |
@@ -693,7 +693,7 @@ A green test run without these cases is not sufficient v1.0.5 certification.
 
 ### 5.7 Drag, accessibility and copy discipline
 
-Use one dnd-kit drag owner around the seven desktop date tracks: one sortable task ID, dated droppables including empty dates, and exact target index. The sortable activation handle is the card's non-interactive body/title/meta region so ordinary card dragging works; checkbox/menu/reference controls remain outside that handle and stop pointer propagation where needed. Do not enable Astryx List `createReorderable` on the same rows.
+Use one dnd-kit drag owner around the seven desktop date tracks: one sortable task ID, dated droppables including empty dates, and exact target index. The sortable Task-card element itself is the pointer source so dragging can begin anywhere on ordinary card surface. Do not create a title/body-only handle. Checkbox/menu/reference/form controls remain genuine interactive descendants and must be rejected by pointer activation; their ordinary control behavior remains independent. Do not enable Astryx List `createReorderable` on the same rows.
 
 Keyboard Move up/Move down remains available on desktop and narrow layouts. Completion, Task selection, reference actions and overflow controls must not initiate dragging.
 
