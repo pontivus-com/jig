@@ -35,8 +35,6 @@ export interface DayViewProps {
   readonly onSelectTask: (task: Task) => void;
   readonly onDelete: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
-  readonly onMoveToDate: (task: Task) => void;
-  readonly onWorkspaceMove: (task: Task, destinationDate: string) => Promise<boolean>;
   readonly onWorkspaceModeChange: (mode: TaskWorkspaceMode | null) => void;
   readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
@@ -54,7 +52,6 @@ function ActiveRow({
   isSelected,
   onSelect,
   onEdit,
-  onMoveToDate,
   onToggleComplete,
   onMove,
 }: Readonly<{
@@ -63,7 +60,6 @@ function ActiveRow({
   isSelected: boolean;
   onSelect?: ((task: Task) => void) | undefined;
   onEdit: (task: Task) => void;
-  onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
   onMove: DayViewProps["onMove"];
 }>): React.ReactElement {
@@ -83,7 +79,6 @@ function ActiveRow({
         void onToggleComplete(task);
       }}
       onEdit={() => onEdit(task)}
-      onMoveToDate={() => onMoveToDate(task)}
       onMoveUp={
         position <= 0
           ? undefined
@@ -116,7 +111,6 @@ export interface DayTaskListsProps {
   readonly selectedTask?: Task | null;
   readonly onSelectTask?: ((task: Task) => void) | undefined;
   readonly onEdit: (task: Task) => void;
-  readonly onMoveToDate: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onMove: DayViewProps["onMove"];
 }
@@ -127,7 +121,6 @@ export function DayTaskLists({
   selectedTask = null,
   onSelectTask,
   onEdit,
-  onMoveToDate,
   onToggleComplete,
   onMove,
 }: DayTaskListsProps): React.ReactElement {
@@ -170,7 +163,6 @@ export function DayTaskLists({
                       ? {}
                       : { onSelect: onSelectTask })}
                     onEdit={onEdit}
-                    onMoveToDate={onMoveToDate}
                     onToggleComplete={onToggleComplete}
                     onMove={onMove}
                   />
@@ -210,8 +202,7 @@ export function DayTaskLists({
                     void onToggleComplete(task);
                   }}
                   onEdit={() => onEdit(task)}
-                  onMoveToDate={() => onMoveToDate(task)}
-                />
+                            />
               ))}
             </List>
           </section>
@@ -237,8 +228,6 @@ export function DayView({
   isSaving,
   onSelectTask,
   onDelete,
-  onMoveToDate,
-  onWorkspaceMove,
   onWorkspaceModeChange,
   onDraftChange,
   onSave,
@@ -268,7 +257,6 @@ export function DayView({
           selectedDate={selectedDate}
           selectedTask={selectedTask}
           onSelectTask={onSelectTask}
-          onMoveToDate={onMoveToDate}
           {...listProps}
         />
 
@@ -331,8 +319,7 @@ export function DayView({
             selectedDate={selectedDate}
             selectedTask={selectedTask}
             onSelectTask={onSelectTask}
-            onMoveToDate={onMoveToDate}
-            {...listProps}
+              {...listProps}
           />
         </div>
 
@@ -348,7 +335,6 @@ export function DayView({
           onModeChange={onWorkspaceModeChange}
           onDraftChange={onDraftChange}
           onSave={onSave}
-          onMove={onWorkspaceMove}
           onDelete={onDelete}
           onToggleComplete={listProps.onToggleComplete}
         />
