@@ -20,9 +20,7 @@ export interface DayViewProps {
   readonly isNarrow: boolean;
   readonly onAdd: (date: string) => void;
   readonly onSelectDate: (date: string) => void;
-  readonly onPrevious: () => void;
   readonly onToday: () => void;
-  readonly onNext: () => void;
   readonly statusControl: ReactNode;
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
@@ -215,9 +213,7 @@ export function DayView({
   isNarrow,
   onAdd,
   onSelectDate,
-  onPrevious,
   onToday,
-  onNext,
   statusControl,
   selectedTask,
   onSelectTask,
@@ -279,24 +275,6 @@ export function DayView({
       </div>
 
       <div className="jig-day-toolbar">
-        <div className="jig-date-step-group">
-          <Button
-            label="‹"
-            aria-label="Previous day"
-            variant="ghost"
-            size="sm"
-            className="jig-date-step"
-            onClick={onPrevious}
-          />
-          <Button
-            label="›"
-            aria-label="Next day"
-            variant="ghost"
-            size="sm"
-            className="jig-date-step"
-            onClick={onNext}
-          />
-        </div>
         <div className="jig-reference-toolbar-actions">
           <Button
             label="Today"
