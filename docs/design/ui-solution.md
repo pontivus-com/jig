@@ -113,7 +113,7 @@ The approved desktop composition is the v1.0.3 reference.
 **Header:** one compact full-width application header with three zones.
 
 - **Left:** Jig product mark/home affordance.
-- **Center:** active week range on the first line, for example **16–22 Nov 2026**. Directly beneath it is a grouped **Previous week chevron · Today · Next week chevron** row. The range never sits between the arrows.
+- **Center (v1.0.5):** one inline temporal group: **Previous chevron · 16–22 Nov 2026 · Next chevron · Today**. The range is informational and sits between the arrows; Today remains an explicit action. This supersedes the older two-line reference geometry.
 - **Right:** **Add task**, adjacent **Planner · History · Settings** navigation, compact synchronization state. Planner is visibly active on the Planner surface.
 
 The temporal centerpiece is centered on the page, not merely centered in the leftover space between left/right controls.
@@ -182,9 +182,10 @@ The published v1.0.4 header is visually too tall and too visually heavy. The cor
 - **Icons are mandatory:** Planner, History, Settings, Add and the temporal/status actions use the governed Astryx semantic icon vocabulary; the flat bar must not degrade into text-only navigation.
 - Desktop outer header target: approximately **44 CSS px**, maximum **2.75rem** — roughly half the shipped v1.0.4 height.
 - Narrow Planner outer header target: approximately **56 CSS px**, maximum **3.5rem** — roughly half the shipped v1.0.4 height, preserving touch-operable controls and the same flat-background/hairline principle.
+- **Narrow one-row header:** compact full Jig wordmark · Previous · compact range · Next · Today · Add · compact sync · hamburger. Prefer icon-only `sm` controls with accessible labels where needed to fit the row; do not reintroduce a second/third header row.
 - Planner/History/Settings remain equal in outer height within the same layout.
 - Reduce padding/min-height at the owning Jig header rules; do not use offsets, negative margins or private Astryx selectors.
-- The centered Planner temporal region remains two lines on desktop: range, then Previous/Today/Next.
+- The centered Planner temporal region is one line on desktop: Previous · compact range · Next · Today. A two-line center is prohibited because it cannot satisfy the 44px height budget without clipping/offsets.
 - The narrow hierarchy remains brand/status/menu, range, controls, but with compact token spacing.
 
 Task-card legibility uses one cross-responsive surface contract:
