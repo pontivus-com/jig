@@ -214,19 +214,18 @@ Desktop Planner is one wide weekly planning surface plus one global application 
 
 **Appearance:** System, Light and Dark are mandatory presentation modes. They use the same semantic hierarchy, component structure and interaction model; theme is local presentation preference rather than Task or Git-synchronized planning state. Focus, selection, priority, completion, save and sync states remain distinguishable in both Light and Dark without relying on color alone.
 
-## 6. Narrow/mobile responsive UX — v1.0.3
+## 6. Narrow/mobile responsive UX — v1.0.5
 
-Narrow/mobile is the same Planner and the same Task model, not a separate Day/Week product mode.
+Narrow/mobile is the same Planner and the same Task model, not a separate Day/Week product mode or a reduced-function implementation.
 
-The header deliberately recomposes rather than squeezing the desktop header into one row:
+The governed v1.0.5 header is one compact row:
 
-1. **Application band:** Jig product mark/home affordance on the left; compact synchronization status and a hamburger/menu button on the right.
-2. **Planner temporal centerpiece:** the active week range centered on its own line, with the grouped **Previous week chevron · Today · Next week chevron** row directly beneath it.
-3. **Seven dated sections:** all seven dates for the displayed week appear as vertically stacked day sections. Each section header shows the date and its compact `+`; no date strip or selected-day control exists.
-4. **Task lists:** each dated section contains that date's canonical outstanding sequence directly below its header. Do not add redundant “Day”, “Attention”, “Your ordered plan”, “selected date view”, or similar labels.
+1. **One application/temporal row:** compact complete Jig wordmark · Previous · compact active week range · Next · Today · Add · compact synchronization state · hamburger. Icon-only `sm` controls may be used where required for width, but accessible labels remain authoritative. Do not create a second temporal row.
+2. **Shared navigation semantics:** the hamburger renders the same **Planner · History · Settings** destination set as desktop from the same typed destination owner. It is a compact menu/popover, never a side-navigation drawer.
+3. **Seven dated sections:** all seven dates for the displayed week appear as vertically stacked day sections. Each section header shows the date and its semantic Add icon; no date strip or selected-day control exists.
+4. **Task lists:** each dated section contains that date's canonical outstanding sequence directly below its header and uses the same sortable Task row, metadata and Task action menu as desktop.
 5. **Global Add:** Add task remains available as a convenient week-context action and opens the unified form with the derived weekday-matching default date; the Date field can be changed immediately.
-
-The hamburger opens a compact menu/popover containing only **History** and **Settings**. It must not open a side-navigation drawer or recreate the former sidebar.
+6. **Direct movement:** whole-card touch/pen/mouse drag is available with the same exact-position movement semantics as desktop; genuine interactive descendants do not initiate drag.
 
 Tapping a Task opens its directly editable full Task form in a non-blocking **BottomSheet rising from the bottom**. Add task uses the same BottomSheet and the same full field hierarchy with inherited date/defaults. There is no read-only inspection step or reduced title-only create screen.
 
