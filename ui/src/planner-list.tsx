@@ -1,13 +1,12 @@
-import {
-  List,
-} from "@astryxdesign/core";
+import { List } from "@astryxdesign/core";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
-import { TaskRow } from "./task-row";
+import { SortableTaskRow, TaskRow } from "./task-row";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
-  readonly selectedDate: string;
+  readonly date: string;
+  readonly isSortable: boolean;
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
@@ -21,9 +20,72 @@ export interface PlannerTaskListProps {
   ) => Promise<boolean>;
 }
 
+interface PlannerSequenceRowProps
+  extends Omit<PlannerTaskListProps, "tasks" | "date" | "selectedTask"> {
+  readonly task: Task;
+  readonly index: number;
+  readonly date: string;
+  readonly sequenceLength: number;
+  readonly isSelected: boolean;
+}
+
+function PlannerSequenceRow({
+  task,
+  index,
+  date,
+  sequenceLength,
+  isSortable,
+  isSelected,
+  onSelectTask,
+  onEdit,
+  onToggleComplete,
+  onSetPriority,
+  onDelete,
+  onMove,
+}: PlannerSequenceRowProps): React.ReactElement {
+  const rowProps = {
+    task,
+    isSelected,
+    onSelect: () => onSelectTask(task),
+    onToggleComplete: () => {
+      void onToggleComplete(task);
+    },
+    onEdit: () => onEdit(task),
+    onSetPriority: (priority: Priority) => {
+      void onSetPriority(task, priority);
+    },
+    onDelete: () => onDelete(task),
+    ...(index > 0
+      ? {
+          onMoveUp: () => {
+            void onMove(task.id, date, index - 1);
+          },
+        }
+      : {}),
+    ...(index < sequenceLength - 1
+      ? {
+          onMoveDown: () => {
+            void onMove(task.id, date, index + 1);
+          },
+        }
+      : {}),
+  };
+
+  return isSortable ? (
+    <SortableTaskRow
+      {...rowProps}
+      index={index}
+      group={date}
+    />
+  ) : (
+    <TaskRow {...rowProps} />
+  );
+}
+
 export function PlannerTaskList({
   tasks,
-  selectedDate,
+  date,
+  isSortable,
   selectedTask,
   onSelectTask,
   onEdit,
@@ -31,41 +93,29 @@ export function PlannerTaskList({
   onSetPriority,
   onDelete,
   onMove,
-}: PlannerTaskListProps): React.ReactElement {
-  const outstanding = outstandingForDate(tasks, selectedDate);
-
+}: PlannerTaskListProps): React.ReactElement | null {
+  const outstanding = outstandingForDate(tasks, date);
   if (outstanding.length === 0) {
-    return <p className="jig-empty-state">Nothing scheduled for this date.</p>;
+    return null;
   }
 
   return (
     <List density="compact" edge="padded" className="jig-task-card-list">
       {outstanding.map((task, index) => (
-        <TaskRow
+        <PlannerSequenceRow
           key={task.id}
           task={task}
+          index={index}
+          date={date}
+          sequenceLength={outstanding.length}
+          isSortable={isSortable}
           isSelected={selectedTask?.id === task.id}
-          onSelect={() => onSelectTask(task)}
-          onToggleComplete={() => {
-            void onToggleComplete(task);
-          }}
-          onEdit={() => onEdit(task)}
-          onSetPriority={(priority) => { void onSetPriority(task, priority); }}
-          onDelete={() => onDelete(task)}
-          {...(index > 0
-            ? {
-                onMoveUp: () => {
-                  void onMove(task.id, selectedDate, index - 1);
-                },
-              }
-            : {})}
-          {...(index < outstanding.length - 1
-            ? {
-                onMoveDown: () => {
-                  void onMove(task.id, selectedDate, index + 1);
-                },
-              }
-            : {})}
+          onSelectTask={onSelectTask}
+          onEdit={onEdit}
+          onToggleComplete={onToggleComplete}
+          onSetPriority={onSetPriority}
+          onDelete={onDelete}
+          onMove={onMove}
         />
       ))}
     </List>
