@@ -1,5 +1,3 @@
-@layer reset, astryx-base, astryx-theme, jig;
-
 @import "@astryxdesign/core/reset.css";
 @import "@astryxdesign/core/astryx.css";
 @import "./theme.css";
@@ -22,30 +20,40 @@ body {
   box-sizing: border-box;
 }
 
-@layer jig {
-  .jig-shell {
-    display: grid;
-    grid-template-columns: 190px minmax(0, 1fr);
-    gap: 30px;
-    min-height: 100dvh;
-    padding: 20px;
-    background: var(--color-background-body);
-  }
+.jig-app-shell {
+  box-sizing: border-box;
+  padding: 20px;
+  background: var(--color-background-body);
+}
 
-  .jig-sidebar {
-    position: sticky;
-    inset-block-start: 20px;
-    display: flex;
-    height: calc(100dvh - 40px);
-    min-width: 0;
-    flex-direction: column;
-    gap: var(--spacing-4);
-    padding: 10px;
-    overflow: auto;
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    background: var(--color-background-surface);
-  }
+.jig-primary-nav {
+  width: 190px;
+  height: 100%;
+  margin-inline-end: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-container);
+  background: var(--color-background-surface);
+}
+
+.jig-content-frame {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.jig-content {
+  min-width: 0;
+  min-height: 100%;
+  padding: 14px 10px 20px 0;
+}
+
+.jig-mobile-header,
+.jig-mobile-surface-nav,
+.jig-mobile-quick-add {
+  display: none;
+}
 
   .jig-sidebar-brand {
     display: grid;
@@ -95,22 +103,6 @@ body {
     font-size: 0.75rem;
   }
 
-  .jig-sidebar-nav {
-    display: grid;
-    gap: var(--spacing-1);
-  }
-
-  .jig-sidebar-nav > * {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .jig-sidebar-nav [aria-current="page"] {
-    background: var(--color-accent-muted);
-    color: var(--color-text-accent);
-    font-weight: 700;
-  }
-
   .jig-sidebar-context {
     display: grid;
     gap: var(--spacing-0-5);
@@ -123,28 +115,10 @@ body {
     overflow-wrap: anywhere;
   }
 
-  .jig-main {
-    min-width: 0;
-    min-height: calc(100dvh - 40px);
-    overflow: auto;
-  }
-
-  .jig-main-banner {
-    padding: 14px 10px 0 0;
-  }
-
   .jig-content {
     min-width: 0;
     min-height: 100%;
     padding: 14px 10px 20px 0;
-  }
-
-  .jig-mobile-header {
-    display: none;
-  }
-
-  .jig-mobile-quick-add {
-    display: none;
   }
 
   .jig-view-actions,
@@ -162,11 +136,6 @@ body {
     border-radius: 999px;
     background: var(--color-background-muted);
     font-weight: 700;
-  }
-
-  .jig-status-control {
-    border: 1px solid var(--color-border);
-    background: var(--color-background-surface);
   }
 
   .jig-status-synchronized {
@@ -483,29 +452,9 @@ body {
     min-width: 2.75rem;
   }
 
-  .jig-week-column .jig-task-card {
-    display: grid;
-    grid-template-columns: 20px minmax(0, 1fr) 24px;
-    align-items: start;
-    column-gap: 4px;
-    --_item-inset-inline: 6px;
-    padding: 8px 6px;
-  }
-
   .jig-week-column .jig-task-card-leading {
     width: 20px;
     min-width: 0;
-  }
-
-  .jig-week-column .jig-task-menu {
-    width: 24px;
-  }
-
-  .jig-week-column .jig-task-menu-trigger {
-    width: 24px;
-    min-width: 24px;
-    min-height: 24px;
-    padding: 0;
   }
 
   .jig-week-column .jig-task-body {
@@ -618,49 +567,6 @@ body {
 
   .jig-task-menu {
     position: relative;
-  }
-
-  .jig-task-menu-trigger {
-    appearance: none;
-    display: flex;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    border-radius: var(--radius-element);
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-    list-style: none;
-    color: var(--color-text-secondary);
-    font-weight: 700;
-  }
-
-  .jig-task-menu-trigger:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  .jig-task-menu-panel {
-    position: absolute;
-    z-index: 20;
-    inset-block-start: calc(100% + var(--spacing-1));
-    inset-inline-end: 0;
-    display: grid;
-    min-width: 9rem;
-    gap: var(--spacing-0-5);
-    padding: var(--spacing-1);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-element);
-    background: var(--color-background-surface);
-    box-shadow: var(--shadow-elevation-med);
-  }
-
-  .jig-task-menu-panel > * {
-    width: 100%;
-    justify-content: flex-start;
   }
 
   .jig-drag-card-overlay {
@@ -1062,295 +968,183 @@ body {
   }
 
   @media (max-width: 47.999rem) {
-    .jig-shell {
-      display: block;
-      min-height: 100dvh;
-      padding: 0;
-    }
-
-    .jig-sidebar {
-      display: none;
-    }
-
-    .jig-main {
-      min-height: calc(100dvh - 24px);
-      margin: 12px;
-      overflow: clip;
-      border: 1px solid var(--color-border);
-      border-radius: 24px;
-      background: var(--color-background-surface);
-    }
-
-    .jig-mobile-header {
-      position: sticky;
-      inset-block-start: 0;
-      z-index: 30;
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 12px;
-      min-height: 70px;
-      padding:
-        12px
-        max(18px, env(safe-area-inset-right, 0px))
-        8px
-        max(18px, env(safe-area-inset-left, 0px));
-      border-block-end: 1px solid var(--color-border);
-      background: var(--color-background-surface);
-    }
-
-    .jig-mobile-brand {
-      font-size: 1.625rem;
-      font-weight: 700;
-    }
-
-    .jig-mobile-destination-menu {
-      position: relative;
-      align-self: end;
-      justify-self: start;
-      grid-column: 1 / 3;
-      grid-row: 2;
-    }
-
-    .jig-mobile-destination-menu > summary {
-      min-width: 0;
-      padding: 0;
-      cursor: pointer;
-      font-size: 0.6875rem;
-      font-weight: 700;
-      list-style: none;
-    }
-
-    .jig-mobile-destination-menu > summary::-webkit-details-marker {
-      display: none;
-    }
-
-    .jig-mobile-destination-panel {
-      position: absolute;
-      z-index: 40;
-      inset-block-start: calc(100% + 8px);
-      inset-inline-start: 0;
-      display: grid;
-      min-width: 9rem;
-      padding: 4px;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-element);
-      background: var(--color-background-surface);
-      box-shadow: var(--shadow-elevation-med);
-    }
-
-    .jig-mobile-destination-panel button {
-      appearance: none;
-      min-height: 2.75rem;
-      border: 0;
-      border-radius: var(--radius-element);
-      padding: var(--spacing-2);
-      background: transparent;
-      color: inherit;
-      font: inherit;
-      text-align: start;
-      cursor: pointer;
-    }
-
-    .jig-mobile-destination-panel button[aria-current="page"] {
-      background: var(--color-background-muted);
-      font-weight: 700;
-    }
-
-    .jig-mobile-header > .jig-status-control {
-      grid-column: 3;
-      grid-row: 1;
-      min-width: 88px;
-      min-height: 30px;
-      border-radius: 999px;
-    }
-
-    .jig-main-banner {
-      padding: 10px 14px 0;
-    }
-
-    .jig-content {
-      padding: 8px 14px calc(5rem + env(safe-area-inset-bottom, 0px));
-    }
-
-    .jig-reference-heading,
-    .jig-day-desktop-heading {
-      display: none;
-    }
-
-    .jig-week-toolbar,
-    .jig-day-toolbar {
-      min-height: 30px;
-      margin-block: 0 8px;
-      justify-content: flex-end;
-    }
-
-    .jig-month-navigation,
-    .jig-date-step-group,
-    .jig-week-toolbar .jig-reference-toolbar-actions > :last-child,
-    .jig-header-add {
-      display: none;
-    }
-
-    .jig-reference-toolbar-actions {
-      margin-inline-start: auto;
-    }
-
-    .jig-reference-toolbar-actions .jig-today-control {
-      min-width: 48px;
-      min-height: 30px;
-    }
-
-    .jig-view-heading {
-      align-items: flex-start;
-      flex-direction: column;
-      gap: var(--spacing-2);
-    }
-
-    .jig-view-actions {
-      width: 100%;
-      justify-content: flex-start;
-    }
-
-    .jig-view-actions .jig-status-control {
-      display: none;
-    }
-
-    .jig-week-strip {
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-      gap: 8px;
-      width: 100%;
-      margin-block-end: 32px;
-      overflow: visible;
-    }
-
-    .jig-week-strip-date {
-      width: auto;
-      min-width: 0;
-      height: 56px;
-      min-height: 56px;
-      max-height: 56px;
-      padding-block: 0;
-      padding-inline: 2px;
-    }
-
-    .jig-mobile-day-heading {
-      display: block;
-      margin-block-end: 28px;
-    }
-
-    .jig-mobile-day-heading h1,
-    .jig-mobile-day-heading p {
-      margin: 0;
-    }
-
-    .jig-mobile-day-heading h1 {
-      font-size: 1.125rem;
-    }
-
-    .jig-mobile-day-heading p {
-      margin-block-start: 5px;
-      color: var(--color-text-secondary);
-      font-size: 0.6875rem;
-    }
-
-    .jig-day-layout {
-      display: block;
-    }
-
-    .jig-day-primary {
-      display: block;
-    }
-
-    .jig-day-lists {
-      gap: 26px;
-    }
-
-    .jig-task-inspector {
-      display: none;
-    }
-
-    .jig-task-card-list {
-      gap: 10px;
-      padding: 0;
-    }
-
-    .jig-task-card {
-      min-height: 88px;
-    }
-
-    .jig-completed-section {
-      padding: 0;
-      border: 0;
-    }
-
-    .jig-mobile-quick-add {
-      position: fixed;
-      z-index: 25;
-      inset-inline-end: max(34px, env(safe-area-inset-right, 0px));
-      inset-block-end: max(45px, env(safe-area-inset-bottom, 0px));
-      display: inline-flex;
-      min-width: 62px;
-      min-height: 52px;
-      align-items: center;
-      justify-content: center;
-      border-radius: 24px;
-      box-shadow: var(--shadow-elevation-med);
-      font-size: 1.35rem;
-    }
-
-    .jig-task-menu-panel {
-      position: fixed;
-      inset-inline: 14px;
-      inset-block-end: calc(14px + env(safe-area-inset-bottom, 0px));
-      min-width: 0;
-    }
-
-    .jig-history-view,
-    .jig-settings-view,
-    .jig-week-view-narrow,
-    .jig-day-view {
-      max-width: none;
-      width: 100%;
-    }
-
-    .jig-history-groups,
-    .jig-settings-grid {
-      margin-block-start: 20px;
-    }
-
-    .jig-settings-grid {
-      grid-template-columns: 1fr;
-      gap: 20px;
-    }
-
-    .jig-local-first-note {
-      margin-block-start: 20px;
-    }
-
-    .jig-editor-actions {
-      align-items: stretch;
-      justify-content: flex-end;
-    }
-
-    .jig-editor-primary-actions {
-      width: 100%;
-      justify-content: flex-end;
-    }
-
-    .jig-editor-date-behavior {
-      padding: 10px 12px;
-    }
-
-    .jig-diagnostics > div {
-      grid-template-columns: 1fr;
-      gap: var(--spacing-0-5);
-    }
+  .jig-app-shell {
+    padding: 12px;
   }
+
+  .jig-primary-nav {
+    width: 100%;
+    height: auto;
+    margin-inline-end: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .jig-content-frame {
+    height: 100%;
+    overflow: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 24px;
+    background: var(--color-background-surface);
+  }
+
+  .jig-mobile-header {
+    display: flex;
+    height: 50px;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 18px;
+  }
+
+  .jig-mobile-brand {
+    font-size: 1.625rem;
+    font-weight: 700;
+  }
+
+  .jig-mobile-header .jig-status-control {
+    min-width: 88px;
+    min-height: 30px;
+  }
+
+  .jig-mobile-surface-nav {
+    display: flex;
+    height: 46px;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 18px;
+  }
+
+  .jig-mobile-destination-trigger,
+  .jig-mobile-today-control {
+    min-height: 30px;
+  }
+
+  .jig-content {
+    min-height: 0;
+    padding: 0 14px calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .jig-week-strip {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    margin-block-end: 32px;
+    overflow: visible;
+  }
+
+  .jig-week-strip-date {
+    width: auto;
+    min-width: 0;
+    height: 56px;
+    min-height: 56px;
+    padding: 0 2px;
+  }
+
+  .jig-mobile-day-heading {
+    display: block;
+    margin-block-end: 28px;
+  }
+
+  .jig-mobile-day-heading h1,
+  .jig-mobile-day-heading p {
+    margin: 0;
+  }
+
+  .jig-mobile-day-heading h1 {
+    font-size: 1.125rem;
+  }
+
+  .jig-mobile-day-heading p {
+    margin-block-start: var(--spacing-1);
+    color: var(--color-text-secondary);
+    font-size: 0.6875rem;
+  }
+
+  .jig-day-lists {
+    gap: 26px;
+  }
+
+  .jig-task-card-list {
+    gap: 10px;
+    padding-inline: 0;
+  }
+
+  .jig-task-card {
+    min-height: 88px;
+  }
+
+  .jig-completed-section {
+    padding: 0;
+    border: 0;
+  }
+
+  .jig-mobile-quick-add {
+    position: fixed;
+    z-index: 25;
+    inset-inline-end: max(34px, env(safe-area-inset-right, 0px));
+    inset-block-end: max(45px, env(safe-area-inset-bottom, 0px));
+    display: inline-flex;
+    min-width: 62px;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 24px;
+    box-shadow: var(--shadow-elevation-med);
+    font-size: 1.35rem;
+  }
+
+  .jig-history-view,
+  .jig-settings-view,
+  .jig-week-view-narrow,
+  .jig-day-view-narrow {
+    width: 100%;
+    max-width: none;
+  }
+
+  .jig-history-groups,
+  .jig-settings-grid {
+    margin-block-start: 20px;
+  }
+
+  .jig-settings-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .jig-local-first-note {
+    margin-block-start: 20px;
+  }
+
+  .jig-editor-mobile-frame {
+    width: calc(100dvw - 24px);
+    height: calc(100dvh - 24px);
+    margin: 12px;
+    padding: 18px;
+    overflow: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 24px;
+    background: var(--color-background-surface);
+  }
+
+  .jig-editor-actions {
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+
+  .jig-editor-primary-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .jig-diagnostics > div {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-0-5);
+  }
+}
+
 
   @media (prefers-reduced-motion: reduce) {
     .jig-date-drop-zone {
       transition: none;
     }
   }
-}
