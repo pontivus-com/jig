@@ -193,8 +193,11 @@ body {
     margin-block: 0 17px;
   }
 
+  .jig-day-toolbar {
+    justify-content: flex-end;
+  }
+
   .jig-month-navigation,
-  .jig-date-step-group,
   .jig-reference-toolbar-actions {
     display: flex;
     align-items: center;
