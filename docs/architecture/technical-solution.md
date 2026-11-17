@@ -282,7 +282,7 @@ Destination state is one discriminated value:
 type Destination = 'planner' | 'history' | 'settings'
 ```
 
-Planner is startup/default. The Jig mark sets `destination='planner'`; returning from History/Settings preserves the current in-session Planner date/week state. History and Settings are the only secondary destinations.
+Planner is startup/default. The Jig mark sets `destination='planner'`; returning from History/Settings preserves the current in-session displayed-week state. History and Settings are the only secondary destinations.
 
 ### 5.2 Planner temporal state and operations
 
