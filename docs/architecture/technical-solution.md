@@ -1052,7 +1052,7 @@ Keep appearance configuration inside the existing Settings → Appearance panel:
 2. Keep one Astryx `SegmentedControl` for exactly `System | Light | Dark`, now bound to `AppearanceMode`.
 3. The App/root owns the two values and passes setters only to Settings. Planner, `PlannerHeader`, Task cards, Task workspace and History receive no theme setter or theme-specific props.
 4. Browser-notification permission can remain an independent Settings row; changing notification permission is not a theme action.
-5. Theme/mode changes apply immediately because the root Theme receives the new registry theme/mode; current destination, displayed week, selected Task, unsaved workspace draft, drag state and canonical Task data are untouched.
+5. Theme/mode changes apply immediately because the root Theme receives the new registry theme/mode; the **setting event itself** changes presentation state only and does not mutate destination, displayed week or canonical Task data. Appearance controls exist only in Settings, and the existing navigation-to-Settings behavior has already dismissed any Planner/History Task workspace before the user can operate them; v1.0.6 does not change that workspace lifecycle.
 6. No header sun/moon icon, keyboard theme shortcut, context-menu theme item, Planner quick switch or duplicate appearance list is introduced.
 
 Browser tests assert that the Theme selector and Appearance segmented control exist in Settings and are absent from Planner/header/History/Task workspace.
