@@ -217,15 +217,6 @@ export function TaskRow({
             onChange={onToggleComplete}
             size="sm"
           />
-          {completed ? null : (
-            <span
-              className="jig-task-drag-handle"
-              aria-hidden="true"
-              title="Drag task"
-            >
-              ≡
-            </span>
-          )}
         </span>
       }
       label={
@@ -233,35 +224,46 @@ export function TaskRow({
           {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
           className="jig-task-body"
         >
-          {onSelect === undefined ? (
-            <span
-              className={
-                completed
-                  ? "jig-task-title jig-task-title-completed"
-                  : "jig-task-title"
-              }
-            >
-              {task.title}
-            </span>
-          ) : (
-            <button
-              type="button"
-              className={[
-                "jig-task-select",
-                "jig-task-title",
-                completed ? "jig-task-title-completed" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onPointerDown={stopPointer}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSelect();
-              }}
-            >
-              {task.title}
-            </button>
-          )}
+          <div className="jig-task-title-row">
+            {completed ? null : (
+              <span
+                className="jig-task-drag-handle"
+                aria-hidden="true"
+                title="Drag task"
+              >
+                ≡
+              </span>
+            )}
+            {onSelect === undefined ? (
+              <span
+                className={
+                  completed
+                    ? "jig-task-title jig-task-title-completed"
+                    : "jig-task-title"
+                }
+              >
+                {task.title}
+              </span>
+            ) : (
+              <button
+                type="button"
+                className={[
+                  "jig-task-select",
+                  "jig-task-title",
+                  completed ? "jig-task-title-completed" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onPointerDown={stopPointer}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect();
+                }}
+              >
+                {task.title}
+              </button>
+            )}
+          </div>
           <TaskMetadata task={task} />
         </div>
       }
