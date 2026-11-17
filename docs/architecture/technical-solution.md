@@ -375,6 +375,7 @@ When narrow drag is not enabled, touch-operable Move up/Move down commands call 
 - **Header geometry:** the desktop app-header outer block has one stable product-level minimum height large enough for the two-line Planner temporal centerpiece; History/Settings titles occupy the same center slot without collapsing the outer header. Apply the equivalent stable-height principle in narrow composition.
 - **Outside dismissal:** the main Planner/History content owner handles pointer-down outside Task rows and closes the open workspace. Workspace portals and Task rows/actions are excluded. Destination navigation continues to close workspace explicitly.
 - **Task menu commands:** menu priority changes issue the ordinary canonical `edit` command with only priority changed; completion/reopen and delete use existing commands; movement uses the existing exact-position command. No alternate Task mutation path is introduced.
+- **Operational-status color semantics:** synchronized and local-only are both healthy durability outcomes and use restrained success-family cues while preserving distinct text labels. Pending/retrying use warning, sync issue uses error, and unknown alone uses neutral/secondary styling.
 
 ### 5.6 Drag, accessibility and copy discipline
 
@@ -491,7 +492,7 @@ A Task's reminder time remains the same local clock time while its scheduled dat
 
 The planning/domain layers receive only these outcomes:
 
-- **Local only:** no usable repository transport is configured; local Task mutations and portable export continue.
+- **Local only:** no usable repository transport is configured; local Task mutations and portable export continue. The compact UI status remains labeled `Local only` but uses the restrained success family because local durability is healthy; it must not be visually grouped with unknown status or mislabeled as repository-synchronized.
 - **Pending / retrying:** export or synchronization has not completed yet.
 - **Synchronized:** the latest portable Jig snapshot has synchronized successfully.
 - **Sync issue:** synchronization cannot currently complete. Preserve SQLite/local Jig data; Git diagnosis/reconciliation remains external.
