@@ -35,7 +35,7 @@ The versioned SVGs under `design/reference/` retain structural provenance. The v
 
 ## Verification and implementation boundary
 
-The v1.0.0–v1.0.3 implementation plans/evidence remain historical for their published releases. The current UI implementation authority is the [v1.0.4 interaction correction plan](implementation/v1.0.4-ui-interaction-corrections.md), with certification recorded in [v1.0.4 implementation evidence](evidence/v1.0.4/README.md). External-system ownership remains governed by the existing product/technical boundaries and the historical v1.0.1 correction.
+The v1.0.0–v1.0.4 implementation plans/evidence are historical for their published releases. The current design authority is the v1.0.5 functional/technical/UI/theme contract above; a v1.0.5 implementation plan must be derived from those documents before corrective code is considered complete. The [v1.0.4 evidence](evidence/v1.0.4/README.md) is explicitly qualified by its post-release correction notice. External-system ownership remains governed by the existing product/technical boundaries and the historical v1.0.1 correction.
 
 Certified behavior includes:
 
@@ -44,13 +44,13 @@ Certified behavior includes:
 - No automatic changes to unrelated documents, branches or staging in the selected repository.
 - Immediate local SQLite saves plus automatic background export/commit/fetch/push/retry, including recovery from repository transport failure.
 - Explicit local-only, pending, synchronized and generic sync-issue status; repository failures never invalidate a successful local Task save and Jig does not model Git divergence or reconciliation.
-- All 22 functional requirements, pinned Astryx/dnd-kit interaction behavior, responsive UI behavior, System/Light/Dark semantic parity and measured lightweight idle operation.
+- Core Task/persistence/repository/installer/runtime behavior covered by the historical verification suites. v1.0.4 UI/drag/responsive certification is qualified by the post-release defect notice and must not be cited as proof of v1.0.5 conformance.
 
 Independent phone installation remains deferred. Git history, branch, merge and conflict reconciliation are outside Jig's product/domain scope and remain owned by the user's Git tooling; do not turn them into Jig workflow or UI state.
 ## UX/UI remediation
 
-- [v1.0.4 interaction correction implementation plan](implementation/v1.0.4-ui-interaction-corrections.md) — current.
-- [v1.0.4 implementation evidence](evidence/v1.0.4/README.md) — certified candidate evidence.
+- [v1.0.4 interaction correction implementation plan](implementation/v1.0.4-ui-interaction-corrections.md) — historical published-release implementation authority; superseded for the affected interaction/presentation behavior by the v1.0.5 corrective design.
+- [v1.0.4 implementation evidence](evidence/v1.0.4/README.md) — historical green-run evidence with a post-release defect qualification.
 - [v1.0.3 single Planner implementation plan](implementation/v1.0.3-single-planner-implementation-plan.md) — historical.
 - [v1.0.3 master-detail workspace correction](implementation/v1.0.3-master-detail-workspace.md) — superseded/historical.
 - [UX/UI conformance audit v1.0](design/ui-ux-conformance-audit-v1.0.md) — historical v1.0.2 baseline.
