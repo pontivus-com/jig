@@ -148,7 +148,7 @@ test("History exposes canonical scheduled date and actual completion time", asyn
   page,
 }) => {
   const today = await browserCivilDate(page);
-  const created = await apiCommand(page, {
+  await apiCommand(page, {
     type: "create",
     title: "History semantics",
     scheduled_date: today,
@@ -158,12 +158,15 @@ test("History exposes canonical scheduled date and actual completion time", asyn
     note: null,
     reminder_time: null,
   });
-  if (created.task === undefined) {
+  const created = (await apiState(page)).tasks.find(
+    (task) => task.title === "History semantics",
+  );
+  if (created === undefined) {
     throw new Error("created Task missing");
   }
   await apiCommand(page, {
     type: "complete",
-    task_id: created.task.id,
+    task_id: created.id,
   });
   await page.reload();
   await page.getByRole("button", { name: "History", exact: true }).click();
