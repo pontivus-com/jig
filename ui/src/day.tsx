@@ -3,7 +3,7 @@ import {
   List,
 } from "@astryxdesign/core";
 import type { ReactNode } from "react";
-import type { Task } from "../../src/core/task";
+import type { Task, TaskCommand } from "../../src/core/task";
 import {
   completedForScheduledDate,
   outstandingForDate,
@@ -12,7 +12,10 @@ import { DateDropZone, TaskDragProvider } from "./drag";
 import { formatCivilDate } from "./dates";
 import { DateStrip } from "./date-strip";
 import { SortableTaskRow, TaskRow } from "./task-row";
-import { TaskInspector } from "./task-inspector";
+import {
+  TaskWorkspaceContent,
+  type TaskWorkspaceMode,
+} from "./task-workspace";
 
 export interface DayViewProps {
   readonly tasks: readonly Task[];
@@ -23,10 +26,15 @@ export interface DayViewProps {
   readonly onToday: () => void;
   readonly statusControl: ReactNode;
   readonly selectedTask: Task | null;
+  readonly workspaceMode: TaskWorkspaceMode | null;
+  readonly workspaceDate: string;
+  readonly externalError: string | null;
+  readonly isSaving: boolean;
   readonly onSelectTask: (task: Task) => void;
   readonly onDelete: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
-  readonly onMoveToDate: (task: Task) => void;
+  readonly onWorkspaceModeChange: (mode: TaskWorkspaceMode | null) => void;
+  readonly onSave: (command: TaskCommand) => Promise<boolean>;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onMove: (
     taskId: string,
@@ -41,7 +49,6 @@ function ActiveRow({
   isSelected,
   onSelect,
   onEdit,
-  onMoveToDate,
   onToggleComplete,
   onMove,
 }: Readonly<{
@@ -50,7 +57,6 @@ function ActiveRow({
   isSelected: boolean;
   onSelect?: ((task: Task) => void) | undefined;
   onEdit: (task: Task) => void;
-  onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
   onMove: DayViewProps["onMove"];
 }>): React.ReactElement {
@@ -92,7 +98,6 @@ function ActiveRow({
               );
             }
       }
-      onMoveToDate={() => onMoveToDate(task)}
     />
   );
 }
@@ -103,7 +108,6 @@ export interface DayTaskListsProps {
   readonly selectedTask?: Task | null;
   readonly onSelectTask?: ((task: Task) => void) | undefined;
   readonly onEdit: (task: Task) => void;
-  readonly onMoveToDate: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onMove: DayViewProps["onMove"];
 }
@@ -114,7 +118,6 @@ export function DayTaskLists({
   selectedTask = null,
   onSelectTask,
   onEdit,
-  onMoveToDate,
   onToggleComplete,
   onMove,
 }: DayTaskListsProps): React.ReactElement {
@@ -157,7 +160,6 @@ export function DayTaskLists({
                       ? {}
                       : { onSelect: onSelectTask })}
                     onEdit={onEdit}
-                    onMoveToDate={onMoveToDate}
                     onToggleComplete={onToggleComplete}
                     onMove={onMove}
                   />
@@ -216,8 +218,14 @@ export function DayView({
   onToday,
   statusControl,
   selectedTask,
+  workspaceMode,
+  workspaceDate,
+  externalError,
+  isSaving,
   onSelectTask,
   onDelete,
+  onWorkspaceModeChange,
+  onSave,
   ...listProps
 }: DayViewProps): React.ReactElement {
   if (isNarrow) {
@@ -309,12 +317,19 @@ export function DayView({
             {...listProps}
           />
         </div>
-        <TaskInspector
-          task={selectedTask}
-          onToggleComplete={listProps.onToggleComplete}
-          onEdit={listProps.onEdit}
-          onMoveToDate={listProps.onMoveToDate}
+
+        <TaskWorkspaceContent
+          mode={workspaceMode ?? "view"}
+          task={workspaceMode === "create" ? null : selectedTask}
+          initiatingDate={workspaceDate}
+          externalError={externalError}
+          isSaving={isSaving}
+          surface="docked"
+          showHeading
+          onModeChange={onWorkspaceModeChange}
+          onSave={onSave}
           onDelete={onDelete}
+          onToggleComplete={listProps.onToggleComplete}
         />
       </div>
     </div>
