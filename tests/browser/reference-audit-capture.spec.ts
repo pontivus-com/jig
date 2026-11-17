@@ -217,3 +217,88 @@ test("capture current-head reference surfaces", async ({ page }) => {
   );
   await capture(page, "mobile-editor");
 });
+
+test("capture governed rollover evidence", async ({ page }) => {
+  await page.goto("/");
+  await resetCanonicalTasks(page);
+  const yesterday = await browserCivilDate(page, -1);
+  const today = await browserCivilDate(page);
+
+  await create(page, "Rolled forward from yesterday", yesterday, {
+    priority: "HIGH",
+    context: "Planning",
+    reminder: "09:00",
+  });
+  await page.reload();
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await expect(
+    page.getByText("Rolled forward from yesterday", { exact: true }),
+  ).toBeVisible();
+  const state = await apiState(page);
+  const rolled = state.tasks.find(
+    (task) => task.title === "Rolled forward from yesterday",
+  );
+  expect(rolled?.scheduled_date).toBe(today);
+  await capture(page, "desktop-day-rollover");
+});
+
+test("capture governed sync-issue evidence", async ({ page }) => {
+  await page.goto("/");
+  await resetCanonicalTasks(page);
+  const status = await page.evaluate(async () => {
+    const response = await fetch("/api/v1/status");
+    return response.json() as Promise<Record<string, unknown>>;
+  });
+
+  await page.route("**/api/v1/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...status,
+        ready: true,
+        repository_status: "sync-issue",
+      }),
+    });
+  });
+
+  await page.reload();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(
+    page.getByText("Repository synchronization issue", { exact: true }),
+  ).toBeVisible();
+  await capture(page, "sync-issue");
+});
+
+test("capture governed local-save-failure evidence", async ({ page }) => {
+  await page.goto("/");
+  await resetCanonicalTasks(page);
+  const today = await browserCivilDate(page);
+  await create(page, "Local save failure evidence", today, {
+    context: "Planning",
+  });
+  await page.reload();
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.route("**/api/v1/commands", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Local database write failed" }),
+    });
+  });
+
+  await page
+    .getByRole("checkbox", { name: "Complete Local save failure evidence" })
+    .click();
+  await expect(
+    page.getByText("Jig could not complete the operation", { exact: true }),
+  ).toBeVisible();
+  await capture(page, "local-save-failure");
+});
+
