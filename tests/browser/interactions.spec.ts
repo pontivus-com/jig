@@ -220,6 +220,36 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   expect(edited.note).toBe("Prepare clause comments.");
 });
 
+test("Day date inspection does not retarget or discard an active edit draft", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Draft identity contract", today);
+  await page.reload();
+
+  await runTaskAction(page, "Draft identity contract", "Edit");
+  const workspace = page.locator(
+    'section[aria-label="Edit task Draft identity contract"]',
+  );
+  await expect(workspace).toBeVisible();
+  await workspace.getByLabel("Title").fill("Unsaved draft identity");
+
+  await page
+    .locator('.jig-week-strip-date:not([aria-current="date"])')
+    .first()
+    .click();
+
+  await expect(workspace).toBeVisible();
+  await expect(workspace.getByLabel("Title")).toHaveValue(
+    "Unsaved draft identity",
+  );
+  await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  expect((await taskByTitle(page, "Draft identity contract")).title).toBe(
+    "Draft identity contract",
+  );
+});
+
 test("Move to date uses the same task workspace and canonical exact move command", async ({
   page,
 }) => {
