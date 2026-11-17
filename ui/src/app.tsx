@@ -3,6 +3,7 @@ import {
   AppShell,
   Banner,
   Button,
+  Icon,
   LayerProvider,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
@@ -45,6 +46,7 @@ import {
   type Destination,
 } from "./planner-header";
 import { ReminderMonitor } from "./reminder";
+import { repositoryStatusPresentation } from "./repository-status";
 import {
   isThemePreference,
   SettingsView,
@@ -88,23 +90,6 @@ function savedThemePreference(): ThemePreference {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function repositoryStatusLabel(status: ServiceStatus | null): string {
-  switch (status?.repository_status) {
-    case "local-only":
-      return "Local only";
-    case "pending":
-      return "Sync pending";
-    case "retrying":
-      return "Retrying";
-    case "synchronized":
-      return "Synced";
-    case "sync-issue":
-      return "Sync issue";
-    default:
-      return "Status";
-  }
 }
 
 function workspaceTaskId(state: TaskWorkspaceState): string | null {
@@ -433,15 +418,20 @@ export function App(): React.ReactElement {
     });
   }, []);
 
-  const repositoryStatus = status?.repository_status ?? "unknown";
+  const repositoryStatus = repositoryStatusPresentation(status);
   const statusControl = (
     <Button
-      label={repositoryStatusLabel(status)}
+      label={repositoryStatus.label}
       variant="ghost"
       size="sm"
-      icon={<span className="jig-status-dot" aria-hidden="true" />}
+      icon={
+        <Icon
+          icon={repositoryStatus.icon}
+          color={repositoryStatus.iconColor}
+        />
+      }
       onClick={() => navigateDestination("settings")}
-      className={`jig-status-control jig-status-${repositoryStatus}`}
+      className={`jig-status-control jig-status-${repositoryStatus.key}`}
     />
   );
 

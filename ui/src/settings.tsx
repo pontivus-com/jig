@@ -11,6 +11,7 @@ import type {
   Diagnostics,
   ServiceStatus,
 } from "../../src/shell/http";
+import { repositoryStatusPresentation } from "./repository-status";
 import {
   browserNotificationState,
   requestBrowserNotificationPermission,
@@ -31,23 +32,6 @@ export interface SettingsViewProps {
   readonly isOperating: boolean;
   readonly onThemePreferenceChange: (value: ThemePreference) => void;
   readonly onSync: () => Promise<void>;
-}
-
-function statusMessage(status: ServiceStatus | null): string {
-  switch (status?.repository_status) {
-    case "local-only":
-      return "Saved locally. Repository synchronization is not currently available.";
-    case "pending":
-      return "Saved locally. Repository synchronization is pending.";
-    case "retrying":
-      return "Saved locally. Repository synchronization is retrying.";
-    case "synchronized":
-      return "Local planning data and the configured repository are synchronized.";
-    case "sync-issue":
-      return "Local planning data is safe. Repository synchronization currently has an operational issue.";
-    default:
-      return "Repository status is unavailable.";
-  }
 }
 
 function notificationStatusMessage(
@@ -76,6 +60,7 @@ export function SettingsView({
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
     useState<BrowserNotificationState>(browserNotificationState);
+  const repositoryStatus = repositoryStatusPresentation(status);
 
   useEffect(() => {
     const refresh = (): void => {
@@ -140,7 +125,7 @@ export function SettingsView({
                   ? "Synced"
                   : "Synchronization"}
               </strong>
-              <p>{statusMessage(status)}</p>
+              <p>{repositoryStatus.message}</p>
               <dl className="jig-diagnostics">
                 <div>
                   <dt>Service</dt>
