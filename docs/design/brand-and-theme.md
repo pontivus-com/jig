@@ -113,6 +113,24 @@ White remains an explicit utility color.
 
 Ink and Amber are already near-complementary in hue. Do not add another decorative brand hue merely to make the interface more colorful.
 
+### Functional color families
+
+The **brand palette** and the **functional UI palette** are not the same thing.
+
+Jig's brand foundation remains Ink + Amber + Paper. The application theme additionally inherits the full Astryx semantic/color families required for interface meaning:
+
+- **blue / info** — information and persistent Task selection;
+- **teal** — temporal orientation such as exact current day;
+- **green / success** — healthy durability, Low priority, positive completion affordances;
+- **yellow / warning** — pending/retrying and genuine caution;
+- **red / error** — High priority, destructive/error outcomes;
+- **gray / Ink neutral** — ordinary structure, Normal priority, active navigation where no status meaning exists;
+- **Amber** — brand, primary action, focus and transient direct manipulation.
+
+These functional families are first-class parts of the application theme even though they are not additional Jig brand colors. Do not avoid a required functional hue merely to keep the interface visually limited to Ink/Amber/Paper.
+
+If a future governed UI state cannot be represented unambiguously and accessibly by the existing brand + Astryx functional families, the correct remedy is to add a new canonical theme role/family through this document and the authored theme source. It is **not** acceptable to overload an unrelated existing color.
+
 ## 3. Accessibility and functional Amber
 
 Brand Amber `#F59E0B` is the logo pin and the preferred Dark-mode accent. It is intentionally **not** the universal Light-mode interactive fill because it has insufficient separation from white for several UI roles.
@@ -200,9 +218,9 @@ Persistent product state, transient interaction state, priority and operational 
 |---|---|---|---|
 | Primary action / keyboard focus | Brand Amber | primary control fill/text as governed by Astryx; focus ring uses Amber | status colors |
 | Drag source / drop target | Brand Amber | transient outline/drag overlay emphasis only; disappears when drag ends | persistent selected-card fill |
-| Desktop current day | Ink / neutral structure | exact-date-only emphasized neutral border/header typography; no whole-column Amber fill | Amber selected-column treatment |
+| Desktop current day | temporal teal / cool structure | exact-date-only subtle teal border/header typography; no whole-column fill | Amber, selected-Task blue, status fill |
 | Planner selected day | none | no selected-day state or visual treatment exists | any persistent weekday/day-selection highlight |
-| Selected Task card | cool Ink/neutral selection | subtle cool neutral surface plus emphasized neutral border; focus ring remains separately Amber when keyboard-focused | Amber fill/border as the persistent selection state |
+| Selected Task card | information blue selection | subtle info-blue muted surface plus info-blue border; focus ring remains separately Amber when keyboard-focused | Amber, today teal, priority/status fill as the persistent selection state |
 | Priority High | semantic error | narrow leading error cue; optional restrained error label | Amber/warning |
 | Priority Normal | Ink / neutral | narrow quiet neutral cue; no loud badge | Amber |
 | Priority Low | semantic success / calm | narrow success-family cue; optional restrained label | info/Amber |
@@ -228,10 +246,10 @@ Feature CSS must consume these aliases for the product states below and must not
 
 | Token | Light | Dark | Sole semantic owner |
 |---|---|---|---|
-| `--jig-state-today-border` | Ink 300 `#C0C8D6` | Ink 600 `#5A667E` | exact current local day structural border |
-| `--jig-state-today-text` | Ink 950 `#0B1426` | Ink 50 `#F9FAFD` | exact current local day date text |
-| `--jig-state-task-selected-bg` | Ink 100 `#EFF2F7` | Ink 800 `#253046` | selected Task persistent surface |
-| `--jig-state-task-selected-border` | Ink 400 `#9BA5B8` | Ink 500 `#788499` | selected Task persistent border |
+| `--jig-state-today-border` | Astryx teal border role | Astryx teal border role | exact current local day structural border |
+| `--jig-state-today-text` | Astryx teal text role | Astryx teal text role | exact current local day date text |
+| `--jig-state-task-selected-bg` | Astryx info-muted role | Astryx info-muted role | selected Task persistent surface |
+| `--jig-state-task-selected-border` | Astryx info border role | Astryx info border role | selected Task persistent border |
 | `--jig-state-nav-active-bg` | Ink 100 `#EFF2F7` | Ink 800 `#253046` | active History/Settings destination |
 | `--jig-state-nav-active-text` | Ink 900 `#162034` | Ink 50 `#F9FAFD` | active History/Settings label/icon |
 | `--jig-state-drag-border` | Amber 700 `#B86C00` | Amber 500 `#F59E0B` | transient drag source/drop target outline |
@@ -275,10 +293,10 @@ This table is binding. “Astryx-owned” means use the stated public component 
 | **Ghost/icon button — Previous, Next, Jig Home, date-header +, menus, close** | transparent + primary/secondary Ink | neutral hover/pressed | active destination handled separately below | Amber focus ring | Astryx disabled | persistent Amber fill |
 | **History/Settings active destination** | ghost control anatomy | neutral hover/pressed | `--jig-state-nav-active-bg` + `--jig-state-nav-active-text`; optional emphasized neutral border | Amber focus ring | n/a | Amber-muted active fill; Task-selection background |
 | **Week/date label — ordinary** | surface/muted header + primary/secondary Ink | no click-selection state | n/a | n/a | n/a | accent/selected state |
-| **Exact current local day** | ordinary date section | n/a | `--jig-state-today-border` + `--jig-state-today-text`; font weight may increase; no whole-lane colored fill | n/a | n/a | Amber; success/warning/error |
+| **Exact current local day** | ordinary date section | n/a | `--jig-state-today-border` + `--jig-state-today-text`; font weight may increase; no whole-lane colored fill | n/a | n/a | Amber; selected-Task info blue; success/warning/error fill |
 | **Non-current date in other weeks** | ordinary date section | n/a | **no day-level state** | n/a | n/a | today or selected-day styling |
 | **Task card — ordinary** | card surface + ordinary border | `--jig-state-hover-bg` | n/a | Amber focus ring on interactive body | disabled controls only | accent-muted card fill |
-| **Task card — selected/open workspace target** | ordinary card | neutral hover remains subordinate | `--jig-state-task-selected-bg` + `--jig-state-task-selected-border` | Amber focus ring additionally | n/a | Amber fill/border; priority/status color as card fill |
+| **Task card — selected/open workspace target** | ordinary card | neutral hover remains subordinate | `--jig-state-task-selected-bg` + `--jig-state-task-selected-border` using the info-blue family | Amber focus ring additionally | n/a | Amber; today teal; priority/status color as card fill |
 | **Task drag source** | selected/ordinary card semantics underneath | n/a | `--jig-state-drag-border`; drag overlay shadow; reduced-opacity source is permitted | n/a during pointer drag | n/a | selected-task neutral as sole drag indicator |
 | **Date drop target** | ordinary/today structural state underneath | n/a | dashed/solid `--jig-state-drag-border` + `--jig-state-drag-bg` | n/a | n/a | today neutral; success/warning/error |
 | **High priority** | no card fill change | n/a | narrow `--jig-priority-high` leading cue + restrained error-family High label if shown | n/a | n/a | Amber/warning |
@@ -304,10 +322,10 @@ The following resolved values are the intended visual result for Jig-owned persi
 
 | Product role | Light | Dark |
 |---|---|---|
-| Today border | Ink 300 `#C0C8D6` | Ink 600 `#5A667E` |
-| Today text | Ink 950 `#0B1426` | Ink 50 `#F9FAFD` |
-| Selected Task background | Ink 100 `#EFF2F7` | Ink 800 `#253046` |
-| Selected Task border | Ink 400 `#9BA5B8` | Ink 500 `#788499` |
+| Today border | Astryx teal border: `#90D7C8` | Astryx teal border: `#4FB1A0` |
+| Today text | Astryx teal text: `#00463D` | Astryx teal text: `#90D7C8` |
+| Selected Task background | Astryx info-muted: `#B9D7FF` | Astryx info-muted: `#88BCFF3D` |
+| Selected Task border | Astryx info border/text role: `#0067CE` | Astryx info border/text role: `#A1CAFF` |
 | Active destination background | Ink 100 `#EFF2F7` | Ink 800 `#253046` |
 | Active destination text | Ink 900 `#162034` | Ink 50 `#F9FAFD` |
 | Drag border / direct manipulation | Amber 700 `#B86C00` | Amber 500 `#F59E0B` |
@@ -315,7 +333,7 @@ The following resolved values are the intended visual result for Jig-owned persi
 | Normal priority cue | Ink 500 `#788499` | Ink 400 `#9BA5B8` |
 | Focus ring | Amber 700 `#B86C00` | Amber 500 `#F59E0B` |
 
-These values are chosen so persistent structural state stays cool/neutral and direct manipulation/focus stays warm/Amber. No persistent product state may use `--color-accent-muted` simply because it is selected.
+These values deliberately use the wider functional palette: temporal orientation is teal, selected Task is info blue, active destination is neutral Ink, direct manipulation/focus is Amber, High is red/error, Normal is neutral, and Low/healthy status is green/success. No persistent product state may use `--color-accent-muted` simply because it is selected.
 
 ## 7. Theme implementation contract
 
