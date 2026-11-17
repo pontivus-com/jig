@@ -48,14 +48,33 @@ async function displayedDateValue(
   }, civilDate);
 }
 
+async function waitForResponsiveHeader(
+  page: Page,
+  width: number,
+): Promise<void> {
+  await expect(
+    page.locator(
+      width >= 1168
+        ? ".jig-app-header-desktop"
+        : ".jig-app-header-narrow",
+    ),
+  ).toBeVisible();
+}
+
 async function headerHeight(page: Page): Promise<number> {
-  const header = page.locator(".jig-app-header");
-  await expect(header).toBeVisible();
-  const box = await header.boundingBox();
-  if (box === null) {
+  let height: number | null = null;
+  await expect
+    .poll(async () => {
+      const box = await page.locator(".jig-app-header").boundingBox();
+      height = box?.height ?? null;
+      return height;
+    })
+    .not.toBeNull();
+
+  if (height === null) {
     throw new Error("Application header geometry unavailable");
   }
-  return box.height;
+  return height;
 }
 
 test("desktop uses explicit Planner navigation with one seven-date open canvas", async ({
@@ -278,6 +297,7 @@ test("header is flat compact and invariant across destinations", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await waitForResponsiveHeader(page, 1440);
   const plannerHeight = await headerHeight(page);
   expect(plannerHeight).toBeLessThanOrEqual(44);
 
@@ -306,6 +326,7 @@ test("header is flat compact and invariant across destinations", async ({
   expectNear(settingsHeight, plannerHeight, 1);
 
   await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
   const narrowHeight = await headerHeight(page);
   expect(narrowHeight).toBeLessThanOrEqual(56);
 });
@@ -462,6 +483,7 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
     { width: 390, height: 844 },
   ]) {
     await page.setViewportSize(viewport);
+    await waitForResponsiveHeader(page, viewport.width);
     for (const selector of [
       ".jig-app-shell",
       ".jig-app-header",
@@ -494,6 +516,7 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
   }
 
   await page.setViewportSize({ width: 1168, height: 900 });
+  await waitForResponsiveHeader(page, 1168);
   const desktopGeometry = await page.locator(".jig-week-column").evaluateAll(
     (elements) => elements.slice(0, 2).map((element) => {
       const box = element.getBoundingClientRect();
@@ -505,6 +528,7 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
   expect(desktopGeometry[0]?.width ?? 0).toBeGreaterThanOrEqual(160);
 
   await page.setViewportSize({ width: 1167, height: 900 });
+  await waitForResponsiveHeader(page, 1167);
   const narrowGeometry = await page.locator(".jig-week-column").evaluateAll(
     (elements) => elements.slice(0, 2).map((element) => {
       const box = element.getBoundingClientRect();
