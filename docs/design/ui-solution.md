@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.5 UX/UI realization v0.14, 2026-11-17. It implements the ten atomic JIG-105 functional/technical solution areas and removes responsive semantic drift between desktop and narrow/mobile.
+**Status:** Binding v1.0.5 UX/UI realization v0.14, 2026-11-17. It implements the eleven atomic JIG-105 functional/technical solution areas and removes responsive semantic drift between desktop and narrow/mobile.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–12 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
