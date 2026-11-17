@@ -155,7 +155,10 @@ export function TaskCardPreview({
   task,
 }: Readonly<{ task: Task }>): React.ReactElement {
   return (
-    <div className="jig-task-card jig-drag-card-overlay" aria-hidden="true">
+    <div
+      className={`jig-task-card jig-task-priority-${task.priority.toLowerCase()} jig-drag-card-overlay`}
+      aria-hidden="true"
+    >
       <div className="jig-task-card-preview-row">
         <span className="jig-task-card-preview-checkbox">□</span>
         <span className="jig-task-drag-handle" aria-hidden="true">
@@ -189,6 +192,7 @@ export function TaskRow({
       {...(onSelect === undefined ? {} : { onClick: onSelect })}
       className={[
         "jig-task-card",
+        `jig-task-priority-${task.priority.toLowerCase()}`,
         isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
       ]
