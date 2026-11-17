@@ -1,4 +1,4 @@
-import { Button } from "@astryxdesign/core";
+import { IconButton } from "@astryxdesign/core";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
@@ -8,6 +8,7 @@ import {
   todayCivilDate,
 } from "./dates";
 import { PlannerTaskList } from "./planner-list";
+import { JigIcon } from "./jig-icons";
 
 export interface WeekViewProps {
   readonly tasks: readonly Task[];
@@ -59,19 +60,18 @@ function DatedSection({
           <strong id={`week-date-${date}`}>
             {formatPlannerDateHeader(date)}
           </strong>
-          <Button
+          <IconButton
             label={`Add task to ${formatCivilDate(date, {
               weekday: "long",
               month: "long",
               day: "numeric",
             })}`}
+            icon={<JigIcon name="add" color="inherit" />}
             variant="ghost"
             size="sm"
             className="jig-date-add"
             onClick={() => onAdd(date)}
-          >
-            <span aria-hidden="true">+</span>
-          </Button>
+          />
         </div>
         <span
           className="jig-task-count"
