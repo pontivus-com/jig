@@ -517,12 +517,6 @@ body {
     white-space: nowrap;
   }
 
-  .jig-task-meta a {
-    color: inherit;
-    text-decoration: underline;
-    text-underline-offset: 0.15em;
-  }
-
   .jig-drag-card-overlay {
     width: min(20rem, 100%);
     padding: var(--spacing-2);
