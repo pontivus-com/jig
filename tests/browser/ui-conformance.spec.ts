@@ -312,12 +312,16 @@ test("narrow shell keeps all destinations reachable and the seven-date strip fit
   await expect(page.locator(".jig-task-inspector")).toHaveCount(0);
 
   await page.locator(".jig-mobile-destination-trigger").click();
+  const mobileNavigation = page.locator(".jig-primary-nav");
+  await expect(mobileNavigation).toBeVisible();
   for (const label of ["Week", "Day", "History", "Settings"]) {
     await expect(
-      page.getByRole("button", { name: label, exact: true }),
+      mobileNavigation.getByRole("button", { name: label, exact: true }),
     ).toBeVisible();
   }
-  await page.getByRole("button", { name: "Day", exact: true }).last().click();
+  await mobileNavigation
+    .getByRole("button", { name: "Day", exact: true })
+    .click();
 
   const strip = page.locator(".jig-week-strip");
   await expect(strip.locator(".jig-week-strip-date")).toHaveCount(7);
