@@ -23,7 +23,8 @@ body {
 
 .jig-app-shell {
   box-sizing: border-box;
-  padding: 20px;
+  margin: 0;
+  padding: 0;
   background: var(--color-background-body);
 }
 
@@ -38,25 +39,30 @@ body {
 .jig-content {
   min-width: 0;
   min-height: 100%;
-  padding: var(--spacing-3) var(--spacing-1) var(--spacing-5);
+  margin: 0;
+  padding: 0;
 }
 
   .jig-app-header {
     width: 100%;
-    background: var(--color-background-surface);
+    margin: 0;
+    border-block-end: var(--border-width) solid var(--color-border);
+    background: var(--color-background-body);
   }
 
   .jig-app-header-desktop {
     display: grid;
-    min-height: 5.5rem;
+    height: 2.75rem;
+    min-height: 0;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    gap: var(--spacing-4);
-    padding: var(--spacing-2) var(--spacing-3);
+    gap: var(--spacing-1);
+    padding: 0 var(--spacing-1);
   }
 
   .jig-header-left {
     justify-self: start;
+    min-width: 0;
   }
 
   .jig-header-center {
@@ -65,10 +71,12 @@ body {
   }
 
   .jig-header-right,
-  .jig-header-destinations {
+  .jig-header-destinations,
+  .jig-header-mobile-actions {
     display: flex;
+    min-width: 0;
     align-items: center;
-    gap: var(--spacing-1);
+    gap: var(--spacing-0-5);
   }
 
   .jig-header-right {
@@ -82,35 +90,27 @@ body {
   .jig-header-brand {
     display: inline-flex;
     align-items: center;
-    gap: var(--spacing-1);
-  }
-
-  .jig-header-brand strong {
-    font-size: var(--font-size-lg);
   }
 
   .jig-header-brand .jig-brand-logo-wrap {
-    width: var(--spacing-6);
+    width: calc(var(--spacing-6) * 1.65);
     height: var(--spacing-6);
   }
 
   .jig-header-temporal {
-    display: grid;
-    justify-items: center;
-    gap: var(--spacing-1);
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-0-5);
   }
 
   .jig-header-week-range,
   .jig-header-destination-title {
+    min-width: 0;
     white-space: nowrap;
-    font-size: var(--font-size-lg);
-    font-weight: var(--font-weight-bold);
-  }
-
-  .jig-header-week-controls {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-1);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
   }
 
   .jig-header-nav-active {
@@ -120,29 +120,17 @@ body {
 
   .jig-app-header-narrow {
     display: grid;
-    min-height: 7rem;
-    gap: var(--spacing-2);
-    padding: var(--spacing-2) var(--spacing-3) var(--spacing-3);
-  }
-
-  .jig-header-mobile-band {
-    display: flex;
+    height: 3.5rem;
+    min-height: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-2);
-  }
-
-  .jig-header-mobile-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-1);
+    gap: var(--spacing-0-5);
+    padding: 0 var(--spacing-0-5);
   }
 
   .jig-brand-logo-wrap {
     position: relative;
     display: block;
-    width: var(--spacing-8);
-    height: var(--spacing-8);
     flex: 0 0 auto;
   }
 
@@ -424,11 +412,11 @@ body {
     gap: var(--spacing-1);
   }
 
-  .jig-task-body-draggable {
+  .jig-task-card:not(.jig-task-card-completed) {
     cursor: grab;
   }
 
-  .jig-task-body-draggable:active {
+  .jig-task-card:not(.jig-task-card-completed):active {
     cursor: grabbing;
   }
 
@@ -808,52 +796,66 @@ body {
     }
   }
 
-  @media (max-width: 75.999rem) {
+  @media (max-width: 72.999rem) {
     .jig-app-shell {
-      padding: var(--spacing-3);
+      margin: 0;
+      padding: 0;
     }
 
     .jig-content-frame {
       height: 100%;
+      margin: 0;
       overflow: auto;
-      border: var(--border-width) solid var(--color-border);
-      border-radius: calc(2 * var(--radius-container));
-      background: var(--color-background-surface);
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
     }
 
     .jig-content {
       min-height: 0;
-      padding: var(--spacing-3) var(--spacing-3) calc(5rem + env(safe-area-inset-bottom, 0px));
+      margin: 0;
+      padding: 0;
     }
 
-    .jig-app-header {
-      border-radius: 0;
+    .jig-header-center {
+      overflow: hidden;
     }
 
-    .jig-header-mobile-band .jig-status-control {
+    .jig-header-temporal {
+      overflow: hidden;
+    }
+
+    .jig-header-week-range {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .jig-header-mobile-actions .jig-status-control {
       min-width: 0;
     }
 
-    .jig-planner-narrow {
+    .jig-week-board {
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--spacing-4);
     }
 
-    .jig-planner-narrow .jig-week-column {
+    .jig-week-board .jig-week-column {
       min-height: 0;
       padding-block: var(--spacing-1) var(--spacing-3);
       border-inline-start: 0;
     }
 
-    .jig-planner-narrow .jig-week-column + .jig-week-column {
+    .jig-week-board .jig-week-column + .jig-week-column {
       border-block-start: var(--border-width) solid var(--color-border);
     }
 
-    .jig-planner-narrow .jig-week-column > section {
+    .jig-week-board .jig-week-column > section {
       min-height: 0;
     }
 
-    .jig-planner-narrow .jig-week-task-area {
+    .jig-week-board .jig-week-task-area {
       min-height: var(--spacing-8);
     }
 
