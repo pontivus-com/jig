@@ -1,6 +1,6 @@
 # Jig documentation
 
-**Status:** v1.0.5 corrective design in progress (2026-11-17). Jig v1.0.4 is published and immutable, but post-release validation found interaction/presentation defects that its certification did not detect. The canonical functional, technical, UI and theme authorities now define v1.0.5 as the corrective patch.
+**Status:** v1.0.5 corrective implementation complete and certified (2026-11-17); release transition pending. Jig v1.0.4 remains published and immutable. The v1.0.5 functional, technical, UI/theme and implementation authorities are satisfied by PR #23 and the reviewed v1.0.5 evidence.
 
 Jig is a small, local-first, just-in-time daily planner. It schedules attention rather than duplicating the underlying project work. All planning data must live under the Jig directory of the user-selected personal Git repository, with a lightweight local desktop service and automatic Git sync.
 
@@ -15,7 +15,7 @@ Jig is a small, local-first, just-in-time daily planner. It schedules attention 
 7. [v1.0.5 release-blocker correction implementation plan](implementation/v1.0.5-release-blocker-correction-plan.md) — current one-to-one execution authority mapping JIG-105-FR-01…11 → JIG-105-SD-01…11 → J105-IMP-01…11. The [v1.0.4 interaction correction implementation plan](implementation/v1.0.4-ui-interaction-corrections.md) is historical for the published v1.0.4 candidate. The [v1.0.3 single Planner plan](implementation/v1.0.3-single-planner-implementation-plan.md), earlier [v1.0.3 master-detail workspace correction](implementation/v1.0.3-master-detail-workspace.md), [v1.0.2 UX/UI remediation plan](implementation/ui-ux-conformance-remediation-v1.0.md), [v1.0.1 ownership-boundary correction](implementation/v1.0.1-ownership-boundary-correction-plan.md), and [v1 MVP plan](implementation/v1-mvp-implementation-plan.md) are historical.
 8. [Installation](install.md) — supported existing-repository installation, upgrade, Git-native continuity and uninstall.
 9. [Releases](releases/README.md) — **canonical release authority**: mandatory `release/vX.Y.Z` metadata transition, explicit `package.json.version = X.Y.Z`, immutable tag/publication validity criteria, binary asset contract and publication channel.
-10. [v1.0.4 implementation evidence](evidence/v1.0.4/README.md) — permanent Verify result, architecture/browser certification and reviewed Light/Dark desktop/narrow visual evidence. The [v1 release-candidate evidence](evidence/v1/README.md) remains the historical v1 baseline.
+10. [v1.0.5 implementation evidence](evidence/v1.0.5/README.md) — current corrective implementation certification: exact product candidate, permanent Verify result, architecture/browser gates and reviewed desktop/narrow Light/Dark visual evidence. The [v1.0.4 evidence](evidence/v1.0.4/README.md) remains the qualified historical record; the [v1 release-candidate evidence](evidence/v1/README.md) remains the historical v1 baseline.
 
 Functional requirements define *what* users can observe. Technical solution owns *how* data and runtime behave. UI solution owns *how* users see and manipulate those functions. No part of the design inherits Order's workflow/lifecycle domain, creates DTO hierarchies, or introduces duplicate task authority.
 
@@ -35,7 +35,7 @@ The versioned SVGs under `design/reference/` retain structural provenance. The v
 
 ## Verification and implementation boundary
 
-The v1.0.0–v1.0.4 implementation plans/evidence are historical for their published releases. The current design authority is the v1.0.5 functional/technical/UI/theme contract above and the current execution authority is the [v1.0.5 release-blocker correction implementation plan](implementation/v1.0.5-release-blocker-correction-plan.md). The [v1.0.4 evidence](evidence/v1.0.4/README.md) is explicitly qualified by its post-release correction notice. External-system ownership remains governed by the existing product/technical boundaries and the historical v1.0.1 correction.
+The v1.0.0–v1.0.4 implementation plans/evidence are historical for their published releases. The v1.0.5 functional/technical/UI/theme contract and [implementation plan](implementation/v1.0.5-release-blocker-correction-plan.md) are now implemented and certified by the [v1.0.5 evidence](evidence/v1.0.5/README.md). The [v1.0.4 evidence](evidence/v1.0.4/README.md) is explicitly qualified by its post-release correction notice. External-system ownership remains governed by the existing product/technical boundaries and the historical v1.0.1 correction.
 
 Certified behavior includes:
 
@@ -49,7 +49,8 @@ Certified behavior includes:
 Independent phone installation remains deferred. Git history, branch, merge and conflict reconciliation are outside Jig's product/domain scope and remain owned by the user's Git tooling; do not turn them into Jig workflow or UI state.
 ## UX/UI remediation
 
-- [v1.0.5 release-blocker correction implementation plan](implementation/v1.0.5-release-blocker-correction-plan.md) — current; exact FR/SD/IMP traceability for the corrective patch.
+- [v1.0.5 release-blocker correction implementation plan](implementation/v1.0.5-release-blocker-correction-plan.md) — implemented; exact FR/SD/IMP traceability for the corrective patch.
+- [v1.0.5 implementation evidence](evidence/v1.0.5/README.md) — PASS; exact product candidate, permanent Verify and reviewed visual evidence.
 - [v1.0.4 interaction correction implementation plan](implementation/v1.0.4-ui-interaction-corrections.md) — historical published-release implementation authority; superseded for the affected interaction/presentation behavior by the v1.0.5 corrective design.
 - [v1.0.4 implementation evidence](evidence/v1.0.4/README.md) — historical green-run evidence with a post-release defect qualification.
 - [v1.0.3 single Planner implementation plan](implementation/v1.0.3-single-planner-implementation-plan.md) — historical.
