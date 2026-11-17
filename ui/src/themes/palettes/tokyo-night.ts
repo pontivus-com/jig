@@ -4,7 +4,7 @@ import type { CommunityPalette } from "../community-theme";
  * Tokyo Night reviewed generated palette authority:
  * Day: extras/lua/tokyonight_day.lua
  * Night: extras/lua/tokyonight_night.lua
- * Upstream source lineage: storm.lua + night.lua + official day inversion.
+ * Upstream source lineage: storm.lua + night.lua + official day inversion.\n * Reviewed blobs are recorded in THIRD_PARTY_NOTICES.md. License: Apache-2.0.
  */
 export const tokyoNightPalette = {
   body: ["#e1e2e7", "#1a1b26"],
