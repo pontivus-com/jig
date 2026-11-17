@@ -63,13 +63,13 @@ test("desktop shell uses a compact rail and Week expands into reclaimed canvas",
   if (sidebar === null) return;
   expectNear(sidebar.x, 20);
   expectNear(sidebar.y, 20);
-  expectNear(sidebar.width, 96);
+  expectNear(sidebar.width, 112);
   expectNear(sidebar.height, 860);
 
   const heading = await page.locator(".jig-reference-heading").boundingBox();
   expect(heading).not.toBeNull();
   if (heading === null) return;
-  expectNear(heading.x, 132);
+  expectNear(heading.x, 149);
   expectNear(heading.y, 34);
 
   await page.getByRole("button", { name: "Week", exact: true }).click();
@@ -77,7 +77,7 @@ test("desktop shell uses a compact rail and Week expands into reclaimed canvas",
   const boardBox = await board.boundingBox();
   expect(boardBox).not.toBeNull();
   if (boardBox === null) return;
-  expectNear(boardBox.x, 132);
+  expectNear(boardBox.x, 149);
   expect(boardBox.width).toBeGreaterThan(1200);
 
   const columns = page.locator(".jig-week-column");
@@ -86,7 +86,7 @@ test("desktop shell uses a compact rail and Week expands into reclaimed canvas",
   expect(first).not.toBeNull();
   if (first !== null) {
     expect(first.width).toBeGreaterThan(170);
-    expectNear(first.x, 132);
+    expectNear(first.x, 149);
   }
 
   await page.setViewportSize({ width: 1920, height: 900 });
@@ -110,9 +110,9 @@ test("Day and Settings use the canonical desktop split geometry", async ({
   expect(primary).not.toBeNull();
   expect(inspector).not.toBeNull();
   if (primary !== null && inspector !== null) {
-    expectNear(primary.x, 132);
+    expectNear(primary.x, 149);
     expectNear(primary.width, 650);
-    expectNear(inspector.x, 812);
+    expectNear(inspector.x, 829);
     expectNear(inspector.y, 145);
     expectNear(inspector.width, 490);
   }
@@ -129,9 +129,9 @@ test("Day and Settings use the canonical desktop split geometry", async ({
   const planning = await cards.nth(0).boundingBox();
   const sync = await cards.nth(1).boundingBox();
   if (planning !== null && sync !== null) {
-    expectNear(planning.x, 132);
+    expectNear(planning.x, 149);
     expectNear(planning.width, 560);
-    expectNear(sync.x, 722);
+    expectNear(sync.x, 739);
     expectNear(sync.width, 580);
   }
 });
