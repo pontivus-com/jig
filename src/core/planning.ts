@@ -134,8 +134,14 @@ export function assertTaskSet(tasks: readonly Task[]): void {
     ids.add(task.id);
 
     if (task.completed_at === null) {
+      if (task.position === null) {
+        throw new PlanningError(
+          "INVALID_OPERATION",
+          `Outstanding Task ${task.id} is missing its position`,
+        );
+      }
       const positions = positionsByDate.get(task.scheduled_date) ?? [];
-      positions.push(task.position as number);
+      positions.push(task.position);
       positionsByDate.set(task.scheduled_date, positions);
     }
   }
@@ -597,8 +603,8 @@ export function startOfWeekMonday(civilDate: string): string {
   return addCivilDays(civilDate, -daysSinceMonday);
 }
 
-export function weekDates(selectedDate: string): readonly string[] {
-  const monday = startOfWeekMonday(selectedDate);
+export function weekDates(displayedWeekStart: string): readonly string[] {
+  const monday = startOfWeekMonday(displayedWeekStart);
 
   return Array.from({ length: 7 }, (_, index) =>
     addCivilDays(monday, index),
