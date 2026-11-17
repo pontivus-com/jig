@@ -96,7 +96,6 @@ async function touchDrag(
     throw new Error("Touch drag geometry unavailable");
   }
 
-  const pointerId = 41;
   const start = {
     x: sourceBox.x + sourceBox.width / 2,
     y: sourceBox.y + sourceBox.height / 2,
@@ -105,63 +104,41 @@ async function touchDrag(
     x: targetBox.x + targetBox.width / 2,
     y: targetBox.y + targetBox.height / 2,
   };
+  const client = await page.context().newCDPSession(page);
+  const point = (x: number, y: number) => ({
+    x,
+    y,
+    radiusX: 1,
+    radiusY: 1,
+    force: 1,
+    id: 1,
+  });
 
-  await source.dispatchEvent("pointerdown", {
-    pointerId,
-    pointerType: "touch",
-    isPrimary: true,
-    button: 0,
-    buttons: 1,
-    clientX: start.x,
-    clientY: start.y,
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [point(start.x, start.y)],
   });
   await page.waitForTimeout(280);
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
   for (let step = 1; step <= 8; step += 1) {
     const progress = step / 8;
-    await page.evaluate(
-      ({ id, x, y }) => {
-        document.dispatchEvent(
-          new PointerEvent("pointermove", {
-            pointerId: id,
-            pointerType: "touch",
-            isPrimary: true,
-            button: 0,
-            buttons: 1,
-            clientX: x,
-            clientY: y,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
-      },
-      {
-        id: pointerId,
-        x: start.x + (end.x - start.x) * progress,
-        y: start.y + (end.y - start.y) * progress,
-      },
-    );
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        point(
+          start.x + (end.x - start.x) * progress,
+          start.y + (end.y - start.y) * progress,
+        ),
+      ],
+    });
   }
 
-  await page.evaluate(
-    ({ id, x, y }) => {
-      document.dispatchEvent(
-        new PointerEvent("pointerup", {
-          pointerId: id,
-          pointerType: "touch",
-          isPrimary: true,
-          button: 0,
-          buttons: 0,
-          clientX: x,
-          clientY: y,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-    },
-    { id: pointerId, x: end.x, y: end.y },
-  );
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await client.detach();
 }
 
 test("unfinished prior-day cards roll into today in the canonical Planner", async ({
@@ -221,7 +198,7 @@ test("non-drag movement uses the same exact index semantics", async ({
         .filter(
           (task) =>
             task.completed_at === null &&
-            task.scheduled_date === today,
+            task.scheduled_date === firstDate,
         )
         .sort(
           (left, right) =>
@@ -368,11 +345,14 @@ test("whole-card desktop drag moves exactly once without runtime errors or selec
 test("narrow touch drag reorders within a date and does not open the workspace", async ({
   page,
 }) => {
-  const today = await browserCivilDate(page);
-  await createTask(page, "Touch first", today);
-  await createTask(page, "Touch second", today);
-  await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
+  const firstDate = await page.locator("[data-date]").first().getAttribute("data-date");
+  if (firstDate === null) {
+    throw new Error("Planner first date unavailable");
+  }
+  await createTask(page, "Touch first", firstDate);
+  await createTask(page, "Touch second", firstDate);
+  await page.reload();
 
   const source = await taskCard(page, "Touch first");
   const target = await taskCard(page, "Touch second");
@@ -399,14 +379,20 @@ test("narrow touch drag reorders within a date and does not open the workspace",
 test("narrow touch drag moves into an empty adjacent date and persists", async ({
   page,
 }) => {
-  const today = await browserCivilDate(page);
-  const dayOfWeek = await page.evaluate(() => new Date().getDay());
-  const offset = dayOfWeek === 0 ? -1 : 1;
-  const destinationDate = await browserCivilDate(page, offset);
-
-  await createTask(page, "Touch cross-date", today);
-  await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
+  const dates = await page.locator("[data-date]").evaluateAll((elements) =>
+    elements
+      .map((element) => element.getAttribute("data-date"))
+      .filter((value): value is string => value !== null),
+  );
+  const sourceDate = dates[0];
+  const destinationDate = dates[1];
+  if (sourceDate === undefined || destinationDate === undefined) {
+    throw new Error("Planner adjacent dates unavailable");
+  }
+
+  await createTask(page, "Touch cross-date", sourceDate);
+  await page.reload();
 
   const source = await taskCard(page, "Touch cross-date");
   const target = page.locator(`[data-date="${destinationDate}"]`);
