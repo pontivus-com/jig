@@ -5,7 +5,13 @@
   "type": "module",
   "dependencies": {
     "@astryxdesign/core": "0.7.13",
+    "@astryxdesign/theme-butter": "0.7.13",
+    "@astryxdesign/theme-chocolate": "0.7.13",
+    "@astryxdesign/theme-gothic": "0.7.13",
+    "@astryxdesign/theme-matcha": "0.7.13",
     "@astryxdesign/theme-neutral": "0.7.13",
+    "@astryxdesign/theme-stone": "0.7.13",
+    "@astryxdesign/theme-y2k": "0.7.13",
     "@dnd-kit/dom": "0.5.3",
     "@dnd-kit/react": "0.5.3",
     "@stylexjs/stylex": "0.19.1",
@@ -28,6 +34,7 @@
     "build": "vite build",
     "test:browser": "playwright test",
     "verify": "bun run typecheck && bun run test && bun run build && bun run test:browser",
-    "theme:check": "astryx theme build ./ui/src/jig-theme.source.ts --check"
+    "theme:check": "bun scripts/build-themes.ts --check",
+    "theme:build": "bun scripts/build-themes.ts"
   }
 }
