@@ -28,7 +28,7 @@ body {
 }
 
 .jig-primary-nav {
-  width: 96px;
+  width: 112px;
   height: 100%;
   margin-inline-end: var(--spacing-4);
   border: var(--border-width) solid var(--color-border);
