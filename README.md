@@ -33,10 +33,13 @@
 Jig is a local-first just-in-time daily planner for one person's lightweight
 intentions across projects and obligations.
 
-The Week view gives each date an explicit ordered list. Day keeps the selected
-date focused while unfinished prior-day work is persistently rolled into the
-current local date. History keeps completed work inspectable. Optional priority, context, references, notes and reminder time add
-just enough detail without creating another workflow system.
+Planner is the single planning surface. On desktop it shows seven dates as
+explicit ordered tracks; on narrow/mobile the same week state becomes a
+seven-date strip plus the selected date's outstanding list. Unfinished prior-day
+work is persistently rolled into the current local date, while History keeps
+completed work inspectable and reopenable. Optional priority, context, references,
+notes and reminder time add just enough detail without creating another workflow
+system.
 
 The actual project, issue, WorkItem or document remains authoritative in its own
 system. Jig owns only the planning intention: **when to attend to it, where it
@@ -46,7 +49,7 @@ sits in the day, whether it is complete, and whether a reminder is due.**
 
 1. **Put an intention on a date.** Title and date are enough; everything else is optional.
 2. **Order the day explicitly.** Drag or use non-drag movement controls. Priority can assist initial placement but never silently reorders an established plan.
-3. **Roll unfinished work forward.** On the local day boundary, unfinished earlier Tasks are persistently moved into the current date so Day, Week, restart and synchronization agree on the same plan.
+3. **Roll unfinished work forward.** On the local day boundary, unfinished earlier Tasks are persistently moved into the current date so Planner, restart and synchronization agree on the same plan.
 4. **Save locally first.** SQLite commits the planning change immediately. Repository export/synchronization happens independently in the background.
 5. **Keep Git mechanics outside the planner.** Jig synchronizes only Jig-owned portable data and reports coarse local/pending/synchronized/sync-issue outcomes. Repository acquisition, topology, signing, credentials and reconciliation remain ordinary Git responsibilities.
 
@@ -99,17 +102,17 @@ jig uninstall       # remove runtime/configuration; preserve repo planning data
 
 ## Release status
 
-Jig **1.0.2** is the current release candidate. The v1 implementation remains
-certified against JIG-FR-01–22, with v1.0.2 adding persisted daily rollover,
-refined reminder delivery, re-certified Astryx UX/UI architecture and a stricter
-release-validity contract.
+Jig **1.0.3** is the current release candidate. This patch release replaces the
+separate Day/Week navigation model with one responsive Planner, a centered
+week-navigation centerpiece, minimal History/Settings navigation and one shared
+Task workspace rendered as a desktop Drawer or narrow/mobile BottomSheet.
 
 Release publication remains PR-bound and immutable: the merged release commit is
-re-verified before the `v1.0.2` tag and Linux x64/arm64 assets are published.
+re-verified before the `v1.0.3` tag and Linux x64/arm64 assets are published.
 
-- [v1.0.2 browser fidelity evidence](docs/evidence/v1.0.2/README.md)
+- [v1.0.3 implementation evidence](docs/evidence/v1.0.3/README.md)
 - [release process, validity contract and asset matrix](docs/releases/README.md)
-- [v1.0.2 release notes](docs/releases/v1.0.2.md)
+- [v1.0.3 release notes](docs/releases/v1.0.3.md)
 - [changelog](CHANGELOG.md)
 
 ## Documentation
