@@ -192,81 +192,92 @@ export function TaskEditor({
           width="100%"
         />
 
-        <DateInput
-          label="Date"
-          value={draft.scheduledDate as ISODateString}
-          onChange={(value) =>
-            update("scheduledDate", value ?? draft.scheduledDate)
-          }
-          isRequired
-          weekStartsOn="mon"
-        />
-
-        <TextInput
-          label="Context"
-          value={draft.context}
-          onChange={(value) => update("context", value)}
-          isOptional
-          width="100%"
-          placeholder="Project, client, or place"
-        />
-
-        <div className="jig-editor-group-field">
-          <FieldLabel
-            label="Priority"
-            inputID={priorityGroupId}
-            labelID={priorityLabelId}
-            isGroupLabel
-          />
-          <SegmentedControl
-            id={priorityGroupId}
-            aria-labelledby={priorityLabelId}
-            label="Priority"
-            value={draft.priority}
-            onChange={(value) => update("priority", value as Priority)}
-            layout="fill"
-          >
-            <SegmentedControlItem value="HIGH" label="High" />
-            <SegmentedControlItem value="NORMAL" label="Normal" />
-            <SegmentedControlItem value="LOW" label="Low" />
-          </SegmentedControl>
-        </div>
-
-        <TimeInput
-          label="Reminder"
-          value={
-            draft.reminderTime.length === 0
-              ? undefined
-              : (draft.reminderTime as ISOTimeString)
-          }
-          onChange={(value) => update("reminderTime", value ?? "")}
-          isOptional
-          hasClear
-        />
-
-        <TextInput
-          label="Reference"
-          value={draft.reference}
-          onChange={(value) => update("reference", value)}
-          isOptional
-          width="100%"
-          placeholder="https://… or a path/locator to copy"
-        />
-
-        <TextArea
-          label="Notes"
-          value={draft.note}
-          onChange={(value) => update("note", value)}
-          isOptional
-          rows={4}
-        />
-
         {task === null ? null : (
+          <>
+          <DateInput
+            label="Date"
+            value={draft.scheduledDate as ISODateString}
+            onChange={(value) =>
+              update("scheduledDate", value ?? draft.scheduledDate)
+            }
+            isRequired
+            weekStartsOn="mon"
+          />
+  
+          <TextInput
+            label="Context"
+            value={draft.context}
+            onChange={(value) => update("context", value)}
+            isOptional
+            width="100%"
+            placeholder="Project, client, or place"
+          />
+  
+          <div className="jig-editor-group-field">
+            <FieldLabel
+              label="Priority"
+              inputID={priorityGroupId}
+              labelID={priorityLabelId}
+              isGroupLabel
+            />
+            <SegmentedControl
+              id={priorityGroupId}
+              aria-labelledby={priorityLabelId}
+              label="Priority"
+              value={draft.priority}
+              onChange={(value) => update("priority", value as Priority)}
+              layout="fill"
+            >
+              <SegmentedControlItem value="HIGH" label="High" />
+              <SegmentedControlItem value="NORMAL" label="Normal" />
+              <SegmentedControlItem value="LOW" label="Low" />
+            </SegmentedControl>
+          </div>
+  
+          <TimeInput
+            label="Reminder"
+            value={
+              draft.reminderTime.length === 0
+                ? undefined
+                : (draft.reminderTime as ISOTimeString)
+            }
+            onChange={(value) => update("reminderTime", value ?? "")}
+            isOptional
+            hasClear
+          />
+  
+          <TextInput
+            label="Reference"
+            value={draft.reference}
+            onChange={(value) => update("reference", value)}
+            isOptional
+            width="100%"
+            placeholder="https://… or a path/locator to copy"
+          />
+  
+          <TextArea
+            label="Notes"
+            value={draft.note}
+            onChange={(value) => update("note", value)}
+            isOptional
+            rows={4}
+          />
+  
+  
+          </>
+        )}
+
+        {task === null ? (
+          <p className="jig-secondary-copy">
+            Add the title now. Date and defaults come from this planning context;
+            open Edit afterward for optional details.
+          </p>
+        ) : (
           <div className="jig-editor-date-behavior">
             <strong>Date change behavior</strong>
             <span>
-              Changing date uses priority-guided insertion. Dragging uses the
-              exact drop position.
+              Editing the date reschedules the task. Week drag-and-drop owns
+              direct visual movement and exact drop position.
             </span>
           </div>
         )}
