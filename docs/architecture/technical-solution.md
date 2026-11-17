@@ -778,6 +778,7 @@ The following facts were verified before selecting the design and are implementa
 - The current width CSS has the correct base `max-width: 50rem`, but a `max-width: 72.999rem` media rule removes that cap. The resulting 1168px→1167px transition expands a secondary screen from about 800px to about 1167px. That media reset is the defect.
 - The current reminder monitor explicitly chooses Astryx Toast when `document.visibilityState === "visible"` and browser `Notification` only while hidden. That code matches the old technical contract but contradicts JIG-106-FR-06; both the contract and code path must become single-channel browser Notification.
 - The current header renders two external SVG images, one fixed Ink/Amber and one fixed White/Amber, and CSS switches them by Light/Dark. External `<img>` SVG resources cannot consume the active application's semantic CSS custom properties, so that mechanism cannot satisfy theme-family-aware branding.
+- The pinned Astryx preset surface mappings prove that Jig cannot choose one generic Task-surface token globally: Neutral dark resolves `--color-background-card` to the same value as body while its `--color-background-surface` is elevated; Gothic resolves `--color-background-surface` to the same value as body while its `--color-background-card` is elevated. Jig therefore needs one **product semantic** `--jig-task-surface` whose value is supplied by each theme wrapper from the appropriate upstream elevated role. Feature CSS still has one owner and no theme branch.
 
 Pinned Astryx evidence:
 - `defineTheme`: https://github.com/meta/astryx/blob/v0.7.13/packages/core/src/theme/defineTheme.ts
@@ -919,13 +920,13 @@ The Jig product-local aliases become **palette-independent references to Astryx 
 --jig-status-healthy-text        -> --color-text-success
 --jig-state-hover-bg             -> --color-overlay-hover
 --jig-state-pressed-bg           -> --color-overlay-pressed
---jig-task-surface               -> --color-background-surface
+--jig-task-surface               -> theme wrapper's elevated Task-surface role
 --jig-task-border                -> --color-border-emphasized
 --jig-brand-primary              -> --color-icon-primary
 --jig-brand-accent               -> --color-icon-accent
 ```
 
-`--jig-task-surface` intentionally maps to `--color-background-surface`, not blindly to `--color-background-card`: the pinned Neutral dark theme can resolve card and body to the same color, whereas surface is elevated from body. The product requirement that Task cards remain clearly separated from Planner canvas therefore remains true across the upstream theme family.
+`--jig-task-surface` is the one product owner for Task elevation, but its theme-source value is intentionally allowed to select the correct upstream elevated role. The pinned presets demonstrate why: Neutral dark has card==body and therefore maps Jig Task surface to `--color-background-surface`; Gothic has surface==body and therefore maps Jig Task surface to `--color-background-card`. Other wrappers choose the published surface/card role that is actually elevated from body and pass the same computed-style/contrast certification. Community themes define body/surface/card distinctly and make the same explicit choice. This is not feature-level branching: the Task component always consumes only `--jig-task-surface`.
 
 For **published Astryx presets**, inherit their complete semantic/component mapping and add only the shared Jig aliases above. For each **community theme**, override the entire Astryx color-semantic inventory used by Core/Jig rather than only body/text/accent. At minimum this includes: body/surface/card/popover/muted/inverted backgrounds; accent/accent-muted/on-accent/neutral; primary/secondary/disabled/accent text and icons; overlays/hover/pressed; ordinary/emphasized borders; skeleton/track/shadow/tint; info/success/warning/error strong, muted, on-fill, text, icon and border roles; and the named blue/cyan/gray/green/orange/pink/purple/red/teal/yellow background/border/icon/text families. This prevents a community theme from leaking Neutral blue/green/red or neutral surfaces through an Astryx component.
 
