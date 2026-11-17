@@ -1,7 +1,7 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.6 UX/UI realization v0.16, 2026-11-18. v1.0.5 remains the responsive/interaction baseline; v1.0.6 adds a bounded desktop content measure for History and Settings only.
-**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–12 and JIG-FR-01–22.
+**Status:** Binding v1.0.6 UX/UI realization v0.17, 2026-11-18. v1.0.5 remains the responsive/interaction baseline; v1.0.6 governs continuous History/Settings content measure, the curated multi-theme application catalogue, independent System/Light/Dark appearance, complete semantic re-theming, theme-aware in-application branding, browser-level reminder delivery and Settings-only appearance configuration.
+**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
 
@@ -46,16 +46,17 @@ A compact always-available synchronization indicator truthfully distinguishes sy
 
 ## 3. Visual language
 
-Use the published **Astryx 0.7.13 core** with Jig's canonical theme defined by [Brand and theme system](brand-and-theme.md). `jigTheme` extends Astryx Neutral so Astryx continues to own spacing, typography mechanics, component structure and semantic status families, while Jig owns the product palette and its Light/Dark role mapping.
+Use the published **Astryx 0.7.13 core** and its public theme system as the reusable visual foundation. v1.0.6 exposes fourteen complete application themes: Jig; Astryx Neutral, Butter, Chocolate, Gothic, Matcha, Stone and Y2K; and the governed community families Gruvbox, Dracula, Solarized, Nord, Catppuccin and Tokyo Night. Theme family changes palette/typography/component-theme presentation only; application structure and product semantics do not fork.
 
-Theme ownership is singular:
+Theme ownership remains singular:
 
-- `ui/src/theme.css` owns raw Jig Ink/Amber/Paper primitives;
-- `ui/src/jig-theme.source.ts` is the only authored semantic mapping from those primitives into Astryx roles and extends `@astryxdesign/theme-neutral/built`;
-- pinned `@astryxdesign/cli@0.7.13` compiles that source with `astryx theme build` into committed `ui/src/jig.js`, `ui/src/jig.css` and declarations; generated artifacts are compiler-owned and are never hand-edited;
-- `ui/src/styles.css` imports the generated theme CSS and styles only Jig-owned product composition using public Astryx tokens;
-- `ui/src/app.tsx` imports the generated `jigTheme` from `ui/src/jig.js` and mounts the one root Jig Theme owner;
-- CI runs `theme build --check` so source/artifact drift is a release failure.
+- one typed presentation registry owns the exact fourteen Theme choices and one independent `System | Light | Dark` appearance value;
+- the default Jig theme retains the governed Ink/Amber/Paper palette; the Astryx presets reuse their pinned 0.7.13 theme definitions; community themes are complete semantic palette mappings over Astryx Neutral mechanics;
+- all Jig-authored theme sources are compiled with pinned `@astryxdesign/cli@0.7.13`; generated artifacts are compiler-owned and never hand-edited;
+- one shared Jig product-token contract maps today, selection, navigation, drag, priority, operational status, Task elevation and brand paint to theme semantics;
+- `ui/src/styles.css` remains composition-only, consumes semantic tokens and never branches on theme name or embeds theme palette literals;
+- `ui/src/app.tsx` mounts exactly one root Astryx `Theme` using the selected Theme preset plus independent appearance mode;
+- CI verifies every authored theme source/artifact pair, not just the default Jig theme.
 
 ### 3.1 UI implementation authority
 
@@ -77,12 +78,12 @@ Visual rules:
 1. **Compact, low-chrome and scan-oriented.** The week is an open canvas, not seven boxed panels. Prefer whitespace, typography and at most hairline separators to heavy outlines. Task cards remain discrete interactive units but use restrained borders/shadows. Avoid nested frames, thick lane borders, gratuitous shadows/gradients and repeated decorative lines.
 2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
 3. **One primary mutation per active form.** Add task is prominent at Planner level. The editable Task workspace has Save as its primary form action; completion/reopen and Delete remain independent Task commands rather than alternate form modes.
-4. **Distinct state vocabulary.** Current day, selected Task, drag target and priority are different semantics and must not collapse onto one brand/neutral family. Current day is an exact-date, subtle teal border/header treatment. Selected Task uses a subtle info-blue surface/border. Drag target uses transient Amber. Priority remains a narrow leading cue: High error/red, Normal quiet neutral, Low calm/success-green.
-5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/drag emphasis rather than the generic color for every active state. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
+4. **Distinct state vocabulary.** Current day, selected Task, drag target, priority, focus and operational status are different semantics and must not collapse onto one visual treatment. The default Jig palette currently renders these as teal/info/Amber/status families, but v1.0.6 theme families may change the literal hues. Their semantic roles, precedence and non-color cues remain invariant.
+5. **Brand restraint.** The default Jig theme retains Ink/Paper/Amber identity. Other theme families may use their own governed palette. The application must never force Jig Ink/White/Amber onto product states or in-application wordmark paint when another theme is active.
 
 #### v1.0.4 state appearance matrix
 
-**Color authority:** the exact component/state colors, Light/Dark resolved values, semantic aliases, button variants, hover/pressed/focus/disabled behavior and prohibited substitutions are governed by [Brand and theme §§6.2–6.4](brand-and-theme.md#62-canonical-jig-product-semantic-tokens). This table summarizes product meaning only; it does not authorize alternative colors.
+**Color authority:** the exact component/state semantic owners, Light/Dark resolution, product aliases, button variants, hover/pressed/focus/disabled behavior and prohibited substitutions are governed by [Technical solution JIG-106-SD-04](../architecture/technical-solution.md) and the [Brand/theme contract](brand-and-theme.md). The literal Jig hues in the historical v1.0.4 table describe the default Jig theme only; every v1.0.6 theme preserves the same meanings without being required to use those hues.
 
 | UI state | Appearance contract |
 |---|---|
@@ -100,9 +101,12 @@ Visual rules:
 | Sync/save error | error family |
 | Unknown status | neutral grey |
 
-6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics must remain clear in both themes without relying on color alone.
-7. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, displayed week or pending form draft changes as a side effect of a breakpoint.
-8. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable, but the final production palette is the canonical Jig theme. No duplicate dark-mode structural mockup set is required.
+6. **Theme and appearance parity.** Theme family and appearance are independent. Every one of the fourteen v1.0.6 Theme presets supports System, Light and Dark; System follows browser/platform preference changes while explicit Light/Dark stays explicit. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics remain clear without relying on color alone.
+7. **Settings-only configuration.** Theme family is selected through one bounded Theme selector and appearance through one System/Light/Dark segmented control in Settings → Appearance. No theme or mode control appears in Planner, the header, Task cards/workspace, History actions or contextual menus.
+8. **Theme-aware brand.** The compact header uses one canonical Jig wordmark geometry. Its foreground and alignment pin consume the active theme's semantic brand roles; changing theme/mode never changes logo geometry or product identity.
+9. **Reminder presentation.** Due reminders use browser/OS Notification only while Jig is open and permission is granted. Page visibility/focus does not change channel. There is no reminder Toast fallback or duplicate.
+10. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, displayed week, selected Task or pending form draft changes as a side effect of a breakpoint or appearance change.
+11. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable; production palette/brand paint is resolved by the active semantic theme. No duplicate structural mockup set is required for each theme.
 
 ## 4. Screen specifications
 
@@ -134,9 +138,9 @@ Remove descriptive/meta copy. The desktop interface must not display phrases suc
 
 Planner, History and Settings share the same global application-header language and adjacent desktop navigation group. The active destination is clear through the governed neutral active-navigation treatment without reintroducing a sidebar.
 
-Unlike Planner's seven-track canvas, History and Settings are reading/configuration surfaces and must not stretch their content across an ultrawide desktop. At desktop composition their screen content uses a centered **50rem / approximately 800px maximum width**. The full-width application header and content frame remain edge-to-edge; only the semantic History/Settings content column is bounded. Below the 73rem breakpoint both secondary screens return to the full available width.
+Unlike Planner's seven-track canvas, History and Settings are reading/configuration surfaces and continuously use a centered **50rem / approximately 800px maximum width** whenever that much space is available. The full-width application header and content frame remain edge-to-edge; only the semantic History/Settings content column is bounded. The outer measure does **not** switch at the 73rem Planner composition breakpoint: below 50rem available width it simply becomes full available width.
 
-Settings keeps its two-column desktop grouping inside that bounded measure using two equal fluid columns rather than fixed 560px/580px tracks. On narrow/mobile it remains one column.
+Settings keeps its internal two-column grouping inside that bounded measure using two equal fluid columns rather than fixed 560px/580px tracks. Its internal grid may reflow to one column at the existing 73rem layout boundary without removing or changing the outer 50rem content measure.
 
 On History, selecting a completed Task opens the same right-side Task workspace while History remains active. Settings has no Planner week navigator because week controls operate only on Planner state. Clicking Jig returns to Planner and preserves the session's Planner date/week state.
 
@@ -243,7 +247,7 @@ The field hierarchy is always Title, Date, Context, Priority, Reminder, Referenc
 | Application frame | Astryx AppShell with no SideNav and no automatic mobile drawer |
 | Global/header controls | Astryx Button/IconButton plus DropdownMenu or Popover mechanics; Jig owns only three-zone/centered geometry |
 | Planner temporal state | Jig pure presentation state: displayed week start only |
-| Lists, labels, fields, alerts, toasts, semantic theme | Astryx published primitives |
+| Lists, labels, fields, alerts and semantic theme | Astryx published primitives; reminder delivery itself is browser Notification, not Toast |
 | Desktop Task workspace | Astryx non-modal right Drawer |
 | Narrow Task workspace | Astryx BottomSheet rising from the bottom |
 | Sortable rows/drop zones | @dnd-kit/react only |
@@ -268,14 +272,17 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
 | Mobile header/menu | compact Jig/sync/Add/hamburger application band; centered week range + grouped controls; seven dated Task sections follow; hamburger menu contains the same Planner/History/Settings destination set as desktop from one semantic owner, uses normalized semantic icons/text, and is not a drawer |
 | Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
-| Secondary screen measure | desktop History and Settings content <=50rem/~800px and centered; Settings two-column content does not overflow; Planner remains full-width; narrow History/Settings return to full available width |
+| Secondary screen measure | History and Settings follow `min(available width, 50rem)` continuously at 1440/1168/1167/1024/900/800/600/390px; no discontinuity at 73rem; Planner remains full-width; Settings column reflow is independent |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
 | Same/cross-day drag | desktop and narrow/mobile card-body drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
 | Narrow drag/order | touch card-body drag supports same-date/cross-date/empty-date movement through the same sortable/drop owners as desktop; Move up/down remains a non-drag alternative without a second order representation |
 | Completion/History | completing removes from Planner; History remains inspectable/reopenable |
 | Daily rollover | same canonical Task appears in current-date Planner bucket on desktop and narrow |
 | Delete | cancel is no-op; confirm permanently removes Task; Git round trip preserves absence |
-| Theme/color/card legibility | System/Light/Dark implement the canonical component/state matrix and Task-card surface contract on desktop and narrow: today teal, selected Task info-blue, drag/focus Amber, High red, Normal neutral, Low/healthy green, warning yellow, unknown neutral; base Task cards remain visibly separated from the Planner canvas |
+| Theme/appearance semantic parity | All fourteen Theme presets resolve coherently in forced Light/Dark and System-Light/System-Dark; a live System preference change repaints without state loss; every governed surface/state follows JIG-106-SD-04; Task cards remain visibly separated from Planner canvas; combined selection/focus/priority/drag meanings remain distinct |
+| Appearance placement | Theme selector + System/Light/Dark segmented control exist only in Settings → Appearance; selection applies immediately and preserves destination, displayed week, Task/workspace draft and canonical data |
+| In-application brand | one canonical inline Jig wordmark geometry on desktop/narrow; foreground and pin resolve through active theme semantic roles with required contrast; no fixed Light/Dark application-logo switching |
+| Reminder delivery | with granted permission an eligible due reminder creates browser Notification whether visible/hidden/focused/unfocused; no reminder Toast; unsupported/default/denied states do not claim delivery and successful keys do not duplicate |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
 
 Final production evidence is the running Astryx UI in Playwright/browser screenshots. Reference SVGs govern structure, not pixel-perfect library anatomy.
