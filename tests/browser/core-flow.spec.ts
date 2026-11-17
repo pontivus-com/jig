@@ -115,7 +115,7 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   expect(tasks).toContain("Concurrent canonical task");
   expect(tasks.filter((title) => title === "Must not replay")).toHaveLength(0);
 
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
 });
 
 test("responsive reflow preserves an open editor draft and appearance remains presentation-only", async ({ page }) => {
@@ -125,7 +125,7 @@ test("responsive reflow preserves an open editor draft and appearance remains pr
 
   await page.setViewportSize({ width: 640, height: 900 });
   await expect(dialog.getByLabel("Title")).toHaveValue("Draft survives reflow");
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
   await navigateTo(page, "Settings");
