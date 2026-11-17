@@ -4,6 +4,7 @@ import {
 } from "@astryxdesign/core";
 import type { ReactNode } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
+import type { TaskDraft } from "./task-editor";
 import {
   completedForScheduledDate,
   outstandingForDate,
@@ -28,6 +29,7 @@ export interface DayViewProps {
   readonly selectedTask: Task | null;
   readonly workspaceMode: TaskWorkspaceMode | null;
   readonly workspaceDate: string;
+  readonly draft: TaskDraft;
   readonly externalError: string | null;
   readonly isSaving: boolean;
   readonly onSelectTask: (task: Task) => void;
@@ -36,6 +38,7 @@ export interface DayViewProps {
   readonly onMoveToDate: (task: Task) => void;
   readonly onWorkspaceMove: (task: Task, destinationDate: string) => Promise<boolean>;
   readonly onWorkspaceModeChange: (mode: TaskWorkspaceMode | null) => void;
+  readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onMove: (
@@ -229,6 +232,7 @@ export function DayView({
   selectedTask,
   workspaceMode,
   workspaceDate,
+  draft,
   externalError,
   isSaving,
   onSelectTask,
@@ -236,6 +240,7 @@ export function DayView({
   onMoveToDate,
   onWorkspaceMove,
   onWorkspaceModeChange,
+  onDraftChange,
   onSave,
   ...listProps
 }: DayViewProps): React.ReactElement {
@@ -335,11 +340,13 @@ export function DayView({
           mode={workspaceMode ?? "view"}
           task={workspaceMode === "create" ? null : selectedTask}
           initiatingDate={workspaceDate}
+          draft={draft}
           externalError={externalError}
           isSaving={isSaving}
           surface="docked"
           showHeading
           onModeChange={onWorkspaceModeChange}
+          onDraftChange={onDraftChange}
           onSave={onSave}
           onMove={onWorkspaceMove}
           onDelete={onDelete}
