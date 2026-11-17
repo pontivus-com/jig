@@ -1,76 +1,100 @@
-# Jig v1.0.3 browser evidence — master-detail workspace
+# Jig v1.0.3 implementation evidence — single Planner
 
-**Status:** Browser fidelity evidence for the v1.0.3 master-detail UX/UI correction.  
-**Captured production revision:** `cf62c0b34db6c458a09ea7397e122a9c5df38664`  
-**Evidence archive commit:** `678cbb43edaa991274444355a408702acd75e1c0`  
-**Capture run:** GitHub Actions `Capture v1.0.3 UI evidence` run #24 (`44020558106`)  
-**Environment:** Ubuntu GitHub runner, Bun 1.4.4, pinned Playwright Chromium.
+**Status:** Current v1.0.3 implementation evidence. Automated certification is governed by the permanent architecture/browser suites. Final reviewed screenshot capture is required before this evidence set is marked visually complete.
 
-The screenshots were generated from the real production Vite build and loopback service. The capture revision includes the final user-visible implementation: readable compact navigation rail, full-canvas Week grid, distinct drag grip, docked desktop-Day workspace, non-modal Week Drawer, and narrow/mobile Drawer editor. Commits after the capture are test/documentation/evidence-harness cleanup only unless this file is explicitly recertified again.
+The earlier v1.0.3 master-detail screenshots certified a superseded Day/Week/SideNav design. They have been removed from the active evidence tree on this branch and remain available only through Git history. They are **not** acceptance evidence for the binding single-Planner design.
 
-## Captured surfaces
+## Governing contracts
 
-| Screenshot | Contract certified |
-| --- | --- |
-| `desktop-day-workspace.jpg` | 112px Day-first icon rail, selected Task details docked on the right, no Task modal |
-| `desktop-week-full.jpg` | seven fluid Week tracks using the full 1440px planning canvas |
-| `desktop-week-task-drawer.jpg` | selected Week Task opens the non-modal right Drawer while the Week board remains underneath |
-| `desktop-week-task-edit.jpg` | Edit replaces detail content inside the same Drawer rather than opening another modal |
-| `desktop-week-wide.jpg` | Week materially expands on a 1920px viewport rather than retaining the old fixed maximum |
-| `mobile-task-edit-drawer.jpg` | narrow Task editing uses the public right-side Drawer with the planning surface retained behind it |
+- [Planning workbench functional design](../../requirements/planning-workbench.md)
+- [Technical solution](../../architecture/technical-solution.md)
+- [UI solution](../../design/ui-solution.md)
+- [v1.0.3 single Planner implementation plan](../../implementation/v1.0.3-single-planner-implementation-plan.md)
+- [Desktop Planner structural reference](../../design/reference/desktop-planner-v1.0.3.svg)
+- [Mobile Planner structural reference](../../design/reference/mobile-planner-v1.0.3.svg)
 
-## Measured geometry
+## Automated certification
 
-### Desktop 1440 × 900
-
-- primary rail: `x=20, y=20, width=112, height=860`;
-- Day primary column: `x=149, width=650`;
-- Day docked Task workspace: `x=829, width=490, height=680`;
-- Week board: `x=149, width=1261`;
-- first Week day track: `width=173.28125`;
-- open Week Drawer: `x=960, width=480, height=900`;
-- opening the Drawer does **not** change the Week board's `1261px` width.
-
-### Desktop 1920 × 900
-
-- Week board: `x=149, width=1741`;
-- first Week day track: `width=241.84375`.
-
-The board therefore consumes the additional 480px viewport width rather than leaving an empty right-side region.
-
-### Narrow 414 × 980
-
-- content frame: `x=12, y=12, width=390, height=956`;
-- Task Drawer: `x=56, y=0, width=358, height=980`.
-
-This is Astryx's public responsive Drawer behavior, not a Jig-authored modal frame.
-
-## Visual review verdict
-
-**PASS.**
-
-The evidence confirms:
-
-- navigation order is Day → Week → History → Settings;
-- all destinations have Astryx semantic iconography and readable labels;
-- the rail is materially smaller than the previous 190px implementation without truncating Settings;
-- Week uses the available canvas and retains all seven visible tracks at the canonical desktop viewport;
-- moving the drag grip into the leading-control column gives the title more usable width without shrinking typography or removing controls;
-- Week card selection keeps Week active and uses the right-side master-detail Drawer;
-- Drawer presentation overlays rather than reflows the Week grid;
-- desktop Day uses one docked details/editor workspace;
-- narrow editing uses the same Task workspace model through Astryx Drawer;
-- permanent Delete confirmation remains the only blocking Task dialog.
-
-## Architecture evidence
-
-The corresponding permanent gates are in:
+Permanent gates are:
 
 - `tests/architecture/ui-ownership.test.ts`;
 - `tests/browser/ui-conformance.spec.ts`;
 - `tests/browser/core-flow.spec.ts`;
-- `tests/browser/interactions.spec.ts`.
+- `tests/browser/interactions.spec.ts`;
+- `tests/browser/day-boundary.spec.ts`;
+- core/integration persistence, rollover, Git synchronization, installer and reminder suites.
 
-They enforce public Astryx ownership, the absence of Task create/edit Dialogs, non-modal Drawer composition, navigation order/icons, fluid Week geometry, responsive draft continuity, explicit drag-handle behavior, and canonical move/delete semantics.
+The implementation branch must pass:
 
-The temporary evidence capture test/workflow used to produce these files is removed after archival and is not part of the production or permanent test architecture.
+```bash
+bun run theme:check
+bun run typecheck
+bun run test
+bun run build
+bun run test:browser
+```
+
+The browser contract specifically certifies:
+
+- Planner is the default/home destination;
+- no desktop SideNav and no AppShell mobile navigation drawer;
+- History and Settings are the only secondary destinations;
+- desktop week range is page-centered with Previous/Today/Next directly beneath it;
+- Previous/Next preserve selected weekday while moving exactly seven civil days;
+- Today restores current local date/current week;
+- seven desktop tracks remain at least 160px and consume the available canvas without board scrolling;
+- Task click/tap inspects and never moves;
+- desktop Task view/create/edit uses a non-blocking right Drawer without narrowing the Planner board;
+- narrow/mobile uses the same Planner state and a BottomSheet Task workspace;
+- the mobile hamburger is an anchored popover containing only History and Settings;
+- responsive Drawer/BottomSheet reflow preserves displayed week, selected date, Task workspace mode and unsaved draft;
+- desktop drag owns exact direct movement and Move up/down remains the non-drag same-day alternative;
+- Edit scheduled date owns explicit non-drag cross-date rescheduling;
+- no separate Move-to-date surface exists;
+- completing a Task removes it from Planner and keeps it inspectable/reopenable in History;
+- local-midnight rollover and Planner selection continuity remain deterministic;
+- permanent Delete confirmation remains the only blocking Task dialog;
+- priority uses restrained theme-derived scanning cues without becoming the ordering authority;
+- System/Light/Dark, local-save truth and repository-sync truth preserve their existing semantics.
+
+## Required reviewed screenshot set
+
+The final screenshot archive must be captured from the exact implementation candidate after all permanent gates pass.
+
+| Required file | Viewport / state | Contract to review |
+| --- | --- | --- |
+| `browser/desktop-planner-light.jpg` | 1440×900, Light | centered week navigator, no sidebar, seven fluid tracks, global actions |
+| `browser/desktop-planner-dark.jpg` | 1440×900, Dark | same hierarchy and state distinction in Dark |
+| `browser/desktop-planner-task-drawer.jpg` | 1440×900 | right Drawer overlays without board reflow |
+| `browser/desktop-planner-edit.jpg` | 1440×900 | Edit remains in the same right workspace |
+| `browser/desktop-history.jpg` | 1440×900 | History active, same global header, completed Task master-detail |
+| `browser/desktop-settings.jpg` | 1440×900 | Settings active, no Planner temporal controls |
+| `browser/mobile-planner.jpg` | 390×844 | application band, centered week controls, seven-date strip, selected-date list |
+| `browser/mobile-task-bottom-sheet.jpg` | 390×844 | Task workspace rises from bottom |
+| `browser/sync-issue.jpg` | representative | synchronization issue remains operational, not Task-domain state |
+| `browser/local-save-failure.jpg` | representative | failed local save is explicit and never claimed successful |
+
+For every capture record:
+
+- implementation commit SHA;
+- viewport;
+- appearance mode;
+- fixture/scenario;
+- governing reference;
+- any intentional deviation caused by the real pinned Astryx component anatomy.
+
+## Visual review criteria
+
+Visual review is a **PASS** only when:
+
+1. the centered week/date interaction reads as one temporal centerpiece;
+2. left product identity and right actions do not pull the centerpiece off the page center;
+3. the desktop board materially uses available width;
+4. selected date, today, Task selection and drag target remain distinct without color-only meaning;
+5. Task priority cues aid scanning without becoming dominant status badges;
+6. the Drawer/BottomSheet feel contextual rather than modal/navigation replacements;
+7. narrow/mobile does not recreate the removed sidebar/drawer navigation;
+8. no meta copy such as “Week of”, “Attention”, “Your ordered plan”, “selected date view”, or implementation commentary appears;
+9. Light and Dark preserve the same hierarchy and accessible state distinctions.
+
+Until the reviewed screenshot set is captured, this README must not claim final visual certification. Automated gates remain the authoritative behavioral/architectural implementation evidence.
