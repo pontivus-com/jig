@@ -98,6 +98,12 @@ test("Day and Settings use the canonical desktop split geometry", async ({
     expectNear(inspector.y, 145);
     expectNear(inspector.width, 490);
   }
+  await expect(
+    page.getByRole("button", { name: "Previous day", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Next day", exact: true }),
+  ).toHaveCount(0);
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   const cards = page.locator(".jig-settings-card");
@@ -158,6 +164,9 @@ test("Week fits seven visible columns at the canonical desktop viewport", async 
   const board = page.locator(".jig-week-board");
   await expect(board).toBeVisible();
   await expect(board.locator(".jig-week-column")).toHaveCount(7);
+  await expect(
+    page.getByText("Drop or add a task", { exact: true }),
+  ).toHaveCount(0);
 
   const geometry = await board.evaluate((element) => {
     const boardRect = element.getBoundingClientRect();
