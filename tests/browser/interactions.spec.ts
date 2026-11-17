@@ -346,12 +346,9 @@ test("narrow touch drag reorders within a date and does not open the workspace",
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const firstDate = await page.locator("[data-date]").first().getAttribute("data-date");
-  if (firstDate === null) {
-    throw new Error("Planner first date unavailable");
-  }
-  await createTask(page, "Touch first", firstDate);
-  await createTask(page, "Touch second", firstDate);
+  const today = await browserCivilDate(page);
+  await createTask(page, "Touch first", today);
+  await createTask(page, "Touch second", today);
   await page.reload();
 
   const source = await taskCard(page, "Touch first");
@@ -364,7 +361,7 @@ test("narrow touch drag reorders within a date and does not open the workspace",
         .filter(
           (task) =>
             task.completed_at === null &&
-            task.scheduled_date === firstDate,
+            task.scheduled_date === today,
         )
         .sort(
           (left, right) =>
@@ -380,18 +377,24 @@ test("narrow touch drag moves into an empty adjacent date and persists", async (
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  const today = await browserCivilDate(page);
   const dates = await page.locator("[data-date]").evaluateAll((elements) =>
     elements
       .map((element) => element.getAttribute("data-date"))
       .filter((value): value is string => value !== null),
   );
-  const sourceDate = dates[0];
-  const destinationDate = dates[1];
-  if (sourceDate === undefined || destinationDate === undefined) {
-    throw new Error("Planner adjacent dates unavailable");
+  const sourceIndex = dates.indexOf(today);
+  const destinationDate =
+    sourceIndex >= 0 && sourceIndex < dates.length - 1
+      ? dates[sourceIndex + 1]
+      : sourceIndex > 0
+        ? dates[sourceIndex - 1]
+        : undefined;
+  if (sourceIndex < 0 || destinationDate === undefined) {
+    throw new Error("Planner current/adjacent dates unavailable");
   }
 
-  await createTask(page, "Touch cross-date", sourceDate);
+  await createTask(page, "Touch cross-date", today);
   await page.reload();
 
   const source = await taskCard(page, "Touch cross-date");
