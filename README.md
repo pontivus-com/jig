@@ -34,8 +34,8 @@ Jig is a local-first just-in-time daily planner for one person's lightweight
 intentions across projects and obligations.
 
 Planner is the single planning surface. On desktop it shows seven dates as
-explicit ordered tracks; on narrow/mobile the same week state becomes a
-seven-date strip plus the selected date's outstanding list. Unfinished prior-day
+explicit ordered tracks; on narrow/mobile the same displayed week becomes seven
+stacked dated sections. Unfinished prior-day
 work is persistently rolled into the current local date, while History keeps
 completed work inspectable and reopenable. Optional priority, context, references,
 notes and reminder time add just enough detail without creating another workflow
@@ -102,17 +102,18 @@ jig uninstall       # remove runtime/configuration; preserve repo planning data
 
 ## Release status
 
-Jig **1.0.3** is the current release candidate. This patch release replaces the
-separate Day/Week navigation model with one responsive Planner, a centered
-week-navigation centerpiece, minimal History/Settings navigation and one shared
-Task workspace rendered as a desktop Drawer or narrow/mobile BottomSheet.
+Jig **1.0.4** is the current release candidate. This patch completes the
+Planner interaction correction: one displayed-week state, full dated sections,
+reliable card-body drag, one directly editable Task workspace, complete Task
+actions, stable application-header geometry and governed semantic Light/Dark
+state treatment.
 
 Release publication remains PR-bound and immutable: the merged release commit is
-re-verified before the `v1.0.3` tag and Linux x64/arm64 assets are published.
+re-verified before the `v1.0.4` tag and Linux x64/arm64 assets are published.
 
-- [v1.0.3 implementation evidence](docs/evidence/v1.0.3/README.md)
+- [v1.0.4 implementation evidence](docs/evidence/v1.0.4/README.md)
 - [release process, validity contract and asset matrix](docs/releases/README.md)
-- [v1.0.3 release notes](docs/releases/v1.0.3.md)
+- [v1.0.4 release notes](docs/releases/v1.0.4.md)
 - [changelog](CHANGELOG.md)
 
 ## Documentation
