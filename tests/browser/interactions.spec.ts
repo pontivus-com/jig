@@ -357,8 +357,8 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Day", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+    page.locator(".jig-mobile-destination-menu > summary"),
+  ).toHaveText("Day");
   await expect(
     page.getByText("Narrow selected task", { exact: true }),
   ).toBeVisible();
