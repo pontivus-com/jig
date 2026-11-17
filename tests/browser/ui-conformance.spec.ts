@@ -297,6 +297,153 @@ test("History exposes canonical scheduled date and actual completion time", asyn
     .locator("xpath=ancestor::li[1]");
   await expect(row.getByText(/Scheduled /)).toBeVisible();
   await expect(row.locator("time")).not.toHaveText("");
+
+  const groupHeading = page.locator(".jig-history-group-heading").first();
+  const dateHeading = await groupHeading.getByRole("heading").boundingBox();
+  const count = await groupHeading.locator(".jig-task-count").boundingBox();
+  expect(dateHeading).not.toBeNull();
+  expect(count).not.toBeNull();
+  if (dateHeading !== null && count !== null) {
+    expectNear(count.x, dateHeading.x, 1);
+    expect(count.y).toBeGreaterThan(dateHeading.y);
+  }
+});
+
+test("Day card density matches active/completed reference hierarchy", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  for (const [index, title] of [
+    "Density active one",
+    "Density active two",
+    "Density active three",
+    "Density active four",
+  ].entries()) {
+    await apiCommand(page, {
+      type: "create",
+      title,
+      scheduled_date: today,
+      priority: index === 0 ? "HIGH" : "NORMAL",
+      context: "Planning",
+      reference: null,
+      note: null,
+      reminder_time: index === 0 ? "10:00" : null,
+    });
+  }
+  await apiCommand(page, {
+    type: "create",
+    title: "Density completed",
+    scheduled_date: today,
+    priority: "NORMAL",
+    context: "Team",
+    reference: null,
+    note: null,
+    reminder_time: null,
+  });
+  const completed = (await apiState(page)).tasks.find(
+    (task) => task.title === "Density completed",
+  );
+  if (completed === undefined) throw new Error("completed density fixture missing");
+  await apiCommand(page, { type: "complete", task_id: completed.id });
+  await page.reload();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const desktopActive = page
+    .getByText("Density active one", { exact: true })
+    .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
+  const desktopCompleted = page
+    .getByText("Density completed", { exact: true })
+    .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
+  const desktopActiveBox = await desktopActive.boundingBox();
+  const desktopCompletedBox = await desktopCompleted.boundingBox();
+  expect(desktopActiveBox).not.toBeNull();
+  expect(desktopCompletedBox).not.toBeNull();
+  if (desktopActiveBox !== null && desktopCompletedBox !== null) {
+    expectNear(desktopActiveBox.height, 86, 2);
+    expectNear(desktopCompletedBox.height, 62, 2);
+  }
+
+  await page.setViewportSize({ width: 414, height: 900 });
+  const mobileActiveBox = await desktopActive.boundingBox();
+  const mobileCompletedBox = await desktopCompleted.boundingBox();
+  const quickAdd = await page
+    .getByRole("button", { name: "Add task", exact: true })
+    .last()
+    .boundingBox();
+  expect(mobileActiveBox).not.toBeNull();
+  expect(mobileCompletedBox).not.toBeNull();
+  expect(quickAdd).not.toBeNull();
+  if (
+    mobileActiveBox !== null &&
+    mobileCompletedBox !== null &&
+    quickAdd !== null
+  ) {
+    expectNear(mobileActiveBox.y, 282, 4);
+    expectNear(mobileActiveBox.height, 88, 2);
+    expectNear(mobileCompletedBox.height, 66, 2);
+    expect(quickAdd.y).toBeGreaterThanOrEqual(
+      mobileCompletedBox.y + mobileCompletedBox.height,
+    );
+  }
+});
+
+test("mobile editor uses the governed 414×980 framed hierarchy", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await apiCommand(page, {
+    type: "create",
+    title: "Editor geometry",
+    scheduled_date: today,
+    priority: "HIGH",
+    context: "Legal",
+    reference: null,
+    note: "Reference editor geometry",
+    reminder_time: "10:00",
+  });
+  await page.reload();
+  await page.setViewportSize({ width: 414, height: 980 });
+
+  const card = page
+    .getByText("Editor geometry", { exact: true })
+    .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
+  await card
+    .getByRole("button", { name: "Actions for Editor geometry" })
+    .click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+
+  const frame = await page.locator(".jig-editor-mobile-frame").boundingBox();
+  expect(frame).not.toBeNull();
+  if (frame !== null) {
+    expectNear(frame.x, 12);
+    expectNear(frame.y, 12);
+    expectNear(frame.width, 390);
+    expectNear(frame.height, 956);
+  }
+
+  const title = await page.getByLabel("Title").boundingBox();
+  const date = await page.getByLabel("Date").boundingBox();
+  const context = await page.getByLabel("Context").boundingBox();
+  const reminder = await page.getByLabel("Reminder").boundingBox();
+  const reference = await page.getByLabel("Reference").boundingBox();
+  const notes = await page.getByLabel("Notes").boundingBox();
+  const fields = [title, date, context, reminder, reference, notes];
+  expect(fields.every((box) => box !== null)).toBe(true);
+  if (fields.every((box) => box !== null)) {
+    const y = fields.map((box) => box!.y);
+    expect(y).toEqual([...y].sort((a, b) => a - b));
+  }
+
+  await expect(
+    page.getByRole("button", { name: "Delete task…", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Cancel", exact: true }).last(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toBeVisible();
 });
 
 test("narrow shell keeps all destinations reachable and the seven-date strip fits", async ({
