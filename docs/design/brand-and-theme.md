@@ -201,8 +201,7 @@ Persistent product state, transient interaction state, priority and operational 
 | Primary action / keyboard focus | Brand Amber | primary control fill/text as governed by Astryx; focus ring uses Amber | status colors |
 | Drag source / drop target | Brand Amber | transient outline/drag overlay emphasis only; disappears when drag ends | persistent selected-card fill |
 | Desktop current day | Ink / neutral structure | exact-date-only emphasized neutral border/header typography; no whole-column Amber fill | Amber selected-column treatment |
-| Desktop selected Planner date | no persistent column color | selection remains Planner state for Add/navigation but does not color an entire desktop column | any “same weekday every week” highlight |
-| Narrow/mobile selected date | compact navigation selection | selected date chip may use the ordinary controlled accent treatment because the date strip is the active navigation control; exact today remains independently identifiable | whole-list/column fill |
+| Planner selected day | none | no selected-day state or visual treatment exists | any persistent weekday/day-selection highlight |
 | Selected Task card | cool Ink/neutral selection | subtle cool neutral surface plus emphasized neutral border; focus ring remains separately Amber when keyboard-focused | Amber fill/border as the persistent selection state |
 | Priority High | semantic error | narrow leading error cue; optional restrained error label | Amber/warning |
 | Priority Normal | Ink / neutral | narrow quiet neutral cue; no loud badge | Amber |
