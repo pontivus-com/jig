@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { resetCanonicalTasks } from "./helpers";
+import { apiState, resetCanonicalTasks } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -44,6 +44,13 @@ test("real runtime supports title-first create, completion, History and reopen",
 
   await addTitleOnlyTask(page, "Browser acceptance task");
   await page.getByLabel("Complete Browser acceptance task").click();
+  await expect
+    .poll(async () =>
+      (await apiState(page)).tasks.find(
+        (task) => task.title === "Browser acceptance task",
+      )?.completed_at ?? null,
+    )
+    .not.toBeNull();
 
   await page.getByRole("button", { name: "History", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Completed work", exact: true })).toBeVisible();
