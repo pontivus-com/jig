@@ -1,5 +1,3 @@
-import { Button } from "@astryxdesign/core";
-import { useToast } from "@astryxdesign/core/Toast";
 import { useEffect, useRef } from "react";
 import type { Task } from "../../src/core/task";
 import { browserNotificationState } from "./browser-notifications";
@@ -51,7 +49,7 @@ function pruneOldReminderKeys(today: string): void {
       }
     }
   } catch {
-    // Device-local suppression is best effort. Toast delivery still works.
+    // Device-local suppression is best effort and never affects Task state.
   }
 }
 
@@ -74,7 +72,6 @@ function markDelivered(key: string): void {
 export function ReminderMonitor({
   tasks,
 }: Readonly<{ tasks: readonly Task[] }>): null {
-  const showToast = useToast();
   const sessionStartedAt = useRef(new Date());
 
   useEffect(() => {
@@ -104,27 +101,6 @@ export function ReminderMonitor({
           continue;
         }
 
-        if (document.visibilityState === "visible") {
-          showToast({
-            body: `Reminder: ${task.title}`,
-            uniqueID: key,
-            collisionBehavior: "ignore",
-            renderContent: ({ body, dismiss }) => (
-              <div className="jig-reminder-toast-content">
-                <span>{body}</span>
-                <Button
-                  label="Dismiss"
-                  variant="ghost"
-                  size="sm"
-                  onClick={dismiss}
-                />
-              </div>
-            ),
-          });
-          markDelivered(key);
-          continue;
-        }
-
         if (browserNotificationState() !== "granted") {
           continue;
         }
@@ -136,7 +112,7 @@ export function ReminderMonitor({
           });
           markDelivered(key);
         } catch {
-          // Leave the key undelivered so a visible/focus catch-up can toast it.
+          // Leave the key undelivered so a later bounded check can retry it.
         }
       }
     };
@@ -144,9 +120,7 @@ export function ReminderMonitor({
     check();
     const interval = window.setInterval(check, REMINDER_INTERVAL_MS);
     const onVisibility = (): void => {
-      if (document.visibilityState === "visible") {
-        check();
-      }
+      check();
     };
     window.addEventListener("focus", check);
     document.addEventListener("visibilitychange", onVisibility);
@@ -156,7 +130,7 @@ export function ReminderMonitor({
       window.removeEventListener("focus", check);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [showToast, tasks]);
+  }, [tasks]);
 
   return null;
 }
