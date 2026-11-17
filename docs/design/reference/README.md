@@ -3,6 +3,11 @@
 This package is a corrected reference-design baseline derived from the current Jig product definition and planning/UX functional design.
 
 Key corrections encoded in the references:
+- Desktop primary navigation is compact and ordered **Day → Week → History → Settings**, with Astryx-owned semantic iconography.
+- Week uses the available planning canvas with seven fluid day tracks (160px product minimum) rather than a fixed 1168px maximum.
+- Clicking a Task never changes destination; it selects the Task and exposes the shared contextual Task workspace.
+- Desktop Day docks that workspace on the right; Week and narrow/mobile use the public Astryx non-modal right Drawer so the underlying planning surface remains in context.
+- Quick Add, per-day Add task, Edit and Move to date reuse the same Task workspace. Task creation/editing is not a centered modal; permanent Delete confirmation is the only blocking Task dialog.
 - `Day` is the view/destination; `Today` is a shortcut.
 - Earlier unfinished Tasks are persistently rolled into the current local date by changing their canonical `scheduled_date`; Day and Week therefore show the same moved Task in the current bucket with no derived carry-over label.
 - `Reference` and `Notes` are separate Task fields.
