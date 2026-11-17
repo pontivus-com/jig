@@ -1,6 +1,6 @@
 # Jig documentation
 
-**Status:** v1.0.3 implementation candidate (2026-11-17). The binding single-Planner functional, technical and UI design is implemented and certified on the implementation branch; release publication remains a separate governed transition.
+**Status:** v1.0.4 implementation candidate (2026-11-17). The binding Planner interaction-correction functional, technical, UI/theme and architecture contract is implemented and certified on the implementation branch; release publication remains a separate governed transition.
 
 Jig is a small, local-first, just-in-time daily planner. It schedules attention rather than duplicating the underlying project work. All planning data must live under the Jig directory of the user-selected personal Git repository, with a lightweight local desktop service and automatic Git sync.
 
@@ -12,10 +12,10 @@ Jig is a small, local-first, just-in-time daily planner. It schedules attention 
 4. [Planning and UX functional requirements](requirements/planning-workbench.md) — observable JIG-FR-01–22 behaviour, including carry-over, confirmed deletion, System/Light/Dark appearance, onboarding/installation, repository ownership, the `jig` command, background availability and automatic synchronization.
 5. [Technical solution](architecture/technical-solution.md) — selected dependencies and exact application architecture, installer/user service, canonical Task, SQLite in the selected repository, isolated repository integration boundary, background sync, canonical snapshot admission and verification.
 6. [UI solution and versioned reference mockups](design/ui-solution.md) — screen hierarchy, desktop/mobile responsive composition, Astryx/dnd-kit ownership, design corrections and browser acceptance.
-7. [v1.0.3 single Planner implementation plan](implementation/v1.0.3-single-planner-implementation-plan.md) — current UI execution authority for the single responsive Planner, centered week navigator, no-sidebar header and shared Drawer/BottomSheet Task workspace. The earlier [v1.0.3 master-detail workspace correction](implementation/v1.0.3-master-detail-workspace.md), [v1.0.2 UX/UI remediation plan](implementation/ui-ux-conformance-remediation-v1.0.md), [v1.0.1 ownership-boundary correction](implementation/v1.0.1-ownership-boundary-correction-plan.md), and [v1 MVP plan](implementation/v1-mvp-implementation-plan.md) are historical.
+7. [v1.0.4 interaction correction implementation plan](implementation/v1.0.4-ui-interaction-corrections.md) — current execution authority for displayed-week-only Planner state, card-body drag, unified editable workspace, full weekday/date-header Add, complete state-color semantics, reduced chrome and architecture-compliance remediation. The [v1.0.3 single Planner plan](implementation/v1.0.3-single-planner-implementation-plan.md), earlier [v1.0.3 master-detail workspace correction](implementation/v1.0.3-master-detail-workspace.md), [v1.0.2 UX/UI remediation plan](implementation/ui-ux-conformance-remediation-v1.0.md), [v1.0.1 ownership-boundary correction](implementation/v1.0.1-ownership-boundary-correction-plan.md), and [v1 MVP plan](implementation/v1-mvp-implementation-plan.md) are historical.
 8. [Installation](install.md) — supported existing-repository installation, upgrade, Git-native continuity and uninstall.
 9. [Releases](releases/README.md) — **canonical release authority**: mandatory `release/vX.Y.Z` metadata transition, explicit `package.json.version = X.Y.Z`, immutable tag/publication validity criteria, binary asset contract and publication channel.
-10. [v1 release-candidate evidence](evidence/v1/README.md) — permanent verification, security/installer/resource certification and representative runtime screenshots.
+10. [v1.0.4 implementation evidence](evidence/v1.0.4/README.md) — permanent Verify result, architecture/browser certification and reviewed Light/Dark desktop/narrow visual evidence. The [v1 release-candidate evidence](evidence/v1/README.md) remains the historical v1 baseline.
 
 Functional requirements define *what* users can observe. Technical solution owns *how* data and runtime behave. UI solution owns *how* users see and manipulate those functions. No part of the design inherits Order's workflow/lifecycle domain, creates DTO hierarchies, or introduces duplicate task authority.
 
@@ -31,11 +31,11 @@ Functional requirements define *what* users can observe. Technical solution owns
 
 ## Screen references
 
-The versioned SVGs under `design/reference/` define the current structural UI baseline. The governing v1.0.3 Planner references are `desktop-planner-v1.0.3.svg` and `mobile-planner-v1.0.3.svg`, together with the retained History, Settings/Sync, Task-workspace and save/sync-state references as constrained by the current UI solution. Earlier Day/Week/sidebar SVGs are historical inputs only. Mandatory System/Light/Dark behavior is governed by the UI and technical designs rather than duplicate dark-mode mockups.
+The versioned SVGs under `design/reference/` retain structural provenance. The v1.0.3 Planner SVGs are historical baselines; v1.0.4 supersedes their selected-day, navigation and heavier-chrome details through the binding functional design, UI solution and brand/theme contract. Earlier Day/Week/sidebar SVGs are historical inputs only. Mandatory System/Light/Dark behavior is governed by the UI/theme and technical designs rather than duplicate dark-mode mockups.
 
 ## Verification and implementation boundary
 
-The v1.0.0–v1.0.2 implementation plans/evidence remain historical for their published releases. The current UI implementation authority is the [v1.0.3 single Planner implementation plan](implementation/v1.0.3-single-planner-implementation-plan.md); the earlier v1.0.3 master-detail plan is superseded. External-system ownership remains governed by the existing product/technical boundaries and the historical v1.0.1 correction.
+The v1.0.0–v1.0.3 implementation plans/evidence remain historical for their published releases. The current UI implementation authority is the [v1.0.4 interaction correction plan](implementation/v1.0.4-ui-interaction-corrections.md), with certification recorded in [v1.0.4 implementation evidence](evidence/v1.0.4/README.md). External-system ownership remains governed by the existing product/technical boundaries and the historical v1.0.1 correction.
 
 Certified behavior includes:
 
@@ -49,7 +49,9 @@ Certified behavior includes:
 Independent phone installation remains deferred. Git history, branch, merge and conflict reconciliation are outside Jig's product/domain scope and remain owned by the user's Git tooling; do not turn them into Jig workflow or UI state.
 ## UX/UI remediation
 
-- [v1.0.3 single Planner implementation plan](implementation/v1.0.3-single-planner-implementation-plan.md) — current.
+- [v1.0.4 interaction correction implementation plan](implementation/v1.0.4-ui-interaction-corrections.md) — current.
+- [v1.0.4 implementation evidence](evidence/v1.0.4/README.md) — certified candidate evidence.
+- [v1.0.3 single Planner implementation plan](implementation/v1.0.3-single-planner-implementation-plan.md) — historical.
 - [v1.0.3 master-detail workspace correction](implementation/v1.0.3-master-detail-workspace.md) — superseded/historical.
 - [UX/UI conformance audit v1.0](design/ui-ux-conformance-audit-v1.0.md) — historical v1.0.2 baseline.
 - [UX/UI conformance remediation plan v1.0](implementation/ui-ux-conformance-remediation-v1.0.md) — historical v1.0.2 implementation authority.
