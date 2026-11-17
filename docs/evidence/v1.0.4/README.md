@@ -1,6 +1,6 @@
 # Jig v1.0.4 implementation evidence
 
-**Status:** PASS — implementation and governed visual states reviewed on 2026-11-17.  
+**Status:** HISTORICAL PASS, POST-RELEASE QUALIFIED — the recorded gates were green on 2026-11-17, but later direct validation found material interaction/presentation defects not detected by those gates.  
 **Implementation branch:** `fix/v1.0.4-ui-interaction-corrections`  
 **Implementation PR:** #21  
 **Last production-code candidate before evidence-only harness changes:** `c833867d006dd5c0c4c6e1610c76828611463e79`  
@@ -26,7 +26,7 @@ The v1.0.4 implementation candidate passed the repository's permanent verificati
 - shell syntax;
 - installer and lifecycle smoke.
 
-The browser gate explicitly covers the v1.0.4 correction contract, including card-body pointer drag, direct editable workspace opening, blank-content dismissal, Task-to-Task retargeting, exact current-day semantics, no selected-day state, seven-section narrow Planner, full weekday labels, per-date Add, stable header geometry, complete menus, responsive draft continuity and distinct semantic state styling.
+The browser gate contained tests intended to cover the v1.0.4 correction contract, including card-body pointer drag, direct editable workspace opening, blank-content dismissal, Task-to-Task retargeting, exact current-day semantics, no selected-day state, seven-section narrow Planner, full weekday labels, per-date Add, stable header geometry, complete menus, responsive draft continuity and semantic state styling. Post-release validation demonstrated that those tests were insufficient: they did not detect the cross-list React DOM reconciliation crash, missing narrow/mobile drag, incomplete icon/menu normalization, oversized header density or insufficient narrow Task-card contrast.
 
 ## Reviewed visual evidence
 
@@ -45,7 +45,7 @@ The successful capture run produced and the review inspected these ten governed 
 | `sync-issue.png` | repository retry/issue warning semantics while local planning remains available |
 | `local-save-failure.png` | editable workspace remains open with an explicit failed-save error; unsaved draft is not represented as successful persistence |
 
-Visual review conclusion: **PASS**. The Planner reads as one open planning canvas rather than seven framed panels; Task cards remain discrete without heavy nested chrome; today, selection, priority, drag/focus and repository status do not collapse onto one color treatment; and the information architecture remains consistent across desktop and narrow layouts.
+Historical visual review conclusion: **PASS at the time of review**, but later direct validation invalidated its sufficiency for the affected v1.0.4 UI claims. The reviewed screenshot set did not establish mobile drag behavior, compact-header quality, complete semantic icon/menu normalization, or adequate Task-card/canvas separation on narrow/mobile. Those omissions are explicit v1.0.5 gates.
 
 ## Architecture evidence
 
