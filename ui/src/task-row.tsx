@@ -15,7 +15,6 @@ export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
-  readonly dragHandleRef?: Ref<HTMLDivElement> | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -205,7 +204,6 @@ export function TaskRow({
   task,
   isSelected = false,
   rowRef,
-  dragHandleRef,
   onSelect,
   onToggleComplete,
   onEdit,
@@ -244,7 +242,6 @@ export function TaskRow({
       }
       label={
         <div
-          {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
           className={completed ? "jig-task-body" : "jig-task-body jig-task-body-draggable"}
         >
           <div className="jig-task-title-row">
@@ -277,7 +274,7 @@ export function TaskRow({
 }
 
 export interface SortableTaskRowProps
-  extends Omit<TaskRowProps, "rowRef" | "dragHandleRef"> {
+  extends Omit<TaskRowProps, "rowRef"> {
   readonly index: number;
   readonly group: string;
 }
@@ -296,17 +293,17 @@ export function SortableTaskRow({
     accept: "jig-task",
   });
 
-  // dnd-kit exposes generic HTMLElement refs; these are bound to the concrete
-  // ListItem <li> and Task body <div> at this single third-party boundary.
+  // dnd-kit exposes a generic HTMLElement ref; it is bound to the concrete
+  // ListItem <li> at this single third-party boundary. With no dedicated
+  // handle, PointerSensor keeps its normal activation constraints and excludes
+  // interactive descendants, preserving click-to-edit and independent controls.
   const rowRef = sortable.ref as Ref<HTMLLIElement>;
-  const dragHandleRef = sortable.handleRef as Ref<HTMLDivElement>;
 
   return (
     <TaskRow
       {...rowProps}
       task={task}
       rowRef={rowRef}
-      dragHandleRef={dragHandleRef}
     />
   );
 }
