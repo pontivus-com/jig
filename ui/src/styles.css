@@ -232,7 +232,12 @@ body {
     border-color: var(--color-border-error);
   }
 
-  .jig-status-local-only,
+  .jig-status-local-only {
+    color: var(--color-text-success);
+    background: var(--color-success-muted);
+    border-color: var(--color-border-success);
+  }
+
   .jig-status-unknown {
     color: var(--color-text-secondary);
     background: var(--color-background-muted);
