@@ -67,7 +67,7 @@ const UTC_INSTANT_PATTERN =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 
 export function isPriority(value: unknown): value is Priority {
-  return typeof value === "string" && PRIORITIES.includes(value as Priority);
+  return value === "HIGH" || value === "NORMAL" || value === "LOW";
 }
 
 export function assertUuid(value: string, field = "id"): void {
@@ -114,7 +114,13 @@ export function assertUtcInstant(value: string, field: string): void {
   }
 }
 
-function assertOptionalText(value: string | null, field: string): void {
+function assertOptionalText(
+  value: unknown,
+  field: string,
+): asserts value is string | null {
+  if (value !== null && typeof value !== "string") {
+    throw new TaskValidationError(`${field} must be null or a string`);
+  }
   if (value !== null && value.trim().length === 0) {
     throw new TaskValidationError(
       `${field} must be null or nonblank text`,
@@ -191,16 +197,9 @@ export function validateTask(value: unknown): Task {
     throw new TaskValidationError("priority is invalid");
   }
 
-  for (const [field, fieldValue] of [
-    ["context", context],
-    ["reference", reference],
-    ["note", note],
-  ] as const) {
-    if (fieldValue !== null && typeof fieldValue !== "string") {
-      throw new TaskValidationError(`${field} must be null or a string`);
-    }
-    assertOptionalText(fieldValue, field);
-  }
+  assertOptionalText(context, "context");
+  assertOptionalText(reference, "reference");
+  assertOptionalText(note, "note");
 
   if (
     reminderTime !== null &&
@@ -270,11 +269,11 @@ export function validateTask(value: unknown): Task {
     id,
     title,
     scheduled_date: scheduledDate,
-    position: position as number | null,
+    position,
     priority,
-    context: context as string | null,
-    reference: reference as string | null,
-    note: note as string | null,
+    context,
+    reference,
+    note,
     reminder_time: reminderTime,
     completed_at: completedAt,
     created_at: createdAt,
