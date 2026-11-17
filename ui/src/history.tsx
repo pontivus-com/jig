@@ -135,7 +135,7 @@ export function HistoryView({
               aria-labelledby={`history-${group.completion_date}`}
               className="jig-history-group"
             >
-              <div className="jig-section-heading">
+              <div className="jig-history-group-heading">
                 <h2 id={`history-${group.completion_date}`}>
                   {formatCivilDate(group.completion_date, {
                     weekday: "long",
@@ -145,7 +145,7 @@ export function HistoryView({
                   })}
                 </h2>
                 <span className="jig-task-count">
-                  {group.tasks.length} {group.tasks.length === 1 ? "task" : "tasks"}
+                  {group.tasks.length} completed
                 </span>
               </div>
               <List density="compact" edge="flush">
