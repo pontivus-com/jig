@@ -244,6 +244,17 @@ test("Task cards expose restrained priority classes without replacing text seman
   await expect(low).toHaveClass(/jig-task-priority-low/);
   await expect(high.getByText("high", { exact: true })).toBeVisible();
   await expect(low.getByText("low", { exact: true })).toBeVisible();
+
+  await high.click();
+  const detail = page.getByRole("dialog", { name: "High priority card" });
+  await expect(detail.locator(".jig-priority-high")).toHaveText("high");
+  await detail.getByRole("button", { name: "✓ Mark complete", exact: true }).click();
+
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  const historyRow = page
+    .getByText("High priority card", { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  await expect(historyRow).toHaveClass(/jig-task-priority-high/);
 });
 
 test("Settings remains a secondary destination without Planner temporal controls", async ({ page }) => {
