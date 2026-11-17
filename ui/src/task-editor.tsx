@@ -12,7 +12,8 @@ import {
 } from "@astryxdesign/core";
 import type { ISODateString } from "@astryxdesign/core/utils";
 import type { ISOTimeString } from "@astryxdesign/core/TimeInput";
-import { useEffect, useState } from "react";
+import { FieldLabel } from "@astryxdesign/core/Field";
+import { useEffect, useId, useState } from "react";
 import type {
   Priority,
   Task,
@@ -122,6 +123,8 @@ export function TaskEditor({
   );
   const [localError, setLocalError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const priorityGroupId = useId();
+  const priorityLabelId = useId();
 
   useEffect(() => {
     if (isOpen) {
@@ -228,16 +231,26 @@ export function TaskEditor({
               placeholder="Project, client, or place"
             />
 
-            <SegmentedControl
-              label="Priority"
-              value={draft.priority}
-              onChange={(value) => update("priority", value as Priority)}
-              layout="fill"
-            >
-              <SegmentedControlItem value="HIGH" label="High" />
-              <SegmentedControlItem value="NORMAL" label="Normal" />
-              <SegmentedControlItem value="LOW" label="Low" />
-            </SegmentedControl>
+            <div className="jig-editor-group-field">
+              <FieldLabel
+                label="Priority"
+                inputID={priorityGroupId}
+                labelID={priorityLabelId}
+                isGroupLabel
+              />
+              <SegmentedControl
+                id={priorityGroupId}
+                aria-labelledby={priorityLabelId}
+                label="Priority"
+                value={draft.priority}
+                onChange={(value) => update("priority", value as Priority)}
+                layout="fill"
+              >
+                <SegmentedControlItem value="HIGH" label="High" />
+                <SegmentedControlItem value="NORMAL" label="Normal" />
+                <SegmentedControlItem value="LOW" label="Low" />
+              </SegmentedControl>
+            </div>
 
             <TimeInput
               label="Reminder"
