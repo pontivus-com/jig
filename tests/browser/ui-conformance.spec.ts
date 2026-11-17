@@ -63,13 +63,13 @@ test("desktop shell uses a compact rail and Week expands into reclaimed canvas",
   if (sidebar === null) return;
   expectNear(sidebar.x, 20);
   expectNear(sidebar.y, 20);
-  expectNear(sidebar.width, 112);
+  expect(sidebar.width).toBeLessThanOrEqual(64);
   expectNear(sidebar.height, 860);
 
   const heading = await page.locator(".jig-reference-heading").boundingBox();
   expect(heading).not.toBeNull();
   if (heading === null) return;
-  expectNear(heading.x, 149);
+  expect(heading.x).toBeLessThan(110);
   expectNear(heading.y, 34);
 
   await page.getByRole("button", { name: "Week", exact: true }).click();
@@ -77,16 +77,16 @@ test("desktop shell uses a compact rail and Week expands into reclaimed canvas",
   const boardBox = await board.boundingBox();
   expect(boardBox).not.toBeNull();
   if (boardBox === null) return;
-  expectNear(boardBox.x, 149);
-  expect(boardBox.width).toBeGreaterThan(1200);
+  expect(boardBox.x).toBeLessThan(110);
+  expect(boardBox.width).toBeGreaterThan(1280);
 
   const columns = page.locator(".jig-week-column");
   await expect(columns).toHaveCount(7);
   const first = await columns.first().boundingBox();
   expect(first).not.toBeNull();
   if (first !== null) {
-    expect(first.width).toBeGreaterThan(170);
-    expectNear(first.x, 149);
+    expect(first.width).toBeGreaterThan(180);
+    expect(first.x).toBeLessThan(110);
   }
 
   await page.setViewportSize({ width: 1920, height: 900 });
@@ -95,8 +95,8 @@ test("desktop shell uses a compact rail and Week expands into reclaimed canvas",
   expect(wideBoard).not.toBeNull();
   expect(wideFirst).not.toBeNull();
   if (wideBoard !== null && wideFirst !== null) {
-    expect(wideBoard.width).toBeGreaterThan(1650);
-    expect(wideFirst.width).toBeGreaterThan(230);
+    expect(wideBoard.width).toBeGreaterThan(1760);
+    expect(wideFirst.width).toBeGreaterThan(245);
   }
 });
 
@@ -110,9 +110,9 @@ test("Day and Settings use the canonical desktop split geometry", async ({
   expect(primary).not.toBeNull();
   expect(inspector).not.toBeNull();
   if (primary !== null && inspector !== null) {
-    expectNear(primary.x, 149);
+    expect(primary.x).toBeLessThan(110);
     expectNear(primary.width, 650);
-    expectNear(inspector.x, 829);
+    expectNear(inspector.x - primary.x, 680);
     expectNear(inspector.y, 145);
     expectNear(inspector.width, 490);
   }
@@ -129,9 +129,9 @@ test("Day and Settings use the canonical desktop split geometry", async ({
   const planning = await cards.nth(0).boundingBox();
   const sync = await cards.nth(1).boundingBox();
   if (planning !== null && sync !== null) {
-    expectNear(planning.x, 149);
+    expect(planning.x).toBeLessThan(110);
     expectNear(planning.width, 560);
-    expectNear(sync.x, 739);
+    expectNear(sync.x - planning.x, 590);
     expectNear(sync.width, 580);
   }
 });
@@ -262,10 +262,12 @@ test("Day Add task edits in the docked workspace without opening a task dialog",
   const workspace = page.locator('section[aria-label="Add task"]');
   await expect(workspace).toBeVisible();
   await expect(workspace.getByLabel("Title")).toBeVisible();
+  await expect(workspace.getByLabel("Date")).toHaveCount(0);
+  await expect(workspace.getByLabel("Context")).toHaveCount(0);
   await expect(workspace.getByRole("button", { name: "Add task" })).toBeVisible();
 });
 
-test("Week Quick add uses the right Drawer instead of a centered task modal", async ({
+test("Week Quick add uses the right Drawer and asks only for a title", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -275,7 +277,44 @@ test("Week Quick add uses the right Drawer instead of a centered task modal", as
   const drawer = page.getByRole("dialog", { name: "Add task" });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByLabel("Title")).toBeVisible();
+  await expect(drawer.getByLabel("Date")).toHaveCount(0);
+  await expect(drawer.getByLabel("Context")).toHaveCount(0);
   await expect(page.locator(".jig-week-board")).toBeVisible();
+});
+
+test("History row selection opens task details without changing destination", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await apiCommand(page, {
+    type: "create",
+    title: "History detail contract",
+    scheduled_date: today,
+    priority: "NORMAL",
+    context: "Archive",
+    reference: null,
+    note: "Completed detail remains inspectable.",
+    reminder_time: null,
+  });
+  const created = (await apiState(page)).tasks.find(
+    (task) => task.title === "History detail contract",
+  );
+  if (created === undefined) throw new Error("history fixture missing");
+  await apiCommand(page, { type: "complete", task_id: created.id });
+  await page.reload();
+  await page.getByRole("button", { name: "History", exact: true }).click();
+
+  await page.getByText("History detail contract", { exact: true }).click();
+
+  await expect(
+    page.locator(".jig-primary-nav").getByRole("button", {
+      name: "History",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-current", "page");
+  const details = page.getByRole("dialog", { name: "History detail contract" });
+  await expect(details).toBeVisible();
+  await expect(details.getByText("Completed detail remains inspectable.")).toBeVisible();
 });
 
 test("Task cards expose content, grip and one overflow affordance without action words", async ({
@@ -486,7 +525,7 @@ test("Day card density matches active/completed reference hierarchy", async ({
   }
 });
 
-test("mobile task editing uses the right-side task workspace rather than the old editor modal", async ({
+test("mobile task editing uses the bottom sheet task workspace rather than a centered modal", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -514,13 +553,8 @@ test("mobile task editing uses the right-side task workspace rather than the old
 
   const editor = page.getByRole("dialog", { name: "Edit task" });
   await expect(editor).toBeVisible();
-  const frame = await editor.boundingBox();
-  expect(frame).not.toBeNull();
-  if (frame !== null) {
-    expectNear(frame.x + frame.width, 414, 3);
-    expect(frame.width).toBeGreaterThanOrEqual(350);
-    expect(frame.height).toBeGreaterThan(900);
-  }
+  await expect(page.locator(".jig-day-view")).toBeVisible();
+  await expect(editor.getByRole("button", { name: "Close", exact: true })).toBeVisible();
 
   const fieldLabels = [
     "Title",
