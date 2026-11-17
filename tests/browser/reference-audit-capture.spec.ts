@@ -238,7 +238,9 @@ test("capture governed rollover evidence", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await expect(
-    page.getByText("Rolled forward from yesterday", { exact: true }),
+    page
+      .getByText("Rolled forward from yesterday", { exact: true })
+      .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]"),
   ).toBeVisible();
   const state = await apiState(page);
   const rolled = state.tasks.find(
