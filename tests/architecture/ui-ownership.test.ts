@@ -38,10 +38,15 @@ describe("UI ownership architecture", () => {
 
   it("uses public Astryx menu and responsive dialog contracts", () => {
     const taskRow = source("ui/src/task-row.tsx");
+    const history = source("ui/src/history.tsx");
     const editor = source("ui/src/task-editor.tsx");
 
     expect(taskRow).toContain("DropdownMenu");
     expect(taskRow).not.toContain("jig-task-menu-panel");
+    expect(history).toContain("DropdownMenu");
+    expect(history).not.toContain("jig-task-menu-panel");
     expect(editor).toContain('variant={isNarrow ? "fullscreen" : "standard"}');
+    expect(editor).toContain("FieldLabel");
+    expect(editor).toContain("isGroupLabel");
   });
 });
