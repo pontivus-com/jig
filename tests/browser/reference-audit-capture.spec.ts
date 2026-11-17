@@ -197,6 +197,14 @@ test("capture current-head reference surfaces", async ({ page }) => {
     "JIG_REFERENCE_METRICS:mobile-editor:" +
       JSON.stringify({
         frame: await page.locator(".jig-editor-mobile-frame").boundingBox(),
+        titleField: await page.locator(".jig-editor-mobile-frame").getByLabel("Title", { exact: true }).first().boundingBox(),
+        dateField: await page.locator(".jig-editor-mobile-frame").getByLabel("Date", { exact: true }).first().boundingBox(),
+        contextField: await page.locator(".jig-editor-mobile-frame").getByLabel("Context", { exact: true }).first().boundingBox(),
+        reminderField: await page.locator(".jig-editor-mobile-frame").getByLabel("Reminder", { exact: true }).first().boundingBox(),
+        referenceField: await page.locator(".jig-editor-mobile-frame").getByLabel("Reference", { exact: true }).first().boundingBox(),
+        notesField: await page.locator(".jig-editor-mobile-frame").getByLabel("Notes", { exact: true }).first().boundingBox(),
+        behavior: await page.locator(".jig-editor-date-behavior").boundingBox(),
+        deleteAction: await page.getByRole("button", { name: "Delete task…", exact: true }).boundingBox(),
         save: await page.getByRole("button", { name: "Save", exact: true }).boundingBox(),
         cancel: await page.getByRole("button", { name: "Cancel", exact: true }).last().boundingBox(),
       }),
