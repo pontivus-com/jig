@@ -23,8 +23,6 @@ export interface TaskWorkspaceContentProps {
   readonly draft: TaskDraft;
   readonly externalError: string | null;
   readonly isSaving: boolean;
-  readonly surface: "docked" | "drawer";
-  readonly showHeading: boolean;
   readonly onModeChange: (mode: TaskWorkspaceMode | null) => void;
   readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
@@ -39,8 +37,6 @@ export function TaskWorkspaceContent({
   draft,
   externalError,
   isSaving,
-  surface,
-  showHeading,
   onModeChange,
   onDraftChange,
   onSave,
@@ -56,8 +52,6 @@ export function TaskWorkspaceContent({
         draft={draft}
         externalError={externalError}
         isSaving={isSaving}
-        surface={surface}
-        showHeading={showHeading}
         onDraftChange={onDraftChange}
         onCancel={() => onModeChange(editorTask === null ? null : "view")}
         onSave={async (command) => {
@@ -74,8 +68,6 @@ export function TaskWorkspaceContent({
   return (
     <TaskInspector
       task={task}
-      surface={surface}
-      showHeading={showHeading}
       onToggleComplete={onToggleComplete}
       onEdit={() => onModeChange("edit")}
       onDelete={onDelete}
@@ -115,7 +107,7 @@ function workspaceSubtitle(
 export interface TaskWorkspaceOverlayProps
   extends Omit<
     TaskWorkspaceContentProps,
-    "surface" | "showHeading" | "mode"
+    "mode"
   > {
   readonly mode: TaskWorkspaceMode | null;
   readonly onClose: () => void;
@@ -177,8 +169,6 @@ export function TaskWorkspaceDrawer({
               draft={draft}
               externalError={externalError}
               isSaving={isSaving}
-              surface="drawer"
-              showHeading={false}
               onModeChange={onModeChange}
               onDraftChange={onDraftChange}
               onSave={onSave}
@@ -247,8 +237,6 @@ export function TaskWorkspaceBottomSheet({
         draft={draft}
         externalError={externalError}
         isSaving={isSaving}
-        surface="drawer"
-        showHeading={false}
         onModeChange={onModeChange}
         onDraftChange={onDraftChange}
         onSave={onSave}
