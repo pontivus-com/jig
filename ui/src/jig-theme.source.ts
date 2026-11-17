@@ -155,5 +155,13 @@ export const jigTheme = defineTheme({
     "--jig-status-healthy-text": "var(--color-text-success)",
     "--jig-state-hover-bg": "var(--color-overlay-hover)",
     "--jig-state-pressed-bg": "var(--color-overlay-pressed)",
+    "--jig-task-surface": [
+      "var(--jig-white)",
+      "var(--jig-ink-800)",
+    ],
+    "--jig-task-border": [
+      "var(--jig-ink-200)",
+      "var(--jig-ink-700)",
+    ],
   },
 });
