@@ -920,10 +920,36 @@ body {
     padding-block-end: var(--spacing-1);
   }
 
+  .jig-editor-date-behavior {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-background-muted);
+  }
+
+  .jig-editor-date-behavior strong {
+    font-size: 0.75rem;
+  }
+
+  .jig-editor-date-behavior span {
+    color: var(--color-text-secondary);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+  }
+
+  .jig-editor-destructive-row {
+    display: flex;
+    justify-content: flex-start;
+    padding-block: 4px 12px;
+    border-block-end: 1px solid var(--color-border);
+  }
+
   .jig-editor-actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: var(--spacing-3);
     padding-block-start: var(--spacing-2);
   }
@@ -1213,11 +1239,16 @@ body {
 
     .jig-editor-actions {
       align-items: stretch;
-      flex-direction: column-reverse;
+      justify-content: flex-end;
     }
 
     .jig-editor-primary-actions {
+      width: 100%;
       justify-content: flex-end;
+    }
+
+    .jig-editor-date-behavior {
+      padding: 10px 12px;
     }
 
     .jig-diagnostics > div {
