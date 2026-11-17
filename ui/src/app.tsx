@@ -22,11 +22,9 @@ import {
 import type {
   CanonicalState,
   CommandResult,
-} from "../../src/shell/sqlite";
-import type {
   Diagnostics,
   ServiceStatus,
-} from "../../src/shell/http";
+} from "../../src/protocol";
 import {
   draftFor,
   type TaskDraft,
