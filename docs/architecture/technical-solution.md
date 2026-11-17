@@ -500,7 +500,7 @@ The complete narrow/mobile architecture review also identifies boundaries that a
 - `TaskWorkspaceContent` is already shared. Desktop Drawer versus narrow BottomSheet is a legitimate responsive presentation-primitive split over the same workspace state/content and remains.
 - `HistoryView` and `SettingsView` are not separate mobile implementations; the same components reflow through CSS.
 - `useLayoutMode` remains justified for the two genuine composition differences above (header anatomy and Drawer/BottomSheet). It must not decide Task capabilities or semantic item sets.
-- TypeScript is already configured with `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Existing assertions in date/HTTP parsers are preceded by runtime validation and are boundary-local; dnd ref assertions are isolated third-party interop. v1.0.5 removes the obsolete `dragHandleRef` assertion with the handle itself, but does not create a broad type-refactor unrelated to the defects.
+- TypeScript is already configured with `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Existing assertions in date/HTTP parsers are preceded by runtime validation and are boundary-local; dnd ref assertions are isolated third-party interop. v1.0.5 removes both obsolete dnd row/handle assertions by binding the public callback refs directly, but does not create a broad type-refactor unrelated to the defects.
 
 
 #### JIG-105-SD-01 — React-owned crash-free drag
@@ -529,7 +529,7 @@ Remove layout mode as a drag capability switch.
 1. `Planner` no longer passes `enableDrag`.
 2. `WeekView` always owns one `TaskDragProvider`; every dated section is always one `DateDropZone`.
 3. `PlannerTaskList` always renders one `SortableTaskRow` for outstanding Tasks; remove the `isSortable` branch and plain-row mobile fallback.
-4. Remove `dragHandleRef`, `bodyPointerProps` and `pointerStart` from `TaskRow`. The Astryx `ListItem` click path remains the one selection owner; dnd-kit owns drag activation on the whole sortable row.
+4. Remove `dragHandleRef`, `bodyPointerProps` and `pointerStart` from `TaskRow`. Bind dnd-kit's public `sortable.ref` (sortable geometry) and `sortable.sourceRef` (pointer source) to the same Astryx `ListItem` `<li>` through one callback ref. The ListItem click path remains the one selection owner; dnd-kit owns drag activation on the whole sortable row.
 5. Use the pinned `PointerSensor` for mouse, touch and pen with pointer-specific activation constraints:
    - mouse/pen: 5px distance threshold;
    - touch: approximately 250ms delay with 5px tolerance so vertical page scrolling remains usable until drag intent is established.
