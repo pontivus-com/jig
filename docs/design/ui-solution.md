@@ -196,7 +196,7 @@ Use Astryx 0.7.13 public semantic icons as the only reusable icon language. The 
 
 - Previous/Next week chevrons;
 - global Add and every date-header Add through the Astryx namespaced `jig:add` extension glyph;
-- Planner (`viewColumns`), History (`checkDouble`) and Settings (`wrench`) destination affordances;
+- Planner (`viewColumns`), History (`jig:history`) and Settings (`wrench`) destination affordances;
 - mobile hamburger;
 - Task overflow menu;
 - reminder clock;
@@ -204,7 +204,7 @@ Use Astryx 0.7.13 public semantic icons as the only reusable icon language. The 
 - completion check;
 - repository success/warning/error/info status.
 
-Essential meaning retains accessible text/labels. Raw `+`, `•••`, `≡` or other Unicode stand-ins are not used for governed controls. Astryx built-ins are used where available. For the required Add meaning absent from Astryx 0.7.13, Jig owns one namespaced `jig:add` extension glyph through Astryx `getExtendedIcon`/`Icon`; this remains inside the Astryx icon system and adds no second icon package.
+Essential meaning retains accessible text/labels. Raw `+`, `•••`, `≡` or other Unicode stand-ins are not used for governed controls. Astryx built-ins are used where available. Missing Add, History, Edit and Delete meanings use the namespaced `jig:add`, `jig:history`, `jig:edit`, `jig:delete` extension glyphs through Astryx `getExtendedIcon`/`Icon`; this remains inside the Astryx icon system and adds no second icon package.
 
 The header brand uses the canonical complete horizontal Jig wordmark asset. Do not compose the standalone J mark beside live “Jig” text.
 
