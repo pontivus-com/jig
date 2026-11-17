@@ -2,7 +2,7 @@
 
 **Status:** Binding v1.0.4 technical solution, v0.12 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, complete theme semantics, header geometry, outside dismissal, Task menu actions, date-header Add, selected-day removal, narrow seven-section composition, full weekday labels and reduced-chrome/icon-led presentation.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
-**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-12 and JIG-FR-01 through JIG-FR-22.
+**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
 
 **Foundational authority rule:** For every external integration, identify the authoritative owner first. Jig implements only the minimum interface needed for Jig's product job and must not absorb that external system's configuration, topology, provisioning, migration, reconciliation or policy. For Git specifically, Jig owns deterministic Jig records, automatic synchronization intent and coarse sync outcome; Git owns repository acquisition, branches/refs/worktrees, signing/identity, credentials, remotes, history and reconciliation. A Git isolation technique may exist inside the adapter, but it is not Jig domain, user workflow or configuration.
@@ -439,7 +439,7 @@ The v1.0.4 implementation must correct the failure mechanism, not merely restyle
 
 No domain, SQLite, HTTP, Git-sync, rollover, reminder or installer change follows from these failures.
 
-### 5.6 Drag, accessibility and copy discipline
+### 5.7 Drag, accessibility and copy discipline
 
 Use one dnd-kit drag owner around the seven desktop date tracks: one sortable task ID, dated droppables including empty dates, and exact target index. The sortable activation handle is the card's non-interactive body/title/meta region so ordinary card dragging works; checkbox/menu/reference controls remain outside that handle and stop pointer propagation where needed. Do not enable Astryx List `createReorderable` on the same rows.
 
@@ -639,6 +639,27 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 ## 10. Requirement-to-design traceability and acceptance
 
+### v1.0.4 corrective requirement traceability
+
+| Requirement | Technical ownership | Required evidence |
+|---|---|---|
+| JIG-104-FR-01 card-body drag | §5.7 one dnd-kit owner + Task body activation region | Real pointer drag from card body; checkbox/menu/reference do not initiate drag |
+| JIG-104-FR-02 exact current day | §5.6 Today identity | Only exact local date gets today treatment across week navigation |
+| JIG-104-FR-03 distinct visual semantics | §5.6 + brand/theme §§6.1.1–6.4 | Today teal, selected Task info-blue, drag/focus Amber, priority/status families remain distinct in Light/Dark |
+| JIG-104-FR-04 outside dismissal | §5.6 content-owned dismissal | Blank Planner/History interaction closes; workspace/menu/dialog interaction does not |
+| JIG-104-FR-05 stable header geometry | §5.3 + §5.6 header geometry | Planner/History/Settings header bounding heights are equal at the same viewport |
+| JIG-104-FR-06 complete Task menu | §5.6 Task menu command ownership | Required actions invoke existing canonical commands; priority edit does not reorder |
+| JIG-104-FR-07 one editable workspace | §5.4 TaskWorkspaceState | Existing Task opens full editable draft directly |
+| JIG-104-FR-08 full Add form | §5.4 unified editor | Add and existing Task expose the same field hierarchy |
+| JIG-104-FR-09 responsive draft continuity | §5.4/§5.5 shared state, Drawer/BottomSheet adapters | Breakpoint change preserves exact draft/workspace state |
+| JIG-104-FR-10 healthy Local only | §5.6 operational-status semantics | Local only uses success family while retaining its distinct label |
+| JIG-104-FR-11 date-header Add | §5.3/§5.5.1 dated-section owner | Compact per-date + uses explicit date; no lane-footer Add |
+| JIG-104-FR-12 content-driven lanes | §5.3/§5.5.1 Planner geometry | Equal widths, independent heights, empty drop target remains usable |
+| JIG-104-FR-13 no selected-day state | §5.2 PlannerState + §5.5 responsive composition | No selectedDate/selectDate/DateStrip/selected-day projection remains |
+| JIG-104-FR-14 derived global Add date | §5.2 pure defaultAddDate + §5.4 create | Derived weekday-matching date is correct and editable before Save |
+| JIG-104-FR-15 full weekday labels | §5.3/§5.5 explicit English long-weekday formatter | Monday–Sunday render in full; no browser-locale abbreviation substitution |
+| JIG-104-FR-16 reduced chrome + explicit top navigation | §5.3 + §5.5.2 reduced-chrome/iconography ownership | Planner/History/Settings stay together on right; open lanes use whitespace/hairlines rather than panel chrome; Task cards remain restrained discrete surfaces |
+
 | Requirement | Technical ownership | Required evidence |
 |---|---|---|
 | JIG-FR-01 quick create | Task creation through the unified Task form | Originating date/defaults are pre-populated; Title and Date are required; optional fields remain optional |
@@ -672,7 +693,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 **Repository/Git integration:** Use existing-repository fixtures with unrelated dirty/staged files and normal developer Git configurations, including commit signing enabled with no Jig key. Verify automatic export/synchronization touches only Jig-owned portable data; user Git configuration is unchanged; installation/retry survives synchronization failure; existing valid Jig data is adopted; the exact v1.0.0 empty-bootstrap residue recovers safely; unknown malformed states are non-destructive; ordinary repository content remains untouched.
 
-**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: Planner startup on today/current week; centered week range above grouped Previous/Today/Next controls; exact seven-day Previous/Next behavior; Today reset; Jig-home state preservation; no desktop sidebar; desktop History/Settings header navigation; mobile History/Settings hamburger popover with no drawer; same-day drag, Thursday-to-Friday drag and empty-day drop; persisted daily rollover visible in both responsive Planner compositions; open-browser local-midnight revalidation; full-card drag overlay; Escape cancel; Task checkbox/link/workspace non-interference; keyboard/touch move alternatives; desktop Drawer overlays without narrowing the board; Drawer↔BottomSheet responsive switching with unsaved editor state preserved; confirmed/cancelled deletion; long-list scrolling; System/Light/Dark parity; visible-page reminder toast; hidden-page browser Notification with granted permission; permission fallback/catch-up; and durable save-error visibility.
+**Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: Planner startup on today/current week; centered week range above grouped Previous/Today/Next controls; exact seven-day Previous/Next behavior; Today reset; Jig-home state preservation; no desktop sidebar; explicit desktop Planner/History/Settings navigation with correct active state; reduced-chrome open seven-track board with full weekday labels and per-date +; mobile History/Settings hamburger popover with no drawer and seven stacked dated sections; same-day card-body drag, Thursday-to-Friday drag and empty-day drop; persisted daily rollover visible in both responsive Planner compositions; open-browser local-midnight revalidation; full-card drag overlay; Escape cancel; Task checkbox/link/workspace non-interference; keyboard/touch move alternatives; desktop Drawer overlays without narrowing the board; Drawer↔BottomSheet responsive switching with unsaved editor state preserved; confirmed/cancelled deletion; long-list scrolling; System/Light/Dark parity; visible-page reminder toast; hidden-page browser Notification with granted permission; permission fallback/catch-up; and durable save-error visibility.
 
 **Installer/service:** Non-root one-script setup in both supported target modes: an existing local repository via `--repo`, and a repository URL cloned by Git into a new/empty checkout via `--repo-url` + `--checkout`. Verify both modes converge on the same repository-validation/setup path, plus exact target selection, idempotent rerun, invalid target refusal, existing-data adoption, failed-install retry, launcher/service restart and auto-sync while the browser is closed. Repository migration/reorganization remains outside Jig.
 
