@@ -22,11 +22,11 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
       - name: Capture v1.0.4 governed UI states
-        run: bunx --bun playwright test tests/browser/v1.0.4-evidence.spec.ts
+        run: bun run test:browser
       - name: Upload v1.0.4 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jig-v1.0.4-ui-evidence
-          path: test-results/v1.0.4-evidence/*.png
+          path: v1.0.4-evidence-output/*.png
           if-no-files-found: error
