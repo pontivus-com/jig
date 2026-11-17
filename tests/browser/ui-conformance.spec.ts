@@ -351,6 +351,18 @@ test("Settings exposes product diagnostics without Git-management workflow", asy
     ).toBeVisible();
   }
 
+  const diagnostics = page.locator(".jig-settings-diagnostics");
+  await expect(
+    diagnostics.getByText("Local database", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    diagnostics.getByText("Portable data", { exact: true }),
+  ).toBeVisible();
+  await expect(diagnostics.getByText("Format v1", { exact: true })).toHaveCount(0);
+  await expect(
+    diagnostics.getByText("Repository adapter", { exact: true }),
+  ).toHaveCount(0);
+
   const body = await page.locator("body").innerText();
   for (const forbidden of [
     "Migrate",
