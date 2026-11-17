@@ -96,6 +96,7 @@ function commandForDraft(
 
 export interface TaskEditorProps {
   readonly isOpen: boolean;
+  readonly isNarrow: boolean;
   readonly task: Task | null;
   readonly initiatingDate: string;
   readonly externalError: string | null;
@@ -107,6 +108,7 @@ export interface TaskEditorProps {
 
 export function TaskEditor({
   isOpen,
+  isNarrow,
   task,
   initiatingDate,
   externalError,
@@ -159,11 +161,18 @@ export function TaskEditor({
         isOpen={isOpen}
         onOpenChange={isSaving ? () => undefined : onOpenChange}
         purpose="form"
-        width="min(38rem, calc(100vw - 2rem))"
+        variant={isNarrow ? "fullscreen" : "standard"}
+        width="38rem"
         maxHeight="90dvh"
-        padding={4}
+        padding={isNarrow ? 0 : 4}
       >
-        <div className="jig-editor">
+        <div
+          className={
+            isNarrow
+              ? "jig-editor jig-editor-mobile-frame"
+              : "jig-editor"
+          }
+        >
           <DialogHeader
             title={task === null ? "Add task" : "Edit task"}
             subtitle={formatCivilDate(
