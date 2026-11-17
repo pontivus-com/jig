@@ -2,6 +2,7 @@ import {
   Button,
   CheckboxInput,
   DropdownMenu,
+  Link,
   ListItem,
 } from "@astryxdesign/core";
 import { useSortable } from "@dnd-kit/react/sortable";
@@ -61,17 +62,17 @@ function TaskMetadata({
         </span>
       )}
       {task.reference === null ? null : isSafeWebReference(task.reference) ? (
-        <a
+        <Link
           className="jig-task-meta-item"
           href={task.reference}
           target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Open reference"
+          type="inherit"
+          hasUnderline
           onPointerDown={stopPointer}
           onClick={(event) => event.stopPropagation()}
         >
           Reference
-        </a>
+        </Link>
       ) : (
         <Button
           label="Copy reference"
