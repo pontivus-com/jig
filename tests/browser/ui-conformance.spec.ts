@@ -491,6 +491,12 @@ test("desktop History and Settings use an 800px centered content column", async 
       expectNear(box.width, 800, 1);
       expectNear(box.x, 320, 1);
     }
+    if (destination === "Settings") {
+      const overflow = await page.locator(".jig-settings-grid").evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(1);
+    }
   }
 
   await page.getByRole("button", { name: "Planner", exact: true }).click();
