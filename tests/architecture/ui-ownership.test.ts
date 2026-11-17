@@ -220,6 +220,17 @@ describe("UI ownership architecture", () => {
     expect(css).not.toContain("calc(5rem + env(safe-area-inset-bottom");
   });
 
+  it("keeps secondary desktop screens constrained without constraining Planner", () => {
+    const css = source("ui/src/styles.css");
+
+    expect(css).toContain(".jig-history-view,");
+    expect(css).toContain(".jig-settings-view {");
+    expect(css).toContain("max-width: 50rem;");
+    expect(css).toContain("margin-inline: auto;");
+    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));");
+    expect(css).not.toContain("grid-template-columns: 560px minmax(0, 580px);");
+  });
+
   it("keeps Planner and Task workspace state singular", () => {
     const app = source("ui/src/app.tsx");
     const planner = source("ui/src/planner.tsx");
