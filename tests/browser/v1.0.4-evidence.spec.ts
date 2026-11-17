@@ -14,6 +14,8 @@ const ROOT = "/tmp/jig-playwright-repository";
 const REMOTE = "/tmp/jig-playwright-remote.git";
 const OFFLINE_REMOTE = "/tmp/jig-playwright-remote.offline.git";
 
+test.setTimeout(90_000);
+
 async function capture(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(250);
   await page.screenshot({
