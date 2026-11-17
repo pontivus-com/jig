@@ -1,0 +1,46 @@
+name: Capture v1.0.3 UI evidence
+
+on:
+  push:
+    branches: [fix/v1.0.3-master-detail-workspace]
+    paths-ignore:
+      - "docs/evidence/v1.0.3/browser/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: capture-v1.0.3-ui-evidence
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/v1.0.3-master-detail-workspace
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bunx playwright install --with-deps chromium
+      - name: Capture real-browser evidence
+        run: bunx playwright test tests/browser/v1.0.3-capture.spec.ts
+      - name: Archive screenshots
+        run: |
+          git config user.name "Jig Evidence Bot"
+          git config user.email "jig-evidence@users.noreply.github.com"
+          git add docs/evidence/v1.0.3/browser
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git diff --cached --binary > "${RUNNER_TEMP}/jig-evidence.patch"
+          git fetch origin fix/v1.0.3-master-detail-workspace
+          git reset --hard origin/fix/v1.0.3-master-detail-workspace
+          git apply --index "${RUNNER_TEMP}/jig-evidence.patch"
+          git commit -m "docs(evidence): archive v1.0.3 master-detail screenshots"
+          git push origin HEAD:fix/v1.0.3-master-detail-workspace
