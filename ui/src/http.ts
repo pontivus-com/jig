@@ -6,12 +6,10 @@ import {
 import type {
   CanonicalState,
   CommandResult,
-  RepositoryStatus,
-} from "../../src/shell/sqlite";
-import type {
   Diagnostics,
+  RepositoryStatus,
   ServiceStatus,
-} from "../../src/shell/http";
+} from "../../src/protocol";
 
 declare global {
   interface Window {
