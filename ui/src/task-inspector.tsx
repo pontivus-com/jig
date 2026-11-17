@@ -7,8 +7,6 @@ export interface TaskInspectorProps {
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onEdit: (task: Task) => void;
   readonly onDelete: (task: Task) => void;
-  readonly showHeading?: boolean;
-  readonly surface?: "docked" | "drawer";
 }
 
 function isSafeWebReference(value: string): boolean {
@@ -25,19 +23,11 @@ export function TaskInspector({
   onToggleComplete,
   onEdit,
   onDelete,
-  showHeading = true,
-  surface = "docked",
 }: TaskInspectorProps): React.ReactElement {
   if (task === null) {
     return (
       <aside
-        className={[
-          "jig-task-inspector",
-          "jig-task-inspector-empty",
-          surface === "drawer" ? "jig-task-inspector-drawer" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        className="jig-task-inspector jig-task-inspector-empty jig-task-inspector-drawer"
       >
         <p>Select a task to inspect its details.</p>
       </aside>
@@ -46,23 +36,9 @@ export function TaskInspector({
 
   return (
     <aside
-      className={[
-        "jig-task-inspector",
-        surface === "drawer" ? "jig-task-inspector-drawer" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className="jig-task-inspector jig-task-inspector-drawer"
       aria-label={`Task details for ${task.title}`}
     >
-      {showHeading ? (
-        <div className="jig-task-inspector-heading">
-          <div>
-            <p className="jig-eyebrow">Selected task</p>
-            <h2>{task.title}</h2>
-          </div>
-        </div>
-      ) : null}
-
       <div className="jig-task-inspector-actions">
         <Button
           label={task.completed_at === null ? "✓ Mark complete" : "Reopen"}
@@ -148,7 +124,6 @@ export function TaskInspector({
             ? ""
             : ` · ${formatReminderTime(task.reminder_time)}`}
         </strong>
-        <span>Rolled-forward cards use their current scheduled date</span>
       </div>
     </aside>
   );
