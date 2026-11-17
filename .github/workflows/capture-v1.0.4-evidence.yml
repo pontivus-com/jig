@@ -22,7 +22,9 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
       - name: Capture v1.0.4 governed UI states
-        run: bun run test:browser
+        env:
+          JIG_CAPTURE_EVIDENCE: "1"
+        run: bunx playwright test tests/browser/ui-conformance.spec.ts --grep "temporary v1.0.4 visual evidence capture"
       - name: Upload v1.0.4 evidence
         if: always()
         uses: actions/upload-artifact@v4
