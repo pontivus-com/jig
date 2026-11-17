@@ -63,9 +63,11 @@ Use the published **Astryx 0.7.13 core** with Jig's canonical theme defined by [
 Theme ownership is singular:
 
 - `ui/src/theme.css` owns raw Jig Ink/Amber/Paper primitives;
-- `ui/src/theme.ts` maps those primitives to public Astryx semantic roles;
-- `ui/src/styles.css` styles only Jig-owned product composition using public Astryx tokens;
-- `ui/src/app.tsx` mounts the one root Jig Theme owner.
+- `ui/src/jig-theme.source.ts` is the only authored semantic mapping from those primitives into Astryx roles and extends `@astryxdesign/theme-neutral/built`;
+- pinned `@astryxdesign/cli@0.7.13` compiles that source with `astryx theme build` into committed `ui/src/jig.js`, `ui/src/jig.css` and declarations; generated artifacts are compiler-owned and are never hand-edited;
+- `ui/src/styles.css` imports the generated theme CSS and styles only Jig-owned product composition using public Astryx tokens;
+- `ui/src/app.tsx` imports the generated `jigTheme` from `ui/src/jig.js` and mounts the one root Jig Theme owner;
+- CI runs `theme build --check` so source/artifact drift is a release failure.
 
 ### 3.1 UI implementation authority
 
@@ -79,7 +81,7 @@ The visual reference does **not** authorize bypassing the component architecture
 
 The pinned Astryx `AppShell` is the application frame. Use its `sideNav`/mobile-navigation contract and the public `SideNav` family for primary destinations. Do not place another complete shell inside AppShell, duplicate the main landmark, or reproduce library-owned responsive navigation with raw parallel chrome.
 
-CSS may set the governed product-level dimensions needed to reproduce the structural references, but must not reshape Astryx internals. No Jig rule may rely on an undocumented/private Astryx selector, DOM child structure, StyleX detail or private custom property. Do not use an application-owned high-priority cascade layer, `!important`, or selector escalation to win against the library. If a public Astryx primitive cannot realize a governed requirement, document that incompatibility and use the smallest Jig-owned semantic composition built from public Astryx leaves/tokens.
+CSS may set the governed product-level dimensions needed to reproduce the structural references, but must not reshape Astryx internals. No Jig rule may rely on an undocumented/private Astryx selector, DOM child structure, StyleX detail or private custom property. Do not use an application-owned high-priority cascade layer, `!important`, or selector escalation to win against the library. The application must also not synthesize Astryx compiler/runtime markers such as `__built` or manually replace the documented theme-build pipeline; those belong only to Astryx-generated artifacts. If a public Astryx primitive cannot realize a governed requirement, document that incompatibility and use the smallest Jig-owned semantic composition built from public Astryx leaves/tokens.
 
 Visual rules:
 1. **Compact, low-chrome and scan-oriented.** Prefer list/row structure with subtle boundaries to decorative card stacks; no gratuitous shadows/gradients.
