@@ -255,7 +255,7 @@ test("Day Add task edits in the docked workspace without opening a task dialog",
   await page.setViewportSize({ width: 1440, height: 900 });
   await page
     .locator(".jig-day-toolbar")
-    .getByRole("button", { name: "Add task", exact: true })
+    .getByRole("button", { name: /Add task$/ })
     .click();
 
   await expect(page.getByRole("dialog", { name: "Add task" })).toHaveCount(0);
