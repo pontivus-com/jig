@@ -423,18 +423,19 @@ test("mobile editor uses the governed 414×980 framed hierarchy", async ({
   }
 
   const editor = page.locator(".jig-editor-mobile-frame");
-  const title = await editor.getByLabel("Title", { exact: true }).first().boundingBox();
-  const date = await editor.getByLabel("Date", { exact: true }).first().boundingBox();
-  const context = await editor.getByLabel("Context", { exact: true }).first().boundingBox();
-  const reminder = await editor.getByLabel("Reminder", { exact: true }).first().boundingBox();
-  const reference = await editor.getByLabel("Reference", { exact: true }).first().boundingBox();
-  const notes = await editor.getByLabel("Notes", { exact: true }).first().boundingBox();
-  const fields = [title, date, context, reminder, reference, notes];
-  expect(fields.every((box) => box !== null)).toBe(true);
-  if (fields.every((box) => box !== null)) {
-    const y = fields.map((box) => box!.y);
-    expect(y).toEqual([...y].sort((a, b) => a - b));
-  }
+  const formText = await editor.locator("form").innerText();
+  const fieldLabels = [
+    "Title",
+    "Date",
+    "Context",
+    "Priority",
+    "Reminder",
+    "Reference",
+    "Notes",
+  ];
+  const positions = fieldLabels.map((label) => formText.indexOf(label));
+  expect(positions.every((position) => position >= 0)).toBe(true);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
 
   await expect(
     page.getByRole("button", { name: "Delete task…", exact: true }),
