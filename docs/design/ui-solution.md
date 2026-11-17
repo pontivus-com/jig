@@ -1,7 +1,7 @@
 # Jig — UI solution design and visual reference contract
 
 **Status:** Binding v1.0.4 UX/UI realization v0.8, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for distinct state color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus and one directly editable Task workspace.
-**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–09 and JIG-FR-01–22.
+**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–10 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
 
@@ -76,7 +76,7 @@ CSS may set the governed product-level dimensions needed to reproduce the struct
 Visual rules:
 1. **Compact, low-chrome and scan-oriented.** Prefer list/row structure with subtle boundaries to decorative card stacks; no gratuitous shadows/gradients.
 2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
-3. **One primary action per active surface.** Quick Add is prominent at week level. The Task workspace has a single Save or Move action in its active edit mode. Completion uses an independently accessible checkbox/command.
+3. **One primary mutation per active form.** Add task is prominent at Planner level. The editable Task workspace has Save as its primary form action; completion/reopen and Delete remain independent Task commands rather than alternate form modes.
 4. **Distinct state vocabulary.** Current day, selected Task, drag target and priority are different semantics and must not collapse onto one Amber fill. Current day is an exact-date, subtle neutral border/header treatment. Selected Task uses a subtle information/selection surface. Drag target uses transient accent treatment. Priority remains a narrow leading cue: High error, Normal quiet neutral, Low calm/success-family.
 5. **Brand restraint.** Ink and Paper own structure/surfaces; Amber is selective identity/action/drag emphasis rather than the generic color for every active state. Semantic info/success/warning/error remain Astryx status colors and are never replaced with brand Amber.
 6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics must remain clear in both themes without relying on color alone.
@@ -133,7 +133,7 @@ Do not render `Day`, `Week`, `Attention`, `Your ordered plan`, `selected date vi
 
 The hamburger opens a compact menu/popover containing only History and Settings. It is not a drawer.
 
-Task view/create/edit uses a BottomSheet rising from the bottom. Create initially asks only for title and inherits the selected/originating date. Edit exposes optional fields. Delete confirmation remains the sole blocking Task dialog.
+Task create/edit uses a BottomSheet rising from the bottom. Existing Tasks open directly into the full editable field surface. Add uses the same full field surface with inherited selected/originating date and canonical defaults. Delete confirmation remains the sole blocking Task dialog.
 
 When narrow drag is absent, Move up/Move down provides touch ordering within the date and Edit date provides cross-date rescheduling.
 
@@ -160,7 +160,7 @@ The field hierarchy is always Title, Date, Context, Priority, Reminder, Referenc
 
 Jig CSS owns only the page-centered header grid, seven Planner tracks, narrow composition, drag state and restrained Task priority accent. It consumes public Astryx tokens/roles and must not target private component internals.
 
-Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. The drag handle must not swallow completion, Task selection, link or menu activation.
+Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop, the non-interactive card body is the pointer drag activation region; completion checkbox, Task action menu and reference controls must remain independently operable and must not initiate drag.
 
 ## 6. Required browser/UX validation
 
