@@ -297,19 +297,16 @@ export function readMetadata(db: Database): PersistenceMetadata {
 }
 
 export function readTasks(db: Database): readonly Task[] {
-  const rows = db
+  const rows: readonly unknown[] = db
     .query(
       `SELECT ${TASK_COLUMNS}
        FROM task
        ORDER BY scheduled_date, completed_at IS NOT NULL, position, id`,
     )
-    .all() as Task[];
-
-  for (const task of rows) {
-    validateTask(task);
-  }
-  assertTaskSet(rows);
-  return rows;
+    .all();
+  const tasks = rows.map((row) => validateTask(row));
+  assertTaskSet(tasks);
+  return tasks;
 }
 
 export function readCanonicalState(db: Database): CanonicalState {
