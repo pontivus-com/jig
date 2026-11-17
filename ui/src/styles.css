@@ -382,9 +382,9 @@ body {
     position: relative;
     min-width: 0;
     min-height: 72px;
-    border: var(--border-width) solid var(--color-border);
+    border: var(--border-width) solid var(--jig-task-border, var(--color-border));
     border-radius: var(--radius-element);
-    background: var(--color-background-surface);
+    background: var(--jig-task-surface, var(--color-background-surface));
   }
 
   .jig-task-card:hover {
@@ -553,13 +553,8 @@ body {
   .jig-history-view,
   .jig-settings-view {
     width: 100%;
-    max-width: 1170px;
-    margin-inline: 0 auto;
-  }
-
-  .jig-planner-narrow {
-    width: 100%;
-    min-width: 0;
+    max-width: none;
+    margin: 0;
   }
 
   .jig-task-sheet-header {
@@ -687,9 +682,9 @@ body {
   .jig-history-task-row {
     min-height: 70px;
     margin-block-start: var(--spacing-3);
-    border: var(--border-width) solid var(--color-border);
+    border: var(--border-width) solid var(--jig-task-border, var(--color-border));
     border-radius: var(--radius-element);
-    background: var(--color-background-surface);
+    background: var(--jig-task-surface, var(--color-background-surface));
   }
 
   .jig-history-task-row.jig-task-priority-high {
