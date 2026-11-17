@@ -263,9 +263,7 @@ export function WeekView({
                     </span>
                   </header>
 
-                  {dateTasks.length === 0 ? (
-                    <p className="jig-empty-column">Drop or add a task</p>
-                  ) : (
+                  {dateTasks.length === 0 ? null : (
                     <List density="compact" edge="flush" className="jig-task-card-list">
                       {dateTasks.map((task) => (
                         <WeekTaskRow
