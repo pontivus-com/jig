@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1 UX/UI realization v0.5, 2026-11-17. Functional structure, Astryx-first component/layout ownership, Option A branding, Jig Light/Dark theming and browser evidence are governed.
+**Status:** Binding v1 UX/UI realization v0.6, 2026-11-17. Functional structure, compact Day-first navigation, fluid Week canvas, shared master-detail Task workspace, Astryx-first component/layout ownership, Option A branding, Jig Light/Dark theming and browser evidence are governed.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Turn the accepted early mobile/day/week/editor mockups into a versioned interface baseline while distinguishing layout intent from noncanonical visual decoration.
