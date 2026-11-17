@@ -674,7 +674,7 @@ The v1.0.5 verification gate must prove the corrected architecture as well as vi
 3. open desktop navigation and narrow hamburger presentation and assert the same ordered destination IDs/labels;
 4. compare outstanding Task menu items at desktop and narrow widths; verify completed History menu separately;
 5. assert semantic icons for navigation/Add/reference/movement/status and absence of raw `+`, `•••`, `≡` stand-ins in governed controls;
-6. desktop header <= 4rem and narrow <= 6rem, invariant across destinations;
+6. desktop header <= 44px / 2.75rem and narrow <= 56px / 3.5rem, invariant across destinations;
 7. computed Task-card background/border differs from Planner canvas in Light and Dark at desktop and narrow widths.
 
 **Architecture/static:**
