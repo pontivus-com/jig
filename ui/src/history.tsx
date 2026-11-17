@@ -3,7 +3,6 @@ import {
   List,
   ListItem,
 } from "@astryxdesign/core";
-import type { ReactNode } from "react";
 import type { Task } from "../../src/core/task";
 import { historyByCompletionDate } from "../../src/core/planning";
 import { formatCivilDate } from "./dates";
@@ -14,7 +13,6 @@ export interface HistoryViewProps {
   readonly onEdit: (task: Task) => void;
   readonly onReopen: (task: Task) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
-  readonly statusControl: ReactNode;
 }
 
 function completionTime(task: Task): string {
@@ -118,7 +116,6 @@ export function HistoryView({
   onEdit,
   onReopen,
   onDelete,
-  statusControl,
 }: HistoryViewProps): React.ReactElement {
   const timeZone =
     Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -131,7 +128,6 @@ export function HistoryView({
           <h1>History</h1>
           <p>Completed work grouped by actual completion date</p>
         </div>
-        {statusControl}
       </div>
 
       {groups.length === 0 ? (
