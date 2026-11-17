@@ -319,7 +319,8 @@ export function App(): React.ReactElement {
       destination !== "day" ||
       canonical === null ||
       workspaceMode === "edit" ||
-      workspaceMode === "create"
+      workspaceMode === "create" ||
+      workspaceMode === "move"
     ) {
       return;
     }
@@ -432,6 +433,13 @@ export function App(): React.ReactElement {
     setWorkspaceMode("edit");
   }, []);
 
+  const openMoveToDate = useCallback((task: Task): void => {
+    setSelectedTaskId(task.id);
+    setWorkspaceDate(task.scheduled_date);
+    setOperationError(null);
+    setWorkspaceMode("move");
+  }, []);
+
   const saveWorkspace = useCallback(
     async (command: TaskCommand): Promise<boolean> => {
       const result = await runCommand(command);
@@ -445,6 +453,26 @@ export function App(): React.ReactElement {
       return true;
     },
     [runCommand],
+  );
+
+  const moveWorkspaceTask = useCallback(
+    async (task: Task, destinationDate: string): Promise<boolean> => {
+      const destinationIndex = outstandingForDate(tasks, destinationDate)
+        .filter((candidate) => candidate.id !== task.id)
+        .length;
+      const moved = await moveTaskExact(
+        task.id,
+        destinationDate,
+        destinationIndex,
+      );
+      if (moved) {
+        setWorkspaceDate(destinationDate);
+        setSelectedDate(destinationDate);
+        setWorkspaceMode("view");
+      }
+      return moved;
+    },
+    [moveTaskExact, tasks],
   );
 
   const closeWorkspace = useCallback((): void => {
@@ -624,6 +652,7 @@ export function App(): React.ReactElement {
         onSelectTask={selectTask}
         onAdd={openCreate}
         onEdit={openEdit}
+        onMoveToDate={openMoveToDate}
         onToggleComplete={toggleComplete}
         onMove={moveTaskExact}
       />
@@ -645,6 +674,8 @@ export function App(): React.ReactElement {
         onDelete={(task) => setDeleteTaskId(task.id)}
         onAdd={openCreate}
         onEdit={openEdit}
+        onMoveToDate={openMoveToDate}
+        onWorkspaceMove={moveWorkspaceTask}
         onWorkspaceModeChange={changeWorkspaceMode}
         onDraftChange={setWorkspaceDraft}
         onSave={saveWorkspace}
@@ -707,6 +738,7 @@ export function App(): React.ReactElement {
             onModeChange={changeWorkspaceMode}
             onDraftChange={setWorkspaceDraft}
             onSave={saveWorkspace}
+            onMove={moveWorkspaceTask}
             onDelete={(task) => setDeleteTaskId(task.id)}
             onToggleComplete={toggleComplete}
             onClose={closeWorkspace}
