@@ -218,10 +218,42 @@ export const jigTheme = {
     "--focus-outline-color": "light-dark(var(--jig-amber-700), var(--jig-amber-500))"
   },
   localTokens: {
-    "--astryx-theme-neutral-color-status-fill-accent": "light-dark(#0074e2, #6d9cfe)"
+    "--astryx-theme-neutral-color-status-fill-accent": "light-dark(#0074e2, #6d9cfe)",
+    "--jig-state-today-border": "var(--color-border-teal)",
+    "--jig-state-today-text": "var(--color-text-teal)",
+    "--jig-state-task-selected-bg": "var(--color-info-muted)",
+    "--jig-state-task-selected-border": "var(--color-border-info)",
+    "--jig-state-nav-active-bg": "light-dark(var(--jig-ink-100), var(--jig-ink-800))",
+    "--jig-state-nav-active-text": "light-dark(var(--jig-ink-900), var(--jig-ink-50))",
+    "--jig-state-drag-border": "light-dark(var(--jig-amber-700), var(--jig-amber-500))",
+    "--jig-state-drag-bg": "light-dark(var(--jig-amber-50), color-mix(in oklab, var(--jig-amber-500) 18%, var(--jig-ink-900)))",
+    "--jig-priority-high": "var(--color-text-error)",
+    "--jig-priority-normal": "light-dark(var(--jig-ink-500), var(--jig-ink-400))",
+    "--jig-priority-low": "var(--color-text-success)",
+    "--jig-status-healthy-bg": "var(--color-success-muted)",
+    "--jig-status-healthy-border": "var(--color-border-success)",
+    "--jig-status-healthy-text": "var(--color-text-success)",
+    "--jig-state-hover-bg": "var(--color-overlay-hover)",
+    "--jig-state-pressed-bg": "var(--color-overlay-pressed)"
   },
   __localTokenOwners: {
-    "--astryx-theme-neutral-color-status-fill-accent": "neutral"
+    "--astryx-theme-neutral-color-status-fill-accent": "neutral",
+    "--jig-state-today-border": "jig",
+    "--jig-state-today-text": "jig",
+    "--jig-state-task-selected-bg": "jig",
+    "--jig-state-task-selected-border": "jig",
+    "--jig-state-nav-active-bg": "jig",
+    "--jig-state-nav-active-text": "jig",
+    "--jig-state-drag-border": "jig",
+    "--jig-state-drag-bg": "jig",
+    "--jig-priority-high": "jig",
+    "--jig-priority-normal": "jig",
+    "--jig-priority-low": "jig",
+    "--jig-status-healthy-bg": "jig",
+    "--jig-status-healthy-border": "jig",
+    "--jig-status-healthy-text": "jig",
+    "--jig-state-hover-bg": "jig",
+    "--jig-state-pressed-bg": "jig"
   },
   __localTokenLineage: ["neutral","jig"],
   components: {
