@@ -1,6 +1,6 @@
 # Jig v1.0.3 implementation evidence — single Planner
 
-**Status:** Automated implementation certification **PASS**; reviewed screenshot capture remains open. Permanent verification passed for implementation candidate `a7a42f26695513ac13a658879b1b36f40cd56352` in GitHub Actions `Verify v1 implementation` run `44032488998`. Final reviewed screenshot capture is required before this evidence set is marked visually complete.
+**Status:** **PASS — automated and visual certification complete.** Final product-code candidate `23c2d98e866f8a83fae1bc6c27c9aa13d39f778b` passed the full permanent `Verify v1 implementation` workflow in run `44033959992`. The final ten-image screenshot set was captured in run `44033950752`, archived in commit `b495b664cb04a5b7a506069b2ca043076f2e54e1`, and visually reviewed against the binding v1.0.3 references.
 
 The earlier v1.0.3 master-detail screenshots certified a superseded Day/Week/SideNav design. They have been removed from the active evidence tree on this branch and remain available only through Git history. They are **not** acceptance evidence for the binding single-Planner design.
 
@@ -15,9 +15,9 @@ The earlier v1.0.3 master-detail screenshots certified a superseded Day/Week/Sid
 
 ## Automated certification
 
-**Result:** **PASS** on implementation candidate `a7a42f26695513ac13a658879b1b36f40cd56352`, workflow run `44032488998`.
+**Result:** **PASS** on final product-code candidate `23c2d98e866f8a83fae1bc6c27c9aa13d39f778b`, workflow run `44033959992`.
 
-The permanent workflow passed theme verification, typecheck, core/integration tests, production build, real-browser acceptance, shell syntax, and installer/lifecycle smoke.
+The permanent workflow passed release-metadata guarding, release-tool compilation, Astryx theme verification, typecheck, core/integration tests, production build, real-browser acceptance, shell syntax, and installer/lifecycle smoke.
 
 Permanent gates are:
 
@@ -61,35 +61,28 @@ The browser contract specifically certifies:
 - priority uses restrained theme-derived scanning cues without becoming the ordering authority;
 - System/Light/Dark, local-save truth and repository-sync truth preserve their existing semantics.
 
-## Required reviewed screenshot set
+## Reviewed screenshot set
 
-The final screenshot archive must be captured from the exact implementation candidate after all permanent gates pass.
+**Result:** **PASS.** The screenshot archive was captured from product-code candidate `23c2d98e866f8a83fae1bc6c27c9aa13d39f778b` by capture run `44033950752`, artifact `14306172511` (SHA-256 `5e9262482e7624519720462e497f0b171e01fe3ff6a87664e1a23facd1054353`), and archived to the branch in commit `b495b664cb04a5b7a506069b2ca043076f2e54e1`.
 
-| Required file | Viewport / state | Contract to review |
+All ten required images were reviewed directly.
+
+| Reviewed file | Viewport / state | Review result |
 | --- | --- | --- |
-| `browser/desktop-planner-light.jpg` | 1440×900, Light | centered week navigator, no sidebar, seven fluid tracks, global actions |
-| `browser/desktop-planner-dark.jpg` | 1440×900, Dark | same hierarchy and state distinction in Dark |
-| `browser/desktop-planner-task-drawer.jpg` | 1440×900 | right Drawer overlays without board reflow |
-| `browser/desktop-planner-edit.jpg` | 1440×900 | Edit remains in the same right workspace |
-| `browser/desktop-history.jpg` | 1440×900 | History active, same global header, completed Task master-detail |
-| `browser/desktop-settings.jpg` | 1440×900 | Settings active, no Planner temporal controls |
-| `browser/mobile-planner.jpg` | 390×844 | application band, centered week controls, seven-date strip, selected-date list |
-| `browser/mobile-task-bottom-sheet.jpg` | 390×844 | Task workspace rises from bottom |
-| `browser/sync-issue.jpg` | representative | synchronization issue remains operational, not Task-domain state |
-| `browser/local-save-failure.jpg` | representative | failed local save is explicit and never claimed successful |
+| `browser/desktop-planner-light.jpg` | 1440×900, Light | **PASS** — centered temporal centerpiece, no sidebar, seven fluid tracks, clear priority scanning cues |
+| `browser/desktop-planner-dark.jpg` | 1440×900, Dark | **PASS** — same hierarchy and state distinctions with appropriate Dark-mode contrast |
+| `browser/desktop-planner-task-drawer.jpg` | 1440×900 | **PASS** — settled right Drawer overlays the Planner without board reflow |
+| `browser/desktop-planner-edit.jpg` | 1440×900 | **PASS** — Edit remains in the same contextual right workspace |
+| `browser/desktop-history.jpg` | 1440×900 | **PASS** — History remains active, shares the global header, and visibly preserves the priority cue |
+| `browser/desktop-settings.jpg` | 1440×900 | **PASS** — Settings active with no Planner temporal controls/Add action |
+| `browser/mobile-planner.jpg` | 390×844 | **PASS** — compact app band, centered week controls, seven-date strip and selected-date list |
+| `browser/mobile-task-bottom-sheet.jpg` | 390×844 | **PASS** — settled Task workspace rises from the bottom as BottomSheet |
+| `browser/sync-issue.jpg` | representative | **PASS** — sync issue is operational feedback while Planner remains usable |
+| `browser/local-save-failure.jpg` | representative | **PASS** — failed save remains explicit inline in the open workspace without duplicate success/error claims |
 
-For every capture record:
+## Visual review verdict
 
-- implementation commit SHA;
-- viewport;
-- appearance mode;
-- fixture/scenario;
-- governing reference;
-- any intentional deviation caused by the real pinned Astryx component anatomy.
-
-## Visual review criteria
-
-Visual review is a **PASS** only when:
+**PASS.** Review confirmed:
 
 1. the centered week/date interaction reads as one temporal centerpiece;
 2. left product identity and right actions do not pull the centerpiece off the page center;
@@ -101,4 +94,4 @@ Visual review is a **PASS** only when:
 8. no meta copy such as “Week of”, “Attention”, “Your ordered plan”, “selected date view”, or implementation commentary appears;
 9. Light and Dark preserve the same hierarchy and accessible state distinctions.
 
-Until the reviewed screenshot set is captured, this README must not claim final visual certification. Automated gates remain the authoritative behavioral/architectural implementation evidence.
+The temporary capture workflow/spec used to create the archive were removed after certification. The permanent architecture/browser suites remain the behavioral and architectural gates; the reviewed images are the v1.0.3 visual-fidelity record.
