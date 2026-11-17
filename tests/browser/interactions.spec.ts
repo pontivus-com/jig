@@ -160,19 +160,7 @@ test("priority edits preserve established manual order", async ({
     )
     .map((task) => task.id);
 
-  await runTaskAction(page, "Priority edited task", "Open / edit");
-  const workspace = page.getByRole("dialog", { name: "Priority edited task" });
-  await expect(workspace).toBeVisible({ timeout: 5_000 });
-  const highPriority = workspace.getByRole("radio", {
-    name: "High",
-    exact: true,
-  });
-  await highPriority.click({ timeout: 5_000 });
-  await expect(highPriority).toHaveAttribute("aria-checked", "true");
-  await workspace
-    .getByRole("button", { name: "Save", exact: true })
-    .click({ timeout: 5_000 });
-  await expect(workspace).toBeVisible({ timeout: 5_000 });
+  await runTaskAction(page, "Priority edited task", "Priority: High");
 
   expect((await taskByTitle(page, "Priority edited task")).priority).toBe(
     "HIGH",
