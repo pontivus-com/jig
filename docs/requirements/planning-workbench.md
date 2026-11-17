@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding v1.0.5 functional design v0.14, amended 2026-11-17 after complete post-release review of published v1.0.4 desktop and narrow/mobile interaction paths. v1.0.5 corrects drag ownership/stability, mobile drag, responsive renderer parity, application-navigation parity, Task-menu parity, semantic icon completeness, header density, Task-card legibility and header-brand correctness. Canonical Task, persistence, rollover, reminder, repository ownership, installer and synchronization semantics are unchanged.
+**Status:** Binding v1.0.6 functional design v0.15, amended 2026-11-18. v1.0.5 remains the published baseline for drag/responsive/header/icon corrections; v1.0.6 adds one presentation-only correction that constrains desktop History and Settings content width while preserving the full-bleed application frame and full-width Planner. Canonical Task, persistence, rollover, reminder, repository ownership, installer and synchronization semantics are unchanged.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -114,6 +114,14 @@ Published v1.0.4 did not satisfy several binding interaction/presentation outcom
 | JIG-105-FR-09 | Header brand uses the canonical Jig wordmark treatment | Application chrome renders the complete canonical Jig wordmark at compact scale. It does not compose the standalone J symbol beside a second live “Jig” word. Light/Dark assets switch through the existing theme presentation without creating a separate mobile brand treatment. |
 | JIG-105-FR-10 | Release acceptance proves responsive semantic parity, not only component presence | A v1.0.5 candidate is not acceptable until real-browser verification covers desktop and narrow/mobile drag with zero runtime/page errors, opens and compares responsive navigation menus, verifies Task-action parity, checks icon presence/absence of Unicode stand-ins, enforces header geometry, verifies card/canvas computed-style separation in Light/Dark, verifies zero application-level viewport inset and the 73rem responsive boundary, and reviews desktop+narrow visual evidence. |
 | JIG-105-FR-11 | Application layout is full-bleed with zero viewport margins | Desktop and narrow/mobile use the full browser viewport from edge to edge. There is no application-shell or page-level margin/padding on the left, right, top or bottom, no outer framed content panel, and no artificial max-width/inset around Planner, History or Settings. Header and main content begin at the viewport edges. Local spacing inside headers, date sections, cards, forms and controls remains allowed because it is component spacing, not screen-edge margin. |
+
+### v1.0.6 secondary-screen width correction
+
+JIG-106-FR-01 supersedes only the History/Settings max-width clause of JIG-105-FR-11. The application frame remains full-bleed; Planner remains unconstrained.
+
+| ID | Requirement | Observable acceptance |
+|---|---|---|
+| JIG-106-FR-01 | Desktop History and Settings use a centered bounded content column | At desktop composition (>=73rem), History and Settings content is centered and capped at approximately 800 CSS px / 50rem. The AppShell, header and content frame remain edge-to-edge, and Planner continues to consume the full available desktop canvas. Settings adapts its internal two-column layout within the bounded column without horizontal overflow. Below 73rem, History and Settings return to the full available width. No Task/domain behavior changes. |
 
 
 ## 4. Functional requirements
