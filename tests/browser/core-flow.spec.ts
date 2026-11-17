@@ -11,17 +11,17 @@ async function navigateTo(
   page: Page,
   destination: "Week" | "Day" | "History" | "Settings",
 ): Promise<void> {
-  const desktop = page
-    .locator(".jig-sidebar")
+  const navigation = page
+    .locator(".jig-primary-nav")
     .getByRole("button", { name: destination, exact: true });
-  if (await desktop.isVisible()) {
-    await desktop.click();
+  if (await navigation.isVisible()) {
+    await navigation.click();
     return;
   }
 
-  const menu = page.locator(".jig-mobile-destination-menu");
-  await menu.locator("summary").click();
-  await menu
+  await page.locator(".jig-mobile-destination-trigger").click();
+  await page
+    .locator(".jig-primary-nav")
     .getByRole("button", { name: destination, exact: true })
     .click();
 }
