@@ -2,7 +2,7 @@
 
 **Status:** Binding v1.0.4 technical solution, v0.10 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, visual-state semantics, header geometry, outside dismissal and Task menu actions.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
-**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-09 and JIG-FR-01 through JIG-FR-22.
+**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-10 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
 
 **Foundational authority rule:** For every external integration, identify the authoritative owner first. Jig implements only the minimum interface needed for Jig's product job and must not absorb that external system's configuration, topology, provisioning, migration, reconciliation or policy. For Git specifically, Jig owns deterministic Jig records, automatic synchronization intent and coarse sync outcome; Git owns repository acquisition, branches/refs/worktrees, signing/identity, credentials, remotes, history and reconciliation. A Git isolation technique may exist inside the adapter, but it is not Jig domain, user workflow or configuration.
@@ -331,7 +331,7 @@ Task cards may render a thin leading priority accent for rapid scanning. The vis
 
 ### 5.4 Desktop Task workspace
 
-Use the public Astryx `Drawer` from the inline-end/right with `hasScrim={false}` for Planner and History Task view/create/edit. It is an overlay over the active destination; opening it must not resize, reflow or narrow the Planner board.
+Use the public Astryx `Drawer` from the inline-end/right with `hasScrim={false}` for Planner and History Task create/edit. Selecting an existing Task constructs its editable draft immediately; there is no read-only view mode. The Drawer overlays the active destination and must not resize, reflow or narrow the Planner board.
 
 There is one workspace state owner:
 
@@ -364,7 +364,7 @@ The hamburger uses Astryx `DropdownMenu` or `Popover` mechanics and contains onl
 
 A prominent touch Add task control remains outside the constrained header (sticky/fixed within the Planner safe area is permitted) and originates from `selectedDate`.
 
-Task view/create/edit uses the public Astryx **BottomSheet** rising from the bottom with `hasScrim={false}`, reusing the exact same `TaskWorkspaceState`. Responsive mode changes presentation only: desktop Drawer ⇄ narrow BottomSheet without destroying or duplicating draft state.
+Task create/edit uses the public Astryx **BottomSheet** rising from the bottom with `hasScrim={false}`, reusing the exact same `TaskWorkspaceState`. Existing Tasks are immediately editable and Add uses the same field surface. Responsive mode changes presentation only: desktop Drawer ⇄ narrow BottomSheet without destroying or duplicating draft state.
 
 When narrow drag is not enabled, touch-operable Move up/Move down commands call the same same-day move operation, and the Edit scheduled-date field calls the same date-change operation used elsewhere. There is no mobile-specific task/order model.
 
@@ -561,7 +561,7 @@ ui/
     planner-header.tsx      centered week range + Previous/Today/Next + desktop/mobile header zones
     week.tsx                desktop seven-date tracks and cross-date drag composition
     task-editor.tsx         Task workspace form content for create/edit
-    task-workspace.tsx      one view/edit/create workspace state rendered as desktop Drawer or narrow BottomSheet
+    task-workspace.tsx      one existing/create editable workspace state rendered as desktop Drawer or narrow BottomSheet
     reminder.tsx            browser due check + toast/Notification delivery
     theme.css               raw Jig palette primitives only
     styles.css              Jig-owned product composition/geometry only
@@ -579,7 +579,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 
 | Requirement | Technical ownership | Required evidence |
 |---|---|---|
-| JIG-FR-01 quick create | Task creation + quick-add | Title-only creates on selected date, default priority |
+| JIG-FR-01 quick create | Task creation through the unified Task form | Originating date/defaults are pre-populated; Title and Date are required; optional fields remain optional |
 | JIG-FR-02 navigate dates | Pure Planner calendar helpers + header/date-strip UI | Previous/Next shift week + selected date by seven days; Today restores current date/week; visible-date selection makes no DB writes |
 | JIG-FR-03 within-day order | dnd-kit + core move + SQLite transaction | Reorder persists through reload/restart |
 | JIG-FR-04 cross-day move | Dated droppables + core move | Exact target position, no duplicate ID; empty day works |
