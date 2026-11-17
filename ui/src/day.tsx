@@ -271,13 +271,15 @@ export function DayView({
       </div>
 
       <div className="jig-day-layout">
-        <DayTaskLists
-          tasks={tasks}
-          selectedDate={selectedDate}
-          selectedTask={selectedTask}
-          onSelectTask={onSelectTask}
-          {...listProps}
-        />
+        <div className="jig-day-primary">
+          <DayTaskLists
+            tasks={tasks}
+            selectedDate={selectedDate}
+            selectedTask={selectedTask}
+            onSelectTask={onSelectTask}
+            {...listProps}
+          />
+        </div>
         <TaskInspector
           task={selectedTask}
           onToggleComplete={listProps.onToggleComplete}
