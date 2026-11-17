@@ -125,11 +125,13 @@ test("capture finalized v1.0.3 single Planner evidence", async ({ page }) => {
   await task.click();
   const drawer = page.getByRole("dialog", { name: "Finalize TTA remediation" });
   await expect(drawer).toBeVisible();
+  await page.waitForTimeout(350);
   await capture(page, "desktop-planner-task-drawer");
 
   await drawer.getByRole("button", { name: "Edit", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Edit task" });
   await expect(editor).toBeVisible();
+  await page.waitForTimeout(200);
   await capture(page, "desktop-planner-edit");
   await closeWorkspace(page);
 
@@ -150,6 +152,7 @@ test("capture finalized v1.0.3 single Planner evidence", async ({ page }) => {
   await expect(
     page.getByRole("dialog", { name: "Finalize TTA remediation" }),
   ).toBeVisible();
+  await page.waitForTimeout(350);
   await capture(page, "mobile-task-bottom-sheet");
   await closeWorkspace(page);
 
@@ -190,8 +193,9 @@ test("capture finalized v1.0.3 single Planner evidence", async ({ page }) => {
   await add.getByLabel("Title").fill("Unsaved evidence task");
   await add.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(
-    page.getByText("Jig could not complete the operation", { exact: true }),
+    add.getByText("Simulated local save failure", { exact: true }),
   ).toBeVisible();
+  await page.waitForTimeout(150);
   await capture(page, "local-save-failure");
   await page.unroute("**/api/v1/commands");
 });
