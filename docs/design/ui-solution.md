@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.5 UX/UI realization v0.13, 2026-11-17. It implements the ten atomic JIG-105 functional/technical solution areas and removes responsive semantic drift between desktop and narrow/mobile.
+**Status:** Binding v1.0.5 UX/UI realization v0.14, 2026-11-17. It implements the ten atomic JIG-105 functional/technical solution areas and removes responsive semantic drift between desktop and narrow/mobile.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–12 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
@@ -138,7 +138,7 @@ On History, selecting a completed Task opens the same right-side Task workspace 
 
 ### 4.3 Narrow/mobile Planner
 
-Below the technical 76rem semantic breakpoint, render a deliberate narrow Planner composition rather than hiding desktop pieces with CSS.
+Below the technical 73rem semantic breakpoint, render a deliberate narrow Planner composition rather than hiding desktop pieces with CSS.
 
 The top hierarchy is:
 
@@ -194,7 +194,19 @@ Task-card legibility uses one cross-responsive surface contract:
 - Selected/drag/focus/priority cues remain separate semantic layers and do not replace the base surface distinction.
 - The same surface values apply to desktop and narrow/mobile.
 
-### 4.3.3 v1.0.5 semantic icon normalization
+### 4.3.3 v1.0.5 full-bleed viewport
+
+Jig uses the entire viewport. There is no decorative page gutter.
+
+- Set application-shell and page-level margin/padding to **0 on all four sides** at desktop and narrow widths.
+- The header starts at the top-left viewport edge, spans the full width, and its single bottom hairline reaches edge-to-edge.
+- Planner begins immediately below the header and uses the full available width. There is no outer rounded frame, border, background panel or horizontal gutter around the seven tracks/stacked sections.
+- History and Settings use the same edge-to-edge application frame. Their own semantic sections may contain internal spacing, but no generic screen-edge padding is reintroduced.
+- Narrow/mobile likewise has no outer page inset. Component touch spacing belongs inside the controls/sections themselves.
+- With the former 48px desktop inset removed, the desktop seven-track breakpoint becomes **73rem / 1168px**.
+- “Zero margin” refers to viewport/application-frame spacing. It does not require text, icons or card contents to touch their own component borders; those retain governed internal padding.
+
+### 4.3.4 v1.0.5 semantic icon normalization
 
 Use Astryx 0.7.13 public semantic icons as the only reusable icon language. The production UI must visibly normalize at least:
 
