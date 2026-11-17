@@ -338,10 +338,14 @@ export function SortableTaskRow({
     ],
   });
 
-  // The Astryx ListItem <li> is both dnd-kit's sortable element and pointer
-  // source. PointerSensor excludes genuine interactive descendants, while
-  // activation constraints preserve ordinary press/release for Task selection.
-  const rowRef = sortable.ref as Ref<HTMLLIElement>;
+  // The Astryx ListItem <li> is both dnd-kit's sortable geometry element and
+  // pointer source. Both public refs therefore receive the same root element.
+  // PointerSensor excludes genuine interactive descendants, while activation
+  // constraints preserve ordinary press/release for Task selection.
+  const rowRef = (element: HTMLLIElement | null): void => {
+    sortable.ref(element);
+    sortable.sourceRef(element);
+  };
 
   return <TaskRow {...rowProps} task={task} rowRef={rowRef} />;
 }
