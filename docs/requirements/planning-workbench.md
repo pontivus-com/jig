@@ -97,11 +97,11 @@ Completed Tasks are never rolled forward. Manually moving a Task to another date
 
 **Week:** one calendar week of date buckets, with previous/next week controls, jump to today, quick-add scoped to a bucket, compact title-first task rows/cards, clear drag affordances, priority/context/reminder metadata only when it adds value, and an obvious drop target for cross-day movement. Dates with substantial lists must remain navigable without making the entire page unusable. No additional generic “Board” view is needed: the week planner already uses Kanban interaction.
 
-**Day:** selected date and one attention list composed of the canonical outstanding Tasks scheduled for that date after daily rollover, plus a compact completed section and an on-demand task inspector/editor. A task's detail surface shows its own minimal fields, optional reference, completion, rescheduling and deletion controls; it does not display the owning project's workflow.
+**Day:** selected date and one attention list composed of the canonical outstanding Tasks scheduled for that date after daily rollover, plus a compact completed section and an on-demand Task workspace. On wide Day the workspace is docked on the right; selecting a Task reveals its details without changing destination, and Add/Edit/Move reuse that same surface. A task's detail surface shows its own minimal fields, optional reference, completion, rescheduling and deletion controls; it does not display the owning project's workflow.
 
 **History:** simple dated access to completed items, not a productivity dashboard. Filter by context/project only if useful; metrics are secondary and not MVP acceptance requirements.
 
-**Quick add:** the default interaction asks only for title and uses the originating date. Secondary fields remain optional and can be edited afterward.
+**Quick add:** the default interaction asks only for title and uses the originating date. It opens the contextual Task workspace rather than a blocking modal. Secondary fields remain optional and can be edited afterward.
 
 **Actions:** desktop pointer drag-and-drop is the primary ordering mechanism. Provide keyboard-accessible alternatives (move before/after or move to date) and visible focus. Completion uses one explicit control. Delete is a destructive action available for outstanding and completed Tasks and always requires explicit confirmation before mutation. Small touch targets or hover-only essential actions are not acceptable even in the desktop-first MVP.
 
@@ -115,7 +115,7 @@ Define narrow layout and input behavior now, without requiring an independently 
 
 - Day-oriented narrow layout: compact horizontal week strip + one day's canonical attention list after rollover, rather than seven unreadable columns.
 - Touch-sized controls; drag-and-drop ordering can be implemented later, with move-to-date as a reliable non-drag fallback.
-- Task editor uses a bounded mobile sheet or full-screen treatment with explicit Save/Cancel and preserved edits when navigation changes.
+- Task view/create/edit/move uses one responsive contextual Task workspace. On narrow layouts it slides from the inline end/right using the UI library's side-panel treatment, with explicit Save/Cancel or Move/Cancel and preserved edits when the layout changes. Task creation/editing is not a centered modal; permanent Delete confirmation remains blocking.
 - The same work item does not become a separate mobile data or lifecycle shape.
 - No full background/scheduled mobile notification requirement.
 
@@ -138,7 +138,7 @@ The earlier mockups used the working name Day and were made to validate relation
 5. **Interrupted work:** a Thursday Task left unfinished is automatically rolled into Friday by changing its canonical scheduled date; the same Task identity, title, reminder and external reference are preserved.
 6. **Completion history:** complete a Task on Friday after rollover; History shows the canonical Friday scheduled date together with the actual completion timestamp. No separate pre-rollover schedule-history field is required in v1.
 7. **Reminder:** while Jig is open and visible, a due reminder produces one in-app toast. If Jig remains open but hidden and browser notification permission is granted, the same due reminder produces one browser Notification instead. No success claim is made while Jig/browser is closed.
-8. **Responsive continuity:** narrow and wide layouts represent the same selected task and values, without duplicate project detail or loss of edits.
+8. **Responsive continuity:** narrow and wide layouts represent the same selected task, Task-workspace mode and values, without duplicate project detail, destination switching caused by selection or loss of edits.
 9. **Daily rollover:** leave a Thursday Task outstanding and advance the local day to Friday. Jig changes the Task's canonical `scheduled_date` to Friday, moves the same card into Friday's bucket, and removes it from Thursday. Day and Week show the same moved Task. If Jig is inactive across multiple days, the outstanding Task catches up directly to the current local date. Existing reminder time-of-day is preserved.
 10. **Deletion:** choose Delete on an outstanding or completed Task, cancel the confirmation once with no change, then confirm; the Task is removed from Jig and the next portable Git snapshot records its absence. No in-app trash or restore is offered.
 11. **Theme parity:** switch among System, Light and Dark. Layout, task meaning, focus, selection, priority, save and synchronization states remain equivalent and readable; changing theme makes no Task mutation.
