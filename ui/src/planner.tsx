@@ -1,5 +1,5 @@
 import { Button } from "@astryxdesign/core";
-import type { Task } from "../../src/core/task";
+import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { DateStrip } from "./date-strip";
 import { formatCivilDate } from "./dates";
@@ -18,6 +18,8 @@ export interface PlannerProps {
   readonly onAdd: (date: string) => void;
   readonly onEdit: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
+  readonly onSetPriority: (task: Task, priority: Priority) => Promise<boolean>;
+  readonly onDelete: (task: Task) => void;
   readonly onMove: (
     taskId: string,
     destinationDate: string,
@@ -36,6 +38,8 @@ export function Planner({
   onAdd,
   onEdit,
   onToggleComplete,
+  onSetPriority,
+  onDelete,
   onMove,
 }: PlannerProps): React.ReactElement {
   if (layoutMode === "desktop") {
@@ -50,6 +54,8 @@ export function Planner({
         onAdd={onAdd}
         onEdit={onEdit}
         onToggleComplete={onToggleComplete}
+        onSetPriority={onSetPriority}
+        onDelete={onDelete}
         onMove={onMove}
       />
     );
@@ -83,6 +89,8 @@ export function Planner({
         onSelectTask={onSelectTask}
         onEdit={onEdit}
         onToggleComplete={onToggleComplete}
+        onSetPriority={onSetPriority}
+        onDelete={onDelete}
         onMove={onMove}
       />
       <Button
