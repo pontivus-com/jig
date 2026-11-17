@@ -29,7 +29,7 @@ async function runTaskAction(
   action: string,
 ): Promise<void> {
   const card = await taskCard(page, title);
-  await card.locator(`summary[aria-label="Actions for ${title}"]`).click();
+  await card.getByRole("button", { name: `Actions for ${title}` }).click();
   await card.getByRole("button", { name: action, exact: true }).click();
 }
 
