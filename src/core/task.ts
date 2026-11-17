@@ -299,3 +299,26 @@ export function normalizeTitle(value: string): string {
   }
   return trimmed;
 }
+
+export function createCanonicalTask(
+  command: Extract<TaskCommand, { readonly type: "create" }>,
+  id: string,
+  now: string,
+): Task {
+  assertUuid(id);
+  assertUtcInstant(now, "created_at");
+  return validateTask({
+    id,
+    title: normalizeTitle(command.title),
+    scheduled_date: command.scheduled_date,
+    position: 0,
+    priority: command.priority ?? "NORMAL",
+    context: normalizeOptionalText(command.context),
+    reference: normalizeOptionalText(command.reference),
+    note: normalizeOptionalText(command.note),
+    reminder_time: command.reminder_time ?? null,
+    completed_at: null,
+    created_at: now,
+    updated_at: now,
+  });
+}
