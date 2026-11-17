@@ -73,11 +73,12 @@ test("desktop shell uses a compact rail and Week expands into reclaimed canvas",
   expectNear(heading.y, 34);
 
   await page.getByRole("button", { name: "Week", exact: true }).click();
-  const board = await page.locator(".jig-week-board").boundingBox();
-  expect(board).not.toBeNull();
-  if (board === null) return;
-  expectNear(board.x, 132);
-  expect(board.width).toBeGreaterThan(1200);
+  const board = page.locator(".jig-week-board");
+  const boardBox = await board.boundingBox();
+  expect(boardBox).not.toBeNull();
+  if (boardBox === null) return;
+  expectNear(boardBox.x, 132);
+  expect(boardBox.width).toBeGreaterThan(1200);
 
   const columns = page.locator(".jig-week-column");
   await expect(columns).toHaveCount(7);
