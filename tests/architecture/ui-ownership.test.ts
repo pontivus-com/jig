@@ -24,8 +24,8 @@ describe("UI ownership architecture", () => {
   it("only consumes public Astryx global tokens from Jig CSS", () => {
     const css = source("ui/src/styles.css");
     const usedTokens = new Set(
-      [...css.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)].map(
-        (match) => match[1],
+      [...css.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)].flatMap(
+        (match) => (match[1] === undefined ? [] : [match[1]]),
       ),
     );
     const unknown = [...usedTokens]
