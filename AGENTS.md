@@ -63,6 +63,28 @@ Apply the same rule beyond Git:
 - **External project systems:** Jig stores references to authoritative work. It does not copy their domain models, lifecycle, or source content.
 - **Notifications:** Jig owns the in-app reminder behavior. Browser/OS notification infrastructure remains externally owned.
 
+## UI and design-system boundary
+
+Jig uses the pinned Astryx release as the authoritative reusable UI and styling system. This is an architecture boundary, not a visual preference.
+
+Apply UI decisions in this order:
+
+1. Product definition, functional requirements and the governed UI references define the user-visible outcome, information hierarchy and structural geometry.
+2. Astryx public component, layout, navigation, dialog, form and theme APIs define how reusable UI mechanics are realized.
+3. Jig React composition owns only product-specific regions and geometry that are not already owned by one Astryx public primitive.
+4. Jig-owned CSS styles only Jig-owned composition and consumes public Astryx semantic/spacing/radius/type tokens.
+5. Browser tests and screenshots verify that architecture; they must never be used as justification for compensating overrides.
+
+Mandatory rules:
+
+- Do not recreate an Astryx-owned application shell, navigation system, dialog anatomy, list anatomy, field anatomy or responsive behavior in parallel merely to resemble a reference image.
+- Do not depend on private/undocumented Astryx DOM structure, CSS selectors, CSS custom properties or internal StyleX implementation details. A private name such as an internal `--_*` variable is not an application integration API.
+- Do not add an application-owned high-priority cascade layer, `!important`, or increasingly specific selectors to override Astryx internals. Preserve Astryx's published stylesheet/theme ordering, then style Jig-owned elements through ordinary scoped rules and supported public component props.
+- Do not use CSS hiding, offsets or absolute positioning to transform the wrong semantic DOM hierarchy into a materially different desktop/mobile hierarchy. At Jig's one semantic breakpoint, render the correct composition while preserving shared application state. CSS media queries may handle pure reflow/density only.
+- Hard-coded dimensions are permitted only for governed structural budgets such as the application inset, navigation rail, canonical Week tracks, Day split, Settings split and reference mobile frame. Interior spacing, sizing and typography use Astryx public tokens/component APIs unless the governed reference establishes a real product-level dimension.
+- Each layout property has one owner. Remove obsolete rules when composition changes; do not stack later overrides on top of earlier rules to cancel them.
+- If the pinned Astryx public API cannot satisfy a governed requirement, first prove and document the incompatibility. Then use the smallest Jig-owned semantic composition built from Astryx public leaves/tokens. Do not solve the problem by reaching into Astryx internals or adding another UI/styling framework.
+
 ## Architecture discipline
 
 - Product definition is the highest authority for scope.
