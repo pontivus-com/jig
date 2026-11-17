@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.5 technical solution, v0.17 (2026-11-17), with eleven atomic JIG-105 solution designs mapped one-to-one to the v1.0.5 functional requirements. The design removes responsive semantic duplication while preserving the canonical Task/domain/persistence/integration architecture.
+**Status:** Binding v1.0.5 technical solution, v0.18 (2026-11-17), with eleven atomic JIG-105 solution designs mapped one-to-one to the v1.0.5 functional requirements. The design removes responsive semantic duplication while preserving the canonical Task/domain/persistence/integration architecture.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
