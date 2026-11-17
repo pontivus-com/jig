@@ -15,6 +15,7 @@ export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragSourceRef?: Ref<HTMLDivElement> | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -204,6 +205,7 @@ export function TaskRow({
   task,
   isSelected = false,
   rowRef,
+  dragSourceRef,
   onSelect,
   onToggleComplete,
   onEdit,
@@ -242,6 +244,7 @@ export function TaskRow({
       }
       label={
         <div
+          {...(dragSourceRef === undefined ? {} : { ref: dragSourceRef })}
           className={completed ? "jig-task-body" : "jig-task-body jig-task-body-draggable"}
         >
           <div className="jig-task-title-row">
@@ -274,7 +277,7 @@ export function TaskRow({
 }
 
 export interface SortableTaskRowProps
-  extends Omit<TaskRowProps, "rowRef"> {
+  extends Omit<TaskRowProps, "rowRef" | "dragSourceRef"> {
   readonly index: number;
   readonly group: string;
 }
@@ -293,17 +296,19 @@ export function SortableTaskRow({
     accept: "jig-task",
   });
 
-  // dnd-kit exposes a generic HTMLElement ref; it is bound to the concrete
-  // ListItem <li> at this single third-party boundary. With no dedicated
-  // handle, PointerSensor keeps its normal activation constraints and excludes
-  // interactive descendants, preserving click-to-edit and independent controls.
+  // dnd-kit exposes generic Element refs. Keep the ListItem <li> as the
+  // sortable/droppable target and bind its draggable source to Jig's
+  // non-interactive Task body. This avoids Astryx ListItem's interactive press
+  // layer becoming the drag activator while preserving row click-to-edit.
   const rowRef = sortable.ref as Ref<HTMLLIElement>;
+  const dragSourceRef = sortable.sourceRef as Ref<HTMLDivElement>;
 
   return (
     <TaskRow
       {...rowProps}
       task={task}
       rowRef={rowRef}
+      dragSourceRef={dragSourceRef}
     />
   );
 }
