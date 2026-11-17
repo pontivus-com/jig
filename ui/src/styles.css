@@ -27,14 +27,6 @@ body {
   background: var(--color-background-body);
 }
 
-.jig-primary-nav {
-  height: 100%;
-  margin-inline-end: var(--spacing-2);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-container);
-  background: var(--color-background-surface);
-}
-
 .jig-content-frame {
   width: 100%;
   min-width: 0;
@@ -46,13 +38,98 @@ body {
 .jig-content {
   min-width: 0;
   min-height: 100%;
-  padding: calc(var(--spacing-3) + var(--spacing-0-5)) calc(var(--spacing-2) + var(--spacing-0-5)) var(--spacing-5) 0;
-}
+  padding: var(--spacing-3) var(--spacing-3) var(--spacing-5);
+}  .jig-app-header {
+    width: 100%;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-container);
+    background: var(--color-background-surface);
+  }
 
-  .jig-nav-brand {
+  .jig-app-header-desktop {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--spacing-4);
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+
+  .jig-header-left {
+    justify-self: start;
+  }
+
+  .jig-header-center {
+    justify-self: center;
+    min-width: 0;
+  }
+
+  .jig-header-right {
+    display: flex;
+    justify-self: end;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+
+  .jig-header-home {
+    min-width: 0;
+  }
+
+  .jig-header-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+
+  .jig-header-brand strong {
+    font-size: var(--font-size-lg);
+  }
+
+  .jig-header-brand .jig-brand-logo-wrap {
+    width: var(--spacing-6);
+    height: var(--spacing-6);
+  }
+
+  .jig-header-temporal {
     display: grid;
     justify-items: center;
-    padding: var(--spacing-2);
+    gap: var(--spacing-1);
+  }
+
+  .jig-header-week-range,
+  .jig-header-destination-title {
+    white-space: nowrap;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .jig-header-week-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+  }
+
+  .jig-header-nav-active {
+    background: var(--color-accent-muted);
+    color: var(--color-text-accent);
+  }
+
+  .jig-app-header-narrow {
+    display: grid;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-3) var(--spacing-3);
+  }
+
+  .jig-header-mobile-band {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-2);
+  }
+
+  .jig-header-mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
   }
 
   .jig-brand-logo-wrap {
@@ -191,39 +268,6 @@ body {
     border-radius: var(--radius-full);
   }
 
-  .jig-week-toolbar,
-  .jig-day-toolbar {
-    display: flex;
-    min-height: var(--size-element-lg);
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-4);
-    margin-block: 0 var(--spacing-4);
-  }
-
-  .jig-day-toolbar {
-    justify-content: flex-end;
-  }
-
-  .jig-month-navigation,
-  .jig-reference-toolbar-actions {
-    display: flex;
-    align-items: center;
-    gap: calc(var(--spacing-2) + var(--spacing-0-5));
-  }
-
-  .jig-month-navigation strong {
-    font-size: var(--font-size-sm);
-  }
-
-  .jig-reference-toolbar-actions > :last-child {
-    min-width: 240px;
-  }
-
-  .jig-today-control {
-    min-width: 128px;
-  }
-
   .jig-view-heading {
     display: flex;
     align-items: center;
@@ -235,7 +279,6 @@ body {
   .jig-view-heading h1,
   .jig-view-heading p,
   .jig-week-column h2,
-  .jig-day-lists h2,
   .jig-history-group h2 {
     margin-block-start: 0;
   }
@@ -257,17 +300,10 @@ body {
   .jig-week-board {
     display: grid;
     grid-template-columns: repeat(7, minmax(10rem, 1fr));
-    gap: var(--spacing-1);
+    gap: var(--spacing-2);
     width: 100%;
     min-width: 0;
     padding-block-end: var(--spacing-3);
-  }
-
-  .jig-week-view {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    margin-inline: 0;
   }
 
   .jig-week-column {
@@ -289,17 +325,15 @@ body {
 
   .jig-week-column-selected {
     border-color: var(--color-accent);
-    background: var(--color-accent-muted);
   }
 
   .jig-week-column-selected .jig-week-column-header {
-    background: var(--color-accent);
-    color: var(--color-on-accent);
+    box-shadow: inset 0 calc(-2 * var(--border-width)) 0 var(--color-accent);
   }
 
-  .jig-week-column-selected .jig-date-heading-button,
-  .jig-week-column-selected .jig-task-count {
-    color: var(--color-on-accent);
+  .jig-week-column-today .jig-date-heading-button {
+    color: var(--color-text-accent);
+    font-weight: var(--font-weight-bold);
   }
 
   .jig-weekday-line {
@@ -377,6 +411,21 @@ body {
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-element);
     background: var(--color-background-surface);
+  }
+
+  .jig-task-priority-high {
+    border-inline-start-color: var(--color-text-error);
+    border-inline-start-width: calc(3 * var(--border-width));
+  }
+
+  .jig-task-priority-normal {
+    border-inline-start-color: var(--color-accent);
+    border-inline-start-width: calc(2 * var(--border-width));
+  }
+
+  .jig-task-priority-low {
+    border-inline-start-color: var(--color-text-info);
+    border-inline-start-width: calc(2 * var(--border-width));
   }
 
   .jig-task-body {
@@ -540,16 +589,17 @@ body {
 
   .jig-week-strip {
     display: grid;
-    grid-template-columns: repeat(7, 80px);
-    gap: var(--spacing-2);
-    width: max-content;
-    margin-block-end: var(--spacing-5);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: var(--spacing-1);
+    width: 100%;
+    margin-block-end: var(--spacing-4);
     overflow: visible;
   }
 
   .jig-week-strip-date {
     position: relative;
-    width: 80px;
+    width: auto;
+    min-width: 0;
     min-height: 56px;
   }
 
@@ -564,47 +614,28 @@ body {
   }
 
   .jig-history-view,
-  .jig-settings-view,
-  .jig-day-view {
+  .jig-settings-view {
     width: 100%;
     max-width: 1170px;
     margin-inline: 0 auto;
   }
 
-  .jig-week-view-narrow {
-    max-width: 60rem;
-    margin-inline: auto;
-  }
-
-  .jig-day-lists {
-    display: grid;
-    gap: var(--spacing-4);
-  }
-
-  .jig-day-primary .jig-task-card-list {
-    gap: var(--spacing-3);
-    padding: var(--spacing-2) 0;
-  }
-
-  .jig-day-primary .jig-task-card {
+  .jig-planner-narrow {
     width: 100%;
-  }
-  .jig-day-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 650px) minmax(320px, 490px);
-    align-items: start;
-    gap: 30px;
-  }
-
-  .jig-day-primary {
-    grid-column: 1;
-    grid-row: 1;
     min-width: 0;
   }
 
-  .jig-day-layout > .jig-task-inspector {
-    grid-column: 2;
-    grid-row: 1;
+  .jig-planner-selected-date-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin-block-end: var(--spacing-2);
+  }
+
+  .jig-planner-selected-date-heading h1 {
+    margin: 0;
+    font-size: var(--font-size-lg);
   }
 
   .jig-task-inspector {
@@ -715,35 +746,10 @@ body {
     font-size: var(--font-size-sm);
   }
 
-  .jig-section-heading {
-    display: flex;
-    align-items: baseline;
-    justify-content: flex-start;
-    gap: var(--spacing-2);
-  }
-
-  .jig-day-lists .jig-task-count {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--spacing-0-5) var(--spacing-2);
-    border-radius: var(--radius-full);
-    background: var(--color-background-muted);
-  }
-
-  .jig-day-scheduled-section h2,
   .jig-history-group h2,
   .jig-settings-section h2 {
     margin-block-end: var(--spacing-1);
     font-size: var(--font-size-lg);
-  }
-
-  .jig-day-scheduled-section {
-    min-height: 9rem;
-  }
-
-  .jig-completed-section {
-    padding: 0;
-    border: 0;
   }
 
   .jig-history-groups {
@@ -950,187 +956,100 @@ body {
     }
   }
 
-  @media (max-width: 47.999rem) {
-  .jig-app-shell {
-    padding: var(--spacing-3);
-  }
+  @media (max-width: 75.999rem) {
+    .jig-app-shell {
+      padding: var(--spacing-3);
+    }
 
-  .jig-primary-nav {
-    width: 100%;
-    height: auto;
-    margin-inline-end: 0;
-    border: 0;
-    border-radius: 0;
-  }
+    .jig-content-frame {
+      height: 100%;
+      overflow: auto;
+      border: var(--border-width) solid var(--color-border);
+      border-radius: calc(2 * var(--radius-container));
+      background: var(--color-background-surface);
+    }
 
-  .jig-content-frame {
-    height: 100%;
-    overflow: auto;
-    border: var(--border-width) solid var(--color-border);
-    border-radius: calc(2 * var(--radius-container));
-    background: var(--color-background-surface);
-  }
+    .jig-content {
+      min-height: 0;
+      padding: var(--spacing-3) var(--spacing-3) calc(5rem + env(safe-area-inset-bottom, 0px));
+    }
 
-  .jig-mobile-header {
-    display: flex;
-    height: 50px;
-    align-items: center;
-    justify-content: space-between;
-    padding-inline: calc(var(--spacing-4) + var(--spacing-0-5));
-  }
+    .jig-app-header {
+      border-radius: calc(2 * var(--radius-container));
+    }
 
-  .jig-mobile-brand {
-    font-size: var(--font-size-2xl);
-    font-weight: var(--font-weight-bold);
-  }
+    .jig-header-mobile-band .jig-status-control {
+      min-width: 0;
+    }
 
-  .jig-mobile-header .jig-status-control {
-    min-width: 88px;
-    min-height: calc(var(--size-element-sm) + var(--spacing-0-5));
-  }
+    .jig-week-strip-date {
+      height: 56px;
+      min-height: 56px;
+    }
 
-  .jig-mobile-surface-nav {
-    display: flex;
-    height: 46px;
-    align-items: center;
-    justify-content: space-between;
-    padding-inline: calc(var(--spacing-4) + var(--spacing-0-5));
-  }
+    .jig-week-strip-date-content {
+      font-size: var(--font-size-sm);
+    }
 
-  .jig-mobile-destination-trigger,
-  .jig-mobile-today-control {
-    min-height: calc(var(--size-element-sm) + var(--spacing-0-5));
-  }
+    .jig-task-card-list {
+      padding: var(--spacing-2) 0;
+    }
 
-  .jig-content {
-    min-height: 0;
-    padding: 0 calc(var(--spacing-3) + var(--spacing-0-5)) calc(5rem + env(safe-area-inset-bottom, 0px));
-  }
+    .jig-task-card {
+      min-height: 88px;
+    }
 
-  .jig-week-strip {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: var(--spacing-2);
-    width: 100%;
-    margin-block-end: var(--spacing-5);
-    overflow: visible;
-  }
+    .jig-mobile-quick-add {
+      position: fixed;
+      z-index: 25;
+      inset-inline-end: max(34px, env(safe-area-inset-right, 0px));
+      inset-block-end: max(45px, env(safe-area-inset-bottom, 0px));
+      display: inline-flex;
+      min-width: 108px;
+      min-height: 52px;
+      align-items: center;
+      justify-content: center;
+      border-radius: calc(2 * var(--radius-container));
+    }
 
-  .jig-week-strip-date {
-    width: auto;
-    min-width: 0;
-    height: 56px;
-    min-height: 56px;
-  }
+    .jig-history-view,
+    .jig-settings-view {
+      width: 100%;
+      max-width: none;
+    }
 
-  .jig-week-strip-date-content {
-    font-size: var(--font-size-sm);
-  }
+    .jig-history-groups,
+    .jig-settings-grid {
+      margin-block-start: var(--spacing-5);
+    }
 
-  .jig-mobile-day-heading {
-    margin-block-end: var(--spacing-5);
-  }
+    .jig-settings-grid {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-5);
+    }
 
-  .jig-mobile-day-heading h1,
-  .jig-mobile-day-heading p {
-    margin: 0;
-  }
+    .jig-local-first-note {
+      margin-block-start: var(--spacing-5);
+    }
 
-  .jig-mobile-day-heading h1 {
-    font-size: var(--font-size-lg);
-  }
+    .jig-editor-actions {
+      align-items: stretch;
+      justify-content: flex-end;
+      padding-block-start: var(--spacing-1);
+    }
 
-  .jig-mobile-day-heading p {
-    margin-block-start: var(--spacing-1);
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-  }
+    .jig-editor-primary-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      width: 100%;
+      gap: var(--spacing-3);
+    }
 
-  .jig-day-lists {
-    gap: var(--spacing-6);
+    .jig-diagnostics > div {
+      grid-template-columns: 1fr;
+      gap: var(--spacing-0-5);
+    }
   }
-
-  .jig-task-card-list {
-    padding: var(--spacing-2) 0;
-  }
-
-  .jig-day-lists .jig-task-count {
-    padding: 0;
-    border-radius: 0;
-    background: transparent;
-  }
-
-  .jig-day-lists .jig-task-count-unit,
-  .jig-completed-section .jig-task-count {
-    display: none;
-  }
-
-  .jig-task-card {
-    min-height: 88px;
-  }
-
-  .jig-task-card-completed {
-    min-height: 66px;
-  }
-
-  .jig-completed-section {
-    padding: 0;
-    border: 0;
-  }
-
-  .jig-mobile-quick-add {
-    position: fixed;
-    z-index: 25;
-    inset-inline-end: max(34px, env(safe-area-inset-right, 0px));
-    inset-block-end: max(45px, env(safe-area-inset-bottom, 0px));
-    display: inline-flex;
-    min-width: 62px;
-    min-height: 52px;
-    align-items: center;
-    justify-content: center;
-    border-radius: calc(2 * var(--radius-container));
-    font-size: var(--font-size-xl);
-  }
-
-  .jig-history-view,
-  .jig-settings-view,
-  .jig-week-view-narrow,
-  .jig-day-view-narrow {
-    width: 100%;
-    max-width: none;
-  }
-
-  .jig-history-groups,
-  .jig-settings-grid {
-    margin-block-start: var(--spacing-5);
-  }
-
-  .jig-settings-grid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-5);
-  }
-
-  .jig-local-first-note {
-    margin-block-start: var(--spacing-5);
-  }
-
-  .jig-editor-actions {
-    align-items: stretch;
-    justify-content: flex-end;
-    padding-block-start: var(--spacing-1);
-  }
-
-  .jig-editor-primary-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-    width: 100%;
-    gap: var(--spacing-3);
-  }
-
-  .jig-diagnostics > div {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-0-5);
-  }
-}
 
 
   @media (prefers-reduced-motion: reduce) {
