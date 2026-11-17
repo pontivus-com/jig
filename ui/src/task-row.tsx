@@ -4,7 +4,7 @@ import {
   ListItem,
 } from "@astryxdesign/core";
 import { useSortable } from "@dnd-kit/react/sortable";
-import type { Ref } from "react";
+import { useState, type Ref } from "react";
 import type { Task } from "../../src/core/task";
 import { formatReminderTime } from "./dates";
 
@@ -94,55 +94,71 @@ function TaskActionMenu({
   onMoveDown?: (() => void) | undefined;
   onMoveToDate?: (() => void) | undefined;
 }>): React.ReactElement {
-  const closeAndRun = (
+  const [open, setOpen] = useState(false);
+
+  const run = (
     event: React.MouseEvent<HTMLElement>,
     action: () => void,
   ): void => {
     event.stopPropagation();
-    event.currentTarget.closest("details")?.removeAttribute("open");
+    setOpen(false);
     action();
   };
 
   return (
-    <details
+    <div
       className="jig-task-menu"
       onPointerDown={stopPointer}
       onClick={(event) => event.stopPropagation()}
     >
-      <summary aria-label={`Actions for ${task.title}`}>•••</summary>
-      <div className="jig-task-menu-panel">
-        <Button
-          label="Edit"
-          variant="ghost"
-          size="sm"
-          onClick={(event) => closeAndRun(event, onEdit)}
-        />
-        {onMoveToDate === undefined ? null : (
+      <button
+        type="button"
+        className="jig-task-menu-trigger"
+        aria-label={`Actions for ${task.title}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((current) => !current);
+        }}
+      >
+        •••
+      </button>
+      {open ? (
+        <div className="jig-task-menu-panel" role="menu">
           <Button
-            label="Move to date…"
+            label="Edit"
             variant="ghost"
             size="sm"
-            onClick={(event) => closeAndRun(event, onMoveToDate)}
+            onClick={(event) => run(event, onEdit)}
           />
-        )}
-        {onMoveUp === undefined ? null : (
-          <Button
-            label="Move up"
-            variant="ghost"
-            size="sm"
-            onClick={(event) => closeAndRun(event, onMoveUp)}
-          />
-        )}
-        {onMoveDown === undefined ? null : (
-          <Button
-            label="Move down"
-            variant="ghost"
-            size="sm"
-            onClick={(event) => closeAndRun(event, onMoveDown)}
-          />
-        )}
-      </div>
-    </details>
+          {onMoveToDate === undefined ? null : (
+            <Button
+              label="Move to date…"
+              variant="ghost"
+              size="sm"
+              onClick={(event) => run(event, onMoveToDate)}
+            />
+          )}
+          {onMoveUp === undefined ? null : (
+            <Button
+              label="Move up"
+              variant="ghost"
+              size="sm"
+              onClick={(event) => run(event, onMoveUp)}
+            />
+          )}
+          {onMoveDown === undefined ? null : (
+            <Button
+              label="Move down"
+              variant="ghost"
+              size="sm"
+              onClick={(event) => run(event, onMoveDown)}
+            />
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
