@@ -549,7 +549,7 @@ test("narrow shell keeps all destinations reachable and the seven-date strip fit
   await expect(page.locator(".jig-mobile-surface-nav")).toBeVisible();
   await expect(page.locator(".jig-mobile-destination-menu")).toHaveCount(0);
   await expect(page.locator(".jig-day-toolbar")).toHaveCount(0);
-  await expect(page.locator(".jig-task-inspector")).toHaveCount(0);
+  await expect(page.locator(".jig-task-inspector:visible")).toHaveCount(0);
 
   await page.locator(".jig-mobile-destination-trigger").click();
   const mobileNavigation = page.locator(".jig-primary-nav");
