@@ -929,8 +929,8 @@ The Jig product-local aliases become **palette-independent references to Astryx 
 --jig-status-healthy-bg          -> --color-success-muted
 --jig-status-healthy-border      -> --color-border-success
 --jig-status-healthy-text        -> --color-text-success
---jig-state-hover-bg             -> --color-overlay-hover
---jig-state-pressed-bg           -> --color-overlay-pressed
+--jig-state-hover-bg             -> opaque tint of --jig-task-surface toward --color-tint-hover
+--jig-state-pressed-bg           -> stronger opaque tint of --jig-task-surface toward --color-tint-hover
 --jig-task-surface               -> theme wrapper's elevated Task-surface role
 --jig-task-border                -> --color-border-emphasized
 --jig-brand-primary              -> --color-icon-primary
@@ -941,7 +941,7 @@ The Jig product-local aliases become **palette-independent references to Astryx 
 
 | Theme wrapper | `--jig-task-surface` source |
 |---|---|
-| Jig | `--color-background-surface` |
+| Jig | existing governed Jig pair: Light `var(--jig-white)`, Dark `var(--jig-ink-800)` |
 | Astryx Neutral | `--color-background-surface` |
 | Astryx Butter | `--color-background-surface` |
 | Astryx Chocolate | `--color-background-card` |
@@ -951,7 +951,9 @@ The Jig product-local aliases become **palette-independent references to Astryx 
 | Astryx Y2K | `--color-background-surface` |
 | Gruvbox / Dracula / Solarized / Nord / Catppuccin / Tokyo Night | their authored `--color-background-surface`, which must be distinct from body |
 
-This mapping follows the actual 0.7.13 values: Neutral dark has card==body; Chocolate Light has surface==body; Gothic has surface==body; the listed alternate role is elevated in each case. This is not feature-level branching: the Task component always consumes only `--jig-task-surface`.
+This mapping preserves the published Jig v1.0.5 contrast fix and follows the actual 0.7.13 preset values: Jig Dark intentionally keeps Ink 800 above its Ink 950 canvas; Neutral dark has card==body; Chocolate Light has surface==body; Gothic has surface==body; the listed alternate role is elevated in each case. This is not feature-level branching: the Task component always consumes only `--jig-task-surface`.
+
+For Jig-owned Task wrappers, hover/pressed are **surface variants, not replacement translucent overlays**. Define them from the active Task surface, e.g. an opaque `color-mix()` toward `--color-tint-hover` (5% hover, 10% pressed), or use an equivalent two-layer background that keeps `--jig-task-surface` underneath. A hover/press must never make an unselected Task transparent onto the Planner canvas. Astryx controls continue to own their own interaction overlays.
 
 For **published Astryx presets**, inherit their complete semantic/component mapping and add only the shared Jig aliases above. For each **community theme**, override the entire Astryx color-semantic inventory used by Core/Jig rather than only body/text/accent. At minimum this includes: body/surface/card/popover/muted/inverted backgrounds; accent/accent-muted/on-accent/neutral; primary/secondary/disabled/accent text and icons; overlays/hover/pressed; ordinary/emphasized borders; skeleton/track/shadow/tint; info/success/warning/error strong, muted, on-fill, text, icon and border roles; and the named blue/cyan/gray/green/orange/pink/purple/red/teal/yellow background/border/icon/text families. This prevents a community theme from leaking Neutral blue/green/red or neutral surfaces through an Astryx component.
 
@@ -977,7 +979,7 @@ The implementation-facing semantic coverage is exhaustive. Existing feature comp
 | primary / secondary / disabled text | `--color-text-primary` / `--color-text-secondary` / `--color-text-disabled` |
 | primary / secondary / disabled icons | `--color-icon-primary` / `--color-icon-secondary` / `--color-icon-disabled` |
 | ordinary / emphasized borders | `--color-border` / `--color-border-emphasized` |
-| hover / pressed | `--jig-state-hover-bg` / `--jig-state-pressed-bg` where Jig owns the wrapper; Astryx interaction semantics inside Astryx controls |
+| hover / pressed | opaque Task-surface tint through `--jig-state-hover-bg` / `--jig-state-pressed-bg` where Jig owns the Task wrapper; Astryx interaction semantics inside Astryx controls |
 | keyboard focus | Astryx `--focus-outline-*`, with the theme's active accent/focus role |
 | active navigation | `--jig-state-nav-active-bg` + `--jig-state-nav-active-text` |
 | exact current day | `--jig-state-today-border` + `--jig-state-today-text` |
