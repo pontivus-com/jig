@@ -46,7 +46,7 @@ The SVGs govern structure, hierarchy, density and representative visual characte
 
 **PASS — the recaptured implementation conforms to the governed reference design without architecture exceptions.**
 
-The archived screenshots certify the captured UI revision above after the final Astryx architecture remediation. The implementation uses the built Neutral theme entry, precompiles the custom Jig theme through Astryx's public `generateThemeCSS()` contract, uses public `Section` / `VStack` / Button elevation and sizing APIs where Astryx owns the mechanic, and keeps ordinary non-structural CSS on public Astryx tokens. The temporary capture harness/workflow are removed after archival; those removals do not alter production UI output.
+The archived screenshots certify the captured visual structure. The final theme architecture uses `ui/src/jig-theme.source.ts` as authoring input, extends `@astryxdesign/theme-neutral/built`, and compiles the runtime `jig.js` / `jig.css` artifacts with pinned `@astryxdesign/cli@0.7.13` via the documented `astryx theme build` path. Jig-authored code does not synthesize `__built` or compile theme CSS itself. Public `Section` / `VStack` / Button elevation and sizing APIs own reusable mechanics, while ordinary non-structural CSS stays on public Astryx tokens.
 
 Verified structural budgets include:
 
@@ -93,7 +93,7 @@ Visual fidelity is not permitted to waive architectural ownership. The final imp
 - `useAppShellMobile()` as the sole responsive-layout authority;
 - explicit desktop/narrow React composition rather than duplicate DOM plus CSS hiding;
 - Astryx `DropdownMenu`, Dialog, List, FieldLabel, SegmentedControl, Section, VStack and Button public contracts;
-- built-theme consumption through `@astryxdesign/theme-neutral/built` plus generated Jig theme CSS;
+- custom-theme authoring through `jig-theme.source.ts`, built Neutral inheritance, and Astryx CLI-generated `jig.js` / `jig.css` runtime artifacts;
 - all Astryx global CSS variables consumed by Jig resolve against the pinned 0.7.13 public token inventory;
 - ordinary typography, radius, motion and interior-spacing values use Astryx public tokens/props, with raw dimensions limited to governed structural budgets;
 - no `.astryx-*` selectors;
@@ -103,7 +103,7 @@ Visual fidelity is not permitted to waive architectural ownership. The final imp
 - no negative-margin/transform screenshot alignment;
 - no reintroduced custom task-menu or mobile-navigation subsystem.
 
-These invariants are enforced by `tests/architecture/ui-ownership.test.ts`, including public-token validation and governed raw-spacing allowlisting, and by the permanent browser-conformance suite.
+These invariants are enforced by `tests/architecture/ui-ownership.test.ts`, including authored-source private-API rejection, generated-artifact ownership, public-token validation and governed raw-spacing allowlisting; CI additionally runs `bun run theme:check` to execute `astryx theme build --check`. The permanent browser-conformance suite remains the runtime geometry/interaction gate.
 
 ## Failure-state evidence
 
