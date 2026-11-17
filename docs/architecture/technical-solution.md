@@ -895,7 +895,7 @@ The root remains exactly one owner:
 <Theme theme={themeRegistry[themePreset].theme} mode={appearanceMode}>
 ```
 
-Do not resolve System in application JavaScript. Astryx 0.7.13 already makes System use `color-scheme: light dark`, removes explicit root `data-theme`, and resolves each `[light,dark]` token through `light-dark()`; platform preference changes therefore repaint the selected family without a third Jig color implementation or duplicated state.
+Do not resolve System in application JavaScript. Astryx 0.7.13 already makes System use `color-scheme: light dark`, removes explicit root `data-theme`, and resolves each `[light,dark]` token through `light-dark()`; platform preference changes therefore repaint the selected family without a third Jig color implementation or duplicated state. Browser acceptance must change the emulated platform color scheme **while the same mounted application remains in System mode** and prove that computed theme values change without changing `ThemePreset`, destination, Planner/workspace state or local persistence.
 
 Browser-local persistence is explicit and backwards compatible:
 
@@ -963,6 +963,38 @@ State precedence is fixed and does not vary by theme:
 4. priority remains its narrow leading semantic cue in selected, focused and dragged states;
 5. current-day treatment belongs to the date/header structure, not Task selection;
 6. operational status remains on the status control and never becomes Task selection/priority.
+
+The implementation-facing semantic coverage is exhaustive. Existing feature composition keeps these exact owners; theme work changes only the values behind them:
+
+| Governed FR-04 surface/state | Technical owner |
+|---|---|
+| page / Planner canvas / flat application header | `--color-background-body`; header hairline `--color-border` |
+| ordinary surface / Section-like content | `--color-background-surface` through Astryx public component semantics |
+| elevated Task card / History Task row | `--jig-task-surface` + `--jig-task-border` |
+| card / popover / dialog / menu layers | Astryx `--color-background-card` / `--color-background-popover` and public component mappings |
+| muted surface | `--color-background-muted` |
+| Task workspace / fields / selectors / segmented controls / buttons | Astryx public component semantics; no Jig theme-name CSS branch |
+| primary / secondary / disabled text | `--color-text-primary` / `--color-text-secondary` / `--color-text-disabled` |
+| primary / secondary / disabled icons | `--color-icon-primary` / `--color-icon-secondary` / `--color-icon-disabled` |
+| ordinary / emphasized borders | `--color-border` / `--color-border-emphasized` |
+| hover / pressed | `--jig-state-hover-bg` / `--jig-state-pressed-bg` where Jig owns the wrapper; Astryx interaction semantics inside Astryx controls |
+| keyboard focus | Astryx `--focus-outline-*`, with the theme's active accent/focus role |
+| active navigation | `--jig-state-nav-active-bg` + `--jig-state-nav-active-text` |
+| exact current day | `--jig-state-today-border` + `--jig-state-today-text` |
+| selected Task | `--jig-state-task-selected-bg` + `--jig-state-task-selected-border` |
+| drag/drop | `--jig-state-drag-bg` + `--jig-state-drag-border` |
+| High priority | `--jig-priority-high` plus the existing explicit High text/meaning where rendered |
+| Normal priority | `--jig-priority-normal`; remains visually quiet |
+| Low priority | `--jig-priority-low` plus the existing explicit Low text/meaning where rendered |
+| completion | Astryx success `check` icon + completed-title line-through + `--color-text-secondary`; completion never relies on color alone |
+| informational state | Astryx info family: `--color-info(-muted)`, `--color-text-info`, `--color-border-info` as owned by the component |
+| healthy / success repository state | `--jig-status-healthy-bg` + `--jig-status-healthy-border` + `--jig-status-healthy-text` |
+| pending / retrying | `--color-warning-muted` + `--color-text-warning` + warning icon; retain explicit Pending/Retrying label |
+| destructive / error / sync issue | `--color-error-muted` + `--color-text-error` (and `--color-border-error` where a border is present); retain explicit error/sync-issue copy |
+| unknown / neutral operational state | `--color-background-muted` + `--color-text-secondary` + info/neutral icon and explicit Status label |
+| brand guide/wordmark / pin | `--jig-brand-primary` / `--jig-brand-accent` from JIG-106-SD-05 |
+
+This table is the current v1.0.6 owner map. Earlier Jig-specific hue names such as “Amber drag”, “teal today” or “info-blue selection” describe the default Jig palette only; other theme families preserve the **semantic roles and precedence**, not those literal hues.
 
 Theme certification must check computed values, not only screenshots. For every preset in forced Light and Dark, and for System under emulated Light and Dark:
 
@@ -1042,7 +1074,7 @@ Permanent verification must cover the complete Cartesian behavior without relyin
 
 1. **Theme registration/build:** all 14 registry entries resolve to a built theme with the expected `data-astryx-theme` name; every authored source passes pinned CLI `theme build --check`.
 2. **Forced modes:** each of 14 presets × Light/Dark verifies representative surfaces, product-state aliases, status families and logo semantics.
-3. **System mode:** each of 14 presets is exercised under emulated OS Light and OS Dark with `data-theme` absent and computed colors changing accordingly; no JavaScript-resolved third mode is accepted.
+3. **System mode:** each of 14 presets is exercised under emulated OS Light and OS Dark with `data-theme` absent and computed colors changing accordingly; at least one test changes the emulated OS scheme live without remount/reload and proves the selected family and application state remain unchanged. No JavaScript-resolved third mode is accepted.
 4. **Detailed state coexistence:** representative fixtures verify selected+focused, selected+priority and drag+priority without losing either meaning.
 5. **Responsive width:** verify 1440, 1168, 1167, 1024, 900, 800, 600 and 390 widths for History/Settings and separately verify Settings 2→1-column reflow at the existing semantic breakpoint.
 6. **Reminder:** with a stubbed browser Notification constructor, visible/hidden and focused/unfocused due reminders all invoke Notification and never render a reminder Toast; denied/default/unsupported states do not claim delivery; repeated checks do not duplicate a successfully delivered key.
