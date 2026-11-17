@@ -359,7 +359,10 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   await expect(page.locator(".jig-week-board")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
   await expect(
-    page.getByText("Narrow selected task", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Narrow selected task" })
+      .first(),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
@@ -367,7 +370,10 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
     page.locator(".jig-mobile-destination-menu > summary"),
   ).toHaveText("Day");
   await expect(
-    page.getByText("Narrow selected task", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Narrow selected task" })
+      .first(),
   ).toBeVisible();
 });
 
