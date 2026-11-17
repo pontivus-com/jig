@@ -12,6 +12,7 @@ export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLDivElement> | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -94,14 +95,14 @@ function TaskActionMenu({
   onMoveDown?: (() => void) | undefined;
   onMoveToDate?: (() => void) | undefined;
 }>): React.ReactElement {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const run = (
+  const closeAndRun = (
     event: React.MouseEvent<HTMLElement>,
     action: () => void,
   ): void => {
     event.stopPropagation();
-    setOpen(false);
+    setIsOpen(false);
     action();
   };
 
@@ -115,29 +116,25 @@ function TaskActionMenu({
         type="button"
         className="jig-task-menu-trigger"
         aria-label={`Actions for ${task.title}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={(event) => {
-          event.stopPropagation();
-          setOpen((current) => !current);
-        }}
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
       >
         •••
       </button>
-      {open ? (
+      {isOpen ? (
         <div className="jig-task-menu-panel" role="menu">
           <Button
             label="Edit"
             variant="ghost"
             size="sm"
-            onClick={(event) => run(event, onEdit)}
+            onClick={(event) => closeAndRun(event, onEdit)}
           />
           {onMoveToDate === undefined ? null : (
             <Button
               label="Move to date…"
               variant="ghost"
               size="sm"
-              onClick={(event) => run(event, onMoveToDate)}
+              onClick={(event) => closeAndRun(event, onMoveToDate)}
             />
           )}
           {onMoveUp === undefined ? null : (
@@ -145,7 +142,7 @@ function TaskActionMenu({
               label="Move up"
               variant="ghost"
               size="sm"
-              onClick={(event) => run(event, onMoveUp)}
+              onClick={(event) => closeAndRun(event, onMoveUp)}
             />
           )}
           {onMoveDown === undefined ? null : (
@@ -153,7 +150,7 @@ function TaskActionMenu({
               label="Move down"
               variant="ghost"
               size="sm"
-              onClick={(event) => run(event, onMoveDown)}
+              onClick={(event) => closeAndRun(event, onMoveDown)}
             />
           )}
         </div>
@@ -184,6 +181,7 @@ export function TaskRow({
   task,
   isSelected = false,
   rowRef,
+  dragHandleRef,
   onSelect,
   onToggleComplete,
   onEdit,
@@ -213,55 +211,43 @@ export function TaskRow({
           onClick={(event) => event.stopPropagation()}
         >
           <CheckboxInput
-            label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
-            isLabelHidden
-            value={completed}
-            onChange={onToggleComplete}
-            size="sm"
-          />
-          {completed ? null : (
+            label={
+        <div
+          {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
+          className="jig-task-body"
+        >
+          {onSelect === undefined ? (
             <span
-              className="jig-task-drag-handle"
-              aria-hidden="true"
-              title="Drag task"
+              className={
+                completed
+                  ? "jig-task-title jig-task-title-completed"
+                  : "jig-task-title"
+              }
             >
-              ≡
+              {task.title}
             </span>
+          ) : (
+            <button
+              type="button"
+              className={[
+                "jig-task-select",
+                "jig-task-title",
+                completed ? "jig-task-title-completed" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onPointerDown={stopPointer}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect();
+              }}
+            >
+              {task.title}
+            </button>
           )}
-        </span>
+          <TaskMetadata task={task} />
+        </div>
       }
-      label={
-        onSelect === undefined ? (
-          <span
-            className={
-              completed
-                ? "jig-task-title jig-task-title-completed"
-                : "jig-task-title"
-            }
-          >
-            {task.title}
-          </span>
-        ) : (
-          <button
-            type="button"
-            className={[
-              "jig-task-select",
-              "jig-task-title",
-              completed ? "jig-task-title-completed" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onPointerDown={stopPointer}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect();
-            }}
-          >
-            {task.title}
-          </button>
-        )
-      }
-      description={<TaskMetadata task={task} />}
       endContent={
         <TaskActionMenu
           task={task}
@@ -276,7 +262,7 @@ export function TaskRow({
 }
 
 export interface SortableTaskRowProps
-  extends Omit<TaskRowProps, "rowRef"> {
+  extends Omit<TaskRowProps, "rowRef" | "dragHandleRef"> {
   readonly index: number;
   readonly group: string;
 }
@@ -295,24 +281,13 @@ export function SortableTaskRow({
     accept: "jig-task",
   });
 
-  const setSortableCard = (node: HTMLLIElement | null): void => {
-    const assign = (ref: Ref<HTMLElement>): void => {
-      if (typeof ref === "function") {
-        ref(node);
-      } else if (ref !== null) {
-        ref.current = node;
-      }
-    };
-
-    assign(sortable.ref as Ref<HTMLElement>);
-    assign(sortable.handleRef as Ref<HTMLElement>);
-  };
-
   return (
     <TaskRow
       {...rowProps}
       task={task}
-      rowRef={setSortableCard}
+      rowRef={sortable.ref as Ref<HTMLLIElement>}
+      dragHandleRef={sortable.handleRef as Ref<HTMLDivElement>}
     />
   );
+
 }
