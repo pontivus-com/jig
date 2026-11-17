@@ -49,7 +49,7 @@ function ActiveRow({
   task: Task;
   tasks: readonly Task[];
   isSelected: boolean;
-  onSelect: (task: Task) => void;
+  onSelect?: ((task: Task) => void) | undefined;
   onEdit: (task: Task) => void;
   onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
@@ -64,7 +64,9 @@ function ActiveRow({
       index={position}
       group={task.scheduled_date}
       isSelected={isSelected}
-      onSelect={() => onSelect(task)}
+      {...(onSelect === undefined
+        ? {}
+        : { onSelect: () => onSelect(task) })}
       onToggleComplete={() => {
         void onToggleComplete(task);
       }}
@@ -96,25 +98,27 @@ function ActiveRow({
   );
 }
 
+export interface DayTaskListsProps {
+  readonly tasks: readonly Task[];
+  readonly selectedDate: string;
+  readonly selectedTask?: Task | null;
+  readonly onSelectTask?: ((task: Task) => void) | undefined;
+  readonly onEdit: (task: Task) => void;
+  readonly onMoveToDate: (task: Task) => void;
+  readonly onToggleComplete: (task: Task) => Promise<boolean>;
+  readonly onMove: DayViewProps["onMove"];
+}
+
 export function DayTaskLists({
   tasks,
   selectedDate,
-  selectedTask,
+  selectedTask = null,
   onSelectTask,
   onEdit,
   onMoveToDate,
   onToggleComplete,
   onMove,
-}: Omit<
-  DayViewProps,
-  | "onAdd"
-  | "onSelectDate"
-  | "onPrevious"
-  | "onToday"
-  | "onNext"
-  | "statusControl"
-  | "onDelete"
->): React.ReactElement {
+}: DayTaskListsProps): React.ReactElement {
   const active = outstandingForDate(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
 
@@ -144,7 +148,9 @@ export function DayTaskLists({
                     task={task}
                     tasks={tasks}
                     isSelected={selectedTask?.id === task.id}
-                    onSelect={onSelectTask}
+                    {...(onSelectTask === undefined
+                      ? {}
+                      : { onSelect: onSelectTask })}
                     onEdit={onEdit}
                     onMoveToDate={onMoveToDate}
                     onToggleComplete={onToggleComplete}
@@ -165,7 +171,9 @@ export function DayTaskLists({
                   key={task.id}
                   task={task}
                   isSelected={selectedTask?.id === task.id}
-                  onSelect={() => onSelectTask(task)}
+                  {...(onSelectTask === undefined
+                    ? {}
+                    : { onSelect: () => onSelectTask(task) })}
                   onToggleComplete={() => {
                     void onToggleComplete(task);
                   }}
