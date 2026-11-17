@@ -1154,9 +1154,14 @@ body {
     gap: var(--spacing-5);
   }
 
+  .jig-editor-mobile-frame .jig-editor-date-behavior {
+    padding: var(--spacing-2);
+  }
+
   .jig-editor-actions {
     align-items: stretch;
     justify-content: flex-end;
+    padding-block-start: var(--spacing-1);
   }
 
   .jig-editor-primary-actions {
