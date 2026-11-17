@@ -34,6 +34,20 @@ async function createTask(
   });
 }
 
+async function displayedDateValue(
+  page: Page,
+  civilDate: string,
+): Promise<string> {
+  return page.evaluate((value) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(new Date(year ?? 0, (month ?? 1) - 1, day ?? 1));
+  }, civilDate);
+}
+
 async function headerHeight(page: Page): Promise<number> {
   const box = await page.locator(".jig-app-header").boundingBox();
   if (box === null) {
@@ -167,7 +181,9 @@ test("global Add exposes the full form and derives the current weekday in the di
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   let workspace = page.getByRole("dialog", { name: "Add task" });
   await expect(workspace.getByLabel("Title")).toBeVisible();
-  await expect(workspace.getByLabel("Date")).toHaveValue(today);
+  await expect(workspace.getByLabel("Date")).toHaveValue(
+    await displayedDateValue(page, today),
+  );
   await expect(workspace.getByLabel("Context")).toBeVisible();
   await expect(workspace.getByText("Priority", { exact: true }).first()).toBeVisible();
   await expect(workspace.getByLabel("Reminder")).toBeVisible();
@@ -179,7 +195,9 @@ test("global Add exposes the full form and derives the current weekday in the di
   const correspondingNextWeekDate = await browserCivilDate(page, 7);
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   workspace = page.getByRole("dialog", { name: "Add task" });
-  await expect(workspace.getByLabel("Date")).toHaveValue(correspondingNextWeekDate);
+  await expect(workspace.getByLabel("Date")).toHaveValue(
+    await displayedDateValue(page, correspondingNextWeekDate),
+  );
 });
 
 test("per-date plus opens the same full form for its explicit date", async ({ page }) => {
@@ -196,7 +214,9 @@ test("per-date plus opens the same full form for its explicit date", async ({ pa
     .click();
 
   const workspace = page.getByRole("dialog", { name: "Add task" });
-  await expect(workspace.getByLabel("Date")).toHaveValue(firstDate);
+  await expect(workspace.getByLabel("Date")).toHaveValue(
+    await displayedDateValue(page, firstDate),
+  );
   await expect(workspace.getByLabel("Context")).toBeVisible();
   await expect(workspace.getByLabel("Notes")).toBeVisible();
 });
@@ -216,7 +236,9 @@ test("Task click opens the editable Drawer directly and blank content dismisses 
   const workspace = page.getByRole("dialog", { name: "Editable directly" });
   await expect(workspace).toBeVisible();
   await expect(workspace.getByLabel("Title")).toHaveValue("Editable directly");
-  await expect(workspace.getByLabel("Date")).toHaveValue(today);
+  await expect(workspace.getByLabel("Date")).toHaveValue(
+    await displayedDateValue(page, today),
+  );
   await workspace.getByLabel("Title").fill("Unsaved replacement");
 
   const after = await board.boundingBox();
