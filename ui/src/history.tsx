@@ -3,6 +3,7 @@ import {
   List,
   ListItem,
 } from "@astryxdesign/core";
+import { useState } from "react";
 import type { Task } from "../../src/core/task";
 import { historyByCompletionDate } from "../../src/core/planning";
 import { formatCivilDate } from "./dates";
@@ -35,6 +36,8 @@ function HistoryTaskRow({
   onReopen: (task: Task) => Promise<boolean>;
   onDelete: (task: Task) => void;
 }>): React.ReactElement {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <ListItem
       itemKey={task.id}
@@ -60,34 +63,52 @@ function HistoryTaskRow({
           <time dateTime={task.completed_at ?? undefined}>
             {completionTime(task)}
           </time>
-          <details
-            className="jig-task-menu"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <summary aria-label={`Actions for ${task.title}`}>•••</summary>
-            <div className="jig-task-menu-panel">
-              <Button
-                label="Reopen"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  void onReopen(task);
-                }}
-              />
-              <Button
-                label="Edit"
-                variant="ghost"
-                size="sm"
-                onClick={() => onEdit(task)}
-              />
-              <Button
-                label="Delete…"
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(task)}
-              />
-            </div>
-          </details>
+          <div className="jig-task-menu" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="jig-task-menu-trigger"
+              aria-label={`Actions for ${task.title}`}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={(event) => {
+                event.stopPropagation();
+                setMenuOpen((current) => !current);
+              }}
+            >
+              •••
+            </button>
+            {menuOpen ? (
+              <div className="jig-task-menu-panel" role="menu">
+                <Button
+                  label="Reopen"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    void onReopen(task);
+                  }}
+                />
+                <Button
+                  label="Edit"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onEdit(task);
+                  }}
+                />
+                <Button
+                  label="Delete…"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete(task);
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
       }
     />
