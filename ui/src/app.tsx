@@ -504,7 +504,8 @@ export function App(): React.ReactElement {
     />
   );
 
-  const durableBanner = operationError !== null ? (
+  const durableBanner =
+    operationError !== null && workspace.mode === "closed" ? (
     <Banner
       status="error"
       title="Jig could not complete the operation"
