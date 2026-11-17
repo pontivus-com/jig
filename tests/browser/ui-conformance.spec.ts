@@ -107,23 +107,26 @@ test("desktop uses explicit Planner navigation with one seven-date open canvas",
   expect(chrome.shadow).toBe("none");
 });
 
-test("temporal centerpiece stays page-centered and week navigation has no selected-day state", async ({
+test("temporal group stays page-centered in one row and navigation has no selected-day state", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   const center = page.locator(".jig-header-center");
+  const temporal = page.locator(".jig-header-temporal");
   const range = page.locator(".jig-header-week-range");
-  const controls = page.locator(".jig-header-week-controls");
   const centerBox = await center.boundingBox();
-  const rangeBox = await range.boundingBox();
-  const controlsBox = await controls.boundingBox();
+  const temporalBox = await temporal.boundingBox();
   expect(centerBox).not.toBeNull();
-  expect(rangeBox).not.toBeNull();
-  expect(controlsBox).not.toBeNull();
-  if (centerBox !== null && rangeBox !== null && controlsBox !== null) {
+  expect(temporalBox).not.toBeNull();
+  if (centerBox !== null && temporalBox !== null) {
     expectNear(centerBox.x + centerBox.width / 2, 720, 4);
-    expect(rangeBox.y).toBeLessThan(controlsBox.y);
+    expectNear(
+      temporalBox.x + temporalBox.width / 2,
+      centerBox.x + centerBox.width / 2,
+      1,
+    );
+    expect(temporalBox.height).toBeLessThanOrEqual(44);
   }
 
   const rangeBefore = await range.textContent();
@@ -269,20 +272,40 @@ test("selecting another Task retargets the open editable workspace", async ({ pa
   await expect(second.getByLabel("Title")).toHaveValue("Retarget second");
 });
 
-test("header outer height is invariant across Planner History and Settings", async ({
+test("header is flat compact and invariant across destinations", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const plannerHeight = await headerHeight(page);
+  expect(plannerHeight).toBeLessThanOrEqual(44);
+
+  const headerChrome = await page.locator(".jig-app-header").evaluate((element) => {
+    const style = getComputedStyle(element);
+    const body = getComputedStyle(document.body);
+    return {
+      background: style.backgroundColor,
+      bodyBackground: body.backgroundColor,
+      borderBottom: style.borderBottomWidth,
+      radius: style.borderRadius,
+      shadow: style.boxShadow,
+    };
+  });
+  expect(headerChrome.background).toBe(headerChrome.bodyBackground);
+  expect(headerChrome.borderBottom).not.toBe("0px");
+  expect(headerChrome.radius).toBe("0px");
+  expect(headerChrome.shadow).toBe("none");
 
   await page.getByRole("button", { name: "History", exact: true }).click();
   const historyHeight = await headerHeight(page);
-
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   const settingsHeight = await headerHeight(page);
 
   expectNear(historyHeight, plannerHeight, 1);
   expectNear(settingsHeight, plannerHeight, 1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const narrowHeight = await headerHeight(page);
+  expect(narrowHeight).toBeLessThanOrEqual(56);
 });
 
 test("selected Task today priority and status use distinct governed semantics", async ({
@@ -334,13 +357,14 @@ test("narrow Planner shows all seven dated sections and preserves the same works
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
 
-  await expect(page.locator(".jig-week-board")).toHaveCount(0);
-  await expect(page.locator(".jig-planner-narrow .jig-week-column")).toHaveCount(7);
+  await expect(page.locator(".jig-week-board")).toHaveCount(1);
+  await expect(page.locator(".jig-week-board .jig-week-column")).toHaveCount(7);
+  await expect(page.locator(".jig-planner-narrow")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Open navigation menu" })).toBeVisible();
 
   const labels = await page
-    .locator(".jig-planner-narrow .jig-week-date-signifier > strong")
+    .locator(".jig-week-board .jig-week-date-signifier > strong")
     .allTextContents();
   expect(labels.map((label) => label.split(" ")[0])).toEqual([
     "Monday",
@@ -359,6 +383,167 @@ test("narrow Planner shows all seven dated sections and preserves the same works
   await page.setViewportSize({ width: 1440, height: 900 });
   workspace = page.getByRole("dialog", { name: "Mobile workspace task" });
   await expect(workspace.getByLabel("Title")).toHaveValue("Draft survives reflow");
+});
+
+test("desktop and narrow navigation share the same destinations and semantic icons", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  for (const label of ["Planner", "History", "Settings"]) {
+    const button = page.getByRole("button", { name: label, exact: true });
+    await expect(button).toBeVisible();
+    await expect(button.locator("svg")).toHaveCount(1);
+  }
+  await expect(
+    page.getByRole("button", { name: "Add task", exact: true }).first().locator("svg"),
+  ).toHaveCount(1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Open navigation menu" }).click();
+
+  const labels = await page.getByRole("menuitem").allTextContents();
+  expect(labels.map((label) => label.trim().replace("Current page", "").trim()))
+    .toEqual(["Planner", "History", "Settings"]);
+
+  for (const label of ["Planner", "History", "Settings"]) {
+    await expect(
+      page.getByRole("menuitem", { name: new RegExp(`^${label}`) }).locator("svg"),
+    ).toHaveCount(1);
+  }
+});
+
+test("outstanding Task action menus are identical at desktop and narrow widths", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Menu first", today);
+  await createTask(page, "Menu parity", today);
+  await createTask(page, "Menu last", today);
+  await page.reload();
+
+  const menuLabels = async (): Promise<string[]> => {
+    const row = page
+      .getByText("Menu parity", { exact: true })
+      .locator("xpath=ancestor::li[1]");
+    await row.getByRole("button", { name: "Actions for Menu parity" }).click();
+    const labels = (await page.getByRole("menuitem").allTextContents())
+      .map((label) => label.trim());
+    await page.keyboard.press("Escape");
+    return labels;
+  };
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const desktop = await menuLabels();
+  expect(desktop).toEqual([
+    "Open / edit",
+    "Complete",
+    "Priority: High",
+    "Priority: NormalCurrent priority",
+    "Priority: Low",
+    "Move up",
+    "Move down",
+    "Delete…",
+  ]);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await menuLabels()).toEqual(desktop);
+});
+
+test("application frame is full-bleed and switches at the 73rem boundary", async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const selector of [
+      ".jig-app-shell",
+      ".jig-app-header",
+      ".jig-content-frame",
+      ".jig-content",
+    ]) {
+      const box = await page.locator(selector).boundingBox();
+      expect(box, selector).not.toBeNull();
+      if (box !== null) {
+        expectNear(box.x, 0, 1);
+        expectNear(box.width, viewport.width, 1);
+      }
+    }
+
+    const frame = await page.locator(".jig-content-frame").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        margin: style.margin,
+        padding: style.padding,
+        border: style.borderWidth,
+        radius: style.borderRadius,
+        shadow: style.boxShadow,
+      };
+    });
+    expect(frame.margin).toBe("0px");
+    expect(frame.padding).toBe("0px");
+    expect(frame.border).toBe("0px");
+    expect(frame.radius).toBe("0px");
+    expect(frame.shadow).toBe("none");
+  }
+
+  await page.setViewportSize({ width: 1168, height: 900 });
+  const desktopGeometry = await page.locator(".jig-week-column").evaluateAll(
+    (elements) => elements.slice(0, 2).map((element) => {
+      const box = element.getBoundingClientRect();
+      return { x: box.x, y: box.y, width: box.width };
+    }),
+  );
+  expect(desktopGeometry).toHaveLength(2);
+  expectNear(desktopGeometry[0]?.y ?? 0, desktopGeometry[1]?.y ?? 0, 1);
+  expect(desktopGeometry[0]?.width ?? 0).toBeGreaterThanOrEqual(160);
+
+  await page.setViewportSize({ width: 1167, height: 900 });
+  const narrowGeometry = await page.locator(".jig-week-column").evaluateAll(
+    (elements) => elements.slice(0, 2).map((element) => {
+      const box = element.getBoundingClientRect();
+      return { y: box.y };
+    }),
+  );
+  expect(narrowGeometry).toHaveLength(2);
+  expect(narrowGeometry[1]?.y ?? 0).toBeGreaterThan(narrowGeometry[0]?.y ?? 0);
+});
+
+test("Task cards remain visibly separated from the canvas in Light and Dark responsive modes", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Contrast contract", today);
+  await page.reload();
+
+  for (const theme of ["light", "dark"] as const) {
+    await page.evaluate((value) => {
+      localStorage.setItem("jig-theme", value);
+    }, theme);
+    await page.reload();
+
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      const colors = await page.evaluate(() => {
+        const card = document.querySelector<HTMLElement>(".jig-task-card");
+        if (card === null) {
+          throw new Error("Task card unavailable");
+        }
+        return {
+          card: getComputedStyle(card).backgroundColor,
+          canvas: getComputedStyle(document.body).backgroundColor,
+          border: getComputedStyle(card).borderColor,
+        };
+      });
+      expect(colors.card).not.toBe(colors.canvas);
+      expect(colors.border).not.toBe("rgba(0, 0, 0, 0)");
+    }
+  }
 });
 
 test("History keeps its destination active while using the same editable workspace and complete menu", async ({
