@@ -1,12 +1,11 @@
 import { List } from "@astryxdesign/core";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
-import { SortableTaskRow, TaskRow } from "./task-row";
+import { SortableTaskRow } from "./task-row";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
   readonly date: string;
-  readonly isSortable: boolean;
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
@@ -34,7 +33,6 @@ function PlannerSequenceRow({
   index,
   date,
   sequenceLength,
-  isSortable,
   isSelected,
   onSelectTask,
   onEdit,
@@ -71,14 +69,12 @@ function PlannerSequenceRow({
       : {}),
   };
 
-  return isSortable ? (
+  return (
     <SortableTaskRow
       {...rowProps}
       index={index}
       group={date}
     />
-  ) : (
-    <TaskRow {...rowProps} />
   );
 }
 
@@ -108,7 +104,6 @@ export function PlannerTaskList({
           index={index}
           date={date}
           sequenceLength={outstanding.length}
-          isSortable={isSortable}
           isSelected={selectedTask?.id === task.id}
           onSelectTask={onSelectTask}
           onEdit={onEdit}
