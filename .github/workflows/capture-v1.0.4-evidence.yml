@@ -17,6 +17,8 @@ jobs:
           bun-version: 1.4.4
       - name: Install exact frozen dependency graph
         run: bun install --frozen-lockfile
+      - name: Build production UI
+        run: bun run build
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
       - name: Capture v1.0.4 governed UI states
