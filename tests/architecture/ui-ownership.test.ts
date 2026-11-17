@@ -46,7 +46,7 @@ describe("UI ownership architecture", () => {
       expect(content, path).not.toContain("__built");
       expect(content, path).not.toContain("generateThemeCSS");
       if (path.endsWith(".tsx")) {
-        expect(content, path).not.toMatch(/<button\b/);
+        expect(content, path).not.toMatch(/<(?:button|a)\b/);
       }
     }
 
