@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1 UX/UI realization v0.4, 2026-11-16. Functional structure, Option A branding, Jig Light/Dark theming and browser evidence are governed.
+**Status:** Binding v1 UX/UI realization v0.5, 2026-11-17. Functional structure, Astryx-first component/layout ownership, Option A branding, Jig Light/Dark theming and browser evidence are governed.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Turn the accepted early mobile/day/week/editor mockups into a versioned interface baseline while distinguishing layout intent from noncanonical visual decoration.
@@ -142,7 +142,7 @@ Use explicit Save/Cancel, persistent form errors on invalid data or server refus
 | UI concern | Canonical owner |
 |---|---|
 | Application frame and responsive primary navigation | Astryx AppShell + public SideNav/mobile-navigation APIs; Jig owns destination state, not shell mechanics |
-| Buttons, icon buttons, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
+| Buttons, icon buttons, menus/popovers, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
 | Sortable rows, drop zones, drag overlays, keyboard drag, pointer/touch gesture lifecycle | @dnd-kit/react only; do not activate Astryx List createReorderable on the same row |
 | Week/date bucket composition, Day selected-date sequence, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
 | Scheduled date, ordering, daily rollover, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
