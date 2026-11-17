@@ -178,6 +178,7 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
     onPreviousWeek,
     onToday,
     onNextWeek,
+    onAdd,
     onNavigate,
   } = props;
 
@@ -186,6 +187,15 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
       <div className="jig-header-mobile-band">
         <BrandHome onHome={onHome} />
         <div className="jig-header-mobile-actions">
+          {destination === "planner" ? (
+            <IconButton
+              label="Add task"
+              icon={<span aria-hidden="true">+</span>}
+              variant="primary"
+              size="sm"
+              onClick={onAdd}
+            />
+          ) : null}
           {statusControl}
           <DropdownMenu
             presentation="popover"
