@@ -190,7 +190,6 @@ export function TaskRow({
         .join(" ")}
       isSelected={isSelected}
       align="first-line"
-      {...(onSelect === undefined ? {} : { onClick: onSelect })}
       startContent={
         <span
           className="jig-task-card-leading"
@@ -216,15 +215,35 @@ export function TaskRow({
         </span>
       }
       label={
-        <span
-          className={
-            completed
-              ? "jig-task-title jig-task-title-completed"
-              : "jig-task-title"
-          }
-        >
-          {task.title}
-        </span>
+        onSelect === undefined ? (
+          <span
+            className={
+              completed
+                ? "jig-task-title jig-task-title-completed"
+                : "jig-task-title"
+            }
+          >
+            {task.title}
+          </span>
+        ) : (
+          <button
+            type="button"
+            className={[
+              "jig-task-select",
+              "jig-task-title",
+              completed ? "jig-task-title-completed" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            onPointerDown={stopPointer}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect();
+            }}
+          >
+            {task.title}
+          </button>
+        )
       }
       description={<TaskMetadata task={task} />}
       endContent={
