@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.4 technical solution, v0.13 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, complete theme semantics, header geometry, outside dismissal, Task menu actions, date-header Add, selected-day removal, narrow seven-section composition, full weekday labels and reduced-chrome/icon-led presentation.
+**Status:** Binding v1.0.4 technical solution, v0.14 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, complete theme semantics, header geometry, outside dismissal, Task menu actions, date-header Add, selected-day removal, narrow seven-section composition, full weekday labels and reduced-chrome/icon-led presentation.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -99,6 +99,37 @@ Jig application source/distribution  (separate from personal planning repo)
 The application binary and runtime may be installed under normal user application directories; **all task data and recoverable canonical planning records must be inside the configured Git repository**. The local service keeps only its own noncanonical logs and launch configuration outside that repository. Do not install the program into or modify the public source checkout when it is not the selected personal target.
 
 **Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, daily rollover, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser reminder presentation. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
+
+### 3.0.1 Architecture compliance invariants
+
+These invariants are binding on **every** v1.0.4 implementation task; architecture compliance is not a cleanup phase that may be deferred until the end.
+
+- **Functional core:** Task/planning semantics and reusable calendar/order transforms are pure typed functions. `src/core/**` must not import UI, HTTP, SQLite, Git, browser, filesystem or process APIs.
+- **Imperative shell:** SQLite, HTTP, Git, filesystem, process lifecycle and other I/O stay under `src/shell/**`. Shell code invokes the functional core; it does not reimplement Task/planning rules.
+- **Presentation boundary:** `ui/src/**` owns browser/UI presentation state and invokes canonical commands. It must not duplicate canonical Task validation, normalization, insertion, ordering, movement or rollover semantics.
+- **Canonical types:** there is one canonical `Task`, one canonical `TaskCommand`, one Planner temporal state owner, one Task workspace state owner and one editable Task draft shape. Presentation drafts are permitted because unsaved form state is not canonical domain state, but they must not become a second Task/command model.
+- **Strict typing:** repository TypeScript remains `strict` with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and `useUnknownInCatchVariables`. Do not introduce `any`, double casts, non-null assertions, or `as` assertions merely to silence the compiler.
+- **Boundary narrowing:** untyped JSON, SQLite rows and third-party component/ref values enter through the smallest possible parser/guard/adapter. A localized assertion is allowed only when runtime validation or a proven third-party typing limitation makes it sound; the assertion must not leak into product/domain logic. Prefer type guards, discriminated unions, typed library generics and exhaustive switches.
+- **Separation of concerns:** parsing/validation, pure domain transitions, persistence, transport and rendering remain separate owners. A UI component may provide friendly required-field feedback, but canonical normalization/validation remains in the functional core.
+- **DRY / one semantic owner:** do not maintain duplicate algorithms or state projections for the same meaning. Shared Planner Task-sequence rendering/move-command wiring, date-header composition, status semantics and command construction have one owner each. Reuse pure helpers rather than copy/paste conditionals.
+- **No abstraction inflation:** do not introduce DTO/mapping hierarchies, service/repository class stacks, state-management frameworks, workflow engines, command buses or parallel projection models to achieve these corrections.
+- **Dependency direction:** core is dependency-free with respect to shell/UI; shell may depend on core; UI may depend on canonical core types/pure helpers and its narrow HTTP adapter, never on SQLite/Git implementation details.
+
+### 3.0.2 Existing compliance breaches that v1.0.4 must close
+
+The correction branch currently contains known architecture violations/inconsistencies. They are part of the v1.0.4 remediation scope and must not survive certification:
+
+1. `ui/src/app.tsx`, `planner.tsx`, `week.tsx`, `planner-list.tsx` and `date-strip.tsx` still maintain the superseded `selectedDate`/date-selection projection in parallel with the final displayed-week-only design.
+2. `app.tsx` still owns `view | edit | create` workspace state while `task-workspace.tsx` already exposes `task | create`; this is parallel/incompatible workspace ownership and permits invalid state combinations.
+3. Desktop `week.tsx` and narrow `planner-list.tsx` duplicate outstanding-Task row mapping plus Move up/Move down wiring. The final seven-section composition must use one shared sequence renderer/command wiring rather than two semantic implementations.
+4. `task-editor.tsx` duplicates canonical optional-text/title normalization before producing `TaskCommand`. UI may perform non-authoritative required-field feedback, but command normalization/validation belongs to the canonical functional core.
+5. `task-editor.tsx` and `settings.tsx` use unchecked value assertions for Astryx component output; dnd refs also use direct assertions. Replace ordinary assertions with existing domain type guards or a minimal validated third-party boundary adapter. Any unavoidable ref assertion must be isolated and justified at the dnd/Astryx integration boundary.
+6. Core validation currently contains avoidable correlated-value assertions (for example position/optional fields after validation) and `isPriority` narrows through an assertion. Refactor the touched validators to return already-narrowed values without product-logic casts.
+7. Repository/HTTP/SQLite boundaries contain several raw-object/row assertions. A runtime-validated object cast may remain only inside the dedicated boundary helper; unsafe patterns such as `object as unknown as Task` are prohibited. Canonical Task import must flow through `validateTask(unknown)`, and SQLite/HTTP parsing must either use typed library generics or validate unknown values before treating them as canonical types.
+8. The theme implementation must place Jig-owned `--jig-state-*` aliases in Astryx `defineTheme({ localTokens: ... })`; they are not public Astryx `TokenName` entries and must not be forced into `tokens`.
+9. Semantic iconography is owned by Astryx's public icon/semantic icon registry where available. Do not add a second icon package or proliferate Unicode stand-ins for meanings Astryx already exposes.
+
+A repo-wide architecture guard must scan production source for the same violation classes. Any additional actual breach found by that guard is in scope for correction before v1.0.4 is considered implementation-complete; this does not authorize unrelated feature refactoring.
 
 Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to active destination (`planner | history | settings`), displayed Planner week start, selected Task/workspace draft, transient drag preview and local appearance preference. There is no selected-day state. Theme preference is presentation state and never part of canonical Task or Git-synchronized planning data. Planner and History are queries over the same canonical Task set; desktop and narrow Planner compositions are presentations of the same Planner state, not parallel view authorities.
 
