@@ -18,10 +18,6 @@
 <rect x="1230" y="34" width="180" height="40" rx="20" fill="#edf7f3" stroke="#dce3ec" stroke-width="1"/>
 <circle cx="1250" cy="54" r="5" fill="#2c765f" stroke="none" stroke-width="1"/>
 <text x="1265" y="59" class="s" fill="#2c765f" font-weight="700">Synced</text>
-<rect x="1070" y="92" width="160" height="36" rx="7" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<text x="1093" y="116" class="b" fill="#152238">All contexts</text>
-<rect x="1242" y="92" width="168" height="36" rx="7" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<text x="1262" y="116" class="b" fill="#152238">Newest first</text>
 <text x="240" y="160" class="h2">Friday, 20 November</text>
 <text x="240" y="183" class="s" fill="#657187">3 completed</text>
 <rect x="240" y="205" width="1170" height="70" rx="8" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
