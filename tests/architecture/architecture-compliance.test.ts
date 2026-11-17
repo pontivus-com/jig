@@ -53,9 +53,13 @@ describe("architecture compliance", () => {
     }
   });
 
-  it("rejects architecture-inflating abstractions and unsafe domain double casts", () => {
+  it("rejects architecture-inflating abstractions and unsafe typing escapes", () => {
     for (const [path, content] of production) {
       expect(content, path).not.toMatch(/\bas\s+unknown\s+as\b/);
+      expect(content, path).not.toMatch(/\bas\s+any\b/);
+      expect(content, path).not.toMatch(/:\s*any\b/);
+      expect(content, path).not.toMatch(/<any>/);
+      expect(content, path).not.toMatch(/\bArray<any>\b/);
       expect(content, path).not.toMatch(
         /\b(?:class|interface|type)\s+\w*(?:Dto|DTO|ViewModel)\b/,
       );
