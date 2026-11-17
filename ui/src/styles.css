@@ -854,6 +854,21 @@ body {
     background: var(--color-background-surface);
   }
 
+  .jig-history-task-row.jig-task-priority-high {
+    border-inline-start-color: var(--color-text-error);
+    border-inline-start-width: calc(3 * var(--border-width));
+  }
+
+  .jig-history-task-row.jig-task-priority-normal {
+    border-inline-start-color: var(--color-accent);
+    border-inline-start-width: calc(2 * var(--border-width));
+  }
+
+  .jig-history-task-row.jig-task-priority-low {
+    border-inline-start-color: var(--color-text-info);
+    border-inline-start-width: calc(2 * var(--border-width));
+  }
+
   .jig-history-complete-indicator {
     display: inline-flex;
     inline-size: var(--spacing-4);
