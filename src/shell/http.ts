@@ -7,27 +7,17 @@ import {
   type TaskCommand,
 } from "../core/task";
 import { PlanningError } from "../core/planning";
+import type {
+  Diagnostics,
+  RepositoryStatus,
+  ServiceStatus,
+} from "../protocol";
+export type { Diagnostics, ServiceStatus } from "../protocol";
 import {
   applyTaskCommand,
   readCanonicalState,
   StaleRevisionError,
-  type RepositoryStatus,
 } from "./sqlite";
-
-export interface ServiceStatus {
-  readonly ready: true;
-  readonly repository_path: string;
-  readonly repository_status: RepositoryStatus;
-}
-
-export interface Diagnostics {
-  readonly service_healthy: boolean;
-  readonly sqlite_available: boolean;
-  readonly sqlite_schema_version: number;
-  readonly repository_path: string;
-  readonly portable_format_version: number;
-  readonly repository_adapter_healthy: boolean;
-}
 
 export interface HttpDependencies {
   readonly db: Database;
