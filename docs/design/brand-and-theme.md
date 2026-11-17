@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1.0.4 brand and application-theme contract, amended 2026-11-17 with the Astryx-first CSS ownership rule and the v1.0.4 product-state color vocabulary.  
+**Status:** Canonical v1.0.5 brand and application-theme contract, amended 2026-11-17 for Task-surface contrast, shared responsive icon semantics and canonical compact-header wordmark usage.
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, brand palette, Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -374,6 +374,44 @@ The following resolved values are the intended visual result for Jig-owned persi
 | Focus ring | Amber 700 `#B86C00` | Amber 500 `#F59E0B` |
 
 These values deliberately use the wider functional palette: temporal orientation is teal, selected Task is info blue, active destination is neutral Ink, direct manipulation/focus is Amber, High is red/error, Normal is neutral, and Low/healthy status is green/success. No persistent product state may use `--color-accent-muted` simply because it is selected.
+
+
+## 6.5 v1.0.5 Task-surface contrast and responsive parity
+
+The Planner canvas and Task card are separate semantic surfaces. v1.0.5 makes that separation explicit because the published v1.0.4 Dark/narrow presentation allowed Task cards to visually merge into their background.
+
+Add two Jig-local semantic aliases in `jig-theme.source.ts`:
+
+| Alias | Light | Dark | Purpose |
+|---|---|---|---|
+| `--jig-task-surface` | White | Ink 800 | Base outstanding/completed Task-card surface across Planner and History |
+| `--jig-task-border` | Ink 200 / emphasized neutral border | Ink 700 / emphasized neutral border | Base Task-card edge separation |
+
+The surrounding Planner canvas remains:
+
+- Light: Paper 100;
+- Dark: Ink 950.
+
+Therefore Dark Task cards sit two Ink stops above the canvas rather than using the v1.0.4 Ink 900 surface. This is deliberate legibility/elevation, not decorative chrome.
+
+Rules:
+
+1. Desktop and narrow/mobile consume the same Task-surface aliases. Responsive CSS must not substitute `--color-background-body`, transparent, or a mobile-only surface.
+2. Hover may add the ordinary transient overlay, but the un-hovered card must already be visibly distinct.
+3. Selected Task continues to use the governed info-blue selected surface/border; keyboard focus adds Amber; drag adds transient Amber; priority remains the narrow leading cue. These states do not redefine the base card surface contract.
+4. History Task rows use the same base Task surface family unless an Astryx component public semantic surface already provides the exact same resolved role.
+5. Do not introduce raw feature-local colors in `styles.css`.
+
+### v1.0.5 icon and header-brand normalization
+
+The public Astryx icon registry is Jig's one reusable application icon language. Header/navigation, Add, Task metadata/actions and status controls use semantic Astryx icons where available and preserve accessible text/labels. The pinned registry supplies `viewColumns`, `checkDouble`, `wrench`, `menu`, `moreHorizontal`, `clock`, `externalLink`, `copy`, `check`, `arrowUp`, `arrowDown`, status icons and temporal chevrons.
+
+The application header must use the canonical complete horizontal Jig wordmark asset. The standalone J icon is reserved for app/favicon/icon contexts and must not be placed next to a second live “Jig” word in the header.
+
+Narrow/mobile is not an alternate icon system: it uses the same semantic icon meaning, size family and state color as desktop, with only touch sizing/layout changing.
+
+Astryx 0.7.13 has no true semantic names for Add, History, Edit or Delete. Jig therefore owns exactly four namespaced extension keys — `jig:add`, `jig:history`, `jig:edit`, `jig:delete` — as bundled 24×24 inline fallbacks resolved through Astryx `getExtendedIcon`/`Icon`. This extends the Astryx registry; it is not a second icon system or dependency. No custom Jig glyph is introduced where an appropriate built-in Astryx semantic name exists.
+
 
 ## 7. Theme implementation contract
 

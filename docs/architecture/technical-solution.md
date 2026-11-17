@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.4 technical solution, v0.14 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, complete theme semantics, header geometry, outside dismissal, Task menu actions, date-header Add, selected-day removal, narrow seven-section composition, full weekday labels and reduced-chrome/icon-led presentation.
+**Status:** Binding v1.0.5 technical solution, v0.18 (2026-11-17), with eleven atomic JIG-105 solution designs mapped one-to-one to the v1.0.5 functional requirements. The design removes responsive semantic duplication while preserving the canonical Task/domain/persistence/integration architecture.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -20,7 +20,7 @@ The normal experience is: run one installer; assign repository; installer config
 | Runtime and service | One Bun 1.4.4 process on Linux, `systemd --user` service, loopback HTTP, no external database or remote service |
 | Command and installer | `jig` launcher in ~/.local/bin; `scripts/install.sh --repo /absolute/existing/repo` or `--repo-url URL --checkout /new/empty/path`. URL mode delegates acquisition to Git and then converges on the same selected-checkout installation path. |
 | UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 with Jig theme derived from Neutral; one Planner destination, Jig-owned responsive top-header composition inside AppShell, desktop right Drawer and narrow BottomSheet for the one Task workspace |
-| Cross-day drag | `@dnd-kit/react@0.5.3` + public sensor primitives from direct-pinned `@dnd-kit/dom@0.5.3`; one drag owner; Astryx handles visual primitives |
+| Cross-day drag | `@dnd-kit/react@0.5.3` + public sensor primitives from direct-pinned `@dnd-kit/dom@0.5.3`; one React-owned drag model across desktop and narrow/mobile; optimistic DOM sorting suppressed; Astryx handles visual primitives |
 | Live data | One Bun SQLite database at `<selected-repo>/.jig/local/jig.sqlite`; immediate transactional writes |
 | Versioned data | Deterministic Task JSON and manifest synchronized through Git inside the selected repository. The adapter may use an isolated Git namespace internally, but branch/ref/worktree lifecycle is an implementation detail confined to that adapter rather than Jig application state or user configuration. |
 | Repository sync boundary | Daemon automatically debounces Jig-record export and invokes a thin Git adapter. The adapter is responsible only for synchronizing Jig-owned portable data without touching unrelated repository content and returns coarse synchronization outcomes plus validated Jig snapshots; Git topology, policy, credentials and reconciliation remain external. |
@@ -65,7 +65,7 @@ Use the sources below to avoid rediscovery, while preserving Jig's own domain an
 | Planner application header | Astryx AppShell topNav slot plus Layout/Stack/Button/IconButton/DropdownMenu or Popover | Reusable control mechanics, focus and menu behavior | SideNav, AppShell auto mobile drawer, or a second application shell; Jig owns the product-specific three-zone header geometry |
 | Completion | Astryx CheckboxInput | Accessible explicit completion control | Any Order lifecycle/status transition semantics |
 | Reference action | Astryx Link/Button | Safe open/copy affordance | Automatic dereferencing or project-content import |
-| Cross-date drag | Pinned `@dnd-kit/react@0.5.3` plus `@dnd-kit/dom@0.5.3` public PointerSensor constraints, then dnd-kit guides | One provider, sortable task IDs, dated droppables, drag overlay, 5px body-handle activation threshold and exact destination index | A second reorder system, custom pointer-state subsystem or priority-derived drop position |
+| Cross-date drag | Pinned `@dnd-kit/react@0.5.3` plus `@dnd-kit/dom@0.5.3` public PointerSensor constraints, then dnd-kit guides | One provider, sortable Task-card element as the pointer source, interactive-descendant exclusion, dated droppables, drag overlay, input-aware activation threshold and exact destination index | A second reorder system, custom pointer-state subsystem, title/body-only drag handle or priority-derived drop position |
 | SQLite | Bun 1.4.4 SQLite API | Prepared statements, explicit transactions and WAL behavior used by the schema in §4.3 | ORM/repository abstraction |
 | Git integration | Standard Git CLI through Bun argument-array subprocess | the minimum scoped operations required to synchronize Jig-owned portable records while leaving unrelated repository state untouched | repository provisioning, user Git policy/configuration, topology management, reconciliation, Git libraries, shell interpolation or Jig-level merge/conflict workflow |
 | HTTP/service | Bun 1.4.4 runtime APIs + §3.2 of this document | Loopback serving, static UI, canonical command admission and write-token checks | A second transport model, external server framework or DTO layer |
@@ -313,7 +313,7 @@ Destination state is one discriminated value:
 type Destination = 'planner' | 'history' | 'settings'
 ```
 
-Planner is startup/default. The Jig mark and the explicit desktop Planner navigation item both set `destination='planner'`; returning from History/Settings preserves the current in-session displayed-week state. The desktop navigation group is Planner/History/Settings; narrow/mobile keeps the compact History/Settings menu while Planner remains the current/home surface outside that menu.
+Planner is startup/default. The Jig mark and the explicit desktop Planner navigation item both set `destination='planner'`; returning from History/Settings preserves the current in-session displayed-week state. The desktop navigation group is Planner/History/Settings; narrow/mobile renders the same Planner/History/Settings destination set through the compact hamburger popover; only presentation differs.
 
 ### 5.2 Planner temporal state and operations
 
@@ -363,16 +363,20 @@ grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 
 Left zone is the Jig home affordance; right zone contains Add task, an adjacent Planner/History/Settings navigation group, and compact sync status; the center zone is therefore page-centered regardless of unequal side content. Planner is explicit in this group and receives the governed neutral active-destination treatment when active.
 
-The center zone is a vertical stack:
+For v1.0.5 the center zone is one inline temporal group, superseding the earlier vertical stack:
 
-1. active week range text;
-2. a single grouped control row: Previous-week chevron, Today, Next-week chevron.
+1. Previous-week IconButton;
+2. compact active week range text;
+3. Next-week IconButton;
+4. Today Button/IconButton with an accessible label.
+
+The range remains informational. The one-row group is the only geometry compatible with the governed 44px header without clipping, private overrides or absolute-position compensation.
 
 The range label is not an interactive element and must not sit between the chevrons. Buttons use Astryx Button/IconButton with explicit accessible labels (“Previous week”, “Today”, “Next week”).
 
 The Planner board uses seven equal-width tracks with a product-level 160px minimum. Track **height is content-driven**; do not stretch tracks merely to equalize bottoms or anchor a lane action. Empty tracks keep only the minimum usable drop-target area.
 
-The seven tracks are **layout tracks, not panel components**. Do not wrap each day in a persistent bordered/card surface. Jig CSS may use spacing plus a single subtle hairline inline divider between adjacent tracks, and may remove even that divider when responsive density makes whitespace sufficient. Do not combine lane borders, header borders and card borders into repeated parallel line work. Task cards remain the discrete interaction surfaces. The desktop semantic breakpoint is **76rem / 1216 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and 48px total outer inset. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
+The seven tracks are **layout tracks, not panel components**. Do not wrap each day in a persistent bordered/card surface. Jig CSS may use spacing plus a single subtle hairline inline divider between adjacent tracks, and may remove even that divider when responsive density makes whitespace sufficient. Do not combine lane borders, header borders and card borders into repeated parallel line work. Task cards remain the discrete interaction surfaces. The desktop semantic breakpoint is **73rem / 1168 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and **zero outer viewport inset**. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
 
 The date column header is non-selectable and owns only date presentation plus the date-specific Add action. Render the **full weekday name** plus day number (for example `Thursday 19`) and one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. Do not abbreviate weekdays.
 
@@ -401,7 +405,7 @@ Permanent Delete confirmation alone uses Astryx `AlertDialog`.
 
 ### 5.5 Narrow/mobile composition
 
-Below 76rem render a deliberate narrow composition from the **same** destination, Planner state, selected Task and workspace state.
+Below 73rem render a deliberate narrow composition from the **same** destination, Planner state, selected Task and workspace state.
 
 The top region has:
 
@@ -413,13 +417,13 @@ The top region has:
 
 There is no date strip, selected-date heading or selected-day list.
 
-The hamburger uses Astryx `DropdownMenu` or `Popover` mechanics and contains only History and Settings. Do not use AppShell MobileNav/SideNav or a side drawer.
+The hamburger uses Astryx `DropdownMenu`/popover mechanics and renders the same canonical Planner/History/Settings destination set as desktop. Do not use AppShell MobileNav/SideNav or a side drawer.
 
 A prominent touch Add task control remains available in narrow/mobile composition and uses the same derived week-context default date as global Add. Each stacked date section also exposes its explicit date-header `+`.
 
 Task create/edit uses the public Astryx **BottomSheet** rising from the bottom with `hasScrim={false}`, reusing the exact same `TaskWorkspaceState`. Existing Tasks are immediately editable and Add uses the same field surface. Responsive mode changes presentation only: desktop Drawer ⇄ narrow BottomSheet without destroying or duplicating draft state.
 
-When narrow drag is not enabled, touch-operable Move up/Move down commands call the same same-day move operation, and the Edit scheduled-date field calls the same date-change operation used elsewhere. There is no mobile-specific task/order model.
+Narrow/mobile drag is enabled for the same outstanding Task rows and exact-position move path as desktop. Touch-operable Move up/Move down remains the non-drag accessibility alternative, and the Edit scheduled-date field remains the explicit non-drag cross-date path. There is no mobile-specific task/order model.
 
 ### 5.5.1 v1.0.4 date-header Add and lane geometry
 
@@ -470,9 +474,297 @@ The v1.0.4 implementation must correct the failure mechanism, not merely restyle
 
 No domain, SQLite, HTTP, Git-sync, rollover, reminder or installer change follows from these failures.
 
+
+### 5.6.2 v1.0.5 post-release corrective design
+
+The v1.0.5 correction is defined as eleven atomic solution designs. Each `JIG-105-SD-nn` is the sole technical design owner for the corresponding `JIG-105-FR-nn`; the implementation plan must preserve that numbering one-to-one.
+
+#### Current implementation failure mechanisms
+
+The published v1.0.4 code contains several responsive semantic forks that explain the observed failures:
+
+- `planner.tsx` sets `enableDrag={layoutMode === "desktop"}`, so direct movement is deliberately disabled by layout rather than capability/input.
+- `week.tsx` conditionally removes both `TaskDragProvider` and `DateDropZone` on narrow/mobile.
+- `planner-list.tsx` conditionally renders `SortableTaskRow` on desktop versus plain `TaskRow` on narrow/mobile.
+- `planner-header.tsx` owns two destination definitions: desktop maps `Planner/History/Settings`, while the narrow hamburger separately hard-codes only History/Settings.
+- architecture tests currently preserve that divergence by asserting that the narrow menu does not contain Planner.
+- narrow CSS gives `.jig-content-frame` `--color-background-surface` while Task cards also use `--color-background-surface`; this collapses the card/canvas distinction on narrow layouts.
+- header CSS reserves 5.5rem desktop and 7rem narrow minimum heights, exceeding the intended compact chrome.
+- Add controls still use raw `+` glyphs despite the icon requirement, and the header composes the standalone J symbol beside live “Jig” text despite the canonical wordmark contract.
+
+These are presentation/interaction ownership defects. No Task schema, core movement rule, SQLite, HTTP, Git-sync, reminder, installer or release-tool redesign is required.
+
+The complete narrow/mobile architecture review also identifies boundaries that are already correct and must **not** be over-refactored:
+
+- `TaskActionMenu` is already the single Planner/History Task overflow-menu component. v1.0.5 strengthens its typed item builder and parity tests; it does not introduce a replacement menu abstraction.
+- `TaskWorkspaceContent` is already shared. Desktop Drawer versus narrow BottomSheet is a legitimate responsive presentation-primitive split over the same workspace state/content and remains.
+- `HistoryView` and `SettingsView` are not separate mobile implementations; the same components reflow through CSS.
+- `useLayoutMode` remains justified for the two genuine composition differences above (header anatomy and Drawer/BottomSheet). It must not decide Task capabilities or semantic item sets.
+- TypeScript is already configured with `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Existing assertions in date/HTTP parsers are preceded by runtime validation and are boundary-local; dnd ref assertions are isolated third-party interop. v1.0.5 removes both obsolete dnd row/handle assertions by binding the public callback refs directly, but does not create a broad type-refactor unrelated to the defects.
+
+
+#### JIG-105-SD-01 — React-owned crash-free drag
+
+**Functional owner:** JIG-105-FR-01.
+
+Jig's React tree and canonical Task state remain the sole rendered-order authority. dnd-kit supplies pointer sensing, collision/drop geometry and transient overlay only.
+
+1. Keep one existing `DragDropProvider`, one `useSortable` per outstanding Task and one canonical `move` command.
+2. Add `onDragOver={(event) => event.preventDefault()}` at the provider. The pinned dnd-kit default `OptimisticSortingPlugin` otherwise mutates sortable DOM order before Jig commits canonical state; suppressing it prevents the second DOM/order owner that causes React `removeChild` reconciliation failures.
+3. Do not maintain a shadow `Task[]`, per-layout order array or drag-over command stream. Persist once, on successful drop.
+4. On drag end derive destination only from dnd-kit target data:
+   - sortable target => target group/date and exact sortable index;
+   - date droppable => explicit date and canonical outstanding count excluding the source Task.
+5. Cancelled/invalid drops submit no command.
+6. Keep the overlay transient and derived from canonical Tasks by active ID.
+
+**Strict typing:** dnd operation data is narrowed with dnd-kit's public `isSortable` guard and explicit `typeof target.data?.date === "string"`. No `any`, double cast or duplicate drag result model is introduced.
+
+#### JIG-105-SD-02 — One pointer drag capability across desktop and narrow/mobile
+
+**Functional owner:** JIG-105-FR-02.
+
+Remove layout mode as a drag capability switch.
+
+1. `Planner` no longer passes `enableDrag`.
+2. `WeekView` always owns one `TaskDragProvider`; every dated section is always one `DateDropZone`.
+3. `PlannerTaskList` always renders one `SortableTaskRow` for outstanding Tasks; remove the `isSortable` branch and plain-row mobile fallback.
+4. Remove `dragHandleRef`, `bodyPointerProps` and `pointerStart` from `TaskRow`. Bind dnd-kit's public `sortable.ref` (sortable geometry) and `sortable.sourceRef` (pointer source) to the same Astryx `ListItem` `<li>` through one callback ref. The ListItem click path remains the one selection owner; dnd-kit owns drag activation on the whole sortable row.
+5. Use the pinned `PointerSensor` for mouse, touch and pen with pointer-specific activation constraints:
+   - mouse/pen: 5px distance threshold;
+   - touch: approximately 250ms delay with 5px tolerance so vertical page scrolling remains usable until drag intent is established.
+6. Because Astryx `ListItem onClick` uses its own accessible whole-row interactive control, configure dnd-kit's public `preventActivation` callback rather than relying on generic interactive-element detection. Jig marks only genuine nested controls (completion checkbox, reference/copy action and Task overflow trigger) with the Jig-owned `data-jig-drag-excluded="true"` boundary; `preventActivation` rejects only targets within that boundary. Do not inspect private Astryx classes/DOM. The remaining ordinary card surface, including Astryx's row-selection overlay, may initiate drag.
+7. A pointer sequence that activates drag must not subsequently execute the ListItem selection/open action on release. Ordinary press/release that never activates drag remains the one Task-selection gesture. This is verified in the browser rather than implemented with a second manual pointer-state machine.
+8. Same-day Move up/down and Edit date remain non-drag alternatives using the same canonical commands.
+
+No touch-specific ordering model, gesture framework or second DnD library is permitted.
+
+#### JIG-105-SD-03 — One responsive Planner semantic composition
+
+**Functional owner:** JIG-105-FR-03.
+
+The Planner's dated-section/Task hierarchy is identical at both responsive widths.
+
+1. Render one `jig-week-board` DOM/composition for all layouts.
+2. Use the existing seven `DatedSection` instances and one shared `PlannerTaskList`; remove the `jig-planner-narrow` semantic branch.
+3. The 73rem breakpoint changes only CSS geometry:
+   - desktop: seven equal tracks;
+   - narrow: one stacked track flow.
+4. Dated section, Add action, Task row, sortable/drop behavior, metadata, state classes and action menus are unchanged by the breakpoint.
+5. Remove narrow-only container chrome that recreates a panel/surface around the whole Planner. The narrow canvas remains the same semantic body surface as desktop.
+6. `layoutMode` remains only where the actual component primitive differs by product contract (desktop Drawer versus BottomSheet, and desktop header composition versus narrow header composition). It must not toggle Planner/task capabilities.
+
+This is the DRY/SoC correction: responsive layout is a presentation projection over one semantic component tree, not a parallel Planner implementation.
+
+#### JIG-105-SD-04 — One typed application-navigation definition
+
+**Functional owner:** JIG-105-FR-04.
+
+Define the navigation semantics once and render them through desktop and narrow Astryx presentations.
+
+1. In `planner-header.tsx` (or one smaller adjacent UI module if extraction improves readability), define one immutable typed destination tuple whose icon field is Astryx `IconName | NamespacedIconName`, containing:
+   - `planner / Planner / viewColumns`;
+   - `history / History / jig:history`;
+   - `settings / Settings / wrench`.
+2. Derive the exported `Destination` union from that tuple rather than separately maintaining a union and item arrays.
+3. Desktop `DestinationNav` maps that tuple to Astryx Buttons and renders each semantic key through `<Icon icon={destination.icon}>` into the Button's public `ReactNode` icon slot.
+4. Narrow `DropdownMenu.items` maps the exact same tuple to Astryx `DropdownMenuItemData` and renders the same `<Icon icon={destination.icon}>` into the menu item's public `ReactNode` icon slot.
+5. Both projections use the same label, semantic icon and active-destination predicate. The mobile menu therefore contains Planner, History and Settings.
+6. No responsive-specific destination allowlist, copied labels or copied IDs remain.
+
+This is a UI semantic constant, not a transport/domain DTO. It never crosses the UI boundary and contains no application state. Do not cast a namespaced key to `IconName`; use Astryx's exported `ExtendedIconName`/`NamespacedIconName` types.
+
+#### JIG-105-SD-05 — One typed Task-action menu owner
+
+**Functional owner:** JIG-105-FR-05.
+
+Keep `TaskActionMenu` as the single Task menu owner and strengthen its contract.
+
+1. Build menu items through one pure UI function returning Astryx's public `DropdownMenuItemData[]`; do not invent a Jig menu DTO.
+2. Inputs are canonical Task state plus applicable `onMoveUp/onMoveDown` callbacks.
+3. Outstanding/completed differences derive only from `task.completed_at`; move availability derives only from canonical sequence position.
+4. Planner desktop/narrow and History all render the same `TaskActionMenu`; no layout mode is passed to it.
+5. Menu commands continue to call existing edit/complete/reopen/move/delete paths.
+6. Tests compare the complete menu item set for an outstanding Task at desktop and narrow widths and separately verify completed History state.
+
+This preserves strict typing by using the design system's exported item type as the boundary type and avoids a parallel action model.
+
+#### JIG-105-SD-06 — Astryx-first complete semantic icon system
+
+**Functional owner:** JIG-105-FR-06.
+
+Use the pinned Astryx icon registry as the one reusable icon system.
+
+**Built-in semantic mapping:**
+
+| Meaning | Astryx icon |
+|---|---|
+| Previous / Next | `chevronLeft` / `chevronRight` |
+| Planner | `viewColumns` |
+| History | `jig:history` namespaced extension |
+| Settings | `wrench` |
+| Mobile navigation trigger | `menu` |
+| Task overflow | `moreHorizontal` |
+| Reminder | `clock` |
+| Web reference | `externalLink` |
+| Copy-only reference | `copy` |
+| Complete/current priority marker | `check` |
+| Move up/down | `arrowUp` / `arrowDown` |
+| Repository health/warning/error/unknown | existing `success/warning/error/info` |
+
+Astryx 0.7.13 does not expose true semantic names for Add, History, Edit or Delete. Implement only those missing Jig-owned meanings through Astryx's documented extension seam:
+
+- namespaced keys: `jig:add`, `jig:history`, `jig:edit`, `jig:delete`;
+- one small Jig icon module with bundled 24×24 inline SVG fallbacks;
+- resolve through `getExtendedIcon`/`Icon` so themes can override the namespaced keys;
+- no Lucide/Heroicons dependency and no second icon registry.
+
+Task menus use `jig:edit`, built-in `check` for Complete/Reopen, built-in `arrowUp`/`arrowDown` for movement and `jig:delete` for Delete. Priority rows retain text plus current-priority check because High/Normal/Low are semantic values rather than generic icon meanings.
+
+Date/global Add use `IconButton` or Button `icon` with that semantic Jig icon. HTTP references show `externalLink`; copy references show `copy`. Essential meaning remains in accessible labels/text.
+
+#### JIG-105-SD-07 — Flat, compact, invariant header bar
+
+**Functional owner:** JIG-105-FR-07.
+
+The header is a thin application bar, not a second surface/card.
+
+- Desktop header background resolves to the same application/body background as the surrounding shell. Do not use `--color-background-surface`, muted gray fill, radius, shadow or framed container for the header.
+- One `border-block-end: var(--border-width) solid var(--color-border)` is the only persistent header chrome.
+- Existing semantics remain on the bar: canonical Jig Home wordmark at left; one centered inline temporal group `Previous · compact week range · Next · Today`; Add task + Planner/History/Settings + synchronization state at right.
+- Desktop: target rendered height ~44px, hard maximum `2.75rem` — approximately half the shipped v1.0.4 `5.5rem` minimum. Use compact token padding and `sm` controls; do not preserve excess vertical breathing room.
+- Narrow: target rendered height ~56px, hard maximum `3.5rem` — approximately half the shipped v1.0.4 `7rem` minimum. Render one row: compact complete Jig wordmark, Previous, compact range, Next, Today, Add, compact sync state and hamburger. Use `sm`/icon-only Astryx controls where horizontal density requires it, with accessible labels/tooltips; it follows the same flat-background/hairline principle.
+- Planner/History/Settings share the same outer height within each layout.
+- Remove the 5.5rem/7rem minimums and replace them with the explicit 2.75rem/3.5rem maxima rather than offsetting them with negative margins or private Astryx overrides.
+- The shared destination definition supplies visible semantic icons to desktop Buttons and narrow menu items; header flattening must not remove any action, label, icon or state.
+- Tests measure actual bounding boxes and computed header background/border, not merely equality.
+
+#### JIG-105-SD-08 — One Task surface/contrast contract across layouts
+
+**Functional owner:** JIG-105-FR-08.
+
+The authored Jig theme owns Task/card separation through local semantic aliases:
+
+- `--jig-task-surface`: Light White; Dark Ink 800.
+- `--jig-task-border`: Light emphasized neutral/Ink 200; Dark emphasized neutral/Ink 700.
+
+Planner canvas remains Paper 100 / Ink 950.
+
+1. Planner Task cards and History Task rows consume the same aliases.
+2. Remove narrow `.jig-content-frame` background/border/radius that turns the narrow Planner into another surface panel and causes card=container color collapse.
+3. Responsive CSS may alter spacing/minimum touch height only; it may not redefine card background/border.
+4. Selected Task info-blue, drag Amber, focus Amber and priority cues layer over this base surface without becoming the base surface.
+5. Generated Jig theme artifacts are rebuilt and `theme:check` must pass.
+
+#### JIG-105-SD-09 — Canonical compact header wordmark
+
+**Functional owner:** JIG-105-FR-09.
+
+`BrandHome` uses `assets/jig-logo.svg` and `jig-logo-on-dark.svg` as the complete wordmark and removes standalone-symbol + live-text composition.
+
+- Scale the complete wordmark to compact header dimensions through Jig-owned wrapper geometry.
+- Retain the existing accessible Button label `Planner home`; image artwork remains decorative to assistive technology.
+- Light/Dark asset switching uses the existing theme selectors.
+- Desktop and narrow render the same `BrandHome`; no second mobile brand component exists.
+
+#### JIG-105-SD-11 — Zero-margin full-bleed viewport composition
+
+**Functional owner:** JIG-105-FR-11.
+
+Jig has no application-level viewport gutter. The browser viewport itself is the application canvas.
+
+1. `.jig-app-shell` owns **zero** outer padding/margin at desktop and narrow widths.
+2. `.jig-content-frame` is not an inset panel: no outer border, radius, shadow, background slab or margin.
+3. `.jig-content` owns zero page-level padding on all four sides. Product/component spacing is applied by the actual semantic owners (header controls, date headers, Task lists, History groups, Settings sections, forms), not by a generic page inset.
+4. The application header spans viewport edge-to-edge and its bottom hairline reaches the full viewport width.
+5. Planner tracks consume the entire available content width. There is no artificial max-width and no left/right screen gutter.
+6. Remove the narrow page-level `calc(5rem + env(safe-area-inset-bottom))` content padding. Safe-area handling, where a specific Astryx overlay/control requires it, stays with that primitive rather than creating a permanent page margin.
+7. Removing the former 48px total desktop outer inset changes the seven-track semantic breakpoint. The minimum desktop width is now:
+   - seven tracks × 160px = 1120px;
+   - six inter-track gaps × 8px = 48px;
+   - outer viewport inset = 0px;
+   - total = **1168px = 73rem**.
+   Therefore `DESKTOP_LAYOUT_MEDIA_QUERY` becomes `(min-width: 73rem)` and the CSS narrow query becomes `max-width: 72.999rem`.
+8. No replacement wrapper may reintroduce the same inset under another class name.
+
+**Verification:** at representative desktop and narrow viewports, bounding boxes for AppShell/header/content-frame/main content start at x=0 and extend to viewport width; application shell/page-level computed margin and padding are 0 on all sides; no content-frame border/radius/shadow exists; Planner first/last tracks align with the available canvas edges; responsive mode changes at the governed 73rem boundary.
+
+---
+
+#### JIG-105-SD-10 — Certification and architecture guards
+
+**Functional owner:** JIG-105-FR-10.
+
+The v1.0.5 verification gate must prove the corrected architecture as well as visible outcomes.
+
+**Browser:**
+1. capture `pageerror` and console-error events during desktop same/cross-date drag; any unallowlisted runtime error fails;
+2. touch/narrow same-date, cross-date and empty-date drag, followed by canonical reload assertions;
+3. open desktop navigation and narrow hamburger presentation and assert the same ordered destination IDs/labels;
+4. compare outstanding Task menu items at desktop and narrow widths; verify completed History menu separately;
+5. assert semantic icons for navigation/Add/reference/movement/status and absence of raw `+`, `•••`, `≡` stand-ins in governed controls;
+6. desktop header <= 44px / 2.75rem and narrow <= 56px / 3.5rem, invariant across destinations;
+7. computed Task-card background/border differs from Planner canvas in Light and Dark at desktop and narrow widths;
+8. application shell/header/content-frame/main bounds are edge-to-edge with zero application-level margin/padding, no content-frame panel chrome, and responsive mode switches at the governed 73rem / 1168px boundary.
+
+**Architecture/static:**
+- no `enableDrag` or `isSortable` responsive capability flag in Planner composition;
+- one `TaskDragProvider`, one `DateDropZone` path and one `SortableTaskRow` path;
+- one destination tuple; tests must not encode a different narrow destination set;
+- `TaskActionMenu` remains the sole Task action-menu owner;
+- no layout-specific Task surface token or raw card color;
+- no replacement application/page inset wrapper and no stale 76rem responsive owner;
+- no new `any`, double cast, non-null assertion, DTO/mapping hierarchy, service/repository layer or second state framework;
+- existing localized third-party dnd ref assertions remain permitted only if library typing still requires them and are not widened into product logic.
+
+**Visual evidence:** desktop Planner Light/Dark, narrow Planner Light/Dark, narrow navigation menu open, desktop+narrow Task menu open, active drag target and workspace state are mandatory.
+
+A green test run without these cases is not sufficient v1.0.5 certification.
+
+#### v1.0.5 architecture-compliance matrix
+
+The corrective design is intentionally presentation-local. It does not add a new domain concept, persistence representation, protocol envelope or shell subsystem.
+
+| Solution | Owning layer / boundary | Canonical semantic owner | Architectural constraint |
+|---|---|---|---|
+| JIG-105-SD-01 drag reconciliation | `ui/src/drag.tsx` interaction adapter | existing canonical Task order + existing move command | dnd-kit may sense/measure only; no shadow order, drag DTO or per-frame domain writes |
+| JIG-105-SD-02 responsive pointer drag | UI composition + dnd sensor configuration | one `SortableTaskRow` / one `DateDropZone` path | viewport must not decide capability; no touch-specific state model or second gesture framework |
+| JIG-105-SD-03 responsive Planner | UI composition + CSS geometry | one dated-section/Task renderer | breakpoint changes geometry only; no mobile Task projection or duplicate renderer |
+| JIG-105-SD-04 application navigation | UI semantic constant | one readonly destination tuple | type icon as Astryx `ExtendedIconName`; render through public Button/DropdownMenu slots; no navigation DTO or responsive copy |
+| JIG-105-SD-05 Task action menu | pure UI item builder + one `TaskActionMenu` component | canonical Task state/sequence position | use Astryx `DropdownMenuItemData`; no mobile/desktop action models |
+| JIG-105-SD-06 icon vocabulary | small UI presentation adapter over Astryx Icon | Astryx built-ins + four governed Jig namespaced keys | keys checked as `NamespacedIconName`; no second icon library/registry, no casts to `IconName` |
+| JIG-105-SD-07 compact header | Jig-owned AppShell topNav composition + scoped CSS | one header geometry owner | public Astryx controls only; no private selectors, offset hacks or second shell |
+| JIG-105-SD-08 Task surface contrast | `jig-theme.source.ts` + generated Astryx theme artifacts | one Task-surface token mapping | no raw responsive colors, no hand-edited generated theme artifacts |
+| JIG-105-SD-09 wordmark | shared `BrandHome` UI composition | canonical Jig logo assets | no alternate mobile brand component or duplicate live brand text |
+| JIG-105-SD-10 certification | architecture/browser/evidence tests | requirements/design contract | tests must prove owner singularity and observable outcomes, not encode divergent responsive behavior |
+| JIG-105-SD-11 full-bleed layout | AppShell/content composition + scoped CSS | one viewport/layout geometry owner | zero application inset; no replacement wrapper/max-width; one 73rem breakpoint |
+
+**FCIS boundary:** no v1.0.5 corrective solution requires new code in `src/core` or `src/shell`. Existing pure planning rules and canonical `TaskCommand`/move semantics remain authoritative. UI code translates pointer/navigation/menu events into existing callbacks/commands; it does not reimplement ordering, scheduling, rollover, completion or persistence semantics.
+
+**Strict typing boundary:** external/browser/dnd data is narrowed at the smallest adapter boundary with public guards/runtime checks. UI semantic constants use exported Astryx types (`IconName`, `NamespacedIconName`, `DropdownMenuItemData`) and derived literal unions. Do not introduce `any`, `unknown as`, double casts, non-null assertions, duplicate domain shapes, DTO/ViewModel types or assertion-only compiler appeasement.
+
+**SoC / DRY boundary:** responsive differences are presentation choices only. One meaning has one owner: one Task model, one order, one Planner renderer, one destination set, one Task menu builder, one icon mapping, one Task-surface mapping and one viewport breakpoint. Drawer versus BottomSheet and desktop versus narrow header composition remain legitimate presentation-primitive differences over shared state.
+
+#### v1.0.5 traceability
+
+| Functional requirement | Technical solution |
+|---|---|
+| JIG-105-FR-01 | JIG-105-SD-01 |
+| JIG-105-FR-02 | JIG-105-SD-02 |
+| JIG-105-FR-03 | JIG-105-SD-03 |
+| JIG-105-FR-04 | JIG-105-SD-04 |
+| JIG-105-FR-05 | JIG-105-SD-05 |
+| JIG-105-FR-06 | JIG-105-SD-06 |
+| JIG-105-FR-07 | JIG-105-SD-07 |
+| JIG-105-FR-08 | JIG-105-SD-08 |
+| JIG-105-FR-09 | JIG-105-SD-09 |
+| JIG-105-FR-10 | JIG-105-SD-10 |
+| JIG-105-FR-11 | JIG-105-SD-11 |
+
+
 ### 5.7 Drag, accessibility and copy discipline
 
-Use one dnd-kit drag owner around the seven desktop date tracks: one sortable task ID, dated droppables including empty dates, and exact target index. The sortable activation handle is the card's non-interactive body/title/meta region so ordinary card dragging works; checkbox/menu/reference controls remain outside that handle and stop pointer propagation where needed. Do not enable Astryx List `createReorderable` on the same rows.
+Use one dnd-kit drag owner around the seven Planner dated sections across desktop and narrow/mobile: one sortable task ID, dated droppables including empty dates, and exact target index. The sortable Task-card element itself is the pointer source so dragging can begin anywhere on ordinary card surface. Do not create a title/body-only handle. Checkbox/menu/reference/form controls remain genuine interactive descendants and must be rejected by pointer activation; their ordinary control behavior remains independent. Do not enable Astryx List `createReorderable` on the same rows.
 
 Keyboard Move up/Move down remains available on desktop and narrow layouts. Completion, Task selection, reference actions and overflow controls must not initiate dragging.
 

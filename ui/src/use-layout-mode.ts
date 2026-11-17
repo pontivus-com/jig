@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export const DESKTOP_LAYOUT_MEDIA_QUERY = "(min-width: 76rem)";
+export const DESKTOP_LAYOUT_MEDIA_QUERY = "(min-width: 73rem)";
 
 export type LayoutMode = "desktop" | "narrow";
 

@@ -234,7 +234,9 @@ export const jigTheme = {
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
     "--jig-state-hover-bg": "var(--color-overlay-hover)",
-    "--jig-state-pressed-bg": "var(--color-overlay-pressed)"
+    "--jig-state-pressed-bg": "var(--color-overlay-pressed)",
+    "--jig-task-surface": "light-dark(var(--jig-white), var(--jig-ink-800))",
+    "--jig-task-border": "light-dark(var(--jig-ink-200), var(--jig-ink-700))"
   },
   __localTokenOwners: {
     "--astryx-theme-neutral-color-status-fill-accent": "neutral",
@@ -253,7 +255,9 @@ export const jigTheme = {
     "--jig-status-healthy-border": "jig",
     "--jig-status-healthy-text": "jig",
     "--jig-state-hover-bg": "jig",
-    "--jig-state-pressed-bg": "jig"
+    "--jig-state-pressed-bg": "jig",
+    "--jig-task-surface": "jig",
+    "--jig-task-border": "jig"
   },
   __localTokenLineage: ["neutral","jig"],
   components: {

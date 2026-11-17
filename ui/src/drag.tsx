@@ -42,6 +42,9 @@ export function TaskDragProvider({
             : String(operation.source.id),
         );
       }}
+      onDragOver={(event) => {
+        event.preventDefault();
+      }}
       onDragEnd={(event) => {
         const { source, target } = event.operation;
         setActiveTaskId(null);
@@ -59,14 +62,7 @@ export function TaskDragProvider({
         let destinationDate: string | null = null;
         let destinationIndex: number | null = null;
 
-        if (
-          isSortable(source) &&
-          (source.group !== source.initialGroup ||
-            source.index !== source.initialIndex)
-        ) {
-          destinationDate = String(source.group);
-          destinationIndex = source.index;
-        } else if (isSortable(target)) {
+        if (isSortable(target)) {
           destinationDate = String(target.group);
           destinationIndex = target.index;
         } else if (

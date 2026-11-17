@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.4 UX/UI realization v0.11, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for complete state-color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus, one directly editable Task workspace, date-header Add, no selected-day state, stacked narrow week composition, full weekday labels, explicit Planner/History/Settings top navigation and a reduced-chrome visual treatment.
+**Status:** Binding v1.0.5 UX/UI realization v0.15, 2026-11-17. It implements the eleven atomic JIG-105 functional/technical solution areas and removes responsive semantic drift between desktop and narrow/mobile.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–12 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
@@ -26,7 +26,7 @@ The original raster provenance recorded in repository history remains useful for
 
 ## 2. Information architecture
 
-Jig has one primary planning destination: **Planner**. Planner remains the default/Home destination and is also shown explicitly in the desktop right-side navigation beside History and Settings so destination state is immediately legible. The Jig mark remains an additional Home affordance. Narrow/mobile keeps Planner as the current/Home surface while the compact menu contains only History and Settings.
+Jig has one primary planning destination: **Planner**. Planner remains the default/Home destination and is also shown explicitly in the desktop right-side navigation beside History and Settings so destination state is immediately legible. The Jig mark remains an additional Home affordance. Narrow/mobile uses the compact hamburger presentation of the same Planner, History and Settings destination set.
 
 The only secondary destinations are **History** and **Settings**.
 
@@ -69,7 +69,7 @@ The visual reference does **not** authorize bypassing the component architecture
 
 The pinned Astryx `AppShell` is the application frame, but v1.0.3 deliberately omits `sideNav` and disables the AppShell automatic mobile drawer. Use the `topNav` slot plus public Astryx Button/IconButton/DropdownMenu or Popover primitives for the approved Jig header. Do not place another complete shell inside AppShell or duplicate the main landmark.
 
-The desktop header is one Jig-owned three-zone composition: Jig Home at left, the centered Planner temporal centerpiece, and Add task + adjacent Planner/History/Settings navigation + synchronization state at right. The center must remain optically/page centered despite unequal side-zone widths. History and Settings use semantic icons plus accessible labels; there is no SideNav.
+The desktop header is one Jig-owned three-zone composition: Jig Home at left, the centered Planner temporal centerpiece, and Add task + adjacent Planner/History/Settings navigation + synchronization state at right. The center must remain optically/page centered despite unequal side-zone widths. Planner, History and Settings use semantic icons plus accessible labels from one shared destination definition; there is no SideNav.
 
 CSS may set the governed product-level dimensions needed to reproduce the structural references, but must not reshape Astryx internals. No Jig rule may rely on an undocumented/private Astryx selector, DOM child structure, StyleX detail or private custom property. Do not use an application-owned high-priority cascade layer, `!important`, or selector escalation to win against the library. The application must also not synthesize Astryx compiler/runtime markers such as `__built` or manually replace the documented theme-build pipeline; those belong only to Astryx-generated artifacts. If a public Astryx primitive cannot realize a governed requirement, document that incompatibility and use the smallest Jig-owned semantic composition built from public Astryx leaves/tokens.
 
@@ -113,7 +113,7 @@ The approved desktop composition is the v1.0.3 reference.
 **Header:** one compact full-width application header with three zones.
 
 - **Left:** Jig product mark/home affordance.
-- **Center:** active week range on the first line, for example **16–22 Nov 2026**. Directly beneath it is a grouped **Previous week chevron · Today · Next week chevron** row. The range never sits between the arrows.
+- **Center (v1.0.5):** one inline temporal group: **Previous chevron · 16–22 Nov 2026 · Next chevron · Today**. The range is informational and sits between the arrows; Today remains an explicit action. This supersedes the older two-line reference geometry.
 - **Right:** **Add task**, adjacent **Planner · History · Settings** navigation, compact synchronization state. Planner is visibly active on the Planner surface.
 
 The temporal centerpiece is centered on the page, not merely centered in the leftover space between left/right controls.
@@ -138,7 +138,7 @@ On History, selecting a completed Task opens the same right-side Task workspace 
 
 ### 4.3 Narrow/mobile Planner
 
-Below the technical 76rem semantic breakpoint, render a deliberate narrow Planner composition rather than hiding desktop pieces with CSS.
+Below the technical 73rem semantic breakpoint, render a deliberate narrow Planner composition rather than hiding desktop pieces with CSS.
 
 The top hierarchy is:
 
@@ -153,11 +153,78 @@ There is no horizontal date strip, selected-date heading, or selected-day Task s
 
 Do not render `Day`, `Week`, `Attention`, `Your ordered plan`, `selected date view`, or other labels that restate the visible hierarchy.
 
-The hamburger opens a compact menu/popover containing only History and Settings. It is not a drawer.
+The hamburger opens a compact menu/popover containing the same Planner, History and Settings destination set as desktop. It is not a drawer; the semantic destination definition is shared and only the presentation differs.
 
 Task create/edit uses a BottomSheet rising from the bottom. Existing Tasks open directly into the full editable field surface. Add uses the same full field surface with its derived or explicit originating date and canonical defaults. Delete confirmation remains the sole blocking Task dialog.
 
-When narrow drag is absent, Move up/Move down provides touch ordering within the date and Edit date provides cross-date rescheduling.
+Narrow/mobile supports the same direct card-body drag semantics as desktop using touch/pen/mouse input. Move up/Move down remains the non-drag accessibility alternative within the date, and Edit date remains the explicit non-drag cross-date rescheduling path.
+
+
+### 4.3.1 v1.0.5 narrow/mobile parity correction
+
+The v1.0.4 published narrow composition did not meet the intended parity standard. v1.0.5 makes the following presentation requirements explicit:
+
+- **Same Task surface:** narrow/mobile Task cards use the same semantic Task-surface and border tokens as desktop. Responsive CSS may increase touch height/spacing but must not replace the Task surface with the page/section background.
+- **Same direct manipulation:** outstanding Task cards are always the same sortable row/drop composition on desktop and narrow/mobile. Touch drag uses the same whole-card sortable pointer source and canonical exact-position move semantics as desktop; genuine interactive descendants remain non-draggable and layout mode never disables sortability.
+- **Normalized application controls:** the narrow application band uses the canonical complete Jig wordmark, compact sync state, semantic Add icon and semantic hamburger icon with one consistent icon size/hit-area system.
+- **Normalized menu:** the hamburger opens the Astryx compact popover/menu with Planner, History and Settings from the same typed destination definition used by desktop. All items use the same labels, semantic icons and active-state vocabulary. No legacy drawer, raw Unicode stand-ins, copied destination array or mixed icon styles are permitted.
+- **Same Task metadata/action iconography:** reminder, reference/copy, completion, overflow and status meanings do not disappear or switch representation merely because the layout is narrow.
+- **Same state vocabulary:** today, Task selection, priority, focus, drag and operational status use the same semantic aliases as desktop.
+- **Same visual legibility:** card/canvas contrast must remain clearly visible in both Light and Dark. The mobile renderer is a reflow, not a separate visual theme.
+
+### 4.3.2 v1.0.5 flat compact header and Task-card legibility
+
+The published v1.0.4 header is visually too tall and too visually heavy. The corrected header is intentionally almost invisible as chrome.
+
+- **Desktop bar:** use the same application/body background as the page. Do not render a gray header slab, card, panel, radius or shadow.
+- **Separation:** use one subtle bottom hairline across the full width. This is the only persistent visual boundary between header and Planner canvas.
+- **Contents do not change:** Jig Home, week range, Previous/Today/Next, Add task, Planner/History/Settings and synchronization state remain available in the same semantic hierarchy.
+- **Icons are mandatory:** Planner, History, Settings, Add and the temporal/status actions use the governed Astryx semantic icon vocabulary; the flat bar must not degrade into text-only navigation.
+- Desktop outer header target: approximately **44 CSS px**, maximum **2.75rem** — roughly half the shipped v1.0.4 height.
+- Narrow Planner outer header target: approximately **56 CSS px**, maximum **3.5rem** — roughly half the shipped v1.0.4 height, preserving touch-operable controls and the same flat-background/hairline principle.
+- **Narrow one-row header:** compact full Jig wordmark · Previous · compact range · Next · Today · Add · compact sync · hamburger. Prefer icon-only `sm` controls with accessible labels where needed to fit the row; do not reintroduce a second/third header row.
+- Planner/History/Settings remain equal in outer height within the same layout.
+- Reduce padding/min-height at the owning Jig header rules; do not use offsets, negative margins or private Astryx selectors.
+- The centered Planner temporal region is one line on desktop: Previous · compact range · Next · Today. A two-line center is prohibited because it cannot satisfy the 44px height budget without clipping/offsets.
+- The narrow hierarchy remains brand/status/menu, range, controls, but with compact token spacing.
+
+Task-card legibility uses one cross-responsive surface contract:
+
+- Light canvas: Paper 100; Task surface: White with emphasized neutral border.
+- Dark canvas: Ink 950; Task surface: **Ink 800 raised neutral**, not the v1.0.4 Ink 900 surface that visually collapses into the canvas.
+- Selected/drag/focus/priority cues remain separate semantic layers and do not replace the base surface distinction.
+- The same surface values apply to desktop and narrow/mobile.
+
+### 4.3.3 v1.0.5 full-bleed viewport
+
+Jig uses the entire viewport. There is no decorative page gutter.
+
+- Set application-shell and page-level margin/padding to **0 on all four sides** at desktop and narrow widths.
+- The header starts at the top-left viewport edge, spans the full width, and its single bottom hairline reaches edge-to-edge.
+- Planner begins immediately below the header and uses the full available width. There is no outer rounded frame, border, background panel or horizontal gutter around the seven tracks/stacked sections.
+- History and Settings use the same edge-to-edge application frame. Their own semantic sections may contain internal spacing, but no generic screen-edge padding is reintroduced.
+- Narrow/mobile likewise has no outer page inset. Component touch spacing belongs inside the controls/sections themselves.
+- With the former 48px desktop inset removed, the desktop seven-track breakpoint becomes **73rem / 1168px**.
+- “Zero margin” refers to viewport/application-frame spacing. It does not require text, icons or card contents to touch their own component borders; those retain governed internal padding.
+
+### 4.3.4 v1.0.5 semantic icon normalization
+
+Use Astryx 0.7.13 public semantic icons as the only reusable icon language. The production UI must visibly normalize at least:
+
+- Previous/Next week chevrons;
+- global Add and every date-header Add through the Astryx namespaced `jig:add` extension glyph;
+- Planner (`viewColumns`), History (`jig:history`) and Settings (`wrench`) destination affordances;
+- mobile hamburger;
+- Task overflow menu;
+- reminder clock;
+- reference external-link/copy affordance;
+- completion check;
+- repository success/warning/error/info status.
+
+Essential meaning retains accessible text/labels. Raw `+`, `•••`, `≡` or other Unicode stand-ins are not used for governed controls. Astryx built-ins are used where available. Missing Add, History, Edit and Delete meanings use the namespaced `jig:add`, `jig:history`, `jig:edit`, `jig:delete` extension glyphs through Astryx `getExtendedIcon`/`Icon`; this remains inside the Astryx icon system and adds no second icon package.
+
+The header brand uses the canonical complete horizontal Jig wordmark asset. Do not compose the standalone J mark beside live “Jig” text.
+
 
 ### 4.4 Shared Task workspace
 
@@ -182,27 +249,28 @@ The field hierarchy is always Title, Date, Context, Priority, Reminder, Referenc
 
 Jig CSS owns only the page-centered header grid, seven Planner tracks, narrow composition, drag state and restrained Task priority accent. It consumes public Astryx tokens/roles and must not target private component internals.
 
-Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop, the non-interactive card body is the pointer drag activation region; completion checkbox, Task action menu and reference controls must remain independently operable and must not initiate drag.
+Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop and narrow/mobile, the sortable Task card itself is the pointer source across the whole ordinary card surface; completion checkbox, Task action menu, reference and other genuine interactive descendants remain independently operable and must not initiate drag. No title/body-only handle exists.
 
 ## 6. Required browser/UX validation
 
 | Case | Acceptance |
 |---|---|
-| Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task + adjacent Planner/History/Settings + sync right; no sidebar; active destination clear; outer header height does not change across Planner/History/Settings |
+| Header composition | edge-to-edge flat bar; Jig Home left; centered inline Previous · compact week range · Next · Today temporal group; Add task + adjacent icon-bearing Planner/History/Settings + sync right; no sidebar; active destination clear; desktop <=44px, narrow <=56px, and outer height does not change across Planner/History/Settings |
 | Week navigation | Previous/Next shift displayed week exactly seven days; Today restores the current week; no selected-day state and no Task mutation |
 | Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; content-driven heights; open lanes with whitespace/hairline separation rather than boxed panels; full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
 | Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
 | Task workspace | Click selects and opens the directly editable full Task form without changing date/order/destination; no second Edit click exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
 | Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
-| Mobile header | Jig/sync/hamburger first row; centered week range + grouped controls; seven dated Task sections follow; hamburger menu has only History/Settings and is not a drawer |
+| Mobile header/menu | compact Jig/sync/Add/hamburger application band; centered week range + grouped controls; seven dated Task sections follow; hamburger menu contains the same Planner/History/Settings destination set as desktop from one semantic owner, uses normalized semantic icons/text, and is not a drawer |
+| Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
-| Same/cross-day drag | exact chosen position/date persists; empty destination works |
-| Narrow ordering | Move up/down works without introducing a second order representation |
+| Same/cross-day drag | desktop and narrow/mobile card-body drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
+| Narrow drag/order | touch card-body drag supports same-date/cross-date/empty-date movement through the same sortable/drop owners as desktop; Move up/down remains a non-drag alternative without a second order representation |
 | Completion/History | completing removes from Planner; History remains inspectable/reopenable |
 | Daily rollover | same canonical Task appears in current-date Planner bucket on desktop and narrow |
 | Delete | cancel is no-op; confirm permanently removes Task; Git round trip preserves absence |
-| Theme/color | System/Light/Dark implement the canonical component/state matrix: today teal, selected Task info-blue, drag/focus Amber, High red, Normal neutral, Low/healthy green, warning yellow, unknown neutral; no unrelated states collapse to one treatment |
+| Theme/color/card legibility | System/Light/Dark implement the canonical component/state matrix and Task-card surface contract on desktop and narrow: today teal, selected Task info-blue, drag/focus Amber, High red, Normal neutral, Low/healthy green, warning yellow, unknown neutral; base Task cards remain visibly separated from the Planner canvas |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
 
 Final production evidence is the running Astryx UI in Playwright/browser screenshots. Reference SVGs govern structure, not pixel-perfect library anatomy.

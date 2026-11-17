@@ -1,11 +1,9 @@
 import type { Priority, Task } from "../../src/core/task";
-import type { LayoutMode } from "./use-layout-mode";
 import { WeekView } from "./week";
 
 export interface PlannerProps {
   readonly tasks: readonly Task[];
   readonly displayedDates: readonly string[];
-  readonly layoutMode: LayoutMode;
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
   readonly onAdd: (date: string) => void;
@@ -25,7 +23,6 @@ export function Planner(props: PlannerProps): React.ReactElement {
     <WeekView
       tasks={props.tasks}
       displayedDates={props.displayedDates}
-      enableDrag={props.layoutMode === "desktop"}
       selectedTask={props.selectedTask}
       onSelectTask={props.onSelectTask}
       onAdd={props.onAdd}

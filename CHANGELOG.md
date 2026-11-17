@@ -4,6 +4,26 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Fixed
+
+- Eliminated the cross-list dnd-kit/React reconciliation crash by keeping React/canonical Task order authoritative and suppressing optimistic DOM sorting during drag.
+- Restored whole-card direct drag on desktop and narrow/mobile with exact same-date/cross-date positioning, touch activation, interactive-control exclusion and no drag-release Task-selection side effect.
+- Removed responsive Planner/navigation semantic forks so desktop and narrow/mobile use one sortable Task path, one Planner/History/Settings destination owner and one Task action-menu owner.
+- Corrected Task-card/canvas separation in Light/Dark, including narrow/mobile Dark mode, and replaced the duplicate header-brand composition with the canonical complete Jig wordmark.
+
+### Changed
+
+- Replaced the oversized gray application chrome with a flat edge-to-edge bar: desktop <=44px, narrow <=56px, one bottom hairline and one-line temporal navigation.
+- Normalized visible actions/status/metadata to the Astryx semantic icon system, with only four governed namespaced Jig extensions for Add, History, Edit and Delete.
+- Removed application-level viewport gutters/content framing and moved the seven-track responsive boundary to 73rem / 1168px.
+- Strengthened architecture/browser certification for runtime drag errors, desktop/mobile movement classes, navigation/menu parity, icons, header geometry, Task contrast and full-bleed responsive behavior.
+
+
+### Documentation
+
+- Defined the v1.0.5 corrective functional/technical/UI contract after post-release v1.0.4 validation exposed a drag reconciliation crash, title/body-only drag activation instead of whole-card drag, missing narrow/mobile drag parity, duplicated responsive navigation/rendering semantics, incomplete semantic icon/menu normalization, oversized header geometry, insufficient Task-card contrast and stale narrow presentation behavior.
+- Added exact JIG-105-FR-01…11 → JIG-105-SD-01…11 → J105-IMP-01…11 traceability and strengthened release acceptance so desktop/narrow drag, navigation/menu parity, Task-action parity, semantic icons, header bounds, zero-margin full-bleed layout/73rem breakpoint, and Light/Dark card contrast are all explicitly certified.
+
 ## [1.0.4] - 2026-11-17
 
 ### Fixed
