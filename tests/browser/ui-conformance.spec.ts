@@ -692,7 +692,19 @@ test("temporary v1.0.5 visual evidence capture", async ({ page }) => {
   const dragCard = page
     .getByText("Review v1.0.5 interaction corrections", { exact: true })
     .locator("xpath=ancestor::li[1]");
-  const destination = page.locator(`[data-date="${tomorrow}"]`);
+  const displayedDates = await page.locator("[data-date]").evaluateAll(
+    (elements) =>
+      elements
+        .map((element) => element.getAttribute("data-date"))
+        .filter((value): value is string => value !== null),
+  );
+  const emptyDropDate = displayedDates.find(
+    (date) => date !== today && date !== tomorrow && date !== inTwoDays,
+  );
+  if (emptyDropDate === undefined) {
+    throw new Error("v1.0.5 evidence empty drop date unavailable");
+  }
+  const destination = page.locator(`[data-date="${emptyDropDate}"]`);
   const sourceBox = await dragCard.boundingBox();
   const destinationBox = await destination.boundingBox();
   if (sourceBox === null || destinationBox === null) {
