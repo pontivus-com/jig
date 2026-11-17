@@ -1,8 +1,8 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.3 technical solution, v0.9 (2026-11-17), incorporating the v1.0.1 Git authority-boundary correction, v1.0.2 Astryx-first UI/CSS ownership correction, and the finalized v1.0.3 single-Planner/header/master-detail interaction architecture.
+**Status:** Binding v1.0.4 technical solution, v0.10 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, visual-state semantics, header geometry, outside dismissal and Task menu actions.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
-**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17 and JIG-FR-01 through JIG-FR-22.
+**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-09 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
 
 **Foundational authority rule:** For every external integration, identify the authoritative owner first. Jig implements only the minimum interface needed for Jig's product job and must not absorb that external system's configuration, topology, provisioning, migration, reconciliation or policy. For Git specifically, Jig owns deterministic Jig records, automatic synchronization intent and coarse sync outcome; Git owns repository acquisition, branches/refs/worktrees, signing/identity, credentials, remotes, history and reconciliation. A Git isolation technique may exist inside the adapter, but it is not Jig domain, user workflow or configuration.
@@ -338,12 +338,11 @@ There is one workspace state owner:
 ```ts
 type TaskWorkspaceState =
   | { mode: 'closed' }
-  | { mode: 'view'; taskId: string }
-  | { mode: 'edit'; taskId: string; draft: TaskDraft }
+  | { mode: 'task'; taskId: string; draft: TaskDraft }
   | { mode: 'create'; originatingDate: LocalCivilDate; draft: TaskDraft }
 ```
 
-Do not add a `move` workspace mode. Drag owns exact direct movement; editing `scheduled_date` owns explicit non-drag rescheduling.
+Do not add `view`, `edit`, or `move` submodes. An existing Task workspace is immediately editable (`mode: 'task'`); create is the same field surface with no Task ID. Drag owns exact direct movement; editing `scheduled_date` owns explicit non-drag rescheduling.
 
 Global Add task creates from `selectedDate`. A column-local Add task first selects that column date and creates from it. Create initially exposes title only and applies canonical defaults; optional fields are edited afterward.
 
@@ -369,9 +368,17 @@ Task view/create/edit uses the public Astryx **BottomSheet** rising from the bot
 
 When narrow drag is not enabled, touch-operable Move up/Move down commands call the same same-day move operation, and the Edit scheduled-date field calls the same date-change operation used elsewhere. There is no mobile-specific task/order model.
 
+### 5.6 v1.0.4 state and interaction corrections
+
+- **Today identity:** derive current-day treatment only from exact local civil-date equality (`date === currentLocalDate`). Never derive today's styling from weekday identity or from `selectedDate`. Desktop `selectedDate` remains operational Planner state for Add/navigation but does not receive a whole-column persistent highlight.
+- **Visual state ownership:** today uses a subtle neutral border/header treatment; selected Task uses the semantic info/selection family; drag target uses the brand/accent transient treatment; priority uses High=error, Normal=quiet neutral, Low=success/low-emphasis. Do not reuse one accent fill for all four states.
+- **Header geometry:** the desktop app-header outer block has one stable product-level minimum height large enough for the two-line Planner temporal centerpiece; History/Settings titles occupy the same center slot without collapsing the outer header. Apply the equivalent stable-height principle in narrow composition.
+- **Outside dismissal:** the main Planner/History content owner handles pointer-down outside Task rows and closes the open workspace. Workspace portals and Task rows/actions are excluded. Destination navigation continues to close workspace explicitly.
+- **Task menu commands:** menu priority changes issue the ordinary canonical `edit` command with only priority changed; completion/reopen and delete use existing commands; movement uses the existing exact-position command. No alternate Task mutation path is introduced.
+
 ### 5.6 Drag, accessibility and copy discipline
 
-Use one dnd-kit drag owner around the seven desktop date tracks: one sortable task ID, dated droppables including empty dates, and exact target index. Do not enable Astryx List `createReorderable` on the same rows.
+Use one dnd-kit drag owner around the seven desktop date tracks: one sortable task ID, dated droppables including empty dates, and exact target index. The sortable activation handle is the card's non-interactive body/title/meta region so ordinary card dragging works; checkbox/menu/reference controls remain outside that handle and stop pointer propagation where needed. Do not enable Astryx List `createReorderable` on the same rows.
 
 Keyboard Move up/Move down remains available on desktop and narrow layouts. Completion, Task selection, reference actions and overflow controls must not initiate dragging.
 
