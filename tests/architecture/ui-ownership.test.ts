@@ -45,6 +45,9 @@ describe("UI ownership architecture", () => {
       );
       expect(content, path).not.toContain("__built");
       expect(content, path).not.toContain("generateThemeCSS");
+      if (path.endsWith(".tsx")) {
+        expect(content, path).not.toMatch(/<button\b/);
+      }
     }
 
     const css = source("ui/src/styles.css");
@@ -55,6 +58,9 @@ describe("UI ownership architecture", () => {
     expect(css).not.toContain(".jig-sidebar");
     expect(css).not.toContain(".jig-mobile-destination-menu");
     expect(css).not.toContain(".jig-task-menu-panel");
+    expect(css).not.toContain(".jig-copy-reference:focus-visible");
+    expect(css).not.toContain(".jig-week-strip-date:focus-visible");
+    expect(css).not.toContain(".jig-date-heading-button:focus-visible");
   });
 
   it("only consumes public Astryx global tokens from Jig CSS", () => {
