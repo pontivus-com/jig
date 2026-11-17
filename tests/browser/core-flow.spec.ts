@@ -7,6 +7,25 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+async function navigateTo(
+  page: Page,
+  destination: "Week" | "Day" | "History" | "Settings",
+): Promise<void> {
+  const desktop = page
+    .locator(".jig-sidebar")
+    .getByRole("button", { name: destination, exact: true });
+  if (await desktop.isVisible()) {
+    await desktop.click();
+    return;
+  }
+
+  const menu = page.locator(".jig-mobile-destination-menu");
+  await menu.locator("summary").click();
+  await menu
+    .getByRole("button", { name: destination, exact: true })
+    .click();
+}
+
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   const dialog = page.getByRole("dialog");
@@ -100,7 +119,7 @@ test("responsive reflow preserves an open editor draft and appearance remains pr
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await navigateTo(page, "Settings");
   await page.getByText("Dark", { exact: true }).click();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("jig-theme"))).toBe("dark");
   const after = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
