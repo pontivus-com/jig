@@ -190,6 +190,7 @@ test("capture current-head reference surfaces", async ({ page }) => {
     .getByRole("button", { name: "Actions for Legal — TTA workflow remediation" })
     .click();
   await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  await page.setViewportSize({ width: 414, height: 980 });
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.waitForTimeout(500);
   console.log(
