@@ -72,7 +72,7 @@ test("already-open browser refreshes canonical state across local midnight", asy
 
   await expect
     .poll(async () => {
-      const heading = page.locator(".jig-day-view .jig-view-heading h1");
+      const heading = page.locator(".jig-day-desktop-heading h1");
       return heading.textContent();
     })
     .toContain(
