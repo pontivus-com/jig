@@ -2,15 +2,134 @@
 
 Jig uses a PR-bound, immutable release process modeled on the Pontivus public-repository release standard used by Order.
 
+This document is the **canonical release authority** for Jig. A merged implementation PR is not itself a release. Release validity requires a separate, explicit metadata transition and successful publication of the certified artifacts described below.
+
+## Release validity contract
+
+A Jig release `X.Y.Z` is valid only when **all** of these statements are true:
+
+1. The implementation intended for the release has already landed on `master` through ordinary reviewed PRs.
+2. A dedicated branch named exactly `release/vX.Y.Z` was created from that verified `master` candidate.
+3. That release branch explicitly changes `package.json.version` to exactly `X.Y.Z`.
+4. `CHANGELOG.md` contains `## [X.Y.Z] - YYYY-MM-DD`, contains the complete release contents previously accumulated under `[Unreleased]`, and recreates an empty `[Unreleased]` section.
+5. `docs/releases/vX.Y.Z.md` exists and identifies target tag `vX.Y.Z`.
+6. The release PR contains only the release-metadata files allowed by `scripts/verify-release.ts` and passes the `release/vX.Y.Z` PR metadata gate.
+7. The release PR is merged to `master`; that exact merged commit is the release candidate.
+8. The permanent `Release` workflow detects that commit as a release transition/finalization and runs the release path. A workflow that exits with `should_release=false` is a successful **no-op**, not a release.
+9. The complete permanent release certification succeeds, including native arm64 certification and packaged-bundle smoke verification.
+10. Immutable tag `vX.Y.Z` points to the exact certified release commit.
+11. A non-draft GitHub Release for `vX.Y.Z` is published.
+12. The GitHub Release contains every asset in the exact asset matrix below, and `SHA256SUMS` verifies the published release payload.
+
+The release identifiers must be consistent:
+
+```text
+release branch       release/vX.Y.Z
+package.json         "version": "X.Y.Z"
+CHANGELOG heading    ## [X.Y.Z] - YYYY-MM-DD
+release notes        docs/releases/vX.Y.Z.md
+Git tag              vX.Y.Z
+GitHub Release tag   vX.Y.Z
+```
+
+A mismatch in any of these identifiers is a release-blocking defect.
+
+### Mandatory package-version transition
+
+Updating `package.json.version` is a **required release activity**. It is intentionally forbidden in ordinary work PRs and intentionally required in the dedicated release PR.
+
+The permanent release workflow uses the package version and release-metadata transition to decide whether publication should occur. Therefore:
+
+- merging implementation for a future version while leaving `package.json.version` at the previous published version does **not** publish the new version;
+- if the current package version is already tagged, the workflow can correctly finish green while skipping certification/packaging/publication;
+- that green no-op must never be interpreted as release success;
+- the remedy is to create/complete the missing `release/vX.Y.Z` metadata PR, not to force-tag the implementation commit or republish an old version.
+
+This separation is deliberate: ordinary development can merge without mutating the public version, while release publication occurs only through an auditable version transition.
+
 ## Release sequence
 
-1. Ordinary work lands through a pull request and adds its public release impact under `CHANGELOG.md` `[Unreleased]`.
-2. A dedicated `release/vX.Y.Z` branch changes only release metadata for the already-verified candidate.
-3. The release PR moves the accumulated `[Unreleased]` entries into `[X.Y.Z] - YYYY-MM-DD` and updates `package.json.version`.
-4. After that release PR merges to `master`, the permanent release workflow re-runs the complete verification gates.
-5. The workflow builds the two supported Linux bundles, verifies checksums, creates immutable tag `vX.Y.Z`, creates a draft GitHub Release, uploads the complete asset set, then publishes it.
+### 1. Accumulate releasable work
+
+Ordinary work lands through pull requests and records its public release impact under `CHANGELOG.md` `[Unreleased]`.
+
+Ordinary PRs:
+
+- must leave `package.json.version` unchanged;
+- declare SemVer impact and target release in the PR body;
+- keep `[Unreleased]` non-empty when they add release-visible work;
+- pass the permanent implementation verification suite.
+
+### 2. Create the dedicated release branch
+
+After the intended candidate is on `master`:
+
+```text
+release/vX.Y.Z
+```
+
+must be created from that candidate.
+
+The release branch is metadata-only. Its required work is:
+
+1. set `package.json.version` to `X.Y.Z`;
+2. move the complete `[Unreleased]` contents into `## [X.Y.Z] - YYYY-MM-DD`;
+3. recreate an empty `## [Unreleased]`;
+4. create/update `docs/releases/vX.Y.Z.md`;
+5. update `README.md` only when current-version/current-behavior references require it.
+
+No runtime/product implementation belongs in this PR.
+
+### 3. Verify and merge the release PR
+
+The release PR must pass `scripts/verify-release.ts --mode pr`, which verifies the branch/version/changelog/file-scope contract, plus the permanent implementation verification suite.
+
+Do not merge the release PR merely because the implementation candidate was already green. The release metadata gate is part of release correctness.
+
+### 4. Certify the exact merged release commit
+
+After the release PR merges to `master`, `.github/workflows/release.yml` must detect the release transition and re-certify the exact merged commit.
+
+The release workflow must run, not skip:
+
+- release metadata verification;
+- native Linux arm64 verification;
+- typecheck and core/integration tests;
+- production UI build;
+- browser acceptance where defined by the workflow;
+- installer/shell lifecycle gates;
+- packaging for Linux x64 and arm64;
+- package checksum verification;
+- packaged x64/arm64 installation smoke tests.
+
+### 5. Publish immutable release artifacts
+
+Only after certification succeeds may the workflow:
+
+1. create immutable tag `vX.Y.Z` at the exact certified commit;
+2. create the GitHub Release as a draft;
+3. upload the complete required asset set;
+4. verify/reuse only byte-identical assets during a safe retry;
+5. publish the GitHub Release.
 
 Published tags are never moved or rebuilt. A correction after publication requires a new version.
+
+## Release completion checklist
+
+Before stating that `X.Y.Z` is released, verify all of the following directly:
+
+- [ ] `master:package.json` reports `X.Y.Z`;
+- [ ] `CHANGELOG.md` has the dated `[X.Y.Z]` section and empty `[Unreleased]`;
+- [ ] `docs/releases/vX.Y.Z.md` exists;
+- [ ] permanent Release workflow completed successfully **with the release jobs executed rather than skipped**;
+- [ ] tag `vX.Y.Z` exists and targets the certified release commit;
+- [ ] GitHub Release `vX.Y.Z` is published and not draft;
+- [ ] `jig-linux-x64.tar.gz` exists;
+- [ ] `jig-linux-arm64.tar.gz` exists;
+- [ ] `jig-install.sh` exists;
+- [ ] `SHA256SUMS` exists and covers both bundles plus the installer.
+
+If any item is false, the version is not yet a valid published release.
 
 ## Supported release hosts
 

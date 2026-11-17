@@ -19,6 +19,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 ### Documentation
 
 - Added the UX/UI conformance audit v1.0 and implementation-ready remediation plan for restoring the governed SVG structural design after v1.0.1.
+- Made the release validity contract explicit: every release requires a dedicated `release/vX.Y.Z` PR with `package.json.version = X.Y.Z`, consistent changelog/release-note/tag metadata, executed binary publication jobs, and verification of the complete published asset set.
 
 ## [1.0.1] - 2026-11-16
 
