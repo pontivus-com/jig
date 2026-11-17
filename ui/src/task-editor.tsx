@@ -16,7 +16,6 @@ import type {
   Task,
   TaskCommand,
 } from "../../src/core/task";
-import { formatCivilDate } from "./dates";
 
 export interface TaskDraft {
   readonly title: string;
@@ -98,8 +97,6 @@ export interface TaskEditorProps {
   readonly draft: TaskDraft;
   readonly externalError: string | null;
   readonly isSaving: boolean;
-  readonly showHeading?: boolean;
-  readonly surface?: "docked" | "drawer";
   readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onCancel: () => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
@@ -111,8 +108,6 @@ export function TaskEditor({
   draft,
   externalError,
   isSaving,
-  showHeading = true,
-  surface = "docked",
   onDraftChange,
   onCancel,
   onSave,
@@ -144,32 +139,9 @@ export function TaskEditor({
 
   return (
     <section
-      className={[
-        "jig-task-inspector",
-        "jig-task-editor-surface",
-        surface === "drawer" ? "jig-task-inspector-drawer" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className="jig-task-inspector jig-task-editor-surface jig-task-inspector-drawer"
       aria-label={task === null ? "Add task" : `Edit task ${task.title}`}
     >
-      {showHeading ? (
-        <div className="jig-task-inspector-heading">
-          <p className="jig-eyebrow">
-            {task === null ? "New task" : "Editing task"}
-          </p>
-          <h2>{task === null ? "Add task" : task.title}</h2>
-          <p className="jig-secondary-copy">
-            {formatCivilDate(task?.scheduled_date ?? initiatingDate, {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-      ) : null}
-
       <form
         className="jig-editor-form"
         onSubmit={(event) => {
@@ -272,15 +244,7 @@ export function TaskEditor({
             Add the title now. Date and defaults come from this planning context;
             open Edit afterward for optional details.
           </p>
-        ) : (
-          <div className="jig-editor-date-behavior">
-            <strong>Date change behavior</strong>
-            <span>
-              Editing the date reschedules the task. Week drag-and-drop owns
-              direct visual movement and exact drop position.
-            </span>
-          </div>
-        )}
+        ) : null}
 
         <div className="jig-editor-actions">
           <div className="jig-editor-primary-actions">
