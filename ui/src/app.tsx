@@ -22,7 +22,10 @@ import {
   completedForScheduledDate,
   outstandingForDate,
 } from "../../src/core/planning";
-import type { CanonicalState } from "../../src/shell/sqlite";
+import type {
+  CanonicalState,
+  CommandResult,
+} from "../../src/shell/sqlite";
 import type {
   Diagnostics,
   ServiceStatus,
@@ -43,19 +46,20 @@ import {
   type ThemePreference,
 } from "./settings";
 import {
-  MoveTaskDialog,
-  TaskEditor,
-} from "./task-editor";
-import {
   millisecondsUntilNextLocalDay,
   todayCivilDate,
 } from "./dates";
+import {
+  TaskWorkspaceDrawer,
+  type TaskWorkspaceMode,
+} from "./task-workspace";
 import { WeekView } from "./week";
 import { jigTheme } from "./jig.js";
 
 type Destination = "week" | "day" | "history" | "settings";
 
 const THEME_STORAGE_KEY = "jig-theme";
+
 function savedThemePreference(): ThemePreference {
   try {
     const value = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -98,6 +102,13 @@ function destinationLabel(destination: Destination): string {
       return "Settings";
   }
 }
+
+const NAV_ITEMS = [
+  { destination: "day", icon: "calendar" },
+  { destination: "week", icon: "viewColumns" },
+  { destination: "history", icon: "clock" },
+  { destination: "settings", icon: "wrench" },
+] as const;
 
 function ResponsiveFrame({
   destination,
@@ -146,11 +157,19 @@ function ResponsiveFrame({
   );
 }
 
-function ResponsiveTaskEditor(
-  props: Omit<React.ComponentProps<typeof TaskEditor>, "isNarrow">,
-): React.ReactElement {
+function ResponsiveTaskWorkspaceDrawer({
+  destination,
+  ...props
+}: Readonly<
+  React.ComponentProps<typeof TaskWorkspaceDrawer> & {
+    destination: Destination;
+  }
+>): React.ReactElement {
   const { isMobile } = useAppShellMobile();
-  return <TaskEditor {...props} isNarrow={isMobile} />;
+  if (!isMobile && destination === "day") {
+    return <></>;
+  }
+  return <TaskWorkspaceDrawer {...props} />;
 }
 
 export function App(): React.ReactElement {
@@ -165,23 +184,13 @@ export function App(): React.ReactElement {
   const [isOperating, setIsOperating] = useState(false);
   const [themePreference, setThemePreference] =
     useState<ThemePreference>(savedThemePreference);
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editorTaskId, setEditorTaskId] = useState<string | null>(null);
-  const [editorDate, setEditorDate] = useState(selectedDate);
-  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
+  const [workspaceMode, setWorkspaceMode] =
+    useState<TaskWorkspaceMode | null>(null);
+  const [workspaceDate, setWorkspaceDate] = useState(selectedDate);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
 
   const tasks = canonical?.tasks ?? [];
-  const editorTask =
-    editorTaskId === null
-      ? null
-      : tasks.find((task) => task.id === editorTaskId) ?? null;
-  const moveTask =
-    moveTaskId === null
-      ? null
-      : tasks.find((task) => task.id === moveTaskId) ?? null;
   const selectedTask =
     selectedTaskId === null
       ? null
@@ -190,7 +199,6 @@ export function App(): React.ReactElement {
     deleteTaskId === null
       ? null
       : tasks.find((task) => task.id === deleteTaskId) ?? null;
-
 
   const refreshCanonical = useCallback(async (): Promise<void> => {
     const next = await readCanonicalTasks();
@@ -313,25 +321,24 @@ export function App(): React.ReactElement {
   }, [canonical, destination, selectedDate, selectedTaskId, tasks]);
 
   const runCommand = useCallback(
-    async (command: TaskCommand): Promise<boolean> => {
+    async (command: TaskCommand): Promise<CommandResult | null> => {
       if (canonical === null || isOperating) {
-        return false;
+        return null;
       }
 
       setOperationError(null);
       setIsOperating(true);
       try {
-        await submitTaskCommand(command, canonical.revision);
+        const result = await submitTaskCommand(command, canonical.revision);
         try {
           await refreshCanonical();
         } catch (refreshError) {
           setOperationError(
             `Saved locally, but Jig could not refresh the view: ${errorMessage(refreshError)}. Reload the application.`,
           );
-          return true;
         }
         void readStatus().then(setStatus).catch(() => undefined);
-        return true;
+        return result;
       } catch (error) {
         if (isStaleRevision(error)) {
           try {
@@ -342,11 +349,11 @@ export function App(): React.ReactElement {
           setOperationError(
             "This view was out of date. Jig reloaded canonical Tasks; review your change and submit it again.",
           );
-          return false;
+          return null;
         }
 
         setOperationError(errorMessage(error));
-        return false;
+        return null;
       } finally {
         setIsOperating(false);
       }
@@ -356,11 +363,11 @@ export function App(): React.ReactElement {
 
   const toggleComplete = useCallback(
     async (task: Task): Promise<boolean> =>
-      runCommand(
+      (await runCommand(
         task.completed_at === null
           ? { type: "complete", task_id: task.id }
           : { type: "reopen", task_id: task.id },
-      ),
+      )) !== null,
     [runCommand],
   );
 
@@ -370,33 +377,60 @@ export function App(): React.ReactElement {
       destinationDate: string,
       destinationIndex: number,
     ): Promise<boolean> =>
-      runCommand({
+      (await runCommand({
         type: "move",
         task_id: taskId,
         destination_date: destinationDate,
         destination_index: destinationIndex,
-      }),
+      })) !== null,
     [runCommand],
   );
 
-  const openCreate = useCallback((date: string): void => {
-    setEditorTaskId(null);
-    setEditorDate(date);
+  const selectTask = useCallback((task: Task): void => {
+    setSelectedTaskId(task.id);
+    setWorkspaceDate(task.scheduled_date);
     setOperationError(null);
-    setEditorOpen(true);
+    setWorkspaceMode("view");
+  }, []);
+
+  const openCreate = useCallback((date: string): void => {
+    setWorkspaceDate(date);
+    setOperationError(null);
+    setWorkspaceMode("create");
   }, []);
 
   const openEdit = useCallback((task: Task): void => {
-    setEditorTaskId(task.id);
-    setEditorDate(task.scheduled_date);
+    setSelectedTaskId(task.id);
+    setWorkspaceDate(task.scheduled_date);
     setOperationError(null);
-    setEditorOpen(true);
+    setWorkspaceMode("edit");
   }, []);
 
-  const openMoveToDate = useCallback((task: Task): void => {
-    setMoveTaskId(task.id);
-    setOperationError(null);
-    setMoveDialogOpen(true);
+  const saveWorkspace = useCallback(
+    async (command: TaskCommand): Promise<boolean> => {
+      const result = await runCommand(command);
+      if (result === null || !("task" in result)) {
+        return false;
+      }
+      setSelectedTaskId(result.task.id);
+      setWorkspaceDate(result.task.scheduled_date);
+      setSelectedDate(result.task.scheduled_date);
+      setWorkspaceMode("view");
+      return true;
+    },
+    [runCommand],
+  );
+
+  const closeWorkspace = useCallback((): void => {
+    setWorkspaceMode(null);
+    if (destination !== "day") {
+      setSelectedTaskId(null);
+    }
+  }, [destination]);
+
+  const navigateDestination = useCallback((next: Destination): void => {
+    setDestination(next);
+    setWorkspaceMode(null);
   }, []);
 
   const changeTheme = useCallback((value: ThemePreference): void => {
@@ -434,6 +468,7 @@ export function App(): React.ReactElement {
 
   const goToToday = (stayInWeek: boolean): void => {
     setSelectedDate(todayCivilDate());
+    setWorkspaceMode(null);
     if (!stayInWeek) {
       setDestination("day");
     }
@@ -446,7 +481,7 @@ export function App(): React.ReactElement {
       variant="ghost"
       size="sm"
       icon={<span className="jig-status-dot" aria-hidden="true" />}
-      onClick={() => setDestination("settings")}
+      onClick={() => navigateDestination("settings")}
       className={`jig-status-control jig-status-${repositoryStatus}`}
     />
   );
@@ -469,22 +504,17 @@ export function App(): React.ReactElement {
               alt=""
             />
           </span>
-          <span className="jig-brand-tagline">Schedules attention</span>
-        </div>
-      }
-      footer={
-        <div className="jig-nav-context">
-          <span>Planning data</span>
-          <small>Personal Git repository</small>
         </div>
       }
     >
-      {(["week", "day", "history", "settings"] as const).map((item) => (
+      {NAV_ITEMS.map((item) => (
         <SideNavItem
-          key={item}
-          label={destinationLabel(item)}
-          isSelected={destination === item}
-          onClick={() => setDestination(item)}
+          key={item.destination}
+          label={destinationLabel(item.destination)}
+          icon={item.icon}
+          size="sm"
+          isSelected={destination === item.destination}
+          onClick={() => navigateDestination(item.destination)}
         />
       ))}
     </SideNav>
@@ -518,84 +548,89 @@ export function App(): React.ReactElement {
     />
   ) : null;
 
-  const renderContent = (isNarrow: boolean): React.ReactNode => canonical === null ? (
-    <div className="jig-loading">
-      <h1>Jig</h1>
-      {loadError === null ? (
-        <p>Loading local planning data…</p>
-      ) : (
-        <>
-          <Banner
-            status="error"
-            title="Jig could not load local planning data"
-            description={loadError}
-            collapsible={false}
-          />
-          <Button
-            label="Retry"
-            variant="primary"
-            onClick={() => {
-              void load();
-            }}
-          />
-        </>
-      )}
-    </div>
-  ) : destination === "week" ? (
-    <WeekView
-      tasks={tasks}
-      selectedDate={selectedDate}
-      isNarrow={isNarrow}
-      onSelectDate={setSelectedDate}
-      onPrevious={() => navigateDate(-7)}
-      onToday={() => goToToday(false)}
-      onNext={() => navigateDate(7)}
-      statusControl={isNarrow ? null : statusControl}
-      onAdd={openCreate}
-      onEdit={openEdit}
-      onMoveToDate={openMoveToDate}
-      onToggleComplete={toggleComplete}
-      onMove={moveTaskExact}
-    />
-  ) : destination === "day" ? (
-    <DayView
-      tasks={tasks}
-      selectedDate={selectedDate}
-      isNarrow={isNarrow}
-      onSelectDate={setSelectedDate}
-      onToday={() => goToToday(false)}
-      statusControl={isNarrow ? null : statusControl}
-      selectedTask={selectedTask}
-      onSelectTask={(task) => setSelectedTaskId(task.id)}
-      onDelete={(task) => setDeleteTaskId(task.id)}
-      onAdd={openCreate}
-      onEdit={openEdit}
-      onMoveToDate={openMoveToDate}
-      onToggleComplete={toggleComplete}
-      onMove={moveTaskExact}
-    />
-  ) : destination === "history" ? (
-    <HistoryView
-      tasks={tasks}
-      onEdit={openEdit}
-      onReopen={toggleComplete}
-      onDelete={(task) => setDeleteTaskId(task.id)}
-      statusControl={isNarrow ? null : statusControl}
-    />
-  ) : (
-    <SettingsView
-      themePreference={themePreference}
-      status={status}
-      diagnostics={diagnostics}
-      operationError={operationError}
-      isOperating={isOperating}
-      onThemePreferenceChange={changeTheme}
-      onSync={syncNow}
-      statusControl={isNarrow ? null : statusControl}
-    />
-  );
-
-
+  const renderContent = (isNarrow: boolean): React.ReactNode =>
+    canonical === null ? (
+      <div className="jig-loading">
+        <h1>Jig</h1>
+        {loadError === null ? (
+          <p>Loading local planning data…</p>
+        ) : (
+          <>
+            <Banner
+              status="error"
+              title="Jig could not load local planning data"
+              description={loadError}
+              collapsible={false}
+            />
+            <Button
+              label="Retry"
+              variant="primary"
+              onClick={() => {
+                void load();
+              }}
+            />
+          </>
+        )}
+      </div>
+    ) : destination === "week" ? (
+      <WeekView
+        tasks={tasks}
+        selectedDate={selectedDate}
+        isNarrow={isNarrow}
+        onSelectDate={setSelectedDate}
+        onPrevious={() => navigateDate(-7)}
+        onToday={() => goToToday(true)}
+        onNext={() => navigateDate(7)}
+        statusControl={isNarrow ? null : statusControl}
+        selectedTask={selectedTask}
+        onSelectTask={selectTask}
+        onAdd={openCreate}
+        onEdit={openEdit}
+        onToggleComplete={toggleComplete}
+        onMove={moveTaskExact}
+      />
+    ) : destination === "day" ? (
+      <DayView
+        tasks={tasks}
+        selectedDate={selectedDate}
+        isNarrow={isNarrow}
+        onSelectDate={setSelectedDate}
+        onToday={() => goToToday(false)}
+        statusControl={isNarrow ? null : statusControl}
+        selectedTask={selectedTask}
+        workspaceMode={workspaceMode}
+        workspaceDate={workspaceDate}
+        externalError={operationError}
+        isSaving={isOperating}
+        onSelectTask={selectTask}
+        onDelete={(task) => setDeleteTaskId(task.id)}
+        onAdd={openCreate}
+        onEdit={openEdit}
+        onWorkspaceModeChange={setWorkspaceMode}
+        onSave={saveWorkspace}
+        onToggleComplete={toggleComplete}
+        onMove={moveTaskExact}
+      />
+    ) : destination === "history" ? (
+      <HistoryView
+        tasks={tasks}
+        onEdit={openEdit}
+        onReopen={toggleComplete}
+        onDelete={(task) => setDeleteTaskId(task.id)}
+        statusControl={isNarrow ? null : statusControl}
+      />
+    ) : (
+      <SettingsView
+        themePreference={themePreference}
+        status={status}
+        diagnostics={diagnostics}
+        operationError={operationError}
+        isOperating={isOperating}
+        onThemePreferenceChange={changeTheme}
+        onSync={syncNow}
+        statusControl={isNarrow ? null : statusControl}
+      />
+    );
 
   return (
     <Theme theme={jigTheme} mode={themePreference}>
@@ -620,42 +655,20 @@ export function App(): React.ReactElement {
             {renderContent}
           </ResponsiveFrame>
 
-          <ResponsiveTaskEditor
-            isOpen={editorOpen}
-            task={editorTask}
-            initiatingDate={editorDate}
+          <ResponsiveTaskWorkspaceDrawer
+            destination={destination}
+            mode={workspaceMode}
+            task={workspaceMode === "create" ? null : selectedTask}
+            initiatingDate={workspaceDate}
             externalError={operationError}
             isSaving={isOperating}
-            onOpenChange={setEditorOpen}
-            onSave={runCommand}
-            onDelete={(taskId) =>
-              runCommand({ type: "delete", task_id: taskId })
-            }
+            onModeChange={setWorkspaceMode}
+            onSave={saveWorkspace}
+            onDelete={(task) => setDeleteTaskId(task.id)}
+            onToggleComplete={toggleComplete}
+            onClose={closeWorkspace}
           />
         </AppShell>
-
-        <MoveTaskDialog
-          task={moveTask}
-          isOpen={moveDialogOpen}
-          initialDate={moveTask?.scheduled_date ?? selectedDate}
-          isSaving={isOperating}
-          error={operationError}
-          onOpenChange={setMoveDialogOpen}
-          onMove={async (destinationDate) => {
-            if (moveTask === null) {
-              return false;
-            }
-            const destinationIndex = outstandingForDate(
-              tasks,
-              destinationDate,
-            ).filter((task) => task.id !== moveTask.id).length;
-            return moveTaskExact(
-              moveTask.id,
-              destinationDate,
-              destinationIndex,
-            );
-          }}
-        />
 
         <AlertDialog
           isOpen={deleteTask !== null}
@@ -682,9 +695,10 @@ export function App(): React.ReactElement {
               type: "delete",
               task_id: deleteTask.id,
             });
-            if (deleted) {
+            if (deleted !== null) {
               setDeleteTaskId(null);
               setSelectedTaskId(null);
+              setWorkspaceMode(null);
             }
           }}
         />
