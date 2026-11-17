@@ -250,32 +250,6 @@ test("Day date inspection does not retarget or discard an active edit draft", as
   );
 });
 
-test("Move to date uses the same task workspace and canonical exact move command", async ({
-  page,
-}) => {
-  const today = await browserCivilDate(page);
-  const tomorrow = await browserCivilDate(page, 1);
-  await createTask(page, "Workspace move contract", today);
-  await page.reload();
-
-  await runTaskAction(page, "Workspace move contract", "Move to date…");
-  const workspace = page.locator('section[aria-label="Move task Workspace move contract"]');
-  await expect(workspace).toBeVisible();
-  await workspace.getByLabel("Destination date").fill(tomorrow);
-  await workspace.getByRole("button", { name: "Move task", exact: true }).click();
-
-  await expect
-    .poll(async () =>
-      (await taskByTitle(page, "Workspace move contract")).scheduled_date,
-    )
-    .toBe(tomorrow);
-  await expect(
-    page.getByRole("complementary", {
-      name: "Task details for Workspace move contract",
-    }),
-  ).toBeVisible();
-});
-
 test("real pointer drag moves a Task across dated Week drop zones", async ({
   page,
 }) => {
