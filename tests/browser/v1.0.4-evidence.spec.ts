@@ -54,6 +54,11 @@ async function capture(page: Page, name: string): Promise<void> {
 test("capture governed v1.0.4 visual states", async ({ page }) => {
   await mkdir(OUTPUT, { recursive: true });
   await page.goto("/");
+  await page.waitForFunction(
+    () =>
+      (window as typeof window & { __JIG_WRITE_TOKEN__?: string })
+        .__JIG_WRITE_TOKEN__ !== undefined,
+  );
   await resetCanonicalTasks(page);
 
   const today = await browserCivilDate(page);
