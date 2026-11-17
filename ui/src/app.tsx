@@ -4,6 +4,8 @@ import {
   Banner,
   Button,
   LayerProvider,
+  SideNav,
+  SideNavItem,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
 import jigLogoLightUrl from "../../assets/jig-logo.svg";
@@ -133,6 +135,7 @@ export function App(): React.ReactElement {
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isNarrow = useNarrowLayout();
 
   const tasks = canonical?.tasks ?? [];
@@ -412,72 +415,76 @@ export function App(): React.ReactElement {
     />
   );
 
-  const desktopSidebar = (
-    <aside className="jig-sidebar" aria-label="Jig navigation">
-      <div className="jig-sidebar-brand" aria-label="Jig">
-        <span className="jig-brand-logo-wrap" aria-hidden="true">
-          <img
-            className="jig-brand-logo jig-brand-logo-light"
-            src={jigLogoLightUrl}
-            alt=""
-          />
-          <img
-            className="jig-brand-logo jig-brand-logo-dark"
-            src={jigLogoDarkUrl}
-            alt=""
-          />
-        </span>
-        <span className="jig-brand-tagline">Schedules attention</span>
-      </div>
-
-      <nav className="jig-sidebar-nav" aria-label="Primary">
-        {(["week", "day", "history", "settings"] as const).map(
-          (item) => (
-            <Button
-              key={item}
-              label={destinationLabel(item)}
-              variant={destination === item ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setDestination(item)}
-              aria-current={destination === item ? "page" : undefined}
+  const primarySideNav = (
+    <SideNav
+      className="jig-primary-nav"
+      aria-label="Primary"
+      header={
+        <div className="jig-sidebar-brand" aria-label="Jig">
+          <span className="jig-brand-logo-wrap" aria-hidden="true">
+            <img
+              className="jig-brand-logo jig-brand-logo-light"
+              src={jigLogoLightUrl}
+              alt=""
             />
-          ),
-        )}
-      </nav>
-
-      <div className="jig-sidebar-context">
-        <span>Planning data</span>
-        <small>Personal Git repository</small>
-      </div>
-    </aside>
+            <img
+              className="jig-brand-logo jig-brand-logo-dark"
+              src={jigLogoDarkUrl}
+              alt=""
+            />
+          </span>
+          <span className="jig-brand-tagline">Schedules attention</span>
+        </div>
+      }
+      footer={
+        <div className="jig-sidebar-context">
+          <span>Planning data</span>
+          <small>Personal Git repository</small>
+        </div>
+      }
+    >
+      {(["week", "day", "history", "settings"] as const).map((item) => (
+        <SideNavItem
+          key={item}
+          label={destinationLabel(item)}
+          isSelected={destination === item}
+          onClick={() => {
+            setDestination(item);
+            setMobileNavOpen(false);
+          }}
+        />
+      ))}
+    </SideNav>
   );
 
-  const mobileHeader = (
+  const mobileHeader = isNarrow ? (
     <header className="jig-mobile-header">
       <span className="jig-mobile-brand">Jig</span>
-      <details className="jig-mobile-destination-menu">
-        <summary>{destinationLabel(destination)}</summary>
-        <div className="jig-mobile-destination-panel">
-          {(["week", "day", "history", "settings"] as const).map(
-            (item) => (
-              <button
-                key={item}
-                type="button"
-                aria-current={destination === item ? "page" : undefined}
-                onClick={(event) => {
-                  event.currentTarget.closest("details")?.removeAttribute("open");
-                  setDestination(item);
-                }}
-              >
-                {destinationLabel(item)}
-              </button>
-            ),
-          )}
-        </div>
-      </details>
       {statusControl}
     </header>
-  );
+  ) : null;
+
+  const mobileSurfaceNav = isNarrow ? (
+    <div className="jig-mobile-surface-nav">
+      <Button
+        label={destinationLabel(destination)}
+        variant="ghost"
+        size="sm"
+        endContent={<span aria-hidden="true">⌄</span>}
+        onClick={() => setMobileNavOpen(true)}
+        className="jig-mobile-destination-trigger"
+      />
+      {destination === "day" || destination === "week" ? (
+        <Button
+          label="Today"
+          variant="secondary"
+          size="sm"
+          onClick={() => goToToday(destination === "week")}
+          className="jig-mobile-today-control"
+        />
+      ) : null}
+    </div>
+  ) : null;
 
   const durableBanner = operationError !== null ? (
     <Banner
@@ -537,9 +544,9 @@ export function App(): React.ReactElement {
       isNarrow={isNarrow}
       onSelectDate={setSelectedDate}
       onPrevious={() => navigateDate(-7)}
-      onToday={() => goToToday(false)}
+      onToday={() => goToToday(true)}
       onNext={() => navigateDate(7)}
-      statusControl={statusControl}
+      statusControl={isNarrow ? null : statusControl}
       onAdd={openCreate}
       onEdit={openEdit}
       onMoveToDate={openMoveToDate}
@@ -550,11 +557,12 @@ export function App(): React.ReactElement {
     <DayView
       tasks={tasks}
       selectedDate={selectedDate}
+      isNarrow={isNarrow}
       onSelectDate={setSelectedDate}
       onPrevious={() => navigateDate(-1)}
       onToday={() => goToToday(false)}
       onNext={() => navigateDate(1)}
-      statusControl={statusControl}
+      statusControl={isNarrow ? null : statusControl}
       selectedTask={selectedTask}
       onSelectTask={(task) => setSelectedTaskId(task.id)}
       onDelete={(task) => setDeleteTaskId(task.id)}
@@ -570,7 +578,7 @@ export function App(): React.ReactElement {
       onEdit={openEdit}
       onReopen={toggleComplete}
       onDelete={(task) => setDeleteTaskId(task.id)}
-      statusControl={statusControl}
+      statusControl={isNarrow ? null : statusControl}
     />
   ) : (
     <SettingsView
@@ -581,7 +589,7 @@ export function App(): React.ReactElement {
       isOperating={isOperating}
       onThemePreferenceChange={changeTheme}
       onSync={syncNow}
-      statusControl={statusControl}
+      statusControl={isNarrow ? null : statusControl}
     />
   );
 
@@ -591,25 +599,29 @@ export function App(): React.ReactElement {
     <Theme theme={jigTheme} mode={themePreference}>
       <LayerProvider>
         <AppShell
+          className="jig-app-shell"
+          sideNav={primarySideNav}
+          mobileNav={{
+            breakpoint: "md",
+            hasToggle: false,
+            isOpen: mobileNavOpen,
+            onOpenChange: setMobileNavOpen,
+          }}
+          banner={durableBanner ?? undefined}
           contentPadding={0}
           height="fill"
           variant="section"
-          mobileNav={false}
         >
-          <div className="jig-shell">
-            {desktopSidebar}
-            <div className="jig-main">
-              {mobileHeader}
-              {durableBanner === null ? null : (
-                <div className="jig-main-banner">{durableBanner}</div>
-              )}
-              <div className="jig-content">{content}</div>
-            </div>
+          <div className="jig-content-frame">
+            {mobileHeader}
+            {mobileSurfaceNav}
+            <div className="jig-content">{content}</div>
           </div>
         </AppShell>
 
         <TaskEditor
           isOpen={editorOpen}
+          isNarrow={isNarrow}
           task={editorTask}
           initiatingDate={editorDate}
           externalError={operationError}
