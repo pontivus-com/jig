@@ -165,18 +165,18 @@ test("priority edits preserve established manual order", async ({
     .map((task) => task.id);
 
   await runTaskAction(page, "Priority edited task", "Edit");
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible({ timeout: 5_000 });
-  const highPriority = dialog.getByRole("radio", {
+  const workspace = page.locator('section[aria-label="Edit task Priority edited task"]');
+  await expect(workspace).toBeVisible({ timeout: 5_000 });
+  const highPriority = workspace.getByRole("radio", {
     name: "High",
     exact: true,
   });
   await highPriority.click({ timeout: 5_000 });
   await expect(highPriority).toHaveAttribute("aria-checked", "true");
-  await dialog
+  await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click({ timeout: 5_000 });
-  await expect(dialog).toBeHidden({ timeout: 5_000 });
+  await expect(workspace).toBeHidden({ timeout: 5_000 });
 
   expect((await taskByTitle(page, "Priority edited task")).priority).toBe(
     "HIGH",
@@ -203,21 +203,47 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   await page.reload();
 
   await runTaskAction(page, "Editable metadata task", "Edit");
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Context").fill("Client Alpha");
-  await dialog
+  const workspace = page.locator('section[aria-label="Edit task Editable metadata task"]');
+  await workspace.getByLabel("Context").fill("Client Alpha");
+  await workspace
     .getByLabel("Reference")
     .fill("../matters/client-alpha");
-  await dialog.getByLabel("Notes").fill("Prepare clause comments.");
-  await dialog
+  await workspace.getByLabel("Notes").fill("Prepare clause comments.");
+  await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
-  await expect(dialog).toBeHidden();
+  await expect(workspace).toBeHidden();
 
   const edited = await taskByTitle(page, "Editable metadata task");
   expect(edited.context).toBe("Client Alpha");
   expect(edited.reference).toBe("../matters/client-alpha");
   expect(edited.note).toBe("Prepare clause comments.");
+});
+
+test("Move to date uses the same task workspace and canonical exact move command", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  const tomorrow = await browserCivilDate(page, 1);
+  await createTask(page, "Workspace move contract", today);
+  await page.reload();
+
+  await runTaskAction(page, "Workspace move contract", "Move to date…");
+  const workspace = page.locator('section[aria-label="Move task Workspace move contract"]');
+  await expect(workspace).toBeVisible();
+  await workspace.getByLabel("Destination date").fill(tomorrow);
+  await workspace.getByRole("button", { name: "Move task", exact: true }).click();
+
+  await expect
+    .poll(async () =>
+      (await taskByTitle(page, "Workspace move contract")).scheduled_date,
+    )
+    .toBe(tomorrow);
+  await expect(
+    page.getByRole("complementary", {
+      name: "Task details for Workspace move contract",
+    }),
+  ).toBeVisible();
 });
 
 test("real pointer drag moves a Task across dated Week drop zones", async ({
@@ -313,9 +339,13 @@ test("deletion requires confirmation and removes the canonical Task", async ({
   await createTask(page, "Delete contract task", today);
   await page.reload();
 
-  await runTaskAction(page, "Delete contract task", "Edit");
-  const editor = page.getByRole("dialog");
-  await editor
+  const deleteCard = await taskCard(page, "Delete contract task");
+  await deleteCard.click();
+  const inspector = page.getByRole("complementary", {
+    name: "Task details for Delete contract task",
+  });
+  await expect(inspector).toBeVisible();
+  await inspector
     .getByRole("button", { name: "Delete task…" })
     .click();
 
