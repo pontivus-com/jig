@@ -17,6 +17,7 @@ import { TaskInspector } from "./task-inspector";
 export interface DayViewProps {
   readonly tasks: readonly Task[];
   readonly selectedDate: string;
+  readonly isNarrow: boolean;
   readonly onAdd: (date: string) => void;
   readonly onSelectDate: (date: string) => void;
   readonly onPrevious: () => void;
@@ -199,6 +200,7 @@ export function DayTaskLists({
 export function DayView({
   tasks,
   selectedDate,
+  isNarrow,
   onAdd,
   onSelectDate,
   onPrevious,
@@ -210,6 +212,44 @@ export function DayView({
   onDelete,
   ...listProps
 }: DayViewProps): React.ReactElement {
+  if (isNarrow) {
+    return (
+      <div className="jig-day-view jig-day-view-narrow">
+        <DateStrip
+          selectedDate={selectedDate}
+          onSelectDate={onSelectDate}
+        />
+
+        <div className="jig-mobile-day-heading">
+          <h1>
+            {formatCivilDate(selectedDate, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </h1>
+          <p>Your ordered plan</p>
+        </div>
+
+        <DayTaskLists
+          tasks={tasks}
+          selectedDate={selectedDate}
+          selectedTask={selectedTask}
+          onSelectTask={onSelectTask}
+          {...listProps}
+        />
+
+        <Button
+          label="+"
+          aria-label="Add task"
+          variant="primary"
+          className="jig-mobile-quick-add"
+          onClick={() => onAdd(selectedDate)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="jig-day-view">
       <div className="jig-reference-heading jig-day-desktop-heading">
@@ -269,17 +309,6 @@ export function DayView({
             onSelectDate={onSelectDate}
           />
 
-          <div className="jig-mobile-day-heading">
-            <h1>
-              {formatCivilDate(selectedDate, {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </h1>
-            <p>Your ordered plan</p>
-          </div>
-
           <DayTaskLists
             tasks={tasks}
             selectedDate={selectedDate}
@@ -296,13 +325,6 @@ export function DayView({
           onDelete={onDelete}
         />
       </div>
-      <Button
-        label="+"
-        aria-label="Add task"
-        variant="primary"
-        className="jig-mobile-quick-add"
-        onClick={() => onAdd(selectedDate)}
-      />
     </div>
   );
 }
