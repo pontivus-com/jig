@@ -3,7 +3,7 @@ import type { CommunityPalette } from "../community-theme";
 /**
  * Gruvbox palette authority:
  * https://github.com/morhetz/gruvbox/blob/66246fba24fd49eeb50dd833094d272f0bbab640/colors/gruvbox.vim
- * v1.0.6 deliberately uses the upstream medium Light/Dark contrast pair.
+ * v1.0.6 deliberately uses the upstream medium Light/Dark contrast pair.\n * License: MIT/X11. Author: Pavel Pertsev and contributors.
  */
 export const gruvboxPalette = {
   body: ["#fbf1c7", "#282828"],
