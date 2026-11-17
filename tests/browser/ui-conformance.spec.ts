@@ -16,6 +16,119 @@ function expectNear(actual: number, expected: number, tolerance = 3): void {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance);
 }
 
+const THEME_PRESETS = [
+  "jig",
+  "astryx-neutral",
+  "astryx-butter",
+  "astryx-chocolate",
+  "astryx-gothic",
+  "astryx-matcha",
+  "astryx-stone",
+  "astryx-y2k",
+  "gruvbox",
+  "dracula",
+  "solarized",
+  "nord",
+  "catppuccin",
+  "tokyo-night",
+] as const;
+
+type ThemePreset = (typeof THEME_PRESETS)[number];
+type AppearanceMode = "system" | "light" | "dark";
+
+async function setAppearance(
+  page: Page,
+  themePreset: ThemePreset,
+  appearanceMode: AppearanceMode,
+): Promise<void> {
+  await page.evaluate(
+    ({ preset, mode }) => {
+      localStorage.setItem("jig-theme-family", preset);
+      localStorage.setItem("jig-appearance-mode", mode);
+      localStorage.removeItem("jig-theme");
+    },
+    { preset: themePreset, mode: appearanceMode },
+  );
+  await page.reload();
+}
+
+function rgbChannels(value: string): readonly [number, number, number] {
+  const match = value.match(
+    /rgba?\(\s*([\d.]+)[, ]+\s*([\d.]+)[, ]+\s*([\d.]+)/,
+  );
+  if (match?.[1] === undefined || match[2] === undefined || match[3] === undefined) {
+    throw new Error(`Unsupported computed color: ${value}`);
+  }
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function relativeLuminance(value: string): number {
+  const channels = rgbChannels(value).map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  return (
+    0.2126 * (channels[0] ?? 0) +
+    0.7152 * (channels[1] ?? 0) +
+    0.0722 * (channels[2] ?? 0)
+  );
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const first = relativeLuminance(foreground);
+  const second = relativeLuminance(background);
+  const lighter = Math.max(first, second);
+  const darker = Math.min(first, second);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+async function themeSnapshot(page: Page): Promise<{
+  readonly rootTheme: string | null;
+  readonly explicitMode: string | null;
+  readonly bodyBackground: string;
+  readonly bodyText: string;
+  readonly taskBackground: string;
+  readonly taskText: string;
+  readonly taskBorder: string;
+  readonly todayBorder: string;
+  readonly logoPrimary: string;
+  readonly logoAccent: string;
+}> {
+  return page.evaluate(() => {
+    const task = document.querySelector<HTMLElement>(".jig-task-card");
+    const today = document.querySelector<HTMLElement>(
+      ".jig-week-column-today .jig-week-column-header",
+    );
+    const logoPrimary = document.querySelector<SVGElement>(".jig-logo path");
+    const logoAccent = document.querySelector<SVGElement>(".jig-logo circle");
+    if (
+      task === null ||
+      today === null ||
+      logoPrimary === null ||
+      logoAccent === null
+    ) {
+      throw new Error("Theme acceptance fixture is unavailable");
+    }
+
+    const bodyStyle = getComputedStyle(document.body);
+    const taskStyle = getComputedStyle(task);
+    return {
+      rootTheme: document.documentElement.getAttribute("data-astryx-theme"),
+      explicitMode: document.documentElement.getAttribute("data-theme"),
+      bodyBackground: bodyStyle.backgroundColor,
+      bodyText: bodyStyle.color,
+      taskBackground: taskStyle.backgroundColor,
+      taskText: taskStyle.color,
+      taskBorder: taskStyle.borderColor,
+      todayBorder: getComputedStyle(today).borderBottomColor,
+      logoPrimary: getComputedStyle(logoPrimary).stroke || getComputedStyle(logoPrimary).fill,
+      logoAccent: getComputedStyle(logoAccent).fill,
+    };
+  });
+}
+
 async function createTask(
   page: Page,
   title: string,
@@ -475,53 +588,58 @@ test("outstanding Task action menus are identical at desktop and narrow widths",
   expect(await menuLabels()).toEqual(desktop);
 });
 
-test("desktop History and Settings use an 800px centered content column", async ({
+test("History and Settings keep one continuous 50rem measure across the Planner breakpoint", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await waitForResponsiveHeader(page, 1440);
+  const viewports = [1440, 1168, 1167, 1024, 900, 800, 600, 390] as const;
 
-  for (const destination of ["History", "Settings"] as const) {
-    await page.getByRole("button", { name: destination, exact: true }).click();
-    const selector =
-      destination === "History" ? ".jig-history-view" : ".jig-settings-view";
-    const box = await page.locator(selector).boundingBox();
-    expect(box, destination).not.toBeNull();
-    if (box !== null) {
-      expectNear(box.width, 800, 1);
-      expectNear(box.x, 320, 1);
+  for (const width of viewports) {
+    await page.setViewportSize({ width, height: 900 });
+    await waitForResponsiveHeader(page, width);
+
+    for (const destination of ["History", "Settings"] as const) {
+      if (width >= 1168) {
+        await page.getByRole("button", { name: destination, exact: true }).click();
+      } else {
+        await page.getByRole("button", { name: "Open navigation menu" }).click();
+        await page
+          .getByRole("menuitem", { name: new RegExp(`^${destination}`) })
+          .click();
+      }
+
+      const selector =
+        destination === "History" ? ".jig-history-view" : ".jig-settings-view";
+      const box = await page.locator(selector).boundingBox();
+      expect(box, `${destination} @ ${width}`).not.toBeNull();
+      if (box !== null) {
+        const expectedWidth = Math.min(width, 800);
+        expectNear(box.width, expectedWidth, 1);
+        expectNear(box.x, (width - expectedWidth) / 2, 1);
+      }
+
+      if (destination === "Settings") {
+        const columns = await page.locator(".jig-settings-grid").evaluate(
+          (element) => getComputedStyle(element).gridTemplateColumns,
+        );
+        if (width >= 1168) {
+          expect(columns.split(" ")).toHaveLength(2);
+        } else {
+          expect(columns.split(" ")).toHaveLength(1);
+        }
+      }
     }
-    if (destination === "Settings") {
-      const overflow = await page.locator(".jig-settings-grid").evaluate(
-        (element) => element.scrollWidth - element.clientWidth,
-      );
-      expect(overflow).toBeLessThanOrEqual(1);
+
+    if (width >= 1168) {
+      await page.getByRole("button", { name: "Planner", exact: true }).click();
+    } else {
+      await page.getByRole("button", { name: "Open navigation menu" }).click();
+      await page.getByRole("menuitem", { name: /^Planner/ }).click();
     }
-  }
-
-  await page.getByRole("button", { name: "Planner", exact: true }).click();
-  const planner = await page.locator(".jig-week-board").boundingBox();
-  expect(planner).not.toBeNull();
-  if (planner !== null) {
-    expectNear(planner.x, 0, 1);
-    expectNear(planner.width, 1440, 1);
-  }
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await waitForResponsiveHeader(page, 390);
-
-  for (const destination of ["History", "Settings"] as const) {
-    await page.getByRole("button", { name: "Open navigation menu" }).click();
-    await page
-      .getByRole("menuitem", { name: new RegExp(`^${destination}`) })
-      .click();
-    const selector =
-      destination === "History" ? ".jig-history-view" : ".jig-settings-view";
-    const box = await page.locator(selector).boundingBox();
-    expect(box, destination).not.toBeNull();
-    if (box !== null) {
-      expectNear(box.x, 0, 1);
-      expectNear(box.width, 390, 1);
+    const planner = await page.locator(".jig-week-board").boundingBox();
+    expect(planner).not.toBeNull();
+    if (planner !== null) {
+      expectNear(planner.x, 0, 1);
+      expectNear(planner.width, width, 1);
     }
   }
 });
@@ -590,39 +708,116 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
   expect(narrowGeometry[1]?.y ?? 0).toBeGreaterThan(narrowGeometry[0]?.y ?? 0);
 });
 
-test("Task cards remain visibly separated from the canvas in Light and Dark responsive modes", async ({
+test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System mode", async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   const today = await browserCivilDate(page);
-  await createTask(page, "Contrast contract", today);
+  await createTask(page, "Theme matrix contract", today);
   await page.reload();
 
-  for (const theme of ["light", "dark"] as const) {
-    await page.evaluate((value) => {
-      localStorage.setItem("jig-theme", value);
-    }, theme);
-    await page.reload();
-
-    for (const viewport of [
-      { width: 1440, height: 900 },
-      { width: 390, height: 844 },
-    ]) {
-      await page.setViewportSize(viewport);
-      const colors = await page.evaluate(() => {
-        const card = document.querySelector<HTMLElement>(".jig-task-card");
-        if (card === null) {
-          throw new Error("Task card unavailable");
-        }
-        return {
-          card: getComputedStyle(card).backgroundColor,
-          canvas: getComputedStyle(document.body).backgroundColor,
-          border: getComputedStyle(card).borderColor,
-        };
-      });
-      expect(colors.card).not.toBe(colors.canvas);
-      expect(colors.border).not.toBe("rgba(0, 0, 0, 0)");
+  for (const preset of THEME_PRESETS) {
+    for (const mode of ["light", "dark"] as const) {
+      await setAppearance(page, preset, mode);
+      const snapshot = await themeSnapshot(page);
+      expect(snapshot.rootTheme).toBe(preset);
+      expect(snapshot.explicitMode).toBe(mode);
+      expect(snapshot.taskBackground, `${preset}/${mode} task vs canvas`)
+        .not.toBe(snapshot.bodyBackground);
+      expect(snapshot.taskBorder).not.toBe("rgba(0, 0, 0, 0)");
+      expect(contrastRatio(snapshot.bodyText, snapshot.bodyBackground))
+        .toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(snapshot.taskText, snapshot.taskBackground))
+        .toBeGreaterThanOrEqual(4.5);
+      expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
+      expect(snapshot.logoPrimary).not.toBe(snapshot.logoAccent);
     }
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await setAppearance(page, preset, "system");
+    const systemLight = await themeSnapshot(page);
+    expect(systemLight.rootTheme).toBe(preset);
+    expect(systemLight.explicitMode).toBeNull();
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect
+      .poll(async () => (await themeSnapshot(page)).bodyBackground)
+      .not.toBe(systemLight.bodyBackground);
+    const systemDark = await themeSnapshot(page);
+    expect(systemDark.rootTheme).toBe(preset);
+    expect(systemDark.explicitMode).toBeNull();
+    expect(systemDark.taskBackground).not.toBe(systemDark.bodyBackground);
   }
+
+  await page.emulateMedia({ colorScheme: "no-preference" });
+});
+
+test("Theme and Appearance controls exist only in Settings and apply independently", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByRole("combobox", { name: "Theme" })).toHaveCount(0);
+  await expect(page.getByText("Appearance", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const themeSelector = page.getByRole("combobox", { name: "Theme" });
+  await expect(themeSelector).toBeVisible();
+  await themeSelector.click();
+
+  const options = page.getByRole("option");
+  await expect(options).toHaveCount(14);
+  expect(await options.allTextContents()).toEqual([
+    "Jig",
+    "Neutral",
+    "Butter",
+    "Chocolate",
+    "Gothic",
+    "Matcha",
+    "Stone",
+    "Y2K",
+    "Gruvbox",
+    "Dracula",
+    "Solarized",
+    "Nord",
+    "Catppuccin",
+    "Tokyo Night",
+  ]);
+  await page.getByRole("option", { name: "Dracula", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-astryx-theme", "dracula");
+
+  const appearance = page.getByText("Appearance", { exact: true });
+  await expect(appearance).toBeVisible();
+  await page.getByText("Dark", { exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  const stored = await page.evaluate(() => ({
+    theme: localStorage.getItem("jig-theme-family"),
+    mode: localStorage.getItem("jig-appearance-mode"),
+    legacy: localStorage.getItem("jig-theme"),
+  }));
+  expect(stored).toEqual({ theme: "dracula", mode: "dark", legacy: null });
+});
+
+test("legacy appearance preference is honored and migrated by the next explicit setting", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    localStorage.removeItem("jig-appearance-mode");
+    localStorage.removeItem("jig-theme-family");
+    localStorage.setItem("jig-theme", "dark");
+  });
+  await page.reload();
+
+  await expect(page.locator("html")).toHaveAttribute("data-astryx-theme", "jig");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByText("Light", { exact: true }).click();
+  const stored = await page.evaluate(() => ({
+    mode: localStorage.getItem("jig-appearance-mode"),
+    legacy: localStorage.getItem("jig-theme"),
+  }));
+  expect(stored).toEqual({ mode: "light", legacy: null });
 });
 
 test("History keeps its destination active while using the same editable workspace and complete menu", async ({
