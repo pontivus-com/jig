@@ -10,9 +10,8 @@ import type {
   NamespacedIconName,
 } from "@astryxdesign/core/Icon";
 import type { ReactNode } from "react";
-import jigLogoLightUrl from "../../assets/jig-logo.svg";
-import jigLogoDarkUrl from "../../assets/jig-logo-on-dark.svg";
 import { JIG_ICON_KEYS, JigIcon } from "./jig-icons";
+import { JigLogo } from "./jig-logo";
 import type { LayoutMode } from "./use-layout-mode";
 
 const DESTINATIONS = [
@@ -84,16 +83,7 @@ function BrandHome({
     >
       <span className="jig-header-brand">
         <span className="jig-brand-logo-wrap" aria-hidden="true">
-          <img
-            className="jig-brand-logo jig-brand-logo-light"
-            src={jigLogoLightUrl}
-            alt=""
-          />
-          <img
-            className="jig-brand-logo jig-brand-logo-dark"
-            src={jigLogoDarkUrl}
-            alt=""
-          />
+          <JigLogo />
         </span>
       </span>
     </Button>
