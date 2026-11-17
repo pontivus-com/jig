@@ -1,6 +1,6 @@
 # Jig documentation
 
-**Status:** v1 MVP release candidate (2026-11-16). The product, functional, technical and UI design baseline is implemented and the V1-01–V1-25 certification evidence is complete.
+**Status:** v1.0.3 implementation candidate (2026-11-17). The binding single-Planner functional, technical and UI design is implemented and certified on the implementation branch; release publication remains a separate governed transition.
 
 Jig is a small, local-first, just-in-time daily planner. It schedules attention rather than duplicating the underlying project work. All planning data must live under the Jig directory of the user-selected personal Git repository, with a lightweight local desktop service and automatic Git sync.
 
