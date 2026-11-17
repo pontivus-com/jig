@@ -310,7 +310,13 @@ export function App(): React.ReactElement {
   }, [observedToday, refreshCanonical]);
 
   useEffect(() => {
-    if (destination !== "day" || canonical === null) {
+    if (
+      destination !== "day" ||
+      canonical === null ||
+      workspaceMode === "edit" ||
+      workspaceMode === "create" ||
+      workspaceMode === "move"
+    ) {
       return;
     }
 
@@ -325,7 +331,14 @@ export function App(): React.ReactElement {
       return;
     }
     setSelectedTaskId(candidates[0]?.id ?? null);
-  }, [canonical, destination, selectedDate, selectedTaskId, tasks]);
+  }, [
+    canonical,
+    destination,
+    selectedDate,
+    selectedTaskId,
+    tasks,
+    workspaceMode,
+  ]);
 
   const runCommand = useCallback(
     async (command: TaskCommand): Promise<CommandResult | null> => {
