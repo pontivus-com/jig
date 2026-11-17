@@ -97,13 +97,13 @@ Completed Tasks are never rolled forward. Manually moving a Task to another date
 
 **Week:** one calendar week of date buckets, with previous/next week controls, jump to today, quick-add scoped to a bucket, compact title-first task rows/cards, clear drag affordances, priority/context/reminder metadata only when it adds value, and an obvious drop target for cross-day movement. Dates with substantial lists must remain navigable without making the entire page unusable. No additional generic “Board” view is needed: the week planner already uses Kanban interaction.
 
-**Day:** selected date and one attention list composed of the canonical outstanding Tasks scheduled for that date after daily rollover, plus a compact completed section and an on-demand Task workspace. On wide Day the workspace is docked on the right; selecting a Task reveals its details without changing destination, and Add/Edit/Move reuse that same surface. A task's detail surface shows its own minimal fields, optional reference, completion, rescheduling and deletion controls; it does not display the owning project's workflow.
+**Day:** selected date and one attention list composed of the canonical outstanding Tasks scheduled for that date after daily rollover, plus a compact completed section and an on-demand Task workspace. On wide Day the workspace is docked on the right; selecting a Task reveals its details without changing destination, and Add/Edit reuse that same surface. A task's detail surface shows its own minimal fields, optional reference, completion, rescheduling and deletion controls; it does not display the owning project's workflow.
 
 **History:** simple dated access to completed items, not a productivity dashboard. Filter by context/project only if useful; metrics are secondary and not MVP acceptance requirements.
 
 **Quick add:** the default interaction asks only for title and uses the originating date. It opens the contextual Task workspace rather than a blocking modal. Secondary fields remain optional and can be edited afterward.
 
-**Actions:** desktop pointer drag-and-drop is the primary ordering mechanism. Provide keyboard-accessible alternatives (move before/after or move to date) and visible focus. Completion uses one explicit control. Delete is a destructive action available for outstanding and completed Tasks and always requires explicit confirmation before mutation. Small touch targets or hover-only essential actions are not acceptable even in the desktop-first MVP.
+**Actions:** desktop pointer drag-and-drop is the primary direct ordering/cross-date movement mechanism. Provide keyboard-accessible same-day move before/after controls and allow explicit cross-date rescheduling through the Edit date field; card selection itself never moves a Task. Completion uses one explicit control. Delete is a destructive action available for outstanding and completed Tasks and always requires explicit confirmation before mutation. Small touch targets or hover-only essential actions are not acceptable even in the desktop-first MVP.
 
 **Visual hierarchy:** dates and work-item titles dominate; the current/selected date is clear; priority is visually modest, with high priority exceptional rather than every Normal value becoming a strong badge; reminder *time* must be recognizable as an alert and not a time block.
 
@@ -114,8 +114,8 @@ Completed Tasks are never rolled forward. Manually moving a Task to another date
 Define narrow layout and input behavior now, without requiring an independently installable mobile app in desktop v1.
 
 - Day-oriented narrow layout: compact horizontal week strip + one day's canonical attention list after rollover, rather than seven unreadable columns.
-- Touch-sized controls; drag-and-drop ordering can be implemented later, with move-to-date as a reliable non-drag fallback.
-- Task view/create/edit/move uses one responsive contextual Task workspace. On narrow layouts it slides from the inline end/right using the UI library's side-panel treatment, with explicit Save/Cancel or Move/Cancel and preserved edits when the layout changes. Task creation/editing is not a centered modal; permanent Delete confirmation remains blocking.
+- Touch-sized controls; drag-and-drop ordering can be implemented later, with the Edit date field as the reliable non-drag cross-date reschedule path.
+- Task view/create/edit uses one responsive contextual Task workspace. On narrow layouts it rises from the bottom using the UI library's BottomSheet treatment, with explicit Save/Cancel and preserved edits when the layout changes. Task creation/editing is not a centered modal; permanent Delete confirmation remains blocking.
 - The same work item does not become a separate mobile data or lifecycle shape.
 - No full background/scheduled mobile notification requirement.
 
