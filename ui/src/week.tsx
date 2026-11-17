@@ -143,28 +143,22 @@ export function WeekView({
   if (isNarrow) {
     return (
       <div className="jig-week-view jig-week-view-narrow">
-        <div className="jig-view-heading">
-          <div>
-            <p className="jig-eyebrow">Week</p>
-            <h1>Plan the week</h1>
-          </div>
-          <div className="jig-view-actions">
-            <Button label="Previous" variant="ghost" size="sm" onClick={onPrevious} />
-            <Button label="Today" variant="ghost" size="sm" onClick={onToday} />
-            <Button label="Next" variant="ghost" size="sm" onClick={onNext} />
-            {statusControl}
-            <Button
-              label="Add task"
-              variant="primary"
-              className="jig-header-add"
-              onClick={() => onAdd(selectedDate)}
-            />
-          </div>
-        </div>
         <DateStrip
           selectedDate={selectedDate}
           onSelectDate={onSelectDate}
         />
+
+        <div className="jig-mobile-day-heading">
+          <h1>
+            {formatCivilDate(selectedDate, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </h1>
+          <p>Weekly planning context · one selected date</p>
+        </div>
+
         <DayTaskLists
           tasks={tasks}
           selectedDate={selectedDate}
