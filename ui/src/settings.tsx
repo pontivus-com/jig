@@ -4,7 +4,7 @@ import {
   SegmentedControl,
   SegmentedControlItem,
 } from "@astryxdesign/core";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
@@ -25,6 +25,7 @@ export interface SettingsViewProps {
   readonly isOperating: boolean;
   readonly onThemePreferenceChange: (value: ThemePreference) => void;
   readonly onSync: () => Promise<void>;
+  readonly statusControl: ReactNode;
 }
 
 function statusMessage(status: ServiceStatus | null): string {
@@ -67,6 +68,7 @@ export function SettingsView({
   isOperating,
   onThemePreferenceChange,
   onSync,
+  statusControl,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
     useState<BrowserNotificationState>(browserNotificationState);
@@ -81,11 +83,12 @@ export function SettingsView({
 
   return (
     <div className="jig-settings-view">
-      <div className="jig-view-heading">
+      <div className="jig-reference-heading">
         <div>
-          <p className="jig-eyebrow">Settings</p>
-          <h1>Jig settings</h1>
+          <h1>Settings</h1>
+          <p>Repository, synchronization, appearance and diagnostics</p>
         </div>
+        {statusControl}
       </div>
 
       {operationError === null ? null : (
@@ -97,86 +100,133 @@ export function SettingsView({
         />
       )}
 
-      <section className="jig-settings-section" aria-labelledby="appearance-heading">
-        <h2 id="appearance-heading">Appearance</h2>
-        <SegmentedControl
-          label="Appearance"
-          value={themePreference}
-          onChange={(value) =>
-            onThemePreferenceChange(value as ThemePreference)
-          }
-          layout="fill"
+      <div className="jig-settings-grid">
+        <section
+          className="jig-settings-panel jig-settings-planning"
+          aria-labelledby="planning-data-heading"
         >
-          <SegmentedControlItem value="system" label="System" />
-          <SegmentedControlItem value="light" label="Light" />
-          <SegmentedControlItem value="dark" label="Dark" />
-        </SegmentedControl>
-
-        <div className="jig-settings-notifications">
-          <div>
-            <strong>Browser notifications</strong>
-            <p>{notificationStatusMessage(notificationState)}</p>
+          <h2 id="planning-data-heading">Planning data</h2>
+          <div className="jig-settings-card">
+            <strong>Repository</strong>
+            <p>{status?.repository_path ?? "Unavailable"}</p>
+            <small>Selected planning-data home · informational only</small>
           </div>
-          {notificationState === "default" ? (
+        </section>
+
+        <section
+          className="jig-settings-panel jig-settings-sync"
+          aria-labelledby="sync-heading"
+        >
+          <h2 id="sync-heading">Synchronization</h2>
+          <div className="jig-settings-card jig-settings-sync-card">
+            <strong>{status?.repository_status === "synchronized" ? "Synced" : "Synchronization"}</strong>
+            <p>{statusMessage(status)}</p>
+            <dl className="jig-diagnostics">
+              <div>
+                <dt>Service</dt>
+                <dd>{status?.ready ? "Running" : "Unavailable"}</dd>
+              </div>
+              <div>
+                <dt>Local save</dt>
+                <dd>{diagnostics?.sqlite_available ? "Safe" : "Unavailable"}</dd>
+              </div>
+            </dl>
             <Button
-              label="Enable"
+              label="Sync now"
               variant="secondary"
-              size="sm"
+              isLoading={isOperating}
               onClick={() => {
-                void requestBrowserNotificationPermission().then(
-                  setNotificationState,
-                );
+                void onSync();
               }}
             />
-          ) : null}
-        </div>
-      </section>
-
-      <section className="jig-settings-section" aria-labelledby="planning-data-heading">
-        <h2 id="planning-data-heading">Planning data</h2>
-        <dl className="jig-diagnostics">
-          <div>
-            <dt>Repository</dt>
-            <dd>{status?.repository_path ?? "Unavailable"}</dd>
           </div>
-        </dl>
-      </section>
+        </section>
 
-      <section className="jig-settings-section" aria-labelledby="sync-heading">
-        <h2 id="sync-heading">Synchronization</h2>
-        <p>{statusMessage(status)}</p>
-        <Button
-          label="Sync now"
-          variant="secondary"
-          isLoading={isOperating}
-          onClick={() => {
-            void onSync();
-          }}
-        />
-      </section>
+        <section
+          className="jig-settings-panel jig-settings-appearance"
+          aria-labelledby="appearance-heading"
+        >
+          <h2 id="appearance-heading">Appearance</h2>
+          <div className="jig-settings-card">
+            <strong>Theme</strong>
+            <SegmentedControl
+              label="Appearance"
+              value={themePreference}
+              onChange={(value) =>
+                onThemePreferenceChange(value as ThemePreference)
+              }
+              layout="fill"
+            >
+              <SegmentedControlItem value="system" label="System" />
+              <SegmentedControlItem value="light" label="Light" />
+              <SegmentedControlItem value="dark" label="Dark" />
+            </SegmentedControl>
 
-      <section className="jig-settings-section" aria-labelledby="diagnostics-heading">
-        <h2 id="diagnostics-heading">Diagnostics</h2>
-        <dl className="jig-diagnostics">
-          <div>
-            <dt>Jig service</dt>
-            <dd>{status?.ready ? "Healthy" : "Unavailable"}</dd>
+            <div className="jig-settings-notifications">
+              <div>
+                <strong>Browser notifications</strong>
+                <p>{notificationStatusMessage(notificationState)}</p>
+              </div>
+              {notificationState === "default" ? (
+                <Button
+                  label="Enable"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    void requestBrowserNotificationPermission().then(
+                      setNotificationState,
+                    );
+                  }}
+                />
+              ) : null}
+            </div>
           </div>
-          <div>
-            <dt>Local database</dt>
-            <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
-          </div>
-          <div>
-            <dt>Portable data</dt>
-            <dd>
-              {diagnostics?.repository_adapter_healthy
-                ? "Healthy"
-                : "Needs attention"}
-            </dd>
-          </div>
-        </dl>
-      </section>
+        </section>
 
+        <section
+          className="jig-settings-panel jig-settings-diagnostics"
+          aria-labelledby="diagnostics-heading"
+        >
+          <h2 id="diagnostics-heading">Diagnostics</h2>
+          <div className="jig-settings-card">
+            <dl className="jig-diagnostics">
+              <div>
+                <dt>Jig service</dt>
+                <dd>{status?.ready ? "Healthy" : "Unavailable"}</dd>
+              </div>
+              <div>
+                <dt>SQLite</dt>
+                <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
+              </div>
+              <div>
+                <dt>Portable data</dt>
+                <dd>
+                  {diagnostics?.portable_format_version === undefined
+                    ? "Unavailable"
+                    : `Format v${diagnostics.portable_format_version}`}
+                </dd>
+              </div>
+              <div>
+                <dt>Repository adapter</dt>
+                <dd>
+                  {diagnostics?.repository_adapter_healthy
+                    ? "Healthy"
+                    : "Needs attention"}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+      </div>
+
+      <div className="jig-local-first-note">
+        <strong>Local-first behavior</strong>
+        <p>Local planning remains usable when synchronization is unavailable.</p>
+        <p>
+          Browser notifications require explicit permission; unrelated repository
+          content is never touched.
+        </p>
+      </div>
     </div>
   );
 }
