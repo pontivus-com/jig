@@ -6,7 +6,6 @@ export interface TaskInspectorProps {
   readonly task: Task | null;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onEdit: (task: Task) => void;
-  readonly onMoveToDate: (task: Task) => void;
   readonly onDelete: (task: Task) => void;
   readonly showHeading?: boolean;
   readonly surface?: "docked" | "drawer";
@@ -25,7 +24,6 @@ export function TaskInspector({
   task,
   onToggleComplete,
   onEdit,
-  onMoveToDate,
   onDelete,
   showHeading = true,
   surface = "docked",
@@ -79,12 +77,6 @@ export function TaskInspector({
           variant="ghost"
           size="sm"
           onClick={() => onEdit(task)}
-        />
-        <Button
-          label="Move to date"
-          variant="ghost"
-          size="sm"
-          onClick={() => onMoveToDate(task)}
         />
         <Button
           label="Delete…"
