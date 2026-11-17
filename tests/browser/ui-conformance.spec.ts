@@ -497,6 +497,12 @@ test("temporary v1.0.4 visual evidence capture", async ({ page }) => {
   );
   await page.mouse.down();
   await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 8,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 3 },
+  );
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+  await page.mouse.move(
     destinationBox.x + destinationBox.width / 2,
     destinationBox.y + Math.min(120, destinationBox.height / 2),
     { steps: 12 },
