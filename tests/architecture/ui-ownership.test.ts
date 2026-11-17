@@ -184,7 +184,10 @@ describe("UI ownership architecture", () => {
     expect(editor).toContain("FieldLabel");
     expect(editor).toContain("isGroupLabel");
     expect(workspace).toContain("<Drawer");
+    expect(workspace).toContain("<BottomSheet");
     expect(workspace).toContain("hasScrim={false}");
+    expect(workspace).not.toContain("TaskMovePanel");
+    expect(workspace).not.toContain('"move"');
     expect(workspace).toContain("<DrawerHeader");
     expect(workspace).toContain("<Layout");
     expect(app).not.toContain("MoveTaskDialog");
@@ -193,10 +196,14 @@ describe("UI ownership architecture", () => {
     expect(app).toContain('icon: "viewColumns"');
     expect(app).toContain('icon: "clock"');
     expect(app).toContain('icon: "wrench"');
+    expect(app).toContain("defaultIsCollapsed: true");
+    expect(app).toContain("<TaskWorkspaceBottomSheet");
     expect(app.indexOf('{ destination: "day"')).toBeLessThan(
       app.indexOf('{ destination: "week"'),
     );
     expect(week).toContain('elevation="med"');
     expect(day).toContain('elevation="med"');
+    expect(source("ui/src/task-inspector.tsx")).not.toContain("Move to date");
+    expect(source("ui/src/task-row.tsx")).not.toContain("Move to date");
   });
 });
