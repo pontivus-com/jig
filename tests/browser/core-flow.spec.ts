@@ -27,7 +27,7 @@ async function navigateTo(
 }
 
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
-  await page.getByRole("button", { name: "Add task", exact: true }).first().click();
+  await page.getByRole("button", { name: /Add task$/ }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Title").fill(title);
   await dialog.getByRole("button", { name: "Add task", exact: true }).click();
@@ -53,7 +53,7 @@ test("real runtime supports title-first create, completion, History and reopen",
     .not.toBeNull();
 
   await page.getByRole("button", { name: "History", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Completed work", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", exact: true })).toBeVisible();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeVisible();
 
   const historyRow = page
@@ -71,7 +71,7 @@ test("real runtime supports title-first create, completion, History and reopen",
 test("stale revisions refetch canonical state and never blindly replay a mutation", async ({ page }) => {
   await addTitleOnlyTask(page, "Stale view seed");
 
-  await page.getByRole("button", { name: "Add task", exact: true }).first().click();
+  await page.getByRole("button", { name: /Add task$/ }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Title").fill("Must not replay");
 
@@ -119,7 +119,7 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
 });
 
 test("responsive reflow preserves an open editor draft and appearance remains presentation-only", async ({ page }) => {
-  await page.getByRole("button", { name: "Add task", exact: true }).first().click();
+  await page.getByRole("button", { name: /Add task$/ }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Title").fill("Draft survives reflow");
 
@@ -169,7 +169,7 @@ test("System, Light and Dark use the canonical Jig theme and remain presentation
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Jig settings", exact: true }),
+    page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();
 
   for (const [label, stored] of [
