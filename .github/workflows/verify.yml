@@ -25,6 +25,8 @@ jobs:
         run: bun scripts/verify-release.ts --mode pr --base origin/master
       - name: Verify release tooling compiles
         run: bun build scripts/package-release.ts scripts/verify-release.ts --target=bun --outdir "${RUNNER_TEMP}/jig-release-tool-check"
+      - name: Verify Astryx theme artifacts are current
+        run: bun run theme:check
       - name: Typecheck
         run: bun run typecheck
       - name: Core and integration tests
