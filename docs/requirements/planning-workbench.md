@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding v1.0.3 functional design v0.7, finalized 2026-11-17 with the single-Planner interaction model and responsive Planner header/date-navigation contract, persisted daily rollover, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual references govern interaction hierarchy and structural intent; the running Astryx UI remains the implementation evidence.  
+**Status:** Binding v1.0.4 functional design v0.8, finalized 2026-11-17 with the v1.0.3 single-Planner model plus the v1.0.4 interaction-correction contract for drag behavior, visual-state semantics, unified Task editing, workspace dismissal, stable header geometry and complete Task actions. Persisted rollover, deletion, appearance themes, repository ownership, installation and synchronization semantics are unchanged.  
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -14,10 +14,11 @@ On narrow/mobile layouts, the same Planner reflows to a horizontal seven-date se
 
 The primary planning interaction is master-detail:
 
-- clicking/tapping a Task **selects and inspects** it; selection never moves the Task and never changes application destination;
-- direct visual movement/reordering is performed by drag-and-drop where supported;
+- clicking/tapping a Task **selects it and opens the unified editable Task workspace**; selection never moves the Task and never changes application destination;
+- direct visual movement/reordering is performed by dragging the non-interactive body of the Task card where supported; checkbox/menu/reference controls never initiate drag;
 - explicit non-drag rescheduling is performed by editing the Task's scheduled date;
-- Add/Quick Add and Edit reuse the same contextual Task workspace as inspection;
+- existing Task selection and Add Task use the same editable field surface; there is no separate read-only inspection step and no second Edit click;
+- clicking outside both a Task card and the contextual workspace dismisses the workspace without saving; clicking another Task retargets the workspace to that Task;
 - permanent Delete confirmation is the only blocking Task modal.
 
 Jig supports evening planning of the next day, morning planning, and unrestricted changes during work. It is not an appointment scheduler and it does not require an hour estimate.
@@ -60,7 +61,7 @@ The following requirements are binding for v1.0.3 and supersede any earlier Day/
 | JIG-103-FR-06 | Desktop Task workspace enters from the right | On desktop Planner and History, Task view/create/edit uses one non-blocking contextual workspace entering from the right. It overlays secondary content rather than navigating away or opening a centered modal. |
 | JIG-103-FR-07 | Mobile Task workspace rises from the bottom | On narrow/mobile layouts, Task view/create/edit uses one non-blocking bottom sheet rising from the bottom. Tapping a Task shows its proper Task details in that sheet; Add/Edit reuse the same sheet. |
 | JIG-103-FR-08 | No Task create/edit modal | Add Task, Quick Add, Task inspection and Edit must not use centered/fullscreen modal dialogs. Permanent destructive Delete confirmation remains the sole blocking Task dialog. |
-| JIG-103-FR-09 | Quick Add is actually quick | Quick Add/Add Task initially asks only for title and inherits the originating selected date plus canonical defaults. Optional Task metadata is edited afterward through Edit. |
+| JIG-103-FR-09 | Quick Add is actually quick | **Superseded by JIG-104-FR-07/08.** Add remains low-friction by inheriting date/defaults, but v1.0.4 uses the same full editable Task form for create and existing Tasks. |
 | JIG-103-FR-10 | Week board uses available desktop width | The desktop Planner board fills the available main canvas with seven equal fluid date columns and no artificial content max-width. Columns expand on wider screens so ordinary Task titles do not wrap unnecessarily. A 160px per-column minimum remains the lower desktop usability budget. |
 | JIG-103-FR-11 | Drag owns direct visual movement | On desktop, drag-and-drop is the direct interaction for same-date reordering and cross-date movement. Dragging places the Task at the exact drop position. Clicking/tapping a card is never overloaded to move or switch it. |
 | JIG-103-FR-12 | Edit owns explicit non-drag rescheduling | Cross-date rescheduling without drag is performed through the scheduled-date field in Edit. There is no separate Move-to-date workspace/modal. Same-day keyboard-accessible Move up/Move down remains available where needed. |
@@ -69,6 +70,22 @@ The following requirements are binding for v1.0.3 and supersede any earlier Day/
 | JIG-103-FR-15 | Completion leaves the Planner and remains inspectable | Completing a Task removes it from the outstanding Planner sequence and records its completion timestamp. Completed Tasks remain inspectable/reopenable from History; the removed standalone Day completed section is not required. |
 | JIG-103-FR-16 | Navigation is intentionally minimal | The only secondary destinations are History and Settings. Desktop exposes them directly in the top application region; mobile exposes the same two destinations through the hamburger menu. Planner remains the implicit home/default surface. |
 | JIG-103-FR-17 | Centered week navigation is the Planner temporal model | The active week date range is visually centered in the Planner header. Directly beneath that range, one grouped control row contains Previous week, Today and Next week. Previous/Next move the displayed week by exactly seven days and preserve the selected weekday by moving the selected date by the same seven days. Today selects the current local date and displays its containing week. The range label itself is informational, not an interactive separator between the three controls. |
+
+### v1.0.4 interaction-correction requirements
+
+The following requirements supersede the affected v1.0.3 interaction wording while preserving the single-Planner information architecture and canonical Task semantics.
+
+| ID | Requirement | Observable acceptance |
+|---|---|---|
+| JIG-104-FR-01 | Card-body drag must work | On desktop, dragging from the non-interactive body/title/meta region of an outstanding Task card starts the canonical dnd-kit drag interaction. Same-date and cross-date drops persist the exact chosen position. Completion checkbox, Task action menu and reference controls never initiate dragging. A tiny dedicated handle is not required for the primary pointer interaction. |
+| JIG-104-FR-02 | Current day is an exact date, not a weekday recurrence | The current-day treatment applies only when a visible Planner date equals the browser's current local civil date. Navigating to another week must not highlight that week's date merely because it has the same weekday as today. |
+| JIG-104-FR-03 | Visual states have separate semantics | Current day, selected Task, Task priority and drag/drop target use deliberately distinct visual treatments. Current day uses a subtle neutral date/column border treatment; selected Task uses its own subtle selection surface/border; priority remains a leading cue with High/Normal/Low semantics; drag target uses a separate transient treatment. No single brand color is reused as the dominant fill for all active states. |
+| JIG-104-FR-04 | Workspace dismisses on outside interaction | With a Task workspace open, clicking/tapping Planner or History content outside a Task card and outside the workspace closes it without saving. Selecting another Task replaces the open workspace target with that Task. Explicit close and Escape continue to close it. |
+| JIG-104-FR-05 | Application header geometry is stable | The top application header has the same outer pixel height for Planner, History and Settings at a given responsive layout. Switching destination must not move the content vertically because Planner has two temporal rows and the secondary destinations have only a title. |
+| JIG-104-FR-06 | Task action menu contains the relevant direct actions | An outstanding Task card menu exposes Edit/Open, Complete, priority selection (High/Normal/Low), applicable Move up/Move down actions and Delete. History exposes the corresponding Reopen, priority selection, Edit/Open and Delete actions. Priority changes reuse canonical Task edit semantics and never reorder established manual order. |
+| JIG-104-FR-07 | One editable Task workspace | There is no separate read-only view mode. Clicking an existing Task opens the canonical Task form directly with Title, Date, Context, Priority, Reminder, Reference and Notes visible and editable. Add Task opens the same field surface with the selected/originating date and canonical defaults already populated. Title and scheduled date are required by the Task contract; optional fields remain optional. |
+| JIG-104-FR-08 | Add is not a reduced secondary form | Add Task must not hide optional fields behind a later Edit step. The same workspace component and field hierarchy are used for new and existing Tasks. The inherited date/defaults keep creation low-friction without creating a separate Quick Add interaction model. |
+| JIG-104-FR-09 | Unified workspace retains responsive continuity | Desktop Drawer and narrow/mobile BottomSheet render the same editable Task draft state. Responsive reflow preserves the current draft. Save persists through the existing create/edit commands; Cancel/outside dismissal closes without persistence. |
 
 ## 4. Functional requirements
 
@@ -150,13 +167,13 @@ Desktop Planner is one wide weekly planning surface plus one global application 
 
 **Planner board:** the seven Monday–Sunday date columns fill the available planning canvas equally. There is no artificial content max-width. Each column remains at least 160px wide in desktop composition. Column headers are the desktop date selector and use compact weekday/day-number formatting such as `Thu 19`; they do not repeat the full selected-date sentence elsewhere.
 
-**Date-state treatment:** current date, selected date, drag target and Task priority are distinct visual states. Selected-date emphasis is concentrated in the date header/column edge rather than saturating the whole column. Drag-over uses its own temporary treatment. Today may have a small independent indicator. These states must remain distinguishable without relying on color alone.
+**Date/state treatment:** current date, Task selection, drag target and Task priority are distinct visual states. On desktop, only the exact current local civil date receives persistent current-day column emphasis; the Planner's internal selected date must not make the corresponding weekday appear to be “today” in adjacent weeks. Current day uses a subtle neutral border/header treatment, not a full-column brand fill. Selected Task uses a separate subtle selection surface/border. Drag-over uses a third transient treatment. Priority remains a leading card cue with High/Normal/Low semantics. These states remain distinguishable without relying on color alone.
 
 **Task scanability and color:** compact Task cards may use a restrained leading accent/color cue to improve scanning. If color encodes Task priority, the mapping is singular and consistent across Planner, History and Task detail, and priority remains readable through text/iconography as well as color. Normal priority must not become a visually dominant badge.
 
-**Task details:** clicking a Planner Task selects it and opens its canonical details in a non-blocking right-side workspace. The workspace overlays from the right and **must not resize, reflow or narrow the seven Planner columns**. Selection itself performs no move.
+**Task workspace:** clicking a Planner Task selects it and opens the canonical editable Task form directly in the non-blocking right-side workspace. There is no read-only detail step and no second Edit click. The workspace overlays from the right and **must not resize, reflow or narrow the seven Planner columns**. Selection itself performs no move. Clicking Planner/History content outside a Task card and outside the workspace closes it without saving; clicking another Task retargets it.
 
-**Task editing/creation:** Edit replaces workspace detail content with the full editor. Add task uses the same workspace in create mode and initially asks only for title. The global Add task originates from the currently selected date; a column-local Add task originates from that column/date and selects that date. Save returns to Task detail. Cancel returns to detail for an existing Task or closes create mode.
+**Task editing/creation:** existing and new Tasks use the same field surface: Title, Date, Context, Priority, Reminder, Reference and Notes. Add task populates the originating date/defaults but does not hide optional fields. The global Add task originates from the currently selected date; a column-local Add task originates from that column/date and selects that date. Save persists through the canonical create/edit command; Cancel or outside dismissal closes without persistence.
 
 **History:** selecting a completed Task opens the same right-side Task workspace while History remains the active destination.
 
