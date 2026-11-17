@@ -143,6 +143,7 @@ export function WeekView({
   onSelectTask,
   onAdd,
   onEdit,
+  onMoveToDate,
   onToggleComplete,
   onMove,
 }: WeekViewProps): React.ReactElement {
