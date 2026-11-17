@@ -2,7 +2,7 @@
 
 **Status:** Binding v1.0.4 technical solution, v0.10 (2026-11-17), preserving the v1.0.3 single-Planner architecture while correcting drag initiation, workspace state, visual-state semantics, header geometry, outside dismissal and Task menu actions.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
-**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-10 and JIG-FR-01 through JIG-FR-22.
+**Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-12 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
 
 **Foundational authority rule:** For every external integration, identify the authoritative owner first. Jig implements only the minimum interface needed for Jig's product job and must not absorb that external system's configuration, topology, provisioning, migration, reconciliation or policy. For Git specifically, Jig owns deterministic Jig records, automatic synchronization intent and coarse sync outcome; Git owns repository acquisition, branches/refs/worktrees, signing/identity, credentials, remotes, history and reconciliation. A Git isolation technique may exist inside the adapter, but it is not Jig domain, user workflow or configuration.
@@ -323,9 +323,9 @@ The center zone is a vertical stack:
 
 The range label is not an interactive element and must not sit between the chevrons. Buttons use Astryx Button/IconButton with explicit accessible labels (“Previous week”, “Today”, “Next week”).
 
-The Planner board uses seven equal tracks with a product-level 160px minimum. The desktop semantic breakpoint is **76rem / 1216 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and 48px total outer inset. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
+The Planner board uses seven equal-width tracks with a product-level 160px minimum. Track **height is content-driven**; do not stretch tracks merely to equalize bottoms or anchor a lane action. Empty tracks keep only the minimum usable drop-target area. The desktop semantic breakpoint is **76rem / 1216 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and 48px total outer inset. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
 
-The date column header is the desktop date-selection control. Selected date, today/current date and drag-over are separate states. Use restrained theme-derived accent treatment and non-color affordances; do not saturate the whole column merely because it is selected.
+The date column header owns the desktop date-selection control **and** the date-specific Add action. Render the date label/number plus one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. Date-label activation selects the date. `+` activation selects the same date and opens the unified create draft. Stop propagation where needed so the icon action does not double-fire the date control. Selected date, exact today/current date and drag-over remain separate states.
 
 Task cards may render a thin leading priority accent for rapid scanning. The visual mapping is singular across Planner/History/detail and derived from theme roles, never hard-coded literals. Priority text/icon semantics remain available so color is not the sole carrier. Normal priority is visually quieter than High.
 
@@ -344,7 +344,7 @@ type TaskWorkspaceState =
 
 Do not add `view`, `edit`, or `move` submodes. An existing Task workspace is immediately editable (`mode: 'task'`); create is the same field surface with no Task ID. Drag owns exact direct movement; editing `scheduled_date` owns explicit non-drag rescheduling.
 
-Global Add task creates from `selectedDate`. A column-local Add task first selects that column date and creates from it. Create initially exposes title only and applies canonical defaults; optional fields are edited afterward.
+Global Add task creates from `selectedDate`. The desktop date-header `+` first selects its column date and then creates from it. Both routes open the same full editable create draft with canonical defaults; there is no bottom-of-lane Add control and no reduced title-only create path.
 
 Permanent Delete confirmation alone uses Astryx `AlertDialog`.
 
@@ -367,6 +367,16 @@ A prominent touch Add task control remains outside the constrained header (stick
 Task create/edit uses the public Astryx **BottomSheet** rising from the bottom with `hasScrim={false}`, reusing the exact same `TaskWorkspaceState`. Existing Tasks are immediately editable and Add uses the same field surface. Responsive mode changes presentation only: desktop Drawer ⇄ narrow BottomSheet without destroying or duplicating draft state.
 
 When narrow drag is not enabled, touch-operable Move up/Move down commands call the same same-day move operation, and the Edit scheduled-date field calls the same date-change operation used elsewhere. There is no mobile-specific task/order model.
+
+### 5.5.1 v1.0.4 date-header Add and lane geometry
+
+- `week.tsx` owns the compact per-date header Add control because it already owns the seven dated tracks and date-selection callback.
+- The control is an Astryx IconButton/Button leaf; Jig owns only its placement beside the date label.
+- The header Add handler uses the same canonical App callback as global Add, supplying the explicit originating date. It does not create another command path.
+- Remove the existing `.jig-week-add-task` footer action and any CSS/grid rules whose sole purpose is pinning that action to the bottom.
+- The desktop board uses equal-width columns with `align-items: start`/equivalent content-driven block sizing. Each lane may have a different height.
+- Empty lanes retain a modest minimum droppable body so cross-date drag remains usable. That minimum is a drag-target usability budget, not a visual equal-height requirement.
+- Drag destination index continues to derive from the canonical outstanding sequence; variable lane height has no effect on Task ordering semantics.
 
 ### 5.6 v1.0.4 state and interaction corrections
 
