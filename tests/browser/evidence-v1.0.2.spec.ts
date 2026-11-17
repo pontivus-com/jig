@@ -44,7 +44,7 @@ async function createReferenceData(page: Page): Promise<{
     });
   }
 
-  const completed = await apiCommand(page, {
+  await apiCommand(page, {
     type: "create",
     title: "Daily standup",
     scheduled_date: selected,
@@ -70,14 +70,12 @@ async function createReferenceData(page: Page): Promise<{
 }
 
 async function chooseDate(page: Page, date: string): Promise<void> {
-  const button = page.locator(`.jig-week-strip-date`).filter({
-    has: page.locator("strong", {
-      hasText: String(Number(date.slice(-2))),
-    }),
+  const day = String(Number(date.slice(-2)));
+  const button = page.locator(".jig-week-strip-date").filter({
+    has: page.locator("strong", { hasText: new RegExp(`^${day}$`) }),
   });
-  if (await button.count()) {
-    await button.first().click();
-  }
+  await expect(button.first()).toBeVisible();
+  await button.first().click();
 }
 
 async function navigateTo(
@@ -104,88 +102,116 @@ async function setTheme(page: Page, theme: "light" | "dark"): Promise<void> {
   await page.reload();
 }
 
-test("capture v1.0.2 reference screens", async ({ page }) => {
-  test.setTimeout(120_000);
-  await page.setViewportSize({ width: 1440, height: 900 });
+async function prepare(
+  page: Page,
+  viewport: { width: number; height: number },
+  theme: "light" | "dark" = "light",
+): Promise<{ today: string; selected: string }> {
+  await page.setViewportSize(viewport);
   await page.goto("/");
-  const { selected } = await createReferenceData(page);
-  await setTheme(page, "light");
+  const fixture = await createReferenceData(page);
+  await setTheme(page, theme);
+  return fixture;
+}
 
+test("capture desktop Week light", async ({ page }) => {
+  const { selected } = await prepare(page, { width: 1440, height: 900 });
   await navigateTo(page, "Week");
-  const weekDate = page.locator(`[data-date="${selected}"] .jig-date-heading-button`);
-  if (await weekDate.count()) {
-    await weekDate.click();
-  }
+  const selectedColumn = page.locator(`[data-date="${selected}"]`);
+  await selectedColumn.locator(".jig-date-heading-button").click();
   await expect(page.locator(".jig-week-board")).toBeVisible();
   await page.screenshot({
     path: `${EVIDENCE}/desktop-week-light.jpg`,
     type: "jpeg",
     quality: 92,
-    fullPage: false,
   });
+});
 
+test("capture desktop Day light", async ({ page }) => {
+  const { selected } = await prepare(page, { width: 1440, height: 900 });
   await navigateTo(page, "Day");
   await chooseDate(page, selected);
-  await expect(page.getByRole("heading", { name: "Attention", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Attention", exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: `${EVIDENCE}/desktop-day-light.jpg`,
     type: "jpeg",
     quality: 92,
-    fullPage: false,
   });
+});
 
+test("capture desktop History light", async ({ page }) => {
+  await prepare(page, { width: 1440, height: 900 });
   await navigateTo(page, "History");
-  await expect(page.getByRole("heading", { name: "History", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "History", exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: `${EVIDENCE}/desktop-history-light.jpg`,
     type: "jpeg",
     quality: 92,
-    fullPage: false,
   });
+});
 
+test("capture desktop Settings light", async ({ page }) => {
+  await prepare(page, { width: 1440, height: 900 });
   await navigateTo(page, "Settings");
-  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Settings", exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: `${EVIDENCE}/desktop-settings-light.jpg`,
     type: "jpeg",
     quality: 92,
-    fullPage: false,
   });
+});
 
-  await setTheme(page, "dark");
+test("capture desktop Week dark", async ({ page }) => {
+  const { selected } = await prepare(
+    page,
+    { width: 1440, height: 900 },
+    "dark",
+  );
   await navigateTo(page, "Week");
+  const selectedColumn = page.locator(`[data-date="${selected}"]`);
+  await selectedColumn.locator(".jig-date-heading-button").click();
   await page.screenshot({
     path: `${EVIDENCE}/desktop-week-dark.jpg`,
     type: "jpeg",
     quality: 92,
-    fullPage: false,
   });
+});
 
-  await setTheme(page, "light");
-  await page.setViewportSize({ width: 414, height: 900 });
+test("capture mobile Day light", async ({ page }) => {
+  const { selected } = await prepare(page, { width: 414, height: 900 });
   await navigateTo(page, "Day");
   await chooseDate(page, selected);
   await page.screenshot({
     path: `${EVIDENCE}/mobile-day-light.jpg`,
     type: "jpeg",
     quality: 92,
-    fullPage: false,
   });
+});
 
-  await page.setViewportSize({ width: 414, height: 980 });
-  const title = page.getByText("Legal — TTA workflow remediation", {
-    exact: true,
-  });
-  const card = title.locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
-  await card.getByRole("button", {
-    name: "Actions for Legal — TTA workflow remediation",
-  }).click();
+test("capture mobile editor light", async ({ page }) => {
+  const { selected } = await prepare(page, { width: 414, height: 980 });
+  await navigateTo(page, "Day");
+  await chooseDate(page, selected);
+
+  const card = page
+    .getByText("Legal — TTA workflow remediation", { exact: true })
+    .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
+  await card
+    .getByRole("button", {
+      name: "Actions for Legal — TTA workflow remediation",
+    })
+    .click();
   await card.getByRole("button", { name: "Edit", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.screenshot({
     path: `${EVIDENCE}/mobile-editor-light.jpg`,
     type: "jpeg",
     quality: 92,
-    fullPage: false,
   });
 });
