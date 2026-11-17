@@ -198,7 +198,7 @@ test("non-drag movement uses the same exact index semantics", async ({
         .filter(
           (task) =>
             task.completed_at === null &&
-            task.scheduled_date === firstDate,
+            task.scheduled_date === today,
         )
         .sort(
           (left, right) =>
@@ -364,7 +364,7 @@ test("narrow touch drag reorders within a date and does not open the workspace",
         .filter(
           (task) =>
             task.completed_at === null &&
-            task.scheduled_date === today,
+            task.scheduled_date === firstDate,
         )
         .sort(
           (left, right) =>
