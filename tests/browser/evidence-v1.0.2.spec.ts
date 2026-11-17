@@ -80,6 +80,25 @@ async function chooseDate(page: Page, date: string): Promise<void> {
   }
 }
 
+async function navigateTo(
+  page: Page,
+  destination: "Week" | "Day" | "History" | "Settings",
+): Promise<void> {
+  const desktop = page
+    .locator(".jig-sidebar")
+    .getByRole("button", { name: destination, exact: true });
+  if (await desktop.isVisible()) {
+    await desktop.click();
+    return;
+  }
+
+  const menu = page.locator(".jig-mobile-destination-menu");
+  await menu.locator("summary").click();
+  await menu
+    .getByRole("button", { name: destination, exact: true })
+    .click();
+}
+
 async function setTheme(page: Page, theme: "light" | "dark"): Promise<void> {
   await page.evaluate((value) => localStorage.setItem("jig-theme", value), theme);
   await page.reload();
@@ -91,7 +110,7 @@ test("capture v1.0.2 reference screens", async ({ page }) => {
   const { selected } = await createReferenceData(page);
   await setTheme(page, "light");
 
-  await page.getByRole("button", { name: "Week", exact: true }).click();
+  await navigateTo(page, "Week");
   const weekDate = page.locator(`[data-date="${selected}"] .jig-date-heading-button`);
   if (await weekDate.count()) {
     await weekDate.click();
@@ -104,7 +123,7 @@ test("capture v1.0.2 reference screens", async ({ page }) => {
     fullPage: false,
   });
 
-  await page.getByRole("button", { name: "Day", exact: true }).click();
+  await navigateTo(page, "Day");
   await chooseDate(page, selected);
   await expect(page.getByRole("heading", { name: "Attention", exact: true })).toBeVisible();
   await page.screenshot({
@@ -114,7 +133,7 @@ test("capture v1.0.2 reference screens", async ({ page }) => {
     fullPage: false,
   });
 
-  await page.getByRole("button", { name: "History", exact: true }).click();
+  await navigateTo(page, "History");
   await expect(page.getByRole("heading", { name: "History", exact: true })).toBeVisible();
   await page.screenshot({
     path: `${EVIDENCE}/desktop-history-light.jpg`,
@@ -123,7 +142,7 @@ test("capture v1.0.2 reference screens", async ({ page }) => {
     fullPage: false,
   });
 
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await navigateTo(page, "Settings");
   await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
   await page.screenshot({
     path: `${EVIDENCE}/desktop-settings-light.jpg`,
@@ -133,7 +152,7 @@ test("capture v1.0.2 reference screens", async ({ page }) => {
   });
 
   await setTheme(page, "dark");
-  await page.getByRole("button", { name: "Week", exact: true }).click();
+  await navigateTo(page, "Week");
   await page.screenshot({
     path: `${EVIDENCE}/desktop-week-dark.jpg`,
     type: "jpeg",
@@ -143,7 +162,7 @@ test("capture v1.0.2 reference screens", async ({ page }) => {
 
   await setTheme(page, "light");
   await page.setViewportSize({ width: 414, height: 900 });
-  await page.getByRole("button", { name: "Day", exact: true }).click();
+  await navigateTo(page, "Day");
   await chooseDate(page, selected);
   await page.screenshot({
     path: `${EVIDENCE}/mobile-day-light.jpg`,
