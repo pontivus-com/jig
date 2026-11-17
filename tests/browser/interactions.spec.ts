@@ -160,8 +160,8 @@ test("priority edits preserve established manual order", async ({
     )
     .map((task) => task.id);
 
-  await runTaskAction(page, "Priority edited task", "Edit");
-  const workspace = page.locator('section[aria-label="Edit task Priority edited task"]');
+  await runTaskAction(page, "Priority edited task", "Open / edit");
+  const workspace = page.getByRole("dialog", { name: "Priority edited task" });
   await expect(workspace).toBeVisible({ timeout: 5_000 });
   const highPriority = workspace.getByRole("radio", {
     name: "High",
@@ -172,7 +172,7 @@ test("priority edits preserve established manual order", async ({
   await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click({ timeout: 5_000 });
-  await expect(workspace).toBeHidden({ timeout: 5_000 });
+  await expect(workspace).toBeVisible({ timeout: 5_000 });
 
   expect((await taskByTitle(page, "Priority edited task")).priority).toBe(
     "HIGH",
@@ -198,8 +198,8 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   await createTask(page, "Editable metadata task", today);
   await page.reload();
 
-  await runTaskAction(page, "Editable metadata task", "Edit");
-  const workspace = page.locator('section[aria-label="Edit task Editable metadata task"]');
+  await runTaskAction(page, "Editable metadata task", "Open / edit");
+  const workspace = page.getByRole("dialog", { name: "Editable metadata task" });
   await workspace.getByLabel("Context").fill("Client Alpha");
   await workspace
     .getByLabel("Reference")
@@ -208,7 +208,7 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
-  await expect(workspace).toBeHidden();
+  await expect(workspace).toBeVisible();
 
   const edited = await taskByTitle(page, "Editable metadata task");
   expect(edited.context).toBe("Client Alpha");
@@ -216,35 +216,13 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   expect(edited.note).toBe("Prepare clause comments.");
 });
 
-test("Planner date inspection does not retarget or discard an active edit draft", async ({
+test("date headers are signifiers rather than selectable Planner state", async ({
   page,
 }) => {
-  const today = await browserCivilDate(page);
-  await createTask(page, "Draft identity contract", today);
-  await page.reload();
-  await page.setViewportSize({ width: 390, height: 844 });
-
-  await runTaskAction(page, "Draft identity contract", "Edit");
-  const workspace = page.locator(
-    'section[aria-label="Edit task Draft identity contract"]',
-  );
-  await expect(workspace).toBeVisible();
-  await workspace.getByLabel("Title").fill("Unsaved draft identity");
-
-  await page
-    .locator('.jig-week-strip-date:not([aria-current="date"])')
-    .first()
-    .click();
-
-  await expect(workspace).toBeVisible();
-  await expect(workspace.getByLabel("Title")).toHaveValue(
-    "Unsaved draft identity",
-  );
-  await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
-
-  expect((await taskByTitle(page, "Draft identity contract")).title).toBe(
-    "Draft identity contract",
-  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('[aria-current="date"]')).toHaveCount(0);
+  await expect(page.locator(".jig-date-heading-button")).toHaveCount(0);
+  await expect(page.locator(".jig-week-date-signifier > strong")).toHaveCount(7);
 });
 
 test("real pointer drag moves a Task across dated Planner drop zones", async ({
@@ -265,8 +243,8 @@ test("real pointer drag moves a Task across dated Planner drop zones", async ({
   await expect(card).toBeVisible();
   await expect(destination).toBeVisible();
 
-  const dragHandle = card.locator(".jig-task-drag-handle");
-  const sourceBox = await dragHandle.boundingBox();
+  const dragBody = card.locator(".jig-task-body");
+  const sourceBox = await dragBody.boundingBox();
   const destinationBox = await destination.boundingBox();
   expect(sourceBox).not.toBeNull();
   expect(destinationBox).not.toBeNull();
@@ -374,20 +352,21 @@ test("deletion requires confirmation and removes the canonical Task", async ({
     .toBe(false);
 });
 
-test("narrow Planner reflows to one selected-date list and Today remains a shortcut", async ({
+test("narrow Planner renders the same seven dates as stacked sections", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
-  await createTask(page, "Narrow selected task", today);
+  await createTask(page, "Narrow stacked task", today);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
 
   await expect(page.locator(".jig-week-board")).toHaveCount(0);
-  await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
+  await expect(page.locator(".jig-planner-narrow .jig-week-column")).toHaveCount(7);
+  await expect(page.locator(".jig-week-strip-date")).toHaveCount(0);
   await expect(
     page
       .locator(".jig-task-card")
-      .filter({ hasText: "Narrow selected task" })
+      .filter({ hasText: "Narrow stacked task" })
       .first(),
   ).toBeVisible();
 
@@ -395,7 +374,7 @@ test("narrow Planner reflows to one selected-date list and Today remains a short
   await expect(
     page
       .locator(".jig-task-card")
-      .filter({ hasText: "Narrow selected task" })
+      .filter({ hasText: "Narrow stacked task" })
       .first(),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Day", exact: true })).toHaveCount(0);
@@ -434,7 +413,7 @@ test("reduced motion preserves non-drag movement semantics", async ({
   ).toHaveCSS("transition-property", "none");
 });
 
-test("long Planner columns keep sticky date controls reachable while tasks scroll", async ({
+test("long Planner lanes grow with content without an internal lane scroller", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -445,15 +424,21 @@ test("long Planner columns keep sticky date controls reachable while tasks scrol
 
   const column = page.locator(`[data-date="${today}"]`);
   await expect(column).toBeVisible();
-  const lastTask = column.getByText("Long list task 18", {
-    exact: true,
+  const geometry = await column.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      overflowY: style.overflowY,
+    };
   });
-  await lastTask.scrollIntoViewIfNeeded();
-  await expect(lastTask).toBeVisible();
+  expect(geometry.scrollHeight).toBeLessThanOrEqual(geometry.clientHeight + 1);
+  expect(geometry.overflowY).not.toBe("auto");
+  expect(geometry.overflowY).not.toBe("scroll");
 
   await expect(
     column.getByRole("button", {
-      name: /^Add task on /,
+      name: /^Add task to /,
     }),
   ).toBeVisible();
 });
