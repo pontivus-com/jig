@@ -210,11 +210,7 @@ export function TaskRow({
       isSelected={isSelected}
       align="first-line"
       startContent={
-        <span
-          className="jig-task-card-leading"
-          onPointerDown={stopPointer}
-          onClick={(event) => event.stopPropagation()}
-        >
+        <span className="jig-task-card-leading">
           <CheckboxInput
             label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
             isLabelHidden
@@ -222,22 +218,22 @@ export function TaskRow({
             onChange={onToggleComplete}
             size="sm"
           />
+          {completed ? null : (
+            <span
+              {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
+              className="jig-task-drag-handle"
+              aria-hidden="true"
+              title="Drag task"
+              onClick={(event) => event.stopPropagation()}
+            >
+              ≡
+            </span>
+          )}
         </span>
       }
       label={
         <div className="jig-task-body">
           <div className="jig-task-title-row">
-            {completed ? null : (
-              <span
-                {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
-                className="jig-task-drag-handle"
-                aria-hidden="true"
-                title="Drag task"
-                onClick={(event) => event.stopPropagation()}
-              >
-                ≡
-              </span>
-            )}
             <span
               className={
                 completed
