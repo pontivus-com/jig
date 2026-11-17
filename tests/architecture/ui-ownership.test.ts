@@ -169,6 +169,39 @@ describe("UI ownership architecture", () => {
     );
   });
 
+  it("uses the canonical wordmark and governed semantic icon system", () => {
+    const header = source("ui/src/planner-header.tsx");
+    const week = source("ui/src/week.tsx");
+    const taskRow = source("ui/src/task-row.tsx");
+    const icons = source("ui/src/jig-icons.tsx");
+
+    expect(header).toContain('assets/jig-logo.svg');
+    expect(header).toContain('assets/jig-logo-on-dark.svg');
+    expect(header).not.toContain("jig-symbol");
+    expect(header).not.toContain("<strong>Jig</strong>");
+
+    expect(header).toContain('icon: "viewColumns"');
+    expect(header).toContain('icon: "wrench"');
+    expect(header).toContain("JIG_ICON_KEYS.history");
+    expect(header).toContain('<JigIcon name="add"');
+    expect(week).toContain('<JigIcon name="add"');
+    expect(taskRow).toContain('<JigIcon name="edit"');
+    expect(taskRow).toContain('<JigIcon name="delete"');
+    expect(taskRow).toContain('icon="externalLink"');
+    expect(taskRow).toContain('icon="copy"');
+    expect(taskRow).toContain('icon="moreHorizontal"');
+    expect(taskRow).toContain('icon="clock"');
+
+    expect(icons).toContain("satisfies Record<JigIconName, NamespacedIconName>");
+    expect(icons).not.toContain("as IconName");
+
+    for (const content of [header, week, taskRow]) {
+      expect(content).not.toContain('aria-hidden="true">+</span>');
+      expect(content).not.toContain("•••");
+      expect(content).not.toContain("≡");
+    }
+  });
+
   it("keeps the application frame full-bleed and header geometry governed", () => {
     const css = source("ui/src/styles.css");
 
