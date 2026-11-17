@@ -265,7 +265,8 @@ test("real pointer drag moves a Task across dated Week drop zones", async ({
   await expect(card).toBeVisible();
   await expect(destination).toBeVisible();
 
-  const sourceBox = await card.boundingBox();
+  const dragHandle = card.locator(".jig-task-drag-handle");
+  const sourceBox = await dragHandle.boundingBox();
   const destinationBox = await destination.boundingBox();
   expect(sourceBox).not.toBeNull();
   expect(destinationBox).not.toBeNull();
@@ -346,7 +347,7 @@ test("deletion requires confirmation and removes the canonical Task", async ({
   });
   await expect(inspector).toBeVisible();
   await inspector
-    .getByRole("button", { name: "Delete task…" })
+    .getByRole("button", { name: "Delete…", exact: true })
     .click();
 
   const confirmation = page.getByRole("alertdialog");
