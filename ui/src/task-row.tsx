@@ -20,7 +20,6 @@ export interface TaskRowProps {
   readonly onEdit: () => void;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
-  readonly onMoveToDate?: (() => void) | undefined;
 }
 
 function isSafeWebReference(value: string): boolean {
@@ -97,13 +96,11 @@ function TaskActionMenu({
   onEdit,
   onMoveUp,
   onMoveDown,
-  onMoveToDate,
 }: Readonly<{
   task: Task;
   onEdit: () => void;
   onMoveUp?: (() => void) | undefined;
   onMoveDown?: (() => void) | undefined;
-  onMoveToDate?: (() => void) | undefined;
 }>): React.ReactElement {
   const items = [
     {
@@ -111,15 +108,6 @@ function TaskActionMenu({
       label: "Edit",
       onClick: onEdit,
     },
-    ...(onMoveToDate === undefined
-      ? []
-      : [
-          {
-            id: "move-date",
-            label: "Move to date…",
-            onClick: onMoveToDate,
-          },
-        ]),
     ...(onMoveUp === undefined
       ? []
       : [
@@ -191,7 +179,6 @@ export function TaskRow({
   onEdit,
   onMoveUp,
   onMoveDown,
-  onMoveToDate,
 }: TaskRowProps): React.ReactElement {
   const completed = task.completed_at !== null;
 
@@ -199,6 +186,7 @@ export function TaskRow({
     <ListItem
       {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
+      {...(onSelect === undefined ? {} : { onClick: onSelect })}
       className={[
         "jig-task-card",
         isSelected ? "jig-task-card-selected" : "",
@@ -228,12 +216,7 @@ export function TaskRow({
           {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
           className="jig-task-body"
           {...(completed ? {} : { tabIndex: 0 })}
-          {...(onSelect === undefined
-            ? {}
-            : {
-                onClick: onSelect,
-                onFocus: onSelect,
-              })}
+          {...(onSelect === undefined ? {} : { onFocus: onSelect })}
         >
           <div className="jig-task-title-row">
             {completed ? null : (
@@ -264,7 +247,6 @@ export function TaskRow({
           onEdit={onEdit}
           {...(onMoveUp === undefined ? {} : { onMoveUp })}
           {...(onMoveDown === undefined ? {} : { onMoveDown })}
-          {...(onMoveToDate === undefined ? {} : { onMoveToDate })}
         />
       }
     />
