@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1 brand and application-theme contract.  
+**Status:** Canonical v1 brand and application-theme contract, amended 2026-11-17 with the Astryx-first CSS ownership rule.  
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, brand palette, Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
