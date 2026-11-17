@@ -187,7 +187,19 @@ export function TaskEditor({
                 year: "numeric",
               },
             )}
-            {...(isSaving ? {} : { onOpenChange })}
+            endContent={
+              isNarrow ? (
+                <Button
+                  type="button"
+                  label="Cancel"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onOpenChange(false)}
+                  isDisabled={isSaving}
+                />
+              ) : undefined
+            }
+            {...(!isNarrow && !isSaving ? { onOpenChange } : {})}
           />
 
           <form
