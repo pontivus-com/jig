@@ -52,12 +52,26 @@ async function installNotificationMock(
   }, permission);
 }
 
+function reminderStart(): Date {
+  const start = new Date();
+  start.setHours(9, 59, 30, 0);
+  return start;
+}
+
+function civilDate(date: Date): string {
+  return [
+    date.getFullYear().toString().padStart(4, "0"),
+    (date.getMonth() + 1).toString().padStart(2, "0"),
+    date.getDate().toString().padStart(2, "0"),
+  ].join("-");
+}
+
 async function prepareReminderPage(
   page: Page,
   permission: "default" | "granted" | "denied",
 ): Promise<void> {
   await page.clock.install({
-    time: new Date("2026-11-17T09:59:30"),
+    time: reminderStart(),
   });
   await installNotificationMock(page, permission);
   await page.goto("/");
@@ -72,7 +86,7 @@ test("visible due reminder uses the in-app toast and not browser Notification", 
   await apiCommand(page, {
     type: "create",
     title: "Visible reminder",
-    scheduled_date: "2026-11-17",
+    scheduled_date: civilDate(reminderStart()),
     priority: "NORMAL",
     context: null,
     reference: null,
@@ -98,7 +112,7 @@ test("hidden open page with granted permission uses one browser Notification", a
   await apiCommand(page, {
     type: "create",
     title: "Hidden reminder",
-    scheduled_date: "2026-11-17",
+    scheduled_date: civilDate(reminderStart()),
     priority: "NORMAL",
     context: null,
     reference: null,
@@ -123,7 +137,7 @@ test("hidden open page with granted permission uses one browser Notification", a
     title: "Jig reminder",
     body: "Hidden reminder",
   });
-  expect(calls[0]?.tag).toContain("2026-11-17|10:00");
+  expect(calls[0]?.tag).toContain(`${civilDate(reminderStart())}|10:00`);
 
   await page.clock.fastForward(60_000);
   expect(
