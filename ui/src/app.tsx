@@ -319,8 +319,7 @@ export function App(): React.ReactElement {
       destination !== "day" ||
       canonical === null ||
       workspaceMode === "edit" ||
-      workspaceMode === "create" ||
-      workspaceMode === "move"
+      workspaceMode === "create"
     ) {
       return;
     }
