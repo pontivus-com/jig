@@ -9,20 +9,20 @@ test.beforeEach(async ({ page }) => {
 
 async function navigateTo(
   page: Page,
-  destination: "Week" | "Day" | "History" | "Settings",
+  destination: "History" | "Settings",
 ): Promise<void> {
-  const navigation = page
-    .locator(".jig-primary-nav")
-    .getByRole("button", { name: destination, exact: true });
-  if (await navigation.isVisible()) {
-    await navigation.click();
+  const direct = page.getByRole("button", {
+    name: destination,
+    exact: true,
+  });
+  if (await direct.isVisible()) {
+    await direct.click();
     return;
   }
 
-  await page.locator(".jig-mobile-destination-trigger").click();
+  await page.getByRole("button", { name: "Open navigation menu" }).click();
   await page
-    .locator(".jig-primary-nav")
-    .getByRole("button", { name: destination, exact: true })
+    .getByRole("menuitem", { name: destination, exact: true })
     .click();
 }
 
@@ -39,9 +39,9 @@ async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
 }
 
 test("real runtime supports title-first create, completion, History and reopen", async ({ page }) => {
-  await expect(
-    page.getByRole("button", { name: "Day", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: "Planner home" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Day", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Week", exact: true })).toHaveCount(0);
 
   await addTitleOnlyTask(page, "Browser acceptance task");
   await page.getByLabel("Complete Browser acceptance task").click();
@@ -126,14 +126,14 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
 
 test("responsive reflow preserves an open workspace draft and appearance remains presentation-only", async ({ page }) => {
   await page.getByRole("button", { name: /Add task$/ }).first().click();
-  const dockedWorkspace = page.locator('section[aria-label="Add task"]');
-  await dockedWorkspace.getByLabel("Title").fill("Draft survives reflow");
+  const desktopWorkspace = page.getByRole("dialog", { name: "Add task" });
+  await desktopWorkspace.getByLabel("Title").fill("Draft survives reflow");
 
   await page.setViewportSize({ width: 640, height: 900 });
-  const drawer = page.getByRole("dialog", { name: "Add task" });
-  await expect(drawer).toBeVisible();
-  await expect(drawer.getByLabel("Title")).toHaveValue("Draft survives reflow");
-  await drawer.getByRole("button", { name: "Cancel", exact: true }).click();
+  const narrowWorkspace = page.getByRole("dialog", { name: "Add task" });
+  await expect(narrowWorkspace).toBeVisible();
+  await expect(narrowWorkspace.getByLabel("Title")).toHaveValue("Draft survives reflow");
+  await narrowWorkspace.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
   await navigateTo(page, "Settings");
@@ -175,7 +175,7 @@ test("System, Light and Dark use the canonical Jig theme and remain presentation
     fetch("/api/v1/tasks").then((response) => response.json()),
   );
 
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await navigateTo(page, "Settings");
   await expect(
     page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();
