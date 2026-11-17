@@ -30,7 +30,7 @@ async function runTaskAction(
 ): Promise<void> {
   const card = await taskCard(page, title);
   await card.getByRole("button", { name: `Actions for ${title}` }).click();
-  await card.getByRole("button", { name: action, exact: true }).click();
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
 }
 
 async function createTask(
