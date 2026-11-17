@@ -294,7 +294,7 @@ body {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 8px;
-    width: 100%;
+    width: min(1168px, 100%);
     min-width: 0;
     padding-block-end: 12px;
   }
