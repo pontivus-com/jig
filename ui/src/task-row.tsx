@@ -223,6 +223,13 @@ export function TaskRow({
         <div
           {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
           className="jig-task-body"
+          {...(completed ? {} : { tabIndex: 0 })}
+          {...(onSelect === undefined
+            ? {}
+            : {
+                onClick: onSelect,
+                onFocus: onSelect,
+              })}
         >
           <div className="jig-task-title-row">
             {completed ? null : (
@@ -234,35 +241,15 @@ export function TaskRow({
                 ≡
               </span>
             )}
-            {onSelect === undefined ? (
-              <span
-                className={
-                  completed
-                    ? "jig-task-title jig-task-title-completed"
-                    : "jig-task-title"
-                }
-              >
-                {task.title}
-              </span>
-            ) : (
-              <button
-                type="button"
-                className={[
-                  "jig-task-select",
-                  "jig-task-title",
-                  completed ? "jig-task-title-completed" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onPointerDown={stopPointer}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect();
-                }}
-              >
-                {task.title}
-              </button>
-            )}
+            <span
+              className={
+                completed
+                  ? "jig-task-title jig-task-title-completed"
+                  : "jig-task-title"
+              }
+            >
+              {task.title}
+            </span>
           </div>
           <TaskMetadata task={task} />
         </div>
