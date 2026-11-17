@@ -126,6 +126,18 @@ describe("architecture compliance", () => {
           text: "return value as ISOTimeString;",
         }),
         expect.objectContaining({
+          path: "ui/src/drag.tsx",
+          text: "ref={ref as Ref<HTMLDivElement>}",
+        }),
+        expect.objectContaining({
+          path: "ui/src/http.ts",
+          text: "return value as Record<string, unknown>;",
+        }),
+        expect.objectContaining({
+          path: "ui/src/http.ts",
+          text: "? (payload as Record<string, unknown>)",
+        }),
+        expect.objectContaining({
           path: "ui/src/task-row.tsx",
           text: "const rowRef = sortable.ref as Ref<HTMLLIElement>;",
         }),
@@ -135,6 +147,6 @@ describe("architecture compliance", () => {
         }),
       ]),
     );
-    expect(assertions).toHaveLength(4);
+    expect(assertions).toHaveLength(7);
   });
 });
