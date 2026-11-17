@@ -1,6 +1,7 @@
 import {
   expect,
   test,
+  type Locator,
   type Page,
 } from "@playwright/test";
 import {
@@ -52,6 +53,115 @@ async function createTask(
     note: null,
     reminder_time: null,
   });
+}
+
+async function mouseDrag(
+  page: Page,
+  source: Locator,
+  target: Locator,
+): Promise<void> {
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (sourceBox === null || targetBox === null) {
+    throw new Error("Drag geometry unavailable");
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 8,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 3 },
+  );
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+  await page.mouse.move(
+    targetBox.x + targetBox.width / 2,
+    targetBox.y + targetBox.height / 2,
+    { steps: 12 },
+  );
+  await page.mouse.up();
+}
+
+async function touchDrag(
+  page: Page,
+  source: Locator,
+  target: Locator,
+): Promise<void> {
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (sourceBox === null || targetBox === null) {
+    throw new Error("Touch drag geometry unavailable");
+  }
+
+  const pointerId = 41;
+  const start = {
+    x: sourceBox.x + sourceBox.width / 2,
+    y: sourceBox.y + sourceBox.height / 2,
+  };
+  const end = {
+    x: targetBox.x + targetBox.width / 2,
+    y: targetBox.y + targetBox.height / 2,
+  };
+
+  await source.dispatchEvent("pointerdown", {
+    pointerId,
+    pointerType: "touch",
+    isPrimary: true,
+    button: 0,
+    buttons: 1,
+    clientX: start.x,
+    clientY: start.y,
+  });
+  await page.waitForTimeout(280);
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
+  for (let step = 1; step <= 8; step += 1) {
+    const progress = step / 8;
+    await page.evaluate(
+      ({ id, x, y }) => {
+        document.dispatchEvent(
+          new PointerEvent("pointermove", {
+            pointerId: id,
+            pointerType: "touch",
+            isPrimary: true,
+            button: 0,
+            buttons: 1,
+            clientX: x,
+            clientY: y,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      },
+      {
+        id: pointerId,
+        x: start.x + (end.x - start.x) * progress,
+        y: start.y + (end.y - start.y) * progress,
+      },
+    );
+  }
+
+  await page.evaluate(
+    ({ id, x, y }) => {
+      document.dispatchEvent(
+        new PointerEvent("pointerup", {
+          pointerId: id,
+          pointerType: "touch",
+          isPrimary: true,
+          button: 0,
+          buttons: 0,
+          clientX: x,
+          clientY: y,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    },
+    { id: pointerId, x: end.x, y: end.y },
+  );
 }
 
 test("unfinished prior-day cards roll into today in the canonical Planner", async ({
@@ -213,9 +323,17 @@ test("date headers are signifiers rather than selectable Planner state", async (
   await expect(page.locator(".jig-week-date-signifier > strong")).toHaveCount(7);
 });
 
-test("real pointer drag moves a Task across dated Planner drop zones", async ({
+test("whole-card desktop drag moves exactly once without runtime errors or selection", async ({
   page,
 }) => {
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      runtimeErrors.push(message.text());
+    }
+  });
+
   const today = await browserCivilDate(page);
   const dayOfWeek = await page.evaluate(() => new Date().getDay());
   const offset = dayOfWeek === 0 ? -1 : 1;
@@ -225,40 +343,11 @@ test("real pointer drag moves a Task across dated Planner drop zones", async ({
   await page.reload();
 
   const card = await taskCard(page, "Pointer drag contract");
-  const destination = page.locator(
-    `[data-date="${destinationDate}"]`,
-  );
+  const destination = page.locator(`[data-date="${destinationDate}"]`);
   await expect(card).toBeVisible();
   await expect(destination).toBeVisible();
 
-  const dragBody = card.locator(".jig-task-body");
-  const sourceBox = await dragBody.boundingBox();
-  const destinationBox = await destination.boundingBox();
-  expect(sourceBox).not.toBeNull();
-  expect(destinationBox).not.toBeNull();
-  if (sourceBox === null || destinationBox === null) {
-    throw new Error("Drag geometry unavailable");
-  }
-
-  await page.mouse.move(
-    sourceBox.x + sourceBox.width / 2,
-    sourceBox.y + sourceBox.height / 2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(
-    sourceBox.x + sourceBox.width / 2 + 8,
-    sourceBox.y + sourceBox.height / 2 + 8,
-    { steps: 3 },
-  );
-  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
-
-  await page.mouse.move(
-    destinationBox.x + destinationBox.width / 2,
-    destinationBox.y + Math.min(120, destinationBox.height / 2),
-    { steps: 12 },
-  );
-  await expect(destination).toHaveClass(/jig-date-drop-zone-active/);
-  await page.mouse.up();
+  await mouseDrag(page, card, destination);
 
   await expect
     .poll(
@@ -266,6 +355,73 @@ test("real pointer drag moves a Task across dated Planner drop zones", async ({
         (await taskByTitle(page, "Pointer drag contract")).scheduled_date,
     )
     .toBe(destinationDate);
+  await expect(
+    page.getByRole("dialog", { name: "Pointer drag contract" }),
+  ).toHaveCount(0);
+  await page.reload();
+  expect(
+    (await taskByTitle(page, "Pointer drag contract")).scheduled_date,
+  ).toBe(destinationDate);
+  expect(runtimeErrors).toEqual([]);
+});
+
+test("narrow touch drag reorders within a date and does not open the workspace", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Touch first", today);
+  await createTask(page, "Touch second", today);
+  await page.reload();
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const source = await taskCard(page, "Touch first");
+  const target = await taskCard(page, "Touch second");
+  await touchDrag(page, source, target);
+
+  await expect
+    .poll(async () =>
+      (await apiState(page)).tasks
+        .filter(
+          (task) =>
+            task.completed_at === null &&
+            task.scheduled_date === today,
+        )
+        .sort(
+          (left, right) =>
+            (left.position ?? 0) - (right.position ?? 0),
+        )
+        .map((task) => task.title),
+    )
+    .toEqual(["Touch second", "Touch first"]);
+  await expect(page.getByRole("dialog", { name: "Touch first" })).toHaveCount(0);
+});
+
+test("narrow touch drag moves into an empty adjacent date and persists", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  const dayOfWeek = await page.evaluate(() => new Date().getDay());
+  const offset = dayOfWeek === 0 ? -1 : 1;
+  const destinationDate = await browserCivilDate(page, offset);
+
+  await createTask(page, "Touch cross-date", today);
+  await page.reload();
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const source = await taskCard(page, "Touch cross-date");
+  const target = page.locator(`[data-date="${destinationDate}"]`);
+  await touchDrag(page, source, target);
+
+  await expect
+    .poll(
+      async () =>
+        (await taskByTitle(page, "Touch cross-date")).scheduled_date,
+    )
+    .toBe(destinationDate);
+  await page.reload();
+  expect((await taskByTitle(page, "Touch cross-date")).scheduled_date).toBe(
+    destinationDate,
+  );
 });
 
 test("references stay data-only: HTTP(S) opens and non-HTTP stays copy-only", async ({
@@ -343,7 +499,7 @@ test("deletion requires confirmation and removes the canonical Task", async ({
     .toBe(false);
 });
 
-test("narrow Planner renders the same seven dates as stacked sections", async ({
+test("narrow Planner reflows the same seven-date semantic board", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -351,8 +507,9 @@ test("narrow Planner renders the same seven dates as stacked sections", async ({
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
 
-  await expect(page.locator(".jig-week-board")).toHaveCount(0);
-  await expect(page.locator(".jig-planner-narrow .jig-week-column")).toHaveCount(7);
+  await expect(page.locator(".jig-week-board")).toHaveCount(1);
+  await expect(page.locator(".jig-week-board .jig-week-column")).toHaveCount(7);
+  await expect(page.locator(".jig-planner-narrow")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(0);
   await expect(
     page
