@@ -519,8 +519,8 @@ Remove layout mode as a drag capability switch.
 4. Use the pinned `PointerSensor` for mouse, touch and pen with pointer-specific activation constraints:
    - mouse/pen: 5px distance threshold;
    - touch: approximately 250ms delay with 5px tolerance so vertical page scrolling remains usable until drag intent is established.
-5. Checkbox/menu/reference controls remain outside the handle and are protected by dnd-kit's interactive-element activation behavior plus existing pointer propagation boundaries.
-6. Same-day Move up/down and Edit date remain non-drag alternatives using the same canonical commands.
+6. Checkbox/menu/reference/form controls remain genuine interactive descendants and are protected by dnd-kit's interactive-element activation behavior plus existing pointer propagation boundaries.
+7. Same-day Move up/down and Edit date remain non-drag alternatives using the same canonical commands.
 
 No touch-specific ordering model, gesture framework or second DnD library is permitted.
 
@@ -586,7 +586,7 @@ Use the pinned Astryx icon registry as the one reusable icon system.
 |---|---|
 | Previous / Next | `chevronLeft` / `chevronRight` |
 | Planner | `viewColumns` |
-| History | `checkDouble` |
+| History | `jig:history` namespaced extension |
 | Settings | `wrench` |
 | Mobile navigation trigger | `menu` |
 | Task overflow | `moreHorizontal` |
@@ -597,12 +597,14 @@ Use the pinned Astryx icon registry as the one reusable icon system.
 | Move up/down | `arrowUp` / `arrowDown` |
 | Repository health/warning/error/unknown | existing `success/warning/error/info` |
 
-Astryx 0.7.13 does not expose a built-in semantic Add/plus name. Implement only the missing Jig-owned glyph through Astryx's documented extension seam:
+Astryx 0.7.13 does not expose true semantic names for Add, History, Edit or Delete. Implement only those missing Jig-owned meanings through Astryx's documented extension seam:
 
-- one namespaced key, `jig:add`;
-- one small bundled 24×24 inline SVG fallback in a Jig icon module;
-- resolve through `getExtendedIcon`/`Icon` so themes can override the namespaced key;
+- namespaced keys: `jig:add`, `jig:history`, `jig:edit`, `jig:delete`;
+- one small Jig icon module with bundled 24×24 inline SVG fallbacks;
+- resolve through `getExtendedIcon`/`Icon` so themes can override the namespaced keys;
 - no Lucide/Heroicons dependency and no second icon registry.
+
+Task menus use `jig:edit`, built-in `check` for Complete/Reopen, built-in `arrowUp`/`arrowDown` for movement and `jig:delete` for Delete. Priority rows retain text plus current-priority check because High/Normal/Low are semantic values rather than generic icon meanings.
 
 Date/global Add use `IconButton` or Button `icon` with that semantic Jig icon. HTTP references show `externalLink`; copy references show `copy`. Essential meaning remains in accessible labels/text.
 
