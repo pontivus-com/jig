@@ -21,11 +21,6 @@ export class PlanningError extends Error {
   }
 }
 
-export interface DayAttention {
-  readonly carried_over: readonly Task[];
-  readonly scheduled: readonly Task[];
-}
-
 export interface HistoryGroup {
   readonly completion_date: string;
   readonly tasks: readonly Task[];
@@ -613,34 +608,6 @@ export function outstandingForDate(
   assertTaskSet(tasks);
   assertCivilDate(scheduledDate);
   return activeSequence(tasks, scheduledDate);
-}
-
-export function dayAttention(
-  tasks: readonly Task[],
-  selectedDate: string,
-): DayAttention {
-  assertTaskSet(tasks);
-  assertCivilDate(selectedDate);
-
-  const carriedOver = tasks
-    .filter(
-      (task) =>
-        task.completed_at === null &&
-        task.scheduled_date < selectedDate,
-    )
-    .sort((left, right) => {
-      const dateComparison = left.scheduled_date.localeCompare(
-        right.scheduled_date,
-      );
-      return dateComparison !== 0
-        ? dateComparison
-        : (left.position ?? 0) - (right.position ?? 0);
-    });
-
-  return {
-    carried_over: carriedOver,
-    scheduled: activeSequence(tasks, selectedDate),
-  };
 }
 
 export function completedForScheduledDate(
