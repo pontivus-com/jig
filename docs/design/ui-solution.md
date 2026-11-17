@@ -144,14 +144,14 @@ Use explicit Save/Cancel, persistent form errors on invalid data or server refus
 | UI concern | Canonical owner |
 |---|---|
 | Application frame and responsive primary navigation | Astryx AppShell + public SideNav/mobile-navigation APIs; Jig owns destination state, not shell mechanics |
-| Buttons, icon buttons, menus/popovers, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
+| Buttons, icon buttons, links, menus/popovers, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
 | Sortable rows, drop zones, drag overlays, keyboard drag, pointer/touch gesture lifecycle | @dnd-kit/react only; do not activate Astryx List createReorderable on the same row |
 | Week/date bucket composition, Day selected-date sequence, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
 | Scheduled date, ordering, daily rollover, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
 | Task reads/writes and generic repository synchronization status | Bun service with SQLite plus isolated repository integration adapter |
 | Reminder due eligibility and presentation while browser is open | One browser-side timer/eligibility monitor + Astryx useToast + browser Notification API; no background sender/service worker |
 
-CSS ownership follows the same table. Jig may style its own page/region/card wrappers and public root classes it supplies, but it does not style descendants that belong to an Astryx component. Governed outer dimensions may use explicit values; ordinary spacing, radius, typography and control sizing use Astryx public tokens/props. Where desktop and narrow information hierarchy differs, React selects the correct composition at the one semantic breakpoint; CSS is reserved for pure reflow/density inside that composition. Superseded rules are deleted rather than counteracted later in the stylesheet.
+CSS ownership follows the same table. Jig may style its own page/region/card wrappers and public root classes it supplies, but it does not style descendants that belong to an Astryx component. Reusable action/navigation mechanics use Astryx Button/IconButton/Link rather than raw `<button>`/`<a>` plus local reset/focus/press CSS, unless a documented public-API incompatibility requires the smallest semantic fallback. Governed outer dimensions may use explicit values; ordinary spacing, radius, typography and control sizing use Astryx public tokens/props. Where desktop and narrow information hierarchy differs, React selects the correct composition at the one semantic breakpoint; CSS is reserved for pure reflow/density inside that composition. Superseded rules are deleted rather than counteracted later in the stylesheet.
 
 Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the same canonical Task operation as a drag. The drag handle must not swallow checkbox clicks, link navigation or editor opening. Avoid duplicate focus stops on the ListItem's clickable layer and nested controls; verify Astryx + dnd-kit with actual Playwright browser interaction.
 
