@@ -1,4 +1,4 @@
-import { Button } from "@astryxdesign/core";
+import { Button, Link } from "@astryxdesign/core";
 import type { Task } from "../../src/core/task";
 import { formatCivilDate, formatReminderTime } from "./dates";
 
@@ -95,9 +95,14 @@ export function TaskInspector({
             <dt>Reference</dt>
             <dd>
               {isSafeWebReference(task.reference) ? (
-                <a href={task.reference} target="_blank" rel="noopener noreferrer">
+                <Link
+                  href={task.reference}
+                  target="_blank"
+                  type="inherit"
+                  hasUnderline
+                >
                   Open reference
-                </a>
+                </Link>
               ) : (
                 <Button
                   label="Copy reference"
