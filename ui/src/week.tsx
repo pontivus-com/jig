@@ -12,7 +12,6 @@ import { PlannerTaskList } from "./planner-list";
 export interface WeekViewProps {
   readonly tasks: readonly Task[];
   readonly displayedDates: readonly string[];
-  readonly enableDrag: boolean;
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
   readonly onAdd: (date: string) => void;
@@ -36,7 +35,6 @@ function DatedSection({
   tasks,
   date,
   isToday,
-  enableDrag,
   selectedTask,
   onSelectTask,
   onAdd,
@@ -87,7 +85,6 @@ function DatedSection({
         <PlannerTaskList
           tasks={tasks}
           date={date}
-          isSortable={enableDrag}
           selectedTask={selectedTask}
           onSelectTask={onSelectTask}
           onEdit={onEdit}
@@ -100,12 +97,10 @@ function DatedSection({
     </section>
   );
 
-  return enableDrag ? (
+  return (
     <DateDropZone date={date} className={className}>
       {content}
     </DateDropZone>
-  ) : (
-    <div className={className}>{content}</div>
   );
 }
 
@@ -113,11 +108,7 @@ function WeekBoard(props: WeekViewProps): React.ReactElement {
   const today = todayCivilDate();
 
   return (
-    <div
-      className={props.enableDrag ? "jig-week-board" : "jig-planner-narrow"}
-      role="group"
-      aria-label="Planner week"
-    >
+    <div className="jig-week-board" role="group" aria-label="Planner week">
       {props.displayedDates.map((date) => (
         <DatedSection
           key={date}
@@ -131,11 +122,9 @@ function WeekBoard(props: WeekViewProps): React.ReactElement {
 }
 
 export function WeekView(props: WeekViewProps): React.ReactElement {
-  return props.enableDrag ? (
+  return (
     <TaskDragProvider tasks={props.tasks} onMove={props.onMove}>
       <WeekBoard {...props} />
     </TaskDragProvider>
-  ) : (
-    <WeekBoard {...props} />
   );
 }
