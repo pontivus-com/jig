@@ -220,6 +220,103 @@ The generic Astryx accent/selected mechanics may still be used inside contained 
 
 
 
+## 6.2 Canonical Jig product semantic tokens
+
+The following **Jig-owned product semantic aliases** are part of the theme contract. They are not feature-local variables and they are not a second palette. They are authored in `ui/src/jig-theme.source.ts` from the canonical Ink/Amber/Paper primitives or inherited Astryx status roles, compiled by the normal Astryx theme build, and consumed by Jig-owned composition CSS.
+
+Feature CSS must consume these aliases for the product states below and must not substitute another semantic family because it “looks close enough”.
+
+| Token | Light | Dark | Sole semantic owner |
+|---|---|---|---|
+| `--jig-state-today-border` | Ink 300 `#C0C8D6` | Ink 600 `#5A667E` | exact current local day structural border |
+| `--jig-state-today-text` | Ink 950 `#0B1426` | Ink 50 `#F9FAFD` | exact current local day date text |
+| `--jig-state-task-selected-bg` | Ink 100 `#EFF2F7` | Ink 800 `#253046` | selected Task persistent surface |
+| `--jig-state-task-selected-border` | Ink 400 `#9BA5B8` | Ink 500 `#788499` | selected Task persistent border |
+| `--jig-state-nav-active-bg` | Ink 100 `#EFF2F7` | Ink 800 `#253046` | active History/Settings destination |
+| `--jig-state-nav-active-text` | Ink 900 `#162034` | Ink 50 `#F9FAFD` | active History/Settings label/icon |
+| `--jig-state-drag-border` | Amber 700 `#B86C00` | Amber 500 `#F59E0B` | transient drag source/drop target outline |
+| `--jig-state-drag-bg` | Amber 50 `#FEF3E7` | Amber 500 mixed 18% into Ink 900 | transient drag target tint only |
+| `--jig-priority-high` | Astryx error text role | Astryx error text role | High priority leading cue |
+| `--jig-priority-normal` | Ink 500 `#788499` | Ink 400 `#9BA5B8` | Normal priority leading cue |
+| `--jig-priority-low` | Astryx success text role | Astryx success text role | Low priority leading cue |
+| `--jig-status-healthy-bg` | Astryx success-muted | Astryx success-muted | Local only / Synced background |
+| `--jig-status-healthy-border` | Astryx success border | Astryx success border | Local only / Synced border |
+| `--jig-status-healthy-text` | Astryx success text | Astryx success text | Local only / Synced text/dot |
+| `--jig-state-hover-bg` | low-alpha Ink 950 (5%) | low-alpha White (5%) | ordinary neutral hover on Jig-owned surfaces |
+| `--jig-state-pressed-bg` | low-alpha Ink 950 (10%) | low-alpha White (10%) | ordinary neutral pressed state on Jig-owned surfaces |
+
+No other product-state color aliases are permitted without updating this document and the authored theme source.
+
+### 6.2.1 Color precedence
+
+When multiple states coexist, apply color in this precedence order:
+
+1. **error/destructive state**;
+2. **drag source/drop target** while dragging;
+3. **keyboard focus ring**;
+4. **selected Task persistent state**;
+5. **today structural state**;
+6. **priority leading cue**;
+7. ordinary hover/pressed/base surface.
+
+Priority never replaces card background/border state; it remains a narrow leading cue. Focus never replaces the persistent state; it adds an Amber focus ring. Drag state is transient and may temporarily override the card/column border while preserving priority cue.
+
+## 6.3 Canonical component and interaction color assignment
+
+This table is binding. “Astryx-owned” means use the stated public component variant and let the Jig theme provide its semantic colors; do not override the component with product-state CSS.
+
+| Component / activity | Base | Hover / pressed | Active / selected / outcome | Focus | Disabled | Prohibited substitution |
+|---|---|---|---|---|---|---|
+| **App page/body** | Paper 100 / Ink 950 | n/a | n/a | n/a | n/a | Amber/status fills |
+| **Header / Drawer / BottomSheet / card surface** | White / Ink 900 | neutral overlay where interactive | n/a | n/a | n/a | status colors as general surface |
+| **Ordinary structural border** | `--color-border` | n/a | emphasized only where contract says so | n/a | n/a | Amber |
+| **Primary button — Add task, Save** | Astryx `primary`: Amber accent + Ink 950 content | Astryx primary hover/pressed | same semantic family | Amber focus ring | Astryx disabled text/surface | success/warning/error |
+| **Secondary button — Today, Complete/Reopen, Cancel when rendered secondary** | Astryx `secondary` neutral | Astryx neutral hover/pressed | no persistent Amber state | Amber focus ring | Astryx disabled | selected-Task/today colors |
+| **Ghost/icon button — Previous, Next, Jig Home, date-header +, menus, close** | transparent + primary/secondary Ink | neutral hover/pressed | active destination handled separately below | Amber focus ring | Astryx disabled | persistent Amber fill |
+| **History/Settings active destination** | ghost control anatomy | neutral hover/pressed | `--jig-state-nav-active-bg` + `--jig-state-nav-active-text`; optional emphasized neutral border | Amber focus ring | n/a | Amber-muted active fill; Task-selection background |
+| **Week/date label — ordinary** | surface/muted header + primary/secondary Ink | no click-selection state | n/a | n/a | n/a | accent/selected state |
+| **Exact current local day** | ordinary date section | n/a | `--jig-state-today-border` + `--jig-state-today-text`; font weight may increase; no whole-lane colored fill | n/a | n/a | Amber; success/warning/error |
+| **Non-current date in other weeks** | ordinary date section | n/a | **no day-level state** | n/a | n/a | today or selected-day styling |
+| **Task card — ordinary** | card surface + ordinary border | `--jig-state-hover-bg` | n/a | Amber focus ring on interactive body | disabled controls only | accent-muted card fill |
+| **Task card — selected/open workspace target** | ordinary card | neutral hover remains subordinate | `--jig-state-task-selected-bg` + `--jig-state-task-selected-border` | Amber focus ring additionally | n/a | Amber fill/border; priority/status color as card fill |
+| **Task drag source** | selected/ordinary card semantics underneath | n/a | `--jig-state-drag-border`; drag overlay shadow; reduced-opacity source is permitted | n/a during pointer drag | n/a | selected-task neutral as sole drag indicator |
+| **Date drop target** | ordinary/today structural state underneath | n/a | dashed/solid `--jig-state-drag-border` + `--jig-state-drag-bg` | n/a | n/a | today neutral; success/warning/error |
+| **High priority** | no card fill change | n/a | narrow `--jig-priority-high` leading cue + restrained error-family High label if shown | n/a | n/a | Amber/warning |
+| **Normal priority** | no card fill change | n/a | narrow `--jig-priority-normal` leading cue; no badge by default | n/a | n/a | Amber |
+| **Low priority** | no card fill change | n/a | narrow `--jig-priority-low` leading cue + restrained success-family Low label if shown | n/a | n/a | info/Amber |
+| **Completed Task** | ordinary card surface; secondary text permitted | neutral hover | completion checkbox/check may use success; title subdued/line-through | Amber focus ring | n/a | success-filled whole card |
+| **Form fields** | Astryx field semantic roles | Astryx field hover/pressed | validation error uses error family; normal value has no product-state color | Amber focus ring | Astryx disabled | Task-selection/today colors |
+| **Priority segmented control** | Astryx control anatomy | Astryx hover | selected segment follows control-selection semantics; surrounding Task card still follows product state | Amber focus ring | Astryx disabled | card priority color as full segment system unless Astryx provides it semantically |
+| **Delete menu item / confirmed destructive action** | ordinary menu until destructive affordance is represented by Astryx; confirmation uses error/destructive semantics | Astryx | error/destructive family | Amber focus ring until destructive confirmation control owns error semantics | disabled as Astryx | Brand Amber as destructive meaning |
+| **Alert/dialog destructive confirmation** | Astryx dialog surface | Astryx | destructive confirm = error family; cancel = neutral/secondary | accessible focus ring | Astryx disabled | warning/Amber |
+| **Local only** | `--jig-status-healthy-*` | neutral button hover if clickable | healthy local durability; label remains `Local only` | Amber focus ring if interactive | n/a | grey/unknown |
+| **Synced** | `--jig-status-healthy-*` | neutral button hover if clickable | healthy repository-synchronized outcome; label remains `Synced` | Amber focus ring if interactive | n/a | Local-only wording substitution |
+| **Pending / retrying** | Astryx warning text/muted/border | neutral button hover if clickable | warning family | Amber focus ring if interactive | n/a | Brand Amber |
+| **Sync issue / save failure** | Astryx error text/muted/border | neutral button hover if clickable | error family | Amber focus ring if interactive | n/a | Brand Amber |
+| **Unknown operational state** | muted neutral background + secondary text + ordinary border | neutral hover if clickable | no positive/negative implication | Amber focus ring if interactive | n/a | success/warning/error |
+| **Informational notice** | Astryx info family | component-owned | info family | component-owned | component-owned | priority Low unless the content is actually status/info |
+| **Empty-state copy** | secondary Ink text on ordinary surface | n/a | n/a | n/a | n/a | status/accent color |
+| **Links / references** | Astryx link/inherit semantics | Astryx | visited behavior per browser/Astryx | Amber focus ring | n/a | priority/status colors |
+
+## 6.4 Light/Dark resolved product-state palette
+
+The following resolved values are the intended visual result for Jig-owned persistent/transient states. Status-family values remain inherited from Astryx and therefore are not duplicated as brand hex literals.
+
+| Product role | Light | Dark |
+|---|---|---|
+| Today border | Ink 300 `#C0C8D6` | Ink 600 `#5A667E` |
+| Today text | Ink 950 `#0B1426` | Ink 50 `#F9FAFD` |
+| Selected Task background | Ink 100 `#EFF2F7` | Ink 800 `#253046` |
+| Selected Task border | Ink 400 `#9BA5B8` | Ink 500 `#788499` |
+| Active destination background | Ink 100 `#EFF2F7` | Ink 800 `#253046` |
+| Active destination text | Ink 900 `#162034` | Ink 50 `#F9FAFD` |
+| Drag border / direct manipulation | Amber 700 `#B86C00` | Amber 500 `#F59E0B` |
+| Drag target tint | Amber 50 `#FEF3E7` | Amber 500 @ 18% mixed into Ink 900 |
+| Normal priority cue | Ink 500 `#788499` | Ink 400 `#9BA5B8` |
+| Focus ring | Amber 700 `#B86C00` | Amber 500 `#F59E0B` |
+
+These values are chosen so persistent structural state stays cool/neutral and direct manipulation/focus stays warm/Amber. No persistent product state may use `--color-accent-muted` simply because it is selected.
+
 ## 7. Theme implementation contract
 
 ### Palette ownership
@@ -230,7 +327,7 @@ No other application stylesheet may hard-code Jig brand colors.
 
 ### Semantic mapping
 
-`ui/src/jig-theme.source.ts` defines the authored Jig theme by extending `@astryxdesign/theme-neutral/built` and maps Jig primitives only into public semantic roles such as:
+`ui/src/jig-theme.source.ts` defines the authored Jig theme by extending `@astryxdesign/theme-neutral/built`. It owns both the public Astryx role overrides and the Jig product-state semantic aliases defined in §6.2. The Jig aliases may reference only canonical Jig primitives or inherited public Astryx status roles; they must never introduce raw feature-local colors. Public Astryx role overrides include:
 
 - `--color-background-*`;
 - `--color-text-*`;
@@ -275,7 +372,7 @@ Jig CSS follows these rules:
 - keep each layout property under one rule owner and delete superseded declarations rather than cancelling them with later overrides;
 - use CSS media queries for pure reflow/density only; when the semantic hierarchy differs between desktop and narrow layouts, React/AppShell composition changes at the one application breakpoint.
 
-There is no per-screen color palette, no Light/Dark duplication in feature CSS and no second styling architecture beside Astryx.
+There is no per-screen color palette, no Light/Dark duplication in feature CSS and no second styling architecture beside Astryx. Product-state Light/Dark values are resolved once in `jig-theme.source.ts`; feature CSS consumes the named aliases only.
 
 ### Theme owner
 
