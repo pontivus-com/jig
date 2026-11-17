@@ -40,20 +40,13 @@ export function TaskInspector({
         <div>
           <p className="jig-eyebrow">Selected task</p>
           <h2>{task.title}</h2>
-          <p className="jig-secondary-copy">
-            {formatCivilDate(task.scheduled_date, {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-          </p>
         </div>
       </div>
 
       <div className="jig-task-inspector-actions">
         <Button
-          label={task.completed_at === null ? "Complete" : "Reopen"}
-          variant="secondary"
+          label={task.completed_at === null ? "✓ Mark complete" : "Reopen"}
+          variant={task.completed_at === null ? "primary" : "secondary"}
           size="sm"
           onClick={() => {
             void onToggleComplete(task);
@@ -66,7 +59,7 @@ export function TaskInspector({
           onClick={() => onEdit(task)}
         />
         <Button
-          label="Move to date…"
+          label="Move to date"
           variant="ghost"
           size="sm"
           onClick={() => onMoveToDate(task)}
