@@ -10,7 +10,10 @@ import type { ISODateString } from "@astryxdesign/core/utils";
 import { useEffect, useState } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
 import { formatCivilDate } from "./dates";
-import { TaskEditor } from "./task-editor";
+import {
+  TaskEditor,
+  type TaskDraft,
+} from "./task-editor";
 import { TaskInspector } from "./task-inspector";
 
 export type TaskWorkspaceMode = "view" | "edit" | "create" | "move";
@@ -19,11 +22,13 @@ export interface TaskWorkspaceContentProps {
   readonly mode: TaskWorkspaceMode;
   readonly task: Task | null;
   readonly initiatingDate: string;
+  readonly draft: TaskDraft;
   readonly externalError: string | null;
   readonly isSaving: boolean;
   readonly surface: "docked" | "drawer";
   readonly showHeading: boolean;
   readonly onModeChange: (mode: TaskWorkspaceMode | null) => void;
+  readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
   readonly onMove: (task: Task, destinationDate: string) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
@@ -34,11 +39,13 @@ export function TaskWorkspaceContent({
   mode,
   task,
   initiatingDate,
+  draft,
   externalError,
   isSaving,
   surface,
   showHeading,
   onModeChange,
+  onDraftChange,
   onSave,
   onMove,
   onDelete,
@@ -48,6 +55,7 @@ export function TaskWorkspaceContent({
     return (
       <TaskMovePanel
         task={task}
+        draft={draft}
         externalError={externalError}
         isSaving={isSaving}
         surface={surface}
@@ -74,6 +82,7 @@ export function TaskWorkspaceContent({
         isSaving={isSaving}
         surface={surface}
         showHeading={showHeading}
+        onDraftChange={onDraftChange}
         onCancel={() => onModeChange(editorTask === null ? null : "view")}
         onSave={async (command) => {
           const saved = await onSave(command);
@@ -196,9 +205,11 @@ export function TaskWorkspaceDrawer({
   mode,
   task,
   initiatingDate,
+  draft,
   externalError,
   isSaving,
   onModeChange,
+  onDraftChange,
   onSave,
   onMove,
   onDelete,
@@ -264,11 +275,13 @@ export function TaskWorkspaceDrawer({
               mode={effectiveMode}
               task={task}
               initiatingDate={initiatingDate}
+              draft={draft}
               externalError={externalError}
               isSaving={isSaving}
               surface="drawer"
               showHeading={false}
               onModeChange={onModeChange}
+              onDraftChange={onDraftChange}
               onSave={onSave}
               onMove={onMove}
               onDelete={onDelete}
