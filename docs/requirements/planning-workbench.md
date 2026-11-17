@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Candidate v0.7, updated 2026-11-17 with the binding v1.0.3 single-Planner interaction model and finalized responsive Planner header/date-navigation contract, persisted daily rollover, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual references govern interaction hierarchy and structural intent; the running Astryx UI remains the implementation evidence.  
+**Status:** Binding v1.0.3 functional design v0.7, finalized 2026-11-17 with the single-Planner interaction model and responsive Planner header/date-navigation contract, persisted daily rollover, deletion, mandatory appearance themes, repository-boundary ownership, full installation, configured-repository, background-sync and usage lifecycle. Visual references govern interaction hierarchy and structural intent; the running Astryx UI remains the implementation evidence.  
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
