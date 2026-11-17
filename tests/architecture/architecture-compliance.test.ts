@@ -145,12 +145,8 @@ describe("architecture compliance", () => {
           path: "ui/src/http.ts",
           text: "? (payload as Record<string, unknown>)",
         }),
-        expect.objectContaining({
-          path: "ui/src/task-row.tsx",
-          text: "const rowRef = sortable.ref as Ref<HTMLLIElement>;",
-        }),
       ]),
     );
-    expect(assertions).toHaveLength(6);
+    expect(assertions).toHaveLength(5);
   });
 });
