@@ -536,7 +536,7 @@ export function App(): React.ReactElement {
       isNarrow={isNarrow}
       onSelectDate={setSelectedDate}
       onPrevious={() => navigateDate(-7)}
-      onToday={() => goToToday(true)}
+      onToday={() => goToToday(false)}
       onNext={() => navigateDate(7)}
       statusControl={statusControl}
       onAdd={openCreate}
