@@ -27,8 +27,7 @@
 <rect x="830" y="178" width="580" height="200" rx="9" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
 <circle cx="856" cy="210" r="6" fill="#2c765f" stroke="none" stroke-width="1"/>
 <text x="872" y="215" class="b" fill="#2c765f" font-weight="700">Synced</text>
-<text x="856" y="246" class="s" fill="#657187">Last sync</text>
-<text x="1000" y="246" class="b" fill="#152238">moments ago</text>
+<text x="856" y="246" class="s" fill="#152238">Local planning data and the configured repository are synchronized.</text>
 <text x="856" y="276" class="s" fill="#657187">Service</text>
 <text x="1000" y="276" class="b" fill="#152238">Running</text>
 <text x="856" y="306" class="s" fill="#657187">Local save</text>
@@ -52,14 +51,10 @@
 <rect x="830" y="513" width="580" height="185" rx="9" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
 <text x="854" y="546" class="s" fill="#657187">Jig service</text>
 <text x="1000" y="546" class="b" fill="#2c765f" font-weight="700">Healthy</text>
-<text x="854" y="576" class="s" fill="#657187">SQLite</text>
+<text x="854" y="576" class="s" fill="#657187">Local database</text>
 <text x="1000" y="576" class="b" fill="#152238">Available</text>
 <text x="854" y="606" class="s" fill="#657187">Portable data</text>
 <text x="1000" y="606" class="b" fill="#2c765f">Healthy</text>
-<text x="854" y="636" class="s" fill="#657187">Repository adapter</text>
-<text x="1000" y="636" class="b" fill="#2c765f">Healthy</text>
-<rect x="1000" y="652" width="160" height="34" rx="7" fill="#ffffff" stroke="#dce3ec" stroke-width="1"/>
-<text x="1024" y="674" class="b" fill="#152238">Run diagnostics</text>
 <rect x="240" y="680" width="1170" height="95" rx="9" fill="#f4f7fb" stroke="#dce3ec" stroke-width="1"/>
 <text x="262" y="710" class="b" fill="#152238" font-weight="700">Local-first behavior</text>
 <text x="262" y="733" class="s" fill="#657187">Local planning remains usable when synchronization is unavailable.</text>
