@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.5 technical solution, v0.18 (2026-11-17), with eleven atomic JIG-105 solution designs mapped one-to-one to the v1.0.5 functional requirements. The design removes responsive semantic duplication while preserving the canonical Task/domain/persistence/integration architecture.
+**Status:** Binding v1.0.6 technical solution, v0.19 (2026-11-18). The eleven JIG-105 designs remain the published v1.0.5 baseline; JIG-106-SD-01 adds one presentation-only secondary-screen width correction with no domain, shell, persistence or protocol changes.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -761,6 +761,31 @@ The corrective design is intentionally presentation-local. It does not add a new
 | JIG-105-FR-10 | JIG-105-SD-10 |
 | JIG-105-FR-11 | JIG-105-SD-11 |
 
+
+### 5.6.3 v1.0.6 secondary-screen width correction
+
+#### JIG-106-SD-01 — Bounded desktop History/Settings content
+
+**Functional owner:** JIG-106-FR-01.
+
+The width constraint belongs to the History/Settings screen composition, not AppShell or the generic content frame.
+
+1. Keep `.jig-app-shell`, `.jig-content-frame` and `.jig-content` full-bleed and zero-inset.
+2. Keep Planner `.jig-week-board` unconstrained so the seven desktop tracks continue to use the complete planning canvas.
+3. At desktop composition, `.jig-history-view` and `.jig-settings-view` own `width: 100%`, `max-width: 50rem` and centered `margin-inline: auto`.
+4. Below the existing 73rem semantic breakpoint, remove the content cap and restore full available width; do not add a second breakpoint.
+5. Replace Settings' fixed 560px/580px columns with `repeat(2, minmax(0, 1fr))` so the existing two-column information grouping fits inside the 800px content column without overflow. Narrow/mobile remains the existing single-column Settings layout.
+6. Do not introduce a wrapper component, layout state, DTO, new responsive owner or private Astryx override. This is scoped Jig-owned CSS geometry only.
+
+**Architecture:** presentation-only; FCIS is unaffected. There is no change in `src/core`, `src/shell`, Task/TaskCommand, persistence, protocol or synchronization. The width budget is one CSS owner shared by exactly the two secondary screens.
+
+**Verification:** at 1440px desktop, History and Settings each render at ~800px and are horizontally centered (~320px x offset), while Planner remains ~1440px wide. At a 390px narrow viewport, History and Settings render at ~390px with x=0. Static tests reject the old fixed Settings grid.
+
+#### v1.0.6 traceability
+
+| Functional requirement | Technical solution |
+|---|---|
+| JIG-106-FR-01 | JIG-106-SD-01 |
 
 ### 5.7 Drag, accessibility and copy discipline
 
