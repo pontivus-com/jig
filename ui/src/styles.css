@@ -913,6 +913,11 @@ body {
     padding-block-end: var(--spacing-1);
   }
 
+  .jig-editor-group-field {
+    display: grid;
+    gap: var(--spacing-1);
+  }
+
   .jig-editor-date-behavior {
     display: grid;
     gap: var(--spacing-1);
