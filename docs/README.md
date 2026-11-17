@@ -14,7 +14,7 @@ Jig is a small, local-first, just-in-time daily planner. It schedules attention 
 6. [UI solution and versioned reference mockups](design/ui-solution.md) — screen hierarchy, desktop/mobile responsive composition, Astryx/dnd-kit ownership, design corrections and browser acceptance.
 7. [v1.0.1 ownership-boundary correction plan](implementation/v1.0.1-ownership-boundary-correction-plan.md) — current corrective execution authority for restoring external-system boundaries and installer reliability. The earlier [v1 MVP plan](implementation/v1-mvp-implementation-plan.md) is historical for v1.0.0.
 8. [Installation](install.md) — supported existing-repository installation, upgrade, Git-native continuity and uninstall.
-9. [Releases](releases/README.md) — immutable release process, binary asset contract and publication channel.
+9. [Releases](releases/README.md) — **canonical release authority**: mandatory `release/vX.Y.Z` metadata transition, explicit `package.json.version = X.Y.Z`, immutable tag/publication validity criteria, binary asset contract and publication channel.
 10. [v1 release-candidate evidence](evidence/v1/README.md) — permanent verification, security/installer/resource certification and representative runtime screenshots.
 
 Functional requirements define *what* users can observe. Technical solution owns *how* data and runtime behave. UI solution owns *how* users see and manipulate those functions. No part of the design inherits Order's workflow/lifecycle domain, creates DTO hierarchies, or introduces duplicate task authority.
@@ -22,7 +22,7 @@ Functional requirements define *what* users can observe. Technical solution owns
 ## Public release surface
 
 - [Install Jig](install.md)
-- [Release process and asset matrix](releases/README.md)
+- [Release process, validity contract and asset matrix](releases/README.md) — canonical authority; an implementation merge is not a release, and every release requires an explicit package-version transition on `release/vX.Y.Z`.
 - [v1.0.0 release notes draft](releases/v1.0.0.md)
 - [v1.0.0 release-preparation task set](releases/v1.0.0-preparation.md)
 - [Changelog](../CHANGELOG.md)
