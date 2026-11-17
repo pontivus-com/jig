@@ -562,7 +562,7 @@ This is the DRY/SoC correction: responsive layout is a presentation projection o
 
 Define the navigation semantics once and render them through desktop and narrow Astryx presentations.
 
-1. In `planner-header.tsx` (or one smaller adjacent UI module if extraction improves readability), define one immutable typed destination tuple whose icon field is Astryx `ExtendedIconName` (`IconName | NamespacedIconName`), containing:
+1. In `planner-header.tsx` (or one smaller adjacent UI module if extraction improves readability), define one immutable typed destination tuple whose icon field is Astryx `IconName | NamespacedIconName`, containing:
    - `planner / Planner / viewColumns`;
    - `history / History / jig:history`;
    - `settings / Settings / wrench`.
@@ -741,7 +741,7 @@ The corrective design is intentionally presentation-local. It does not add a new
 
 **FCIS boundary:** no v1.0.5 corrective solution requires new code in `src/core` or `src/shell`. Existing pure planning rules and canonical `TaskCommand`/move semantics remain authoritative. UI code translates pointer/navigation/menu events into existing callbacks/commands; it does not reimplement ordering, scheduling, rollover, completion or persistence semantics.
 
-**Strict typing boundary:** external/browser/dnd data is narrowed at the smallest adapter boundary with public guards/runtime checks. UI semantic constants use exported Astryx types (`ExtendedIconName`, `NamespacedIconName`, `DropdownMenuItemData`) and derived literal unions. Do not introduce `any`, `unknown as`, double casts, non-null assertions, duplicate domain shapes, DTO/ViewModel types or assertion-only compiler appeasement.
+**Strict typing boundary:** external/browser/dnd data is narrowed at the smallest adapter boundary with public guards/runtime checks. UI semantic constants use exported Astryx types (`IconName`, `NamespacedIconName`, `DropdownMenuItemData`) and derived literal unions. Do not introduce `any`, `unknown as`, double casts, non-null assertions, duplicate domain shapes, DTO/ViewModel types or assertion-only compiler appeasement.
 
 **SoC / DRY boundary:** responsive differences are presentation choices only. One meaning has one owner: one Task model, one order, one Planner renderer, one destination set, one Task menu builder, one icon mapping, one Task-surface mapping and one viewport breakpoint. Drawer versus BottomSheet and desktop versus narrow header composition remain legitimate presentation-primitive differences over shared state.
 
