@@ -627,10 +627,10 @@ The header is a thin application bar, not a second surface/card.
 - Desktop header background resolves to the same application/body background as the surrounding shell. Do not use `--color-background-surface`, muted gray fill, radius, shadow or framed container for the header.
 - One `border-block-end: var(--border-width) solid var(--color-border)` is the only persistent header chrome.
 - Existing semantics remain on the bar: canonical Jig Home wordmark at left; centered Planner week range + Previous/Today/Next; Add task + Planner/History/Settings + synchronization state at right.
-- Desktop: `block-size: 4rem` maximum, with compact token padding; target rendered height 60–64px.
-- Narrow: outer rendered height <= 6rem, using compact token gaps and `sm` Astryx controls; it follows the same flat-background/hairline principle.
+- Desktop: target rendered height ~44px, hard maximum `2.75rem` — approximately half the shipped v1.0.4 `5.5rem` minimum. Use compact token padding and `sm` controls; do not preserve excess vertical breathing room.
+- Narrow: target rendered height ~56px, hard maximum `3.5rem` — approximately half the shipped v1.0.4 `7rem` minimum. Use compact token gaps and `sm` Astryx controls; it follows the same flat-background/hairline principle.
 - Planner/History/Settings share the same outer height within each layout.
-- Remove 5.5rem/7rem minimums rather than offsetting them with negative margins or private Astryx overrides.
+- Remove the 5.5rem/7rem minimums and replace them with the explicit 2.75rem/3.5rem maxima rather than offsetting them with negative margins or private Astryx overrides.
 - The shared destination definition supplies visible semantic icons to desktop Buttons and narrow menu items; header flattening must not remove any action, label, icon or state.
 - Tests measure actual bounding boxes and computed header background/border, not merely equality.
 
