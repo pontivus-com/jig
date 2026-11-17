@@ -163,8 +163,16 @@ export function DayTaskLists({
         </DateDropZone>
 
         {completed.length === 0 ? null : (
-          <details className="jig-completed-section" open>
-            <summary>Completed ({completed.length})</summary>
+          <section
+            className="jig-completed-section"
+            aria-labelledby="day-completed-heading"
+          >
+            <div className="jig-section-heading">
+              <h2 id="day-completed-heading">Completed</h2>
+              <span className="jig-task-count">
+                {completed.length} {completed.length === 1 ? "task" : "tasks"}
+              </span>
+            </div>
             <List density="compact" edge="flush" className="jig-task-card-list">
               {completed.map((task) => (
                 <TaskRow
@@ -181,7 +189,7 @@ export function DayTaskLists({
                 />
               ))}
             </List>
-          </details>
+          </section>
         )}
       </div>
     </TaskDragProvider>
@@ -254,24 +262,24 @@ export function DayView({
         </div>
       </div>
 
-      <DateStrip
-        selectedDate={selectedDate}
-        onSelectDate={onSelectDate}
-      />
-
-      <div className="jig-mobile-day-heading">
-        <h1>
-          {formatCivilDate(selectedDate, {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          })}
-        </h1>
-        <p>Your ordered plan</p>
-      </div>
-
       <div className="jig-day-layout">
         <div className="jig-day-primary">
+          <DateStrip
+            selectedDate={selectedDate}
+            onSelectDate={onSelectDate}
+          />
+
+          <div className="jig-mobile-day-heading">
+            <h1>
+              {formatCivilDate(selectedDate, {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </h1>
+            <p>Your ordered plan</p>
+          </div>
+
           <DayTaskLists
             tasks={tasks}
             selectedDate={selectedDate}
