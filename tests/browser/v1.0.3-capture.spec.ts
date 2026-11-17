@@ -144,7 +144,6 @@ test("capture v1.0.3 master-detail surfaces", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Edit task" })).toBeVisible();
   await capture(page, "desktop-week-task-edit");
 
-  await page.getByRole("button", { name: "Close", exact: false }).first().click().catch(() => undefined);
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1920, height: 900 });
   console.log(
