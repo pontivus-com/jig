@@ -420,12 +420,6 @@ body {
     cursor: grabbing;
   }
 
-  .jig-task-body:focus-visible {
-    outline: var(--focus-outline-width) var(--focus-outline-style) var(--focus-outline-color);
-    outline-offset: var(--focus-outline-offset);
-    border-radius: var(--radius-element);
-  }
-
   .jig-task-card-selected {
     border-color: var(--jig-state-task-selected-border);
     background: var(--jig-state-task-selected-bg);
