@@ -3,7 +3,7 @@ import type { CommunityPalette } from "../community-theme";
 /**
  * Dracula application palette authority:
  * https://github.com/dracula/draculatheme.com/blob/34a22aa05be158b5524a7355c8e39f548a877e8a/content/spec.mdx
- * Light = Alucard Classic; Dark = Dracula Classic.
+ * Light = Alucard Classic; Dark = Dracula Classic.\n * License: MIT. Copyright: Dracula Theme.
  */
 export const draculaPalette = {
   body: ["#fffbeb", "#282a36"],
