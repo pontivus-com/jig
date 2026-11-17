@@ -458,11 +458,11 @@ export function App(): React.ReactElement {
   );
 
   const closeWorkspace = useCallback((): void => {
+    // Keep the last-selected Task rendered while Astryx Drawer completes its
+    // exit animation. Selection remains presentation state and is replaced by
+    // the next card selection or destination/date reconciliation.
     setWorkspaceMode(null);
-    if (destination !== "day") {
-      setSelectedTaskId(null);
-    }
-  }, [destination]);
+  }, []);
 
   const changeWorkspaceMode = useCallback(
     (mode: TaskWorkspaceMode | null): void => {
