@@ -73,7 +73,7 @@ The following requirements are binding for v1.0.3 and supersede any earlier Day/
 
 | ID | Requirement | Observable acceptance |
 |---|---|---|
-| JIG-FR-01 | Create a task quickly | A title entered from a day/column creates a task on that date without requiring priority, estimate, context, or link. |
+| JIG-FR-01 | Create a task quickly | A title entered from a Planner date context/column creates a task on that date without requiring priority, estimate, context, or link. |
 | JIG-FR-02 | Navigate planning dates | Move between weeks, select any visible date in the Planner, and return to today without altering Task data. Narrow/mobile date selection changes only the selected Planner date. |
 | JIG-FR-03 | Order within a day | Drag an outstanding task to any position within its scheduled date. The new order persists across view changes and restart. |
 | JIG-FR-04 | Move between dates | Drag into another visible date/position on desktop, or explicitly edit the Task's scheduled date when a non-drag reschedule is needed. The item is moved, not copied. |
@@ -93,7 +93,7 @@ The following requirements are binding for v1.0.3 and supersede any earlier Day/
 | JIG-FR-18 | Automatic save and Git synchronization | Each successful task edit is durable locally without a Save-to-Git action; Jig automatically serializes, commits and synchronizes its own portable data when a remote is configured, with bounded batching and retry. |
 | JIG-FR-19 | Safe cohabitation and synchronization honesty | Jig must not stage, commit or rewrite unrelated repository content. Missing remote or repository synchronization failure never invalidates a successful local Task save. The UI reports only the operational synchronization outcome; Jig does not classify Git topology, merge histories or provide repository reconciliation. |
 | JIG-FR-20 | Low-friction idle operation | The desktop service starts predictably, stays lightweight and idle-efficient, and offers immediate access to the Planner throughout the working day without requiring repeated initialization. |
-| JIG-FR-21 | Delete a task | An outstanding or completed Task can be permanently removed after explicit destructive-action confirmation. On success it disappears from planning, completed and History views. Jig provides no trash, soft delete or in-app restore; prior Git history is the only recovery when an exported version exists. |
+| JIG-FR-21 | Delete a task | An outstanding or completed Task can be permanently removed after explicit destructive-action confirmation. On success it disappears from Planner and History. Jig provides no trash, soft delete or in-app restore; prior Git history is the only recovery when an exported version exists. |
 | JIG-FR-22 | System, Light and Dark appearance | Jig supports System, Light and Dark appearance modes through one semantic theme owner. System follows the platform/browser color preference. Theme changes affect presentation only and never mutate Task data, selected date, ordering, drafts, completion or synchronization state. |
 
 ### Initial placement rule
@@ -104,7 +104,7 @@ This keeps priority useful on capture without introducing a hidden automatic sch
 
 ### Completion placement
 
-The selected date's completed area shows items scheduled for that date which are now done. The history view can group items by actual completion date. These are different queries over the same underlying completion fact. Reopening places the task back into the outstanding list on its scheduled date; any needed ordering adjustment is explicit.
+Planner contains the canonical outstanding sequence only. Completing a Task removes it from Planner and records its completion timestamp. History groups completed Tasks by actual completion date and remains the canonical UI for inspecting/reopening completed work. Reopening places the same Task back into the outstanding Planner sequence on its scheduled date; any needed ordering adjustment is explicit.
 
 ### Daily rollover and ordering
 
@@ -126,7 +126,7 @@ Because the scheduled date physically changes, Planner must show the card in the
 
 A reminder is part of the scheduled Task. When rollover changes the Task's scheduled date, its existing reminder time remains the same time-of-day and therefore applies to the new rolled-forward date. Do not preserve or display an obsolete originating reminder date unless a separate future product requirement introduces explicit schedule history.
 
-Completed Tasks are never rolled forward. Manually moving a Task to another date remains explicit and uses the existing move/edit semantics.
+Completed Tasks are never rolled forward. Explicit date changes use either desktop drag/drop or the scheduled-date field in Edit.
 
 ## 5. Desktop spatial UX — v1.0.3
 
@@ -199,7 +199,7 @@ The initial experience starts **before** the user sees the planner:
 1. User runs one installer script from the Jig application distribution. It checks Linux prerequisites, installs the pinned application/runtime in the user's application directory, and accepts either an existing local Git repository or a repository URL plus new/empty checkout destination. URL mode invokes ordinary Git clone behavior and then continues through the same selected-checkout installation path.
 2. The installer verifies that the target is a writable Git repository other than Jig's public source checkout, establishes Jig's repository-contained local data area, and determines whether valid existing Jig portable data is already present. Existing valid Jig data is adopted; otherwise Jig initializes a new dataset. Any Git isolation mechanism used for automatic synchronization remains an internal adapter detail and must not become installer/user-visible repository-management behavior.
 3. The installer creates a `jig` launcher and installs/enables a Linux **user** service. It reports the exact repository path, local UI address, data location, and sync state. No elevated/root install is required for the ordinary path.
-4. The user runs `jig` or visits the local UI. The service may already be running. It opens Day (defaulting to the current local date) or Week without an installer or terminal wizard on every visit; Today remains a shortcut, not a separate destination.
+4. The user runs `jig` or visits the local UI. The service may already be running. It opens Planner as the default/home surface without an installer or terminal wizard on every visit; Today remains a date shortcut inside Planner, not a separate destination.
 5. Create/edit/reorder/complete/delete operations save to local SQLite at commit time. On successful save, the interface reflects the saved Task. In the background, the repository integration boundary batches the current canonical snapshot into deterministic Git records and attempts synchronization when a configured remote is available.
 6. The app keeps working offline. Repository synchronization failures never block Task use or roll back successful local saves. Jig exposes a generic durable **Sync issue — local data safe** outcome and does not inspect, classify or repair Git topology/history. Repository structure, credentials, signing policy and reconciliation remain Git responsibilities; when the selected repository again exposes valid Jig portable data and synchronization succeeds, normal operation resumes.
 7. Reboot/log-in and service restarts preserve task data and resume pending Git synchronization. Uninstallation removes application/service artifacts only; personal planning data remains in the configured repository unless explicitly and separately removed.
@@ -221,6 +221,6 @@ A responsive visual structure and touch-accessible controls are required at init
 
 Jig owns Task behavior, local persistence, deterministic portable Jig records, automatic synchronization intent and coarse synchronization outcomes. Git owns repository acquisition, repository topology, branches/refs/worktrees, signing and identity policy, credentials, history, merge/rebase/conflict behavior and reconciliation. Functional requirements may require isolation or automatic synchronization outcomes, but must not promote Git implementation mechanics into Jig workflow or user configuration.
 
-## 9. Non-decisions
+## 10. Non-decisions
 
 This functional specification does **not** select SQLite, file formats, a Git merge/conflict/reconciliation policy, a drag-and-drop library, exact breakpoints, deployment wrappers, or the implementation component graph. Git history reconciliation is outside Jig's domain rather than a deferred Jig behavior. It does require System/Light/Dark appearance semantics; the technical and UI solutions own their concrete realization. See [technical solution](../architecture/technical-solution.md). The technical choices satisfy this document and do not redefine it.
