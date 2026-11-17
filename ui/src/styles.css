@@ -47,7 +47,7 @@ body {
 .jig-content {
   min-width: 0;
   min-height: 100%;
-  padding: var(--spacing-3) var(--spacing-2) var(--spacing-5) 0;
+  padding: calc(var(--spacing-3) + var(--spacing-0-5)) calc(var(--spacing-2) + var(--spacing-0-5)) var(--spacing-5) 0;
 }
 
   .jig-nav-brand {
@@ -188,14 +188,14 @@ body {
 
   .jig-reference-heading .jig-status-control {
     min-width: 180px;
-    min-height: 40px;
+    min-height: calc(var(--size-element-lg) + var(--spacing-1));
     border-radius: var(--radius-full);
   }
 
   .jig-week-toolbar,
   .jig-day-toolbar {
     display: flex;
-    min-height: 36px;
+    min-height: var(--size-element-lg);
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-4);
@@ -210,15 +210,11 @@ body {
   .jig-reference-toolbar-actions {
     display: flex;
     align-items: center;
-    gap: var(--spacing-2);
+    gap: calc(var(--spacing-2) + var(--spacing-0-5));
   }
 
   .jig-month-navigation strong {
     font-size: var(--font-size-sm);
-  }
-
-  .jig-reference-toolbar-actions > * {
-    min-height: 36px;
   }
 
   .jig-reference-toolbar-actions > :last-child {
@@ -282,7 +278,7 @@ body {
     min-height: 18rem;
     overflow: auto;
     border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-element);
+    border-radius: calc(var(--radius-element) + var(--border-width));
     background: var(--color-background-surface);
   }
 
@@ -395,7 +391,7 @@ body {
   .jig-task-card-list {
     display: grid;
     gap: var(--spacing-2);
-    padding: var(--spacing-2) var(--spacing-1-5);
+    padding: calc(var(--spacing-2) + var(--spacing-0-5)) var(--spacing-1-5);
   }
 
   .jig-task-card {
@@ -475,8 +471,8 @@ body {
   }
 
   .jig-week-column .jig-task-drag-handle {
-    min-width: 12px;
-    min-height: 16px;
+    min-width: var(--spacing-3);
+    min-height: var(--spacing-4);
     font-size: var(--font-size-sm);
   }
 
@@ -521,7 +517,7 @@ body {
   .jig-priority-label {
     display: inline-flex;
     align-items: center;
-    min-height: 16px;
+    min-height: var(--spacing-4);
     padding-inline: var(--spacing-2);
     border-radius: var(--radius-full);
     font-size: var(--font-size-xs);
@@ -650,7 +646,7 @@ body {
 
   .jig-task-inspector {
     position: sticky;
-    inset-block-start: var(--spacing-3);
+    inset-block-start: calc(var(--spacing-3) + var(--spacing-0-5));
     display: grid;
     min-width: 0;
     min-height: 680px;
@@ -658,7 +654,7 @@ body {
     gap: var(--spacing-6);
     padding: var(--spacing-6);
     border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-container);
+    border-radius: calc(var(--radius-element) + 2 * var(--border-width));
     background: var(--color-background-surface);
   }
 
@@ -708,7 +704,7 @@ body {
     display: grid;
     gap: var(--spacing-1);
     margin-block-start: auto;
-    padding: var(--spacing-3) var(--spacing-4);
+    padding: calc(var(--spacing-3) + var(--spacing-0-5)) calc(var(--spacing-4) + var(--spacing-0-5));
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-element);
     background: var(--color-background-muted);
@@ -756,8 +752,8 @@ body {
 
   .jig-history-groups {
     display: grid;
-    gap: var(--spacing-6);
-    margin-block-start: var(--spacing-10);
+    gap: calc(var(--spacing-6) + var(--spacing-0-5));
+    margin-block-start: calc(var(--spacing-9) + var(--spacing-0-5));
   }
 
   .jig-history-group-heading {
@@ -789,7 +785,7 @@ body {
   .jig-settings-panel {
     display: grid;
     align-content: start;
-    gap: var(--spacing-2);
+    gap: calc(var(--spacing-2) + var(--spacing-0-5));
   }
 
   .jig-settings-panel h2 {
@@ -799,7 +795,7 @@ body {
 
   .jig-settings-card {
     overflow: hidden;
-    border-radius: var(--radius-element);
+    border-radius: calc(var(--radius-element) + var(--border-width));
   }
 
   .jig-settings-card p,
@@ -819,8 +815,8 @@ body {
 
   .jig-local-first-note {
     overflow: hidden;
-    margin-block-start: var(--spacing-8);
-    border-radius: var(--radius-element);
+    margin-block-start: calc(var(--spacing-7) + var(--spacing-0-5));
+    border-radius: calc(var(--radius-element) + var(--border-width));
   }
 
   .jig-local-first-note p {
@@ -851,8 +847,8 @@ body {
 
   .jig-history-complete-indicator {
     display: inline-flex;
-    inline-size: 1rem;
-    block-size: 1rem;
+    inline-size: var(--spacing-4);
+    block-size: var(--spacing-4);
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-element);
@@ -969,7 +965,7 @@ body {
 
   @media (max-width: 47.999rem) {
   .jig-app-shell {
-    padding: 12px;
+    padding: var(--spacing-3);
   }
 
   .jig-primary-nav {
@@ -984,7 +980,7 @@ body {
     height: 100%;
     overflow: auto;
     border: var(--border-width) solid var(--color-border);
-    border-radius: 24px;
+    border-radius: calc(2 * var(--radius-container));
     background: var(--color-background-surface);
   }
 
@@ -993,7 +989,7 @@ body {
     height: 50px;
     align-items: center;
     justify-content: space-between;
-    padding-inline: 18px;
+    padding-inline: calc(var(--spacing-4) + var(--spacing-0-5));
   }
 
   .jig-mobile-brand {
@@ -1003,7 +999,7 @@ body {
 
   .jig-mobile-header .jig-status-control {
     min-width: 88px;
-    min-height: 30px;
+    min-height: calc(var(--size-element-sm) + var(--spacing-0-5));
   }
 
   .jig-mobile-surface-nav {
@@ -1011,17 +1007,17 @@ body {
     height: 46px;
     align-items: center;
     justify-content: space-between;
-    padding-inline: 18px;
+    padding-inline: calc(var(--spacing-4) + var(--spacing-0-5));
   }
 
   .jig-mobile-destination-trigger,
   .jig-mobile-today-control {
-    min-height: 30px;
+    min-height: calc(var(--size-element-sm) + var(--spacing-0-5));
   }
 
   .jig-content {
     min-height: 0;
-    padding: 0 14px calc(5rem + env(safe-area-inset-bottom, 0px));
+    padding: 0 calc(var(--spacing-3) + var(--spacing-0-5)) calc(5rem + env(safe-area-inset-bottom, 0px));
   }
 
   .jig-week-strip {
@@ -1037,7 +1033,7 @@ body {
     min-width: 0;
     height: 56px;
     min-height: 56px;
-    padding: 0 2px;
+    padding: 0 var(--spacing-0-5);
   }
 
   .jig-mobile-day-heading {
@@ -1101,7 +1097,7 @@ body {
     min-height: 52px;
     align-items: center;
     justify-content: center;
-    border-radius: 24px;
+    border-radius: calc(2 * var(--radius-container));
     font-size: var(--font-size-xl);
   }
 
@@ -1128,15 +1124,15 @@ body {
   }
 
   .jig-editor-mobile-frame {
-    width: calc(100dvw - 24px);
-    height: calc(100dvh - 24px);
-    margin: 12px;
+    width: calc(100dvw - 2 * var(--spacing-3));
+    height: calc(100dvh - 2 * var(--spacing-3));
+    margin: var(--spacing-3);
     padding: var(--spacing-4);
     align-content: start;
     gap: var(--spacing-10);
     overflow: auto;
     border: var(--border-width) solid var(--color-border);
-    border-radius: 24px;
+    border-radius: calc(2 * var(--radius-container));
     background: var(--color-background-surface);
   }
 
