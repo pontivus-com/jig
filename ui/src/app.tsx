@@ -562,9 +562,7 @@ export function App(): React.ReactElement {
       selectedDate={selectedDate}
       isNarrow={isNarrow}
       onSelectDate={setSelectedDate}
-      onPrevious={() => navigateDate(-1)}
       onToday={() => goToToday(false)}
-      onNext={() => navigateDate(1)}
       statusControl={isNarrow ? null : statusControl}
       selectedTask={selectedTask}
       onSelectTask={(task) => setSelectedTaskId(task.id)}
