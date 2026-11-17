@@ -1,26 +1,38 @@
-import { rename } from "node:fs/promises";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rename } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { runGit } from "../../src/shell/git";
 import {
   apiCommand,
+  apiState,
   browserCivilDate,
   resetCanonicalTasks,
+  taskByTitle,
 } from "./helpers";
 
-const OUTPUT = "test-results/v1.0.4-evidence";
+const EVIDENCE_DIR = "test-results/v1.0.4-evidence";
+const ROOT = "/tmp/jig-playwright-repository";
 const REMOTE = "/tmp/jig-playwright-remote.git";
 const OFFLINE_REMOTE = "/tmp/jig-playwright-remote.offline.git";
 
-async function createFixtureTask(
+async function capture(page: Page, name: string): Promise<void> {
+  await page.waitForTimeout(250);
+  await page.screenshot({
+    path: `${EVIDENCE_DIR}/${name}.jpg`,
+    type: "jpeg",
+    quality: 90,
+    fullPage: false,
+  });
+}
+
+async function createTask(
   page: Page,
   title: string,
   date: string,
   priority: "HIGH" | "NORMAL" | "LOW",
-  extras: {
+  options: {
     context?: string | null;
-    reminder_time?: string | null;
     reference?: string | null;
-    note?: string | null;
+    reminder_time?: string | null;
   } = {},
 ): Promise<void> {
   await apiCommand(page, {
@@ -28,77 +40,108 @@ async function createFixtureTask(
     title,
     scheduled_date: date,
     priority,
-    context: extras.context ?? null,
-    reminder_time: extras.reminder_time ?? null,
-    reference: extras.reference ?? null,
-    note: extras.note ?? null,
+    context: options.context ?? null,
+    reference: options.reference ?? null,
+    note: null,
+    reminder_time: options.reminder_time ?? null,
   });
 }
 
 async function repositoryStatus(page: Page): Promise<string> {
   return page.evaluate(async () => {
     const response = await fetch("/api/v1/status");
-    const body = (await response.json()) as { repository_status: string };
-    return body.repository_status;
+    if (!response.ok) {
+      throw new Error(`GET /status failed: ${response.status}`);
+    }
+    const value = (await response.json()) as { repository_status: string };
+    return value.repository_status;
   });
 }
 
-async function capture(page: Page, name: string): Promise<void> {
-  await page.screenshot({
-    path: `${OUTPUT}/${name}.png`,
-    fullPage: true,
-    animations: "disabled",
+async function syncNow(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const token = (
+      window as typeof window & { __JIG_WRITE_TOKEN__?: string }
+    ).__JIG_WRITE_TOKEN__;
+    if (token === undefined) {
+      throw new Error("Jig write token is unavailable");
+    }
+    const response = await fetch("/api/v1/sync", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-jig-write-token": token,
+      },
+      body: "{}",
+    });
+    if (!response.ok) {
+      throw new Error(
+        `POST /sync failed: ${response.status} ${await response.text()}`,
+      );
+    }
+    const value = (await response.json()) as { repository_status: string };
+    return value.repository_status;
   });
 }
 
-test("capture governed v1.0.4 visual states", async ({ page }) => {
-  await mkdir(OUTPUT, { recursive: true });
-  await page.goto("/");
-  await page.waitForFunction(
-    () =>
-      (window as typeof window & { __JIG_WRITE_TOKEN__?: string })
-        .__JIG_WRITE_TOKEN__ !== undefined,
+async function setTheme(page: Page, theme: "Light" | "Dark"): Promise<void> {
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("radio", { name: theme, exact: true }).click();
+  await page.getByRole("button", { name: "Planner", exact: true }).click();
+}
+
+test("capture reviewed v1.0.4 visual states", async ({ page }) => {
+  test.skip(
+    process.env.JIG_CAPTURE_EVIDENCE !== "1",
+    "Temporary v1.0.4 evidence capture only",
   );
+
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+  await page.goto("/");
   await resetCanonicalTasks(page);
 
   const today = await browserCivilDate(page);
   const tomorrow = await browserCivilDate(page, 1);
-  const inTwoDays = await browserCivilDate(page, 2);
+  const dayAfter = await browserCivilDate(page, 2);
 
-  await createFixtureTask(page, "Review contract changes", today, "HIGH", {
-    context: "Client Alpha",
-    reminder_time: "10:30",
-    reference: "https://example.com/matter/alpha",
+  await createTask(page, "Prepare client review", today, "HIGH", {
+    context: "Client",
+    reminder_time: "15:30",
   });
-  await createFixtureTask(page, "Prepare implementation notes", today, "NORMAL", {
+  await createTask(page, "Refine implementation notes", today, "NORMAL", {
     context: "Jig",
-    note: "Keep the functional core boundary explicit.",
+    reference: "https://example.com/reference",
   });
-  await createFixtureTask(page, "Follow up with counsel", tomorrow, "LOW", {
-    context: "Client Alpha",
+  await createTask(page, "Review follow-up", tomorrow, "LOW", {
+    context: "Planning",
   });
-  await createFixtureTask(page, "Archive completed brief", inTwoDays, "NORMAL");
+  await createTask(page, "Confirm next steps", dayAfter, "NORMAL");
 
+  await syncNow(page);
   await page.reload();
   await page.setViewportSize({ width: 1440, height: 900 });
+  await setTheme(page, "Light");
   await capture(page, "desktop-planner-light");
 
-  await page.getByText("Prepare implementation notes", { exact: true }).click();
+  await page.getByText("Refine implementation notes", { exact: true }).click();
   await expect(
-    page.getByRole("dialog", { name: "Prepare implementation notes" }),
+    page.getByRole("dialog", { name: "Refine implementation notes" }),
   ).toBeVisible();
-  await capture(page, "desktop-planner-task-drawer");
+  await capture(page, "desktop-selected-task-drawer");
+  await page
+    .getByRole("dialog", { name: "Refine implementation notes" })
+    .getByRole("button", { name: "Close" })
+    .click();
 
-  await page.getByRole("button", { name: "Close", exact: true }).click();
-  const dragCard = page
-    .getByText("Review contract changes", { exact: true })
-    .locator("xpath=ancestor::li[1]");
-  const dragBody = dragCard.locator(".jig-task-body");
+  const source = page
+    .getByText("Prepare client review", { exact: true })
+    .locator("xpath=ancestor::li[1]")
+    .locator(".jig-task-body");
   const destination = page.locator(`[data-date="${tomorrow}"]`);
-  const sourceBox = await dragBody.boundingBox();
+  const sourceBox = await source.boundingBox();
   const destinationBox = await destination.boundingBox();
   if (sourceBox === null || destinationBox === null) {
-    throw new Error("Evidence drag geometry unavailable");
+    throw new Error("Drag evidence geometry unavailable");
   }
   await page.mouse.move(
     sourceBox.x + sourceBox.width / 2,
@@ -106,75 +149,94 @@ test("capture governed v1.0.4 visual states", async ({ page }) => {
   );
   await page.mouse.down();
   await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 8,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 3 },
+  );
+  await page.mouse.move(
     destinationBox.x + destinationBox.width / 2,
-    destinationBox.y + Math.min(120, destinationBox.height / 2),
+    destinationBox.y + Math.min(destinationBox.height / 2, 180),
     { steps: 12 },
   );
-  await capture(page, "desktop-planner-drag-target");
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+  await expect(destination).toHaveClass(/jig-date-drop-zone-active/);
+  await capture(page, "desktop-drag-target");
   await page.mouse.up();
+  await expect
+    .poll(async () => (await taskByTitle(page, "Prepare client review")).scheduled_date)
+    .toBe(tomorrow);
 
-  await page.evaluate(() => localStorage.setItem("jig-theme", "dark"));
-  await page.reload();
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await setTheme(page, "Dark");
   await capture(page, "desktop-planner-dark");
+  await setTheme(page, "Light");
 
+  const completed = await taskByTitle(page, "Confirm next steps");
+  await apiCommand(page, { type: "complete", task_id: completed.id });
+  await page.reload();
   await page.getByRole("button", { name: "History", exact: true }).click();
   await capture(page, "desktop-history");
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await capture(page, "desktop-settings");
 
-  await page.evaluate(() => localStorage.setItem("jig-theme", "light"));
-  await page.reload();
   await page.getByRole("button", { name: "Planner", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   await capture(page, "mobile-planner");
 
-  await page.getByText("Prepare implementation notes", { exact: true }).click();
+  await page.getByText("Refine implementation notes", { exact: true }).click();
   await expect(
-    page.getByRole("dialog", { name: "Prepare implementation notes" }),
+    page.getByRole("dialog", { name: "Refine implementation notes" }),
   ).toBeVisible();
   await capture(page, "mobile-task-bottom-sheet");
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "Refine implementation notes" })
+    .getByRole("button", { name: "Close" })
+    .click();
 
   await page.setViewportSize({ width: 1440, height: 900 });
+  await runGit(ROOT, ["remote", "remove", "origin"]);
+  await syncNow(page);
+  await expect.poll(() => repositoryStatus(page)).toBe("local-only");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Local only" })).toBeVisible();
+  await capture(page, "desktop-local-only");
+
+  await runGit(ROOT, ["remote", "add", "origin", REMOTE]);
+  await syncNow(page);
+  await expect
+    .poll(() => repositoryStatus(page), { timeout: 10_000 })
+    .toBe("synchronized");
+
   await rename(REMOTE, OFFLINE_REMOTE);
   try {
-    await createFixtureTask(page, "Locally safe during outage", today, "NORMAL");
+    const stateBeforeOutage = await apiState(page);
+    await apiCommand(page, {
+      type: "create",
+      title: "Local work remains safe",
+      scheduled_date: today,
+      priority: "NORMAL",
+      context: "Offline",
+      reference: null,
+      note: null,
+      reminder_time: null,
+    });
+    expect((await apiState(page)).revision).toBeGreaterThan(stateBeforeOutage.revision);
+
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      await syncNow(page);
+    }
     await expect
       .poll(() => repositoryStatus(page), { timeout: 10_000 })
-      .toMatch(/^(retrying|sync-issue)$/);
+      .toBe("sync-issue");
     await page.reload();
-    await capture(page, "sync-issue");
+    await expect(page.getByText("Repository synchronization issue")).toBeVisible();
+    await capture(page, "desktop-sync-issue");
   } finally {
     await rename(OFFLINE_REMOTE, REMOTE);
   }
 
-  await page.getByText("Prepare implementation notes", { exact: true }).click();
-  const workspace = page.getByRole("dialog", {
-    name: "Prepare implementation notes",
-  });
-  await expect(workspace).toBeVisible();
-
-  await page.route("**/api/v1/commands", async (route) => {
-    await route.fulfill({
-      status: 500,
-      contentType: "application/json",
-      body: JSON.stringify({ error: "Evidence local save failure" }),
-    });
-  });
-  await workspace.getByLabel("Notes").fill("This change must not persist.");
-  await workspace.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(workspace.getByRole("alert")).toContainText(
-    "Evidence local save failure",
-  );
-  await capture(page, "local-save-failure");
-});
-
-test.afterAll(async () => {
-  try {
-    await rename(OFFLINE_REMOTE, REMOTE);
-  } catch {
-    // The evidence test restores the fixture itself; this is crash cleanup only.
-  }
+  await syncNow(page);
+  await expect
+    .poll(() => repositoryStatus(page), { timeout: 10_000 })
+    .toBe("synchronized");
 });
