@@ -14,7 +14,7 @@ The binding structural references for this batch are:
 | Governing artifact | Screen | Structural meaning |
 |---|---|---|
 | ![Desktop Planner v1.0.3](reference/desktop-planner-v1.0.3.svg) | [Desktop Planner](reference/desktop-planner-v1.0.3.svg) | No sidebar; Jig home at left; page-centered week range above grouped Previous/Today/Next controls; Add task/History/Settings/sync at right; seven fluid date tracks |
-| ![Mobile Planner v1.0.3](reference/mobile-planner-v1.0.3.svg) | [Mobile/narrow Planner](reference/mobile-planner-v1.0.3.svg) | Jig/sync/hamburger application row, centered week range + grouped week controls, seven-date strip, selected-date Task list |
+| ![Mobile Planner v1.0.3](reference/mobile-planner-v1.0.3.svg) | [Mobile/narrow Planner](reference/mobile-planner-v1.0.3.svg) | Historical v1.0.3 narrow composition only. v1.0.4 supersedes its selected-date strip/list with seven vertically stacked dated sections; the asset must not be used as authority for day selection. |
 | ![Narrow Task workspace](reference/mobile-editor.svg) | [Narrow Task workspace](reference/mobile-editor.svg) | BottomSheet Task workspace; permanent Delete confirmation remains separate |
 | ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history; uses the same top application navigation |
 | ![Desktop settings and sync](reference/desktop-settings-sync.svg) | [Desktop settings/sync](reference/desktop-settings-sync.svg) | Appearance, notification and operational status/settings |
@@ -36,7 +36,7 @@ The only secondary destinations are **History** and **Settings**.
 - There is no desktop SideNav, mobile navigation drawer, separate Day destination, separate Week destination, or Board destination.
 - Today is a temporal shortcut inside Planner, not a destination.
 
-Planner owns one `displayed week + selected date` presentation state. Desktop renders all seven outstanding date sequences at once. Narrow/mobile renders the same seven dates as a strip and shows only the selected date's outstanding sequence. Completed Tasks are absent from Planner and live in History.
+Planner owns one temporal presentation state: the displayed week. Desktop renders all seven outstanding date sequences as columns. Narrow/mobile renders the same seven sequences as vertically stacked dated sections. There is no selected-day state or selected-day subview. Completed Tasks are absent from Planner and live in History.
 
 ### Onboarding and installed lifecycle
 
@@ -63,7 +63,7 @@ The visual reference does **not** authorize bypassing the component architecture
 
 1. this UI solution and the governed SVGs define product structure, hierarchy, density and genuine structural dimensions;
 2. pinned Astryx public APIs define application shell, navigation, responsive shell behavior, list/field/button/link/drawer/dialog anatomy, spacing mechanics and semantic styling;
-3. Jig React composition supplies only product-specific structures such as the three-zone Planner header, seven dated Planner buckets, narrow date strip/list, shared Task workspace and Settings information grouping;
+3. Jig React composition supplies only product-specific structures such as the three-zone Planner header, seven dated Planner buckets, narrow seven-section stack, shared Task workspace and Settings information grouping;
 4. Jig CSS supplies only the remaining Jig-owned geometry and consumes public Astryx tokens;
 5. browser geometry assertions and screenshots verify the implementation; they do not justify private overrides or compensating layout rules.
 
@@ -85,8 +85,7 @@ Visual rules:
 | UI state | Appearance contract |
 |---|---|
 | Desktop exact current day | subtle cool-neutral column/header border + stronger date typography; no Amber fill |
-| Desktop selected Planner date | no persistent whole-column color; selectedDate remains operational state only |
-| Narrow/mobile selected date | compact selected date control may use the ordinary accent treatment because it directly controls the visible date list |
+| Planner selected day | **none** — day selection is not a product state in v1.0.4 |
 | Selected Task | cool Ink/neutral tinted card surface + emphasized neutral border; no Amber selection fill |
 | Task High priority | narrow error/red leading cue; explicit High label where shown |
 | Task Normal priority | quiet Ink/neutral leading cue; no loud badge |
@@ -100,7 +99,7 @@ Visual rules:
 | Unknown status | neutral grey |
 
 6. **Theme parity.** System/Light/Dark are mandatory. System follows the browser/platform preference and explicit Light/Dark overrides it locally. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics must remain clear in both themes without relying on color alone.
-7. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, selected date or pending form draft changes as a side effect of a breakpoint.
+7. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, displayed week or pending form draft changes as a side effect of a breakpoint.
 8. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable, but the final production palette is the canonical Jig theme. No duplicate dark-mode structural mockup set is required.
 
 ## 4. Screen specifications
@@ -117,15 +116,15 @@ The approved desktop composition is the v1.0.3 reference.
 
 The temporal centerpiece is centered on the page, not merely centered in the leftover space between left/right controls.
 
-The week range uses compact formatting without “Week of” or a separate month title. Previous/Next shift by exactly seven days while preserving selected weekday; Today selects the current local date/current week.
+The week range uses compact formatting without “Week of” or a separate month title. Previous/Next shift the displayed week by exactly seven days. Today returns to the week containing the current local date.
 
-The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. Date headers such as `Thu 19` are the desktop date selector and contain a compact `+` immediately adjacent to the day/date label for date-specific creation.
+The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. Date headers such as `Thu 19` are non-selectable labels and contain a compact `+` immediately adjacent to the day/date label for date-specific creation.
 
 Desktop does not persistently color the whole selected-date column. The exact current local civil date alone receives the subtle current-day border/header treatment; the same weekday in another displayed week does not. Selected Task uses its own subtle card selection treatment. Drag-over has a separate transient treatment. Do not conflate these states.
 
 Task cards are compact and title-first. A thin leading color/accent may encode priority for scanning, but color is not the only priority signal and Normal remains visually quiet.
 
-Clicking a Task opens the full editable Task form directly in the non-blocking right workspace without moving it. There is no separate read-only details step and no Edit indirection. The workspace overlays the board and never narrows/reflows the seven tracks. Clicking blank Planner/History content dismisses the workspace; clicking another Task retargets it. Global Add task originates from the selected date. Per-date Add is the compact `+` in that date header and opens the same full form for that date. The former full-width bottom-of-lane Add control does not exist.
+Clicking a Task opens the full editable Task form directly in the non-blocking right workspace without moving it. There is no separate read-only details step and no Edit indirection. The workspace overlays the board and never narrows/reflows the seven tracks. Clicking blank Planner/History content dismisses the workspace; clicking another Task retargets it. Global Add task derives its default date from the viewed week and the current local weekday; in the current week this is today. Per-date Add is the compact `+` in that date header and opens the same full form for that explicit date. The former full-width bottom-of-lane Add control does not exist.
 
 Remove descriptive/meta copy. The desktop interface must not display phrases such as “Week of”, “full available canvas”, “selected date view”, “Today is a shortcut”, or similar explanatory design text.
 
@@ -144,10 +143,11 @@ The top hierarchy is:
 1. Jig product mark/home on the left; compact sync state plus hamburger on the right;
 2. centered active week range;
 3. grouped Previous/Today/Next controls immediately beneath the range;
-4. seven-date horizontal strip;
-5. compact selected-date heading and optional Task count;
-6. selected-date outstanding Task list;
-7. prominent Add task touch action outside the constrained header.
+4. seven vertically stacked dated sections for the displayed week;
+5. each section header shows its date plus a compact `+`, followed by that date's outstanding Task list;
+6. global Add task remains available as a week-context shortcut using the derived weekday-matching default date.
+
+There is no horizontal date strip, selected-date heading, or selected-day Task subview.
 
 Do not render `Day`, `Week`, `Attention`, `Your ordered plan`, `selected date view`, or other labels that restate the visible hierarchy.
 
@@ -169,12 +169,12 @@ The field hierarchy is always Title, Date, Context, Priority, Reminder, Referenc
 |---|---|
 | Application frame | Astryx AppShell with no SideNav and no automatic mobile drawer |
 | Global/header controls | Astryx Button/IconButton plus DropdownMenu or Popover mechanics; Jig owns only three-zone/centered geometry |
-| Planner temporal state | Jig pure presentation state: displayed week start + selected date |
+| Planner temporal state | Jig pure presentation state: displayed week start only |
 | Lists, labels, fields, alerts, toasts, semantic theme | Astryx published primitives |
 | Desktop Task workspace | Astryx non-modal right Drawer |
 | Narrow Task workspace | Astryx BottomSheet rising from the bottom |
 | Sortable rows/drop zones | @dnd-kit/react only |
-| Planner seven-track composition, narrow date strip/list, Task workspace content | small Jig React composition |
+| Planner seven-track composition, narrow seven-section stack, Task workspace content | small Jig React composition |
 | Scheduled date/order/rollover/complete/reopen/delete/identity | pure Jig planning core |
 | Task reads/writes and repository synchronization state | Bun service + SQLite + repository adapter |
 
@@ -187,13 +187,13 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Case | Acceptance |
 |---|---|
 | Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task/History/Settings/sync right; no sidebar; outer header height does not change across Planner/History/Settings |
-| Week navigation | Previous/Next shift displayed week and selected date exactly seven days; Today restores current date/current week; no Task mutation |
+| Week navigation | Previous/Next shift displayed week exactly seven days; Today restores the current week; no selected-day state and no Task mutation |
 | Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; track height is content-driven; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
-| Unified creation | Global Add uses selected date; column/local Add uses originating date; the full canonical Task form is visible immediately with inherited defaults and no later Edit step required |
+| Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
 | Task workspace | Click selects and opens the directly editable full Task form without changing date/order/destination; no second Edit click exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
-| Responsive continuity | displayed week, selected date/task, workspace mode and unsaved draft survive Drawer↔BottomSheet change |
-| Mobile header | Jig/sync/hamburger first row; centered week range + grouped controls; seven-date strip; hamburger menu has only History/Settings and is not a drawer |
+| Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
+| Mobile header | Jig/sync/hamburger first row; centered week range + grouped controls; seven dated Task sections follow; hamburger menu has only History/Settings and is not a drawer |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
 | Same/cross-day drag | exact chosen position/date persists; empty destination works |
 | Narrow ordering | Move up/down works without introducing a second order representation |
