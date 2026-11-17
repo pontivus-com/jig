@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.4 UX/UI realization v0.9, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for complete state-color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus, one directly editable Task workspace, date-header Add, no selected-day state, stacked narrow week composition and full weekday labels.
+**Status:** Binding v1.0.4 UX/UI realization v0.10, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for complete state-color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus, one directly editable Task workspace, date-header Add, no selected-day state, stacked narrow week composition, full weekday labels, explicit Planner/History/Settings top navigation and a reduced-chrome visual treatment.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–12 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
@@ -74,7 +74,7 @@ The desktop header is one Jig-owned three-zone composition: Jig Home at left, th
 CSS may set the governed product-level dimensions needed to reproduce the structural references, but must not reshape Astryx internals. No Jig rule may rely on an undocumented/private Astryx selector, DOM child structure, StyleX detail or private custom property. Do not use an application-owned high-priority cascade layer, `!important`, or selector escalation to win against the library. The application must also not synthesize Astryx compiler/runtime markers such as `__built` or manually replace the documented theme-build pipeline; those belong only to Astryx-generated artifacts. If a public Astryx primitive cannot realize a governed requirement, document that incompatibility and use the smallest Jig-owned semantic composition built from public Astryx leaves/tokens.
 
 Visual rules:
-1. **Compact, low-chrome and scan-oriented.** Prefer list/row structure with subtle boundaries to decorative card stacks; no gratuitous shadows/gradients.
+1. **Compact, low-chrome and scan-oriented.** The week is an open canvas, not seven boxed panels. Prefer whitespace, typography and at most hairline separators to heavy outlines. Task cards remain discrete interactive units but use restrained borders/shadows. Avoid nested frames, thick lane borders, gratuitous shadows/gradients and repeated decorative lines.
 2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
 3. **One primary mutation per active form.** Add task is prominent at Planner level. The editable Task workspace has Save as its primary form action; completion/reopen and Delete remain independent Task commands rather than alternate form modes.
 4. **Distinct state vocabulary.** Current day, selected Task, drag target and priority are different semantics and must not collapse onto one brand/neutral family. Current day is an exact-date, subtle teal border/header treatment. Selected Task uses a subtle info-blue surface/border. Drag target uses transient Amber. Priority remains a narrow leading cue: High error/red, Normal quiet neutral, Low calm/success-green.
@@ -114,17 +114,17 @@ The approved desktop composition is the v1.0.3 reference.
 
 - **Left:** Jig product mark/home affordance.
 - **Center:** active week range on the first line, for example **16–22 Nov 2026**. Directly beneath it is a grouped **Previous week chevron · Today · Next week chevron** row. The range never sits between the arrows.
-- **Right:** **Add task**, **History**, **Settings**, compact synchronization state.
+- **Right:** **Add task**, adjacent **Planner · History · Settings** navigation, compact synchronization state. Planner is visibly active on the Planner surface.
 
 The temporal centerpiece is centered on the page, not merely centered in the leftover space between left/right controls.
 
 The week range uses compact formatting without “Week of” or a separate month title. Previous/Next shift the displayed week by exactly seven days. Today returns to the week containing the current local date.
 
-The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. Date headers use full weekday names, for example `Thursday 19`; they are non-selectable date signifiers and contain a compact `+` immediately adjacent to the label for date-specific creation.
+The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. The tracks are visually open: no lane cards, no thick outlines and no framed column containers. Use spacing and at most a subtle hairline divider between adjacent days. Date headers use full weekday names, for example `Thursday 19`; they are non-selectable date signifiers and contain a compact `+` immediately adjacent to the label for date-specific creation.
 
 The exact current local civil date alone receives the subtle teal current-day border/header treatment; the same weekday in another displayed week does not. Selected Task uses its own subtle info-blue card selection treatment. Drag-over uses transient Amber. Priority uses red/neutral/green cues. Do not conflate these states.
 
-Task cards are compact and title-first. A thin leading color/accent may encode priority for scanning, but color is not the only priority signal and Normal remains visually quiet.
+Task cards are compact and title-first. They are the primary discrete surfaces inside the otherwise open week canvas. Use a restrained surface, thin border and minimal elevation only where needed for separation; avoid heavy outlines or nested chrome. Small semantic icons may identify reminder, context/reference, completion or other visible metadata states, while the title remains dominant. A thin leading color/accent may encode priority for scanning, but color is not the only priority signal and Normal remains visually quiet.
 
 Clicking a Task opens the full editable Task form directly in the non-blocking right workspace without moving it. There is no separate read-only details step and no Edit indirection. The workspace overlays the board and never narrows/reflows the seven tracks. Clicking blank Planner/History content dismisses the workspace; clicking another Task retargets it. Global Add task derives its default date from the viewed week and the current local weekday; in the current week this is today. Per-date Add is the compact `+` in that date header and opens the same full form for that explicit date. The former full-width bottom-of-lane Add control does not exist.
 
@@ -188,9 +188,9 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 
 | Case | Acceptance |
 |---|---|
-| Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task/History/Settings/sync right; no sidebar; outer header height does not change across Planner/History/Settings |
+| Header composition | Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task + adjacent Planner/History/Settings + sync right; no sidebar; active destination clear; outer header height does not change across Planner/History/Settings |
 | Week navigation | Previous/Next shift displayed week exactly seven days; Today restores the current week; no selected-day state and no Task mutation |
-| Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; track height is content-driven; headers use full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
+| Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; content-driven heights; open lanes with whitespace/hairline separation rather than boxed panels; full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
 | Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
 | Task workspace | Click selects and opens the directly editable full Task form without changing date/order/destination; no second Edit click exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
