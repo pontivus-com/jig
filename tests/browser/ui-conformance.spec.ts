@@ -49,7 +49,9 @@ async function displayedDateValue(
 }
 
 async function headerHeight(page: Page): Promise<number> {
-  const box = await page.locator(".jig-app-header").boundingBox();
+  const header = page.locator(".jig-app-header");
+  await expect(header).toBeVisible();
+  const box = await header.boundingBox();
   if (box === null) {
     throw new Error("Application header geometry unavailable");
   }
