@@ -99,15 +99,15 @@ export function TaskInspector({
                   Open reference
                 </a>
               ) : (
-                <button
-                  type="button"
+                <Button
+                  label="Copy reference"
+                  variant="ghost"
+                  size="sm"
                   className="jig-copy-reference"
                   onClick={() => {
                     void navigator.clipboard.writeText(task.reference ?? "");
                   }}
-                >
-                  Copy reference
-                </button>
+                />
               )}
             </dd>
           </div>
