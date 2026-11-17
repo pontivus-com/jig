@@ -49,12 +49,6 @@ body {
   padding: 14px 10px 20px 0;
 }
 
-.jig-mobile-header,
-.jig-mobile-surface-nav,
-.jig-mobile-quick-add {
-  display: none;
-}
-
   .jig-nav-brand {
     display: grid;
     gap: var(--spacing-1);
@@ -735,11 +729,6 @@ body {
     font-size: 0.6875rem;
   }
 
-  .jig-mobile-day-heading {
-    display: none;
-  }
-
-
   .jig-section-heading {
     display: flex;
     align-items: baseline;
@@ -911,10 +900,10 @@ body {
 
   .jig-editor-date-behavior {
     display: grid;
-    gap: 4px;
-    padding: 12px 14px;
+    gap: var(--spacing-1);
+    padding: var(--spacing-3);
     border: 1px solid var(--color-border);
-    border-radius: 8px;
+    border-radius: var(--radius-element);
     background: var(--color-background-muted);
   }
 
@@ -931,7 +920,7 @@ body {
   .jig-editor-destructive-row {
     display: flex;
     justify-content: flex-start;
-    padding-block: 4px 12px;
+    padding-block: var(--spacing-1) var(--spacing-3);
     border-block-end: 1px solid var(--color-border);
   }
 
@@ -1041,8 +1030,7 @@ body {
   }
 
   .jig-mobile-day-heading {
-    display: block;
-    margin-block-end: 28px;
+    margin-block-end: var(--spacing-6);
   }
 
   .jig-mobile-day-heading h1,
@@ -1061,11 +1049,10 @@ body {
   }
 
   .jig-day-lists {
-    gap: 26px;
+    gap: var(--spacing-6);
   }
 
   .jig-task-card-list {
-    gap: 10px;
     padding-inline: 0;
   }
 
@@ -1103,12 +1090,12 @@ body {
 
   .jig-history-groups,
   .jig-settings-grid {
-    margin-block-start: 20px;
+    margin-block-start: var(--spacing-5);
   }
 
   .jig-settings-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: var(--spacing-5);
   }
 
   .jig-local-first-note {
@@ -1119,7 +1106,7 @@ body {
     width: calc(100dvw - 24px);
     height: calc(100dvh - 24px);
     margin: 12px;
-    padding: 18px;
+    padding: var(--spacing-4);
     overflow: auto;
     border: 1px solid var(--color-border);
     border-radius: 24px;
