@@ -261,19 +261,29 @@ export function TaskEditor({
               rows={4}
             />
 
+            {task === null ? null : (
+              <>
+                <div className="jig-editor-date-behavior">
+                  <strong>Date change behavior</strong>
+                  <span>
+                    Changing date uses priority-guided insertion. Dragging uses
+                    the exact drop position.
+                  </span>
+                </div>
+                <div className="jig-editor-destructive-row">
+                  <Button
+                    type="button"
+                    label="Delete task…"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleteOpen(true)}
+                    isDisabled={isSaving}
+                  />
+                </div>
+              </>
+            )}
+
             <div className="jig-editor-actions">
-              {task === null ? (
-                <span />
-              ) : (
-                <Button
-                  type="button"
-                  label="Delete task…"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDeleteOpen(true)}
-                  isDisabled={isSaving}
-                />
-              )}
               <div className="jig-editor-primary-actions">
                 <Button
                   type="button"
