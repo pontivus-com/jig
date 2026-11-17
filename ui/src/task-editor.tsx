@@ -162,7 +162,7 @@ export function TaskEditor({
           label="Date"
           value={asIsoDateString(draft.scheduledDate)}
           onChange={(value) => {
-            if (value !== null) {
+            if (value !== undefined) {
               update("scheduledDate", value);
             }
           }}
