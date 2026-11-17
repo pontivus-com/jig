@@ -1,5 +1,7 @@
+import type { ISODateString } from "@astryxdesign/core/utils";
+import type { ISOTimeString } from "@astryxdesign/core/TimeInput";
 import { addCivilDays } from "../../src/core/planning";
-import { assertCivilDate } from "../../src/core/task";
+import { assertCivilDate, assertLocalTime } from "../../src/core/task";
 
 export function todayCivilDate(now = new Date()): string {
   return [
@@ -24,6 +26,27 @@ export function civilDateAsLocalDate(civilDate: string): Date {
   assertCivilDate(civilDate);
   const [year, month, day] = civilDate.split("-").map(Number);
   return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
+}
+
+export function asIsoDateString(value: string): ISODateString {
+  assertCivilDate(value);
+  return value as ISODateString;
+}
+
+export function asIsoTimeString(value: string): ISOTimeString {
+  assertLocalTime(value);
+  return value as ISOTimeString;
+}
+
+export function formatPlannerDateHeader(civilDate: string): string {
+  const date = civilDateAsLocalDate(civilDate);
+  const weekday = new Intl.DateTimeFormat("en", {
+    weekday: "long",
+  }).format(date);
+  const day = new Intl.DateTimeFormat("en", {
+    day: "numeric",
+  }).format(date);
+  return `${weekday} ${day}`;
 }
 
 export function formatCivilDate(
