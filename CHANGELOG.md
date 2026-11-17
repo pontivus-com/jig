@@ -6,7 +6,18 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Changed
 
-- Constrained desktop History and Settings content to a centered 50rem / approximately 800px measure while preserving the full-width Planner and full-bleed application frame; Settings now uses fluid two-column tracks within that bounded content area.
+- Constrained History and Settings to one continuous centered 50rem / approximately 800px maximum content measure whenever space permits, independent of the 73rem Planner breakpoint, while preserving the full-width Planner/full-bleed application frame and independent Settings column reflow.
+- Defined the v1.0.6 curated application-theme catalogue: Jig; Astryx Neutral, Butter, Chocolate, Gothic, Matcha, Stone and Y2K; plus Gruvbox, Dracula, Solarized, Nord, Catppuccin and Tokyo Night.
+- Split theme family from System/Light/Dark appearance so each theme supports independent local appearance selection and System follows the platform preference.
+- Expanded theme governance to every application surface/state, including Task elevation, current day, selection, drag, priority, completion, operational status and combined-state precedence, without feature-local palettes.
+- Made the in-application Jig wordmark use canonical geometry with active-theme semantic foreground/accent paint while retaining fixed theme-independent favicon/app/release assets.
+- Replaced visible-page reminder Toast delivery with one browser/OS Notification channel while Jig is open and permission is granted, independent of page visibility/focus.
+- Kept Theme and System/Light/Dark configuration exclusively in Settings → Appearance.
+
+### Documentation
+
+- Completed JIG-106-FR-01…07 → JIG-106-SD-01…07 technical traceability and added the binding J106-IMP-01…08 implementation/certification plan.
+- Reconciled repository governance, UI and brand/theme authorities with the complete v1.0.6 scope; the former width-only implementation plan is superseded.
 
 
 ## [1.0.5] - 2026-11-17
