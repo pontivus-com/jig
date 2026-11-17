@@ -43,12 +43,19 @@ function TaskMetadata({
         <span className="jig-task-meta-item">{task.context}</span>
       )}
       {task.reminder_time === null ? null : (
-        <span className="jig-task-meta-item">
+        <span className="jig-task-meta-item jig-reminder-time">
+          <span aria-hidden="true">◷</span>{" "}
           {formatReminderTime(task.reminder_time)}
         </span>
       )}
       {task.priority === "NORMAL" ? null : (
-        <span className="jig-task-meta-item jig-priority-label">
+        <span
+          className={[
+            "jig-task-meta-item",
+            "jig-priority-label",
+            `jig-priority-${task.priority.toLowerCase()}`,
+          ].join(" ")}
+        >
           {task.priority.toLowerCase()}
         </span>
       )}
