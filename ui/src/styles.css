@@ -440,23 +440,14 @@ body {
     gap: var(--spacing-1);
   }
 
-  .jig-task-card-leading {
-    min-width: 2.75rem;
-  }
-
-  .jig-week-column .jig-task-card-leading {
-    width: 20px;
-    min-width: 0;
-  }
-
   .jig-week-column .jig-task-body {
     width: 100%;
     min-width: 0;
-    gap: 2px;
+    gap: var(--spacing-0-5);
   }
 
   .jig-week-column .jig-task-title-row {
-    gap: 4px;
+    gap: var(--spacing-1);
   }
 
   .jig-week-column .jig-task-title {
@@ -469,7 +460,7 @@ body {
   }
 
   .jig-week-column .jig-task-meta {
-    gap: 2px 5px;
+    gap: var(--spacing-0-5) var(--spacing-1);
     font-size: 0.6875rem;
     line-height: 1.25;
   }
@@ -555,10 +546,6 @@ body {
     cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 0.15em;
-  }
-
-  .jig-task-menu {
-    position: relative;
   }
 
   .jig-drag-card-overlay {
