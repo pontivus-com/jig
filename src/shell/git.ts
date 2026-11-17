@@ -168,8 +168,7 @@ function parseTaskRecord(
     );
   }
 
-  const task = object as unknown as Task;
-  validateTask(task);
+  const task = validateTask(object);
   if (task.id !== expectedId) {
     throw new SnapshotValidationError(
       `${path} id does not match its filename`,
