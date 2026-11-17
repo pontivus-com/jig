@@ -6,8 +6,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Documentation
 
-- Defined the v1.0.5 corrective functional/technical/UI contract after post-release v1.0.4 validation exposed a drag reconciliation crash, missing narrow/mobile drag parity, incomplete semantic icon/menu normalization, oversized header geometry, insufficient Task-card contrast and stale narrow presentation behavior.
-- Strengthened release acceptance so desktop and narrow/mobile drag must run without browser/runtime errors and Light/Dark responsive visual parity must be explicitly reviewed.
+- Defined the v1.0.5 corrective functional/technical/UI contract after post-release v1.0.4 validation exposed a drag reconciliation crash, title/body-only drag activation instead of whole-card drag, missing narrow/mobile drag parity, duplicated responsive navigation/rendering semantics, incomplete semantic icon/menu normalization, oversized header geometry, insufficient Task-card contrast and stale narrow presentation behavior.
+- Added exact JIG-105-FR-01…10 → JIG-105-SD-01…10 → J105-IMP-01…10 traceability and strengthened release acceptance so desktop/narrow drag, navigation/menu parity, Task-action parity, semantic icons, header bounds and Light/Dark card contrast are all explicitly certified.
 
 ## [1.0.4] - 2026-11-17
 
