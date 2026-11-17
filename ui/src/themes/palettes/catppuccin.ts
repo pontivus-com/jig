@@ -3,7 +3,7 @@ import type { CommunityPalette } from "../community-theme";
 /**
  * Catppuccin palette authority:
  * https://github.com/catppuccin/palette/blob/2a5d25cb0b00033bb049d11ab12c8bed478bf4e8/palette.json
- * palette.json version 1.8.0. Light = Latte; Dark = Mocha.
+ * palette.json version 1.8.0. Light = Latte; Dark = Mocha.\n * License: MIT. Copyright (c) 2021 Catppuccin.
  */
 export const catppuccinPalette = {
   body: ["#eff1f5", "#1e1e2e"],
