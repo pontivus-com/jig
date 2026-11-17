@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.4 UX/UI realization v0.8, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for distinct state color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus and one directly editable Task workspace.
+**Status:** Binding v1.0.4 UX/UI realization v0.9, 2026-11-17. The v1.0.3 single responsive Planner remains, with v1.0.4 corrections for complete state-color semantics, exact-current-day indication, working card-body drag, stable header height, outside-click dismissal, complete Task menus, one directly editable Task workspace, date-header Add, no selected-day state, stacked narrow week composition and full weekday labels.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-103-FR-01–17, JIG-104-FR-01–12 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
@@ -120,7 +120,7 @@ The temporal centerpiece is centered on the page, not merely centered in the lef
 
 The week range uses compact formatting without “Week of” or a separate month title. Previous/Next shift the displayed week by exactly seven days. Today returns to the week containing the current local date.
 
-The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. Date headers such as `Thu 19` are non-selectable labels and contain a compact `+` immediately adjacent to the day/date label for date-specific creation.
+The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. Date headers use full weekday names, for example `Thursday 19`; they are non-selectable date signifiers and contain a compact `+` immediately adjacent to the label for date-specific creation.
 
 The exact current local civil date alone receives the subtle teal current-day border/header treatment; the same weekday in another displayed week does not. Selected Task uses its own subtle info-blue card selection treatment. Drag-over uses transient Amber. Priority uses red/neutral/green cues. Do not conflate these states.
 
@@ -146,7 +146,7 @@ The top hierarchy is:
 2. centered active week range;
 3. grouped Previous/Today/Next controls immediately beneath the range;
 4. seven vertically stacked dated sections for the displayed week;
-5. each section header shows its date plus a compact `+`, followed by that date's outstanding Task list;
+5. each section header shows the full weekday name + day number (for example `Thursday 19`) plus a compact `+`, followed by that date's outstanding Task list;
 6. global Add task remains available as a week-context shortcut using the derived weekday-matching default date.
 
 There is no horizontal date strip, selected-date heading, or selected-day Task subview.
@@ -155,7 +155,7 @@ Do not render `Day`, `Week`, `Attention`, `Your ordered plan`, `selected date vi
 
 The hamburger opens a compact menu/popover containing only History and Settings. It is not a drawer.
 
-Task create/edit uses a BottomSheet rising from the bottom. Existing Tasks open directly into the full editable field surface. Add uses the same full field surface with inherited selected/originating date and canonical defaults. Delete confirmation remains the sole blocking Task dialog.
+Task create/edit uses a BottomSheet rising from the bottom. Existing Tasks open directly into the full editable field surface. Add uses the same full field surface with its derived or explicit originating date and canonical defaults. Delete confirmation remains the sole blocking Task dialog.
 
 When narrow drag is absent, Move up/Move down provides touch ordering within the date and Edit date provides cross-date rescheduling.
 
