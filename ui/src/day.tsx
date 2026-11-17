@@ -251,6 +251,8 @@ export function DayView({
           label="+"
           aria-label="Add task"
           variant="primary"
+          size="lg"
+          elevation="med"
           className="jig-mobile-quick-add"
           onClick={() => onAdd(selectedDate)}
         />
@@ -279,7 +281,7 @@ export function DayView({
           <Button
             label="Today"
             variant="secondary"
-            size="sm"
+            size="md"
             className="jig-today-control"
             onClick={onToday}
           />
