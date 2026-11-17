@@ -2,6 +2,7 @@ import {
   Button,
   List,
 } from "@astryxdesign/core";
+import type { ReactNode } from "react";
 import type { Task } from "../../src/core/task";
 import {
   outstandingForDate,
@@ -10,6 +11,39 @@ import {
 import { DateDropZone, TaskDragProvider } from "./drag";
 import { DayTaskLists } from "./day";
 import { formatCivilDate, todayCivilDate } from "./dates";
+
+function weekHeading(dates: readonly string[], fallback: string): string {
+  const first = dates[0] ?? fallback;
+  const last = dates[6] ?? fallback;
+  const firstMonth = formatCivilDate(first, { month: "long" });
+  const lastMonth = formatCivilDate(last, { month: "long" });
+  const firstYear = formatCivilDate(first, { year: "numeric" });
+  const lastYear = formatCivilDate(last, { year: "numeric" });
+  const firstDay = formatCivilDate(first, { day: "numeric" });
+  const lastDay = formatCivilDate(last, { day: "numeric" });
+
+  if (firstMonth === lastMonth && firstYear === lastYear) {
+    return `Week of ${firstDay}–${lastDay} ${lastMonth}`;
+  }
+
+  const firstLabel = formatCivilDate(first, {
+    month: "short",
+    day: "numeric",
+  });
+  const lastLabel =
+    firstYear === lastYear
+      ? formatCivilDate(last, {
+          month: "short",
+          day: "numeric",
+        })
+      : formatCivilDate(last, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+
+  return `Week of ${firstLabel} – ${lastLabel}`;
+}
 import { DateStrip } from "./date-strip";
 import { SortableTaskRow } from "./task-row";
 
@@ -18,6 +52,10 @@ export interface WeekViewProps {
   readonly selectedDate: string;
   readonly isNarrow: boolean;
   readonly onSelectDate: (date: string) => void;
+  readonly onPrevious: () => void;
+  readonly onToday: () => void;
+  readonly onNext: () => void;
+  readonly statusControl: ReactNode;
   readonly onAdd: (date: string) => void;
   readonly onEdit: (task: Task) => void;
   readonly onMoveToDate: (task: Task) => void;
@@ -89,6 +127,10 @@ export function WeekView({
   selectedDate,
   isNarrow,
   onSelectDate,
+  onPrevious,
+  onToday,
+  onNext,
+  statusControl,
   onAdd,
   onEdit,
   onMoveToDate,
@@ -101,21 +143,22 @@ export function WeekView({
   if (isNarrow) {
     return (
       <div className="jig-week-view jig-week-view-narrow">
-        <div className="jig-view-heading">
-          <div>
-            <p className="jig-eyebrow">Week</p>
-            <h1>Plan the week</h1>
-          </div>
-          <Button
-            label="Add task"
-            variant="primary"
-            onClick={() => onAdd(selectedDate)}
-          />
-        </div>
         <DateStrip
           selectedDate={selectedDate}
           onSelectDate={onSelectDate}
         />
+
+        <div className="jig-mobile-day-heading">
+          <h1>
+            {formatCivilDate(selectedDate, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </h1>
+          <p>Weekly planning context · one selected date</p>
+        </div>
+
         <DayTaskLists
           tasks={tasks}
           selectedDate={selectedDate}
@@ -124,33 +167,68 @@ export function WeekView({
           onToggleComplete={onToggleComplete}
           onMove={onMove}
         />
+        <Button
+          label="+"
+          aria-label="Add task"
+          variant="primary"
+          size="lg"
+          elevation="med"
+          className="jig-mobile-quick-add"
+          onClick={() => onAdd(selectedDate)}
+        />
       </div>
     );
   }
 
   return (
     <div className="jig-week-view">
-      <div className="jig-view-heading">
+      <div className="jig-reference-heading">
         <div>
-          <p className="jig-eyebrow">Week</p>
-          <h1>
-            {formatCivilDate(dates[0] ?? selectedDate, {
-              month: "short",
-              day: "numeric",
-            })}
-            {" – "}
-            {formatCivilDate(dates[6] ?? selectedDate, {
-              month: "short",
-              day: "numeric",
+          <h1>{weekHeading(dates, selectedDate)}</h1>
+          <p>Plan attention across the week · drag to an exact position</p>
+        </div>
+        {statusControl}
+      </div>
+
+      <div className="jig-week-toolbar">
+        <div className="jig-month-navigation">
+          <Button
+            label="‹"
+            aria-label="Previous week"
+            variant="ghost"
+            size="sm"
+            className="jig-date-step"
+            onClick={onPrevious}
+          />
+          <strong>
+            {formatCivilDate(selectedDate, {
+              month: "long",
               year: "numeric",
             })}
-          </h1>
+          </strong>
+          <Button
+            label="›"
+            aria-label="Next week"
+            variant="ghost"
+            size="sm"
+            className="jig-date-step"
+            onClick={onNext}
+          />
         </div>
-        <Button
-          label="Add task"
-          variant="primary"
-          onClick={() => onAdd(selectedDate)}
-        />
+        <div className="jig-reference-toolbar-actions">
+          <Button
+            label="Today"
+            variant="secondary"
+            size="md"
+            className="jig-today-control"
+            onClick={onToday}
+          />
+          <Button
+            label="+ Quick add"
+            variant="primary"
+            onClick={() => onAdd(selectedDate)}
+          />
+        </div>
       </div>
 
       <TaskDragProvider tasks={tasks} onMove={onMove}>
@@ -171,33 +249,30 @@ export function WeekView({
               >
                 <section aria-labelledby={`week-date-${date}`}>
                   <header className="jig-week-column-header">
-                    <button
-                      type="button"
+                    <Button
+                      label={formatCivilDate(date, {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                      variant="ghost"
+                      size="sm"
                       className="jig-date-heading-button"
                       onClick={() => onSelectDate(date)}
                       aria-current={date === selectedDate ? "date" : undefined}
                     >
-                      <span>{formatCivilDate(date, { weekday: "short" })}</span>
                       <strong id={`week-date-${date}`}>
-                        {formatCivilDate(date, {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {formatCivilDate(date, { weekday: "short" })}{" "}
+                        {formatCivilDate(date, { day: "numeric" })}
                       </strong>
-                    </button>
-                    <Button
-                      label="Add"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onAdd(date)}
-                      aria-label={`Add task on ${formatCivilDate(date)}`}
-                    />
+                    </Button>
+                    <span className="jig-task-count" aria-label={`${dateTasks.length} outstanding tasks`}>
+                      {dateTasks.length}
+                    </span>
                   </header>
 
-                  {dateTasks.length === 0 ? (
-                    <p className="jig-empty-column">Drop or add a task</p>
-                  ) : (
-                    <List density="compact" hasDividers edge="flush">
+                  {dateTasks.length === 0 ? null : (
+                    <List density="compact" edge="padded" className="jig-task-card-list">
                       {dateTasks.map((task) => (
                         <WeekTaskRow
                           key={task.id}
@@ -211,6 +286,14 @@ export function WeekView({
                       ))}
                     </List>
                   )}
+                  <Button
+                    label="+ Add task"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onAdd(date)}
+                    aria-label={`Add task on ${formatCivilDate(date)}`}
+                    className="jig-week-add-task"
+                  />
                 </section>
               </DateDropZone>
             );

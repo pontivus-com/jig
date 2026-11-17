@@ -1,12 +1,12 @@
 import { defineTheme } from "@astryxdesign/core/theme";
-import { neutralTheme } from "@astryxdesign/theme-neutral";
+import { neutralTheme } from "@astryxdesign/theme-neutral/built";
 
 /**
- * Jig's Astryx semantic theme.
+ * Jig's Astryx semantic theme source.
  *
- * Raw palette values live only in theme.css. This file owns the mapping from
- * those brand primitives to the public Astryx semantic roles used by every
- * component and Jig composition.
+ * Raw palette values live only in theme.css. This file is authoring input for
+ * Astryx `theme build`; application runtime code consumes only the generated
+ * built theme module and stylesheet.
  */
 export const jigTheme = defineTheme({
   name: "jig",

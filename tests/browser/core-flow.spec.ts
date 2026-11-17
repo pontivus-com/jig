@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { resetCanonicalTasks } from "./helpers";
+import { apiState, resetCanonicalTasks } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -7,34 +7,71 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+async function navigateTo(
+  page: Page,
+  destination: "Week" | "Day" | "History" | "Settings",
+): Promise<void> {
+  const navigation = page
+    .locator(".jig-primary-nav")
+    .getByRole("button", { name: destination, exact: true });
+  if (await navigation.isVisible()) {
+    await navigation.click();
+    return;
+  }
+
+  await page.locator(".jig-mobile-destination-trigger").click();
+  await page
+    .locator(".jig-primary-nav")
+    .getByRole("button", { name: destination, exact: true })
+    .click();
+}
+
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
-  await page.getByRole("button", { name: "Add task", exact: true }).first().click();
+  await page.getByRole("button", { name: /Add task$/ }).first().click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("Start with a title. Everything else is optional.")).toBeVisible();
   await dialog.getByLabel("Title").fill(title);
   await dialog.getByRole("button", { name: "Add task", exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByText(title, { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".jig-task-card").filter({ hasText: title }).first(),
+  ).toBeVisible();
 }
 
 test("real runtime supports title-first create, completion, History and reopen", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: /–/ })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Day", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
 
   await addTitleOnlyTask(page, "Browser acceptance task");
   await page.getByLabel("Complete Browser acceptance task").click();
+  await expect
+    .poll(async () =>
+      (await apiState(page)).tasks.find(
+        (task) => task.title === "Browser acceptance task",
+      )?.completed_at ?? null,
+    )
+    .not.toBeNull();
 
   await page.getByRole("button", { name: "History", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Completed work", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", exact: true })).toBeVisible();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeVisible();
 
-  await page.getByLabel("Reopen Browser acceptance task").click();
+  const historyRow = page
+    .getByText("Browser acceptance task", { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  await historyRow
+    .getByRole("button", { name: "Actions for Browser acceptance task" })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Reopen", exact: true })
+    .click();
   await expect(page.getByText("Browser acceptance task", { exact: true })).toBeHidden();
 });
 
 test("stale revisions refetch canonical state and never blindly replay a mutation", async ({ page }) => {
   await addTitleOnlyTask(page, "Stale view seed");
 
-  await page.getByRole("button", { name: "Add task", exact: true }).first().click();
+  await page.getByRole("button", { name: /Add task$/ }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Title").fill("Must not replay");
 
@@ -78,20 +115,20 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   expect(tasks).toContain("Concurrent canonical task");
   expect(tasks.filter((title) => title === "Must not replay")).toHaveLength(0);
 
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
 });
 
 test("responsive reflow preserves an open editor draft and appearance remains presentation-only", async ({ page }) => {
-  await page.getByRole("button", { name: "Add task", exact: true }).first().click();
+  await page.getByRole("button", { name: /Add task$/ }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Title").fill("Draft survives reflow");
 
   await page.setViewportSize({ width: 640, height: 900 });
   await expect(dialog.getByLabel("Title")).toHaveValue("Draft survives reflow");
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await navigateTo(page, "Settings");
   await page.getByText("Dark", { exact: true }).click();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("jig-theme"))).toBe("dark");
   const after = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
@@ -132,7 +169,7 @@ test("System, Light and Dark use the canonical Jig theme and remain presentation
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Jig settings", exact: true }),
+    page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();
 
   for (const [label, stored] of [

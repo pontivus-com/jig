@@ -17,6 +17,22 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+async function taskCard(page: Page, title: string) {
+  return page
+    .getByText(title, { exact: true })
+    .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
+}
+
+async function runTaskAction(
+  page: Page,
+  title: string,
+  action: string,
+): Promise<void> {
+  const card = await taskCard(page, title);
+  await card.getByRole("button", { name: `Actions for ${title}` }).click();
+  await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
+
 async function createTask(
   page: Page,
   title: string,
@@ -38,51 +54,49 @@ async function createTask(
   });
 }
 
-test("Day carry-over is derived without date mutation and explicit Move to date reschedules", async ({
+test("unfinished prior-day cards roll into today across Day and Week", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
   const yesterday = await browserCivilDate(page, -1);
-  await createTask(page, "Carry-over contract", yesterday);
+  await createTask(page, "Rollover contract", yesterday);
   await page.reload();
 
-  await page.getByRole("button", { name: "Day", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Carried over" }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Day", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
   await expect(
-    page.getByText("Carry-over contract", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Rollover contract" })
+      .first(),
   ).toBeVisible();
 
-  expect(
-    (await taskByTitle(page, "Carry-over contract")).scheduled_date,
-  ).toBe(yesterday);
-
-  await page
-    .getByRole("button", {
-      name: "Move Carry-over contract to another date",
-    })
-    .click();
-
-  const dialog = page.getByRole("dialog");
-  await expect(
-    dialog.getByRole("heading", { name: "Move task to date" }),
-  ).toBeVisible();
-  await dialog.getByLabel("Destination date").fill(today);
-  await dialog
-    .getByRole("button", { name: "Move task", exact: true })
-    .click();
-
-  await expect(dialog).toBeHidden();
   await expect
     .poll(
-      async () =>
-        (await taskByTitle(page, "Carry-over contract")).scheduled_date,
+      async () => (await taskByTitle(page, "Rollover contract")).scheduled_date,
     )
     .toBe(today);
+
+  await page.getByRole("button", { name: "Week", exact: true }).click();
+  const todayColumn = page.locator(`[data-date="${today}"]`);
   await expect(
-    page.getByRole("heading", { name: "Carried over" }),
-  ).toBeHidden();
+    todayColumn.getByText("Rollover contract", { exact: true }),
+  ).toBeVisible();
+
+  const state = await apiState(page);
+  expect(
+    state.tasks.some(
+      (task) =>
+        task.title === "Rollover contract" &&
+        task.scheduled_date === yesterday,
+    ),
+  ).toBe(false);
+
+  await page.reload();
+  expect(
+    (await taskByTitle(page, "Rollover contract")).scheduled_date,
+  ).toBe(today);
 });
 
 test("non-drag movement uses the same exact index semantics", async ({
@@ -93,9 +107,7 @@ test("non-drag movement uses the same exact index semantics", async ({
   await createTask(page, "Second exact task", today);
   await page.reload();
 
-  await page
-    .getByRole("button", { name: "Move First exact task down" })
-    .click();
+  await runTaskAction(page, "First exact task", "Move down");
 
   await expect
     .poll(async () =>
@@ -113,9 +125,7 @@ test("non-drag movement uses the same exact index semantics", async ({
     )
     .toEqual(["Second exact task", "First exact task"]);
 
-  await page
-    .getByRole("button", { name: "Move First exact task up" })
-    .click();
+  await runTaskAction(page, "First exact task", "Move up");
 
   await expect
     .poll(async () =>
@@ -154,9 +164,7 @@ test("priority edits preserve established manual order", async ({
     )
     .map((task) => task.id);
 
-  await page
-    .getByRole("button", { name: "Edit Priority edited task" })
-    .click({ timeout: 5_000 });
+  await runTaskAction(page, "Priority edited task", "Edit");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: 5_000 });
   const highPriority = dialog.getByRole("radio", {
@@ -194,9 +202,7 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   await createTask(page, "Editable metadata task", today);
   await page.reload();
 
-  await page
-    .getByRole("button", { name: "Edit Editable metadata task" })
-    .click();
+  await runTaskAction(page, "Editable metadata task", "Edit");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Context").fill("Client Alpha");
   await dialog
@@ -224,17 +230,16 @@ test("real pointer drag moves a Task across dated Week drop zones", async ({
 
   await createTask(page, "Pointer drag contract", today);
   await page.reload();
+  await page.getByRole("button", { name: "Week", exact: true }).click();
 
-  const handle = page.getByRole("button", {
-    name: "Drag Pointer drag contract",
-  });
+  const card = await taskCard(page, "Pointer drag contract");
   const destination = page.locator(
     `[data-date="${destinationDate}"]`,
   );
-  await expect(handle).toBeVisible();
+  await expect(card).toBeVisible();
   await expect(destination).toBeVisible();
 
-  const sourceBox = await handle.boundingBox();
+  const sourceBox = await card.boundingBox();
   const destinationBox = await destination.boundingBox();
   expect(sourceBox).not.toBeNull();
   expect(destinationBox).not.toBeNull();
@@ -296,7 +301,7 @@ test("references stay data-only: HTTP(S) opens and non-HTTP stays copy-only", as
     .getByText("Copy-only reference", { exact: true })
     .locator("xpath=ancestor::li[1]");
   await expect(
-    copyOnlyRow.getByRole("button", { name: "Copy reference" }),
+    copyOnlyRow.locator('button[aria-label="Copy reference"]'),
   ).toBeVisible();
   await expect(copyOnlyRow.getByRole("link")).toHaveCount(0);
 });
@@ -308,9 +313,7 @@ test("deletion requires confirmation and removes the canonical Task", async ({
   await createTask(page, "Delete contract task", today);
   await page.reload();
 
-  await page
-    .getByRole("button", { name: "Edit Delete contract task" })
-    .click();
+  await runTaskAction(page, "Delete contract task", "Edit");
   const editor = page.getByRole("dialog");
   await editor
     .getByRole("button", { name: "Delete task…" })
@@ -347,19 +350,30 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   await createTask(page, "Narrow selected task", today);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator(".jig-mobile-destination-trigger").click();
+  await page
+    .locator(".jig-primary-nav")
+    .getByRole("button", { name: "Week", exact: true })
+    .click();
 
   await expect(page.locator(".jig-week-board")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
   await expect(
-    page.getByText("Narrow selected task", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Narrow selected task" })
+      .first(),
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect(page.locator(".jig-mobile-destination-trigger")).toHaveText(
+    /Day/,
+  );
   await expect(
-    page.getByRole("button", { name: "Day", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
-  await expect(
-    page.getByText("Narrow selected task", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Narrow selected task" })
+      .first(),
   ).toBeVisible();
 });
 
@@ -372,9 +386,7 @@ test("reduced motion preserves non-drag movement semantics", async ({
   await createTask(page, "Reduced motion second", today);
   await page.reload();
 
-  await page
-    .getByRole("button", { name: "Move Reduced motion first down" })
-    .click();
+  await runTaskAction(page, "Reduced motion first", "Move down");
 
   await expect
     .poll(async () =>
@@ -405,6 +417,7 @@ test("long Week columns keep sticky date controls reachable while tasks scroll",
     await createTask(page, `Long list task ${index + 1}`, today);
   }
   await page.reload();
+  await page.getByRole("button", { name: "Week", exact: true }).click();
 
   const column = page.locator(`[data-date="${today}"]`);
   await expect(column).toBeVisible();

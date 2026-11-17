@@ -12,12 +12,14 @@ import {
 } from "@astryxdesign/core";
 import type { ISODateString } from "@astryxdesign/core/utils";
 import type { ISOTimeString } from "@astryxdesign/core/TimeInput";
-import { useEffect, useState } from "react";
+import { FieldLabel } from "@astryxdesign/core/Field";
+import { useEffect, useId, useState } from "react";
 import type {
   Priority,
   Task,
   TaskCommand,
 } from "../../src/core/task";
+import { formatCivilDate } from "./dates";
 
 interface TaskDraft {
   readonly title: string;
@@ -95,6 +97,7 @@ function commandForDraft(
 
 export interface TaskEditorProps {
   readonly isOpen: boolean;
+  readonly isNarrow: boolean;
   readonly task: Task | null;
   readonly initiatingDate: string;
   readonly externalError: string | null;
@@ -106,6 +109,7 @@ export interface TaskEditorProps {
 
 export function TaskEditor({
   isOpen,
+  isNarrow,
   task,
   initiatingDate,
   externalError,
@@ -119,6 +123,8 @@ export function TaskEditor({
   );
   const [localError, setLocalError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const priorityGroupId = useId();
+  const priorityLabelId = useId();
 
   useEffect(() => {
     if (isOpen) {
@@ -158,19 +164,42 @@ export function TaskEditor({
         isOpen={isOpen}
         onOpenChange={isSaving ? () => undefined : onOpenChange}
         purpose="form"
-        width="min(38rem, calc(100vw - 2rem))"
+        variant={isNarrow ? "fullscreen" : "standard"}
+        width="38rem"
         maxHeight="90dvh"
-        padding={4}
+        padding={isNarrow ? 0 : 4}
       >
-        <div className="jig-editor">
+        <div
+          className={
+            isNarrow
+              ? "jig-editor jig-editor-mobile-frame"
+              : "jig-editor"
+          }
+        >
           <DialogHeader
             title={task === null ? "Add task" : "Edit task"}
-            subtitle={
-              task === null
-                ? "Start with a title. Everything else is optional."
-                : "Update only what changed."
+            subtitle={formatCivilDate(
+              task?.scheduled_date ?? initiatingDate,
+              {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              },
+            )}
+            endContent={
+              isNarrow ? (
+                <Button
+                  type="button"
+                  label="Cancel"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onOpenChange(false)}
+                  isDisabled={isSaving}
+                />
+              ) : undefined
             }
-            {...(isSaving ? {} : { onOpenChange })}
+            {...(!isNarrow && !isSaving ? { onOpenChange } : {})}
           />
 
           <form
@@ -205,17 +234,6 @@ export function TaskEditor({
               weekStartsOn="mon"
             />
 
-            <SegmentedControl
-              label="Priority"
-              value={draft.priority}
-              onChange={(value) => update("priority", value as Priority)}
-              layout="fill"
-            >
-              <SegmentedControlItem value="HIGH" label="High" />
-              <SegmentedControlItem value="NORMAL" label="Normal" />
-              <SegmentedControlItem value="LOW" label="Low" />
-            </SegmentedControl>
-
             <TextInput
               label="Context"
               value={draft.context}
@@ -224,6 +242,27 @@ export function TaskEditor({
               width="100%"
               placeholder="Project, client, or place"
             />
+
+            <div className="jig-editor-group-field">
+              <FieldLabel
+                label="Priority"
+                inputID={priorityGroupId}
+                labelID={priorityLabelId}
+                isGroupLabel
+              />
+              <SegmentedControl
+                id={priorityGroupId}
+                aria-labelledby={priorityLabelId}
+                label="Priority"
+                value={draft.priority}
+                onChange={(value) => update("priority", value as Priority)}
+                layout="fill"
+              >
+                <SegmentedControlItem value="HIGH" label="High" />
+                <SegmentedControlItem value="NORMAL" label="Normal" />
+                <SegmentedControlItem value="LOW" label="Low" />
+              </SegmentedControl>
+            </div>
 
             <TimeInput
               label="Reminder"
@@ -256,24 +295,36 @@ export function TaskEditor({
               rows={4}
             />
 
+            {task === null ? null : (
+              <>
+                <div className="jig-editor-date-behavior">
+                  <strong>Date change behavior</strong>
+                  <span>
+                    Changing date uses priority-guided insertion. Dragging uses
+                    the exact drop position.
+                  </span>
+                </div>
+                <div className="jig-editor-destructive-row">
+                  <Button
+                    type="button"
+                    label="Delete task…"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleteOpen(true)}
+                    isDisabled={isSaving}
+                  />
+                </div>
+              </>
+            )}
+
             <div className="jig-editor-actions">
-              {task === null ? (
-                <span />
-              ) : (
-                <Button
-                  type="button"
-                  label="Delete task…"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDeleteOpen(true)}
-                  isDisabled={isSaving}
-                />
-              )}
               <div className="jig-editor-primary-actions">
                 <Button
                   type="button"
                   label="Cancel"
                   variant="secondary"
+                  size={isNarrow ? "lg" : "md"}
+                  {...(isNarrow ? { width: "100%" } : {})}
                   onClick={() => onOpenChange(false)}
                   isDisabled={isSaving}
                 />
@@ -281,6 +332,8 @@ export function TaskEditor({
                   type="submit"
                   label={task === null ? "Add task" : "Save"}
                   variant="primary"
+                  size={isNarrow ? "lg" : "md"}
+                  {...(isNarrow ? { width: "100%" } : {})}
                   isLoading={isSaving}
                 />
               </div>

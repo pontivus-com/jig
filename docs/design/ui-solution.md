@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1 UX/UI realization v0.4, 2026-11-16. Functional structure, Option A branding, Jig Light/Dark theming and browser evidence are governed.
+**Status:** Binding v1 UX/UI realization v0.5, 2026-11-17. Functional structure, Astryx-first component/layout ownership, Option A branding, Jig Light/Dark theming and browser evidence are governed.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Turn the accepted early mobile/day/week/editor mockups into a versioned interface baseline while distinguishing layout intent from noncanonical visual decoration.
@@ -14,7 +14,7 @@ The current repository includes seven **versioned SVG structural references**. T
 | Governing artifact | Screen | Structural meaning |
 |---|---|---|
 | ![Desktop week](reference/desktop-week.svg) | [Desktop weekly planner](reference/desktop-week.svg) | Primary seven-day scheduled-date board and visible cross-column movement targets |
-| ![Desktop day](reference/desktop-day.svg) | [Desktop day view](reference/desktop-day.svg) | Selected-date attention list with carried-over earlier work, completed group and selected task details |
+| ![Desktop day](reference/desktop-day.svg) | [Desktop day view](reference/desktop-day.svg) | Selected-date canonical attention list after persisted rollover, completed group and selected task details |
 | ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history grouped by actual completion date |
 | ![Desktop settings and sync](reference/desktop-settings-sync.svg) | [Desktop settings/sync](reference/desktop-settings-sync.svg) | Repository, service, appearance and synchronization controls |
 | ![Mobile day](reference/mobile-day.svg) | [Mobile narrow day](reference/mobile-day.svg) | Compact date strip and one attention list at narrow widths |
@@ -63,9 +63,25 @@ Use the published **Astryx 0.7.13 core** with Jig's canonical theme defined by [
 Theme ownership is singular:
 
 - `ui/src/theme.css` owns raw Jig Ink/Amber/Paper primitives;
-- `ui/src/theme.ts` maps those primitives to public Astryx semantic roles;
-- `ui/src/styles.css` composes layout using semantic tokens and does not define a second palette;
-- `ui/src/app.tsx` mounts the one root Jig Theme owner.
+- `ui/src/jig-theme.source.ts` is the only authored semantic mapping from those primitives into Astryx roles and extends `@astryxdesign/theme-neutral/built`;
+- pinned `@astryxdesign/cli@0.7.13` compiles that source with `astryx theme build` into committed `ui/src/jig.js`, `ui/src/jig.css` and declarations; generated artifacts are compiler-owned and are never hand-edited;
+- `ui/src/styles.css` imports the generated theme CSS and styles only Jig-owned product composition using public Astryx tokens;
+- `ui/src/app.tsx` imports the generated `jigTheme` from `ui/src/jig.js` and mounts the one root Jig Theme owner;
+- CI runs `theme build --check` so source/artifact drift is a release failure.
+
+### 3.1 UI implementation authority
+
+The visual reference does **not** authorize bypassing the component architecture. Implementation order is mandatory:
+
+1. this UI solution and the governed SVGs define product structure, hierarchy, density and genuine structural dimensions;
+2. pinned Astryx public APIs define application shell, navigation, responsive shell behavior, list/field/dialog/button anatomy, spacing mechanics and semantic styling;
+3. Jig React composition supplies only product-specific structures such as seven dated Week buckets, the Day attention/inspector relationship and Settings information grouping;
+4. Jig CSS supplies only the remaining Jig-owned geometry and consumes public Astryx tokens;
+5. browser geometry assertions and screenshots verify the implementation; they do not justify private overrides or compensating layout rules.
+
+The pinned Astryx `AppShell` is the application frame. Use its `sideNav`/mobile-navigation contract and the public `SideNav` family for primary destinations. Do not place another complete shell inside AppShell, duplicate the main landmark, or reproduce library-owned responsive navigation with raw parallel chrome.
+
+CSS may set the governed product-level dimensions needed to reproduce the structural references, but must not reshape Astryx internals. No Jig rule may rely on an undocumented/private Astryx selector, DOM child structure, StyleX detail or private custom property. Do not use an application-owned high-priority cascade layer, `!important`, or selector escalation to win against the library. The application must also not synthesize Astryx compiler/runtime markers such as `__built` or manually replace the documented theme-build pipeline; those belong only to Astryx-generated artifacts. If a public Astryx primitive cannot realize a governed requirement, document that incompatibility and use the smallest Jig-owned semantic composition built from public Astryx leaves/tokens.
 
 Visual rules:
 1. **Compact, low-chrome and scan-oriented.** Prefer list/row structure with subtle boundaries to decorative card stacks; no gratuitous shadows/gradients.
@@ -97,13 +113,29 @@ Day view and Week view query the **same Task**; opening the inspector does not c
 
 ### 4.3 Mobile narrow Day
 
-Below the single application-owned **48rem / 768 CSS px** breakpoint, the week board becomes a horizontal seven-date strip plus one Day attention list. Preserve prominent title-first task cards, touch-sized checkbox and action targets, whole-card drag where supported and a non-drag move-to-date command. A persistent Quick Add target may move to the thumb-reachable region, but must not obscure the last item or reminder feedback.
+Below the single application-owned **48rem / 768 CSS px** breakpoint, render a deliberate narrow composition rather than the desktop Day DOM with selective CSS hiding.
+
+The governed 414×900 hierarchy is:
+
+1. framed application surface with Jig identity and synchronization status in the first header band;
+2. compact destination control showing **Day** on the left and the **Today** shortcut on the right;
+3. seven simultaneously visible dates;
+4. selected-date title/context;
+5. one canonical **Attention** sequence;
+6. compact Completed content when present;
+7. persistent Quick Add in the governed thumb-reachable position.
+
+All four destinations remain reachable through the compact Astryx/AppShell mobile-navigation path. Do not add a separate full-width desktop toolbar below this hierarchy. Previous/Next need not form an additional row when the seven-date strip already provides direct date selection.
+
+Preserve prominent title-first task cards, touch-sized checkbox and action targets, whole-card drag where supported and a non-drag move-to-date command. Quick Add must not obscure the final task or reminder feedback. The desktop sidebar, desktop Day heading/toolbar and desktop inspector are not mounted in the narrow Day composition.
 
 Desktop MVP requires responsive semantic continuity and basic mobile-sized layout validation. It does **not** require installation as a self-contained phone app, native Git commands or background push notifications.
 
 ### 4.4 Mobile/editor composition
 
-Task creation defaults to **title only** and the initiating date; no forced priority, reminder, time estimate or context. Editing uses one bounded Astryx Dialog/compatible responsive treatment with Title, Date, optional Context, optional Priority, optional Reminder Time, optional Reference and optional short Notes. Optional fields are initially subordinate; no advanced project form.
+Task creation defaults to **title only** and the initiating date; no forced priority, reminder, time estimate or context. The Task draft/form state is singular across responsive changes. The field hierarchy is Title, Date, Context, Priority, Reminder, Reference, Notes.
+
+Use Astryx Dialog through its supported public API for the presentation appropriate to the active layout mode. Desktop uses the bounded editor treatment. Narrow mode must select a public Astryx dialog/presentation configuration that naturally produces the governed 414×980 editor hierarchy and reachable actions; do not mount a desktop dialog and resize/reposition its private internals with CSS. If the pinned public Dialog API cannot meet the governed narrow contract, document that exact incompatibility before using the smallest Jig-owned host around the same Astryx form controls.
 
 Use explicit Save/Cancel, persistent form errors on invalid data or server refusal, and preserve the active draft while the screen is reflowed or while a user inspects another date unless they explicitly confirm discarding edits. For an existing Task, expose a visually subordinate destructive **Delete task…** action; activating it opens an explicit confirmation and only confirmation invokes deletion. Creation mode has no Delete action. Date editing applies priority-guided insertion, whereas a drag drop uses the exact drop index. Changing priority does not rearrange the task.
 
@@ -111,12 +143,15 @@ Use explicit Save/Cancel, persistent form errors on invalid data or server refus
 
 | UI concern | Canonical owner |
 |---|---|
-| Shell, navigation, buttons, icon buttons, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
+| Application frame and responsive primary navigation | Astryx AppShell + public SideNav/mobile-navigation APIs; Jig owns destination state, not shell mechanics |
+| Buttons, icon buttons, links, menus/popovers, lists, labels, fields, dialog/drawer, calendar input, time input, toasts, semantic theme | Astryx published primitives |
 | Sortable rows, drop zones, drag overlays, keyboard drag, pointer/touch gesture lifecycle | @dnd-kit/react only; do not activate Astryx List createReorderable on the same row |
 | Week/date bucket composition, Day selected-date sequence, mobile strip, empty-date state, completed groups, task editor composition | Small Jig React composition |
 | Scheduled date, ordering, daily rollover, initial priority placement, complete/reopen/delete, task identity | Pure Jig planning core |
 | Task reads/writes and generic repository synchronization status | Bun service with SQLite plus isolated repository integration adapter |
 | Reminder due eligibility and presentation while browser is open | One browser-side timer/eligibility monitor + Astryx useToast + browser Notification API; no background sender/service worker |
+
+CSS ownership follows the same table. Jig may style its own page/region/card wrappers and public root classes it supplies, but it does not style descendants that belong to an Astryx component. Reusable action/navigation mechanics use Astryx Button/IconButton/Link rather than raw `<button>`/`<a>` plus local reset/focus/press CSS, unless a documented public-API incompatibility requires the smallest semantic fallback. Governed outer dimensions may use explicit values; ordinary spacing, radius, typography and control sizing use Astryx public tokens/props. Where desktop and narrow information hierarchy differs, React selects the correct composition at the one semantic breakpoint; CSS is reserved for pure reflow/density inside that composition. Superseded rules are deleted rather than counteracted later in the stylesheet.
 
 Keyboard alternatives **Move up**, **Move down**, **Move to date** invoke the same canonical Task operation as a drag. The drag handle must not swallow checkbox clicks, link navigation or editor opening. Avoid duplicate focus stops on the ListItem's clickable layer and nested controls; verify Astryx + dnd-kit with actual Playwright browser interaction.
 

@@ -16,6 +16,7 @@ import {
   moveTask,
   PlanningError,
   reopenTask,
+  rollForwardOutstanding,
 } from "../core/planning";
 
 export const SQLITE_SCHEMA_VERSION = 2;
@@ -475,6 +476,47 @@ export function applyTaskCommand(
     }
     throw error;
   }
+}
+
+export interface RolloverResult {
+  readonly revision: number;
+  readonly moved_task_ids: readonly string[];
+}
+
+export function rollForwardOutstandingInDatabase(
+  db: Database,
+  currentLocalDate: string,
+  updatedAt: string,
+): RolloverResult {
+  const transaction = db.transaction((): RolloverResult => {
+    const state = readCanonicalState(db);
+    const result = rollForwardOutstanding(
+      state.tasks,
+      currentLocalDate,
+      updatedAt,
+    );
+    if (result.moved_task_ids.length === 0) {
+      return {
+        revision: state.revision,
+        moved_task_ids: [],
+      };
+    }
+
+    persistCanonicalSet(db, state.tasks, result.tasks);
+    const revision = state.revision + 1;
+    db.query(
+      `UPDATE app_metadata
+       SET revision = ?, pending_sync = 1
+       WHERE singleton = 1`,
+    ).run(revision);
+
+    return {
+      revision,
+      moved_task_ids: result.moved_task_ids,
+    };
+  });
+
+  return transaction();
 }
 
 export function markExported(

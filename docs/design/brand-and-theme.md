@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1 brand and application-theme contract.  
+**Status:** Canonical v1 brand and application-theme contract, amended 2026-11-17 with the Astryx-first CSS ownership rule.  
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, brand palette, Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -9,9 +9,10 @@
 This document is the single human-readable authority for Jig branding and theming. The executable authorities are:
 
 - `ui/src/theme.css` — canonical raw Jig palette primitives;
-- `ui/src/theme.ts` — the only mapping from those primitives into Astryx semantic roles;
-- `ui/src/styles.css` — layout/composition only; it must consume semantic Astryx tokens and must not introduce a second color system;
-- `ui/src/app.tsx` — the single application `<Theme theme={jigTheme}>` owner.
+- `ui/src/jig-theme.source.ts` — the only authored mapping from those primitives into Astryx semantic roles;
+- `ui/src/jig.js`, `ui/src/jig.css` and their declarations — compiler-owned artifacts produced by pinned `@astryxdesign/cli@0.7.13` from that source;
+- `ui/src/styles.css` — layout/composition only; it imports the generated Jig theme CSS, consumes semantic Astryx tokens and must not introduce a second color system;
+- `ui/src/app.tsx` — the single application `<Theme theme={jigTheme}>` owner, consuming the generated `jigTheme` module.
 
 No feature component owns a private palette.
 
@@ -201,7 +202,7 @@ No other application stylesheet may hard-code Jig brand colors.
 
 ### Semantic mapping
 
-`ui/src/theme.ts` defines `jigTheme` by extending the published Astryx Neutral theme and maps Jig primitives only into public semantic roles such as:
+`ui/src/jig-theme.source.ts` defines the authored Jig theme by extending `@astryxdesign/theme-neutral/built` and maps Jig primitives only into public semantic roles such as:
 
 - `--color-background-*`;
 - `--color-text-*`;
@@ -214,15 +215,39 @@ No other application stylesheet may hard-code Jig brand colors.
 
 Astryx continues to own spacing, sizing, typography mechanics, component structure, status families and interaction semantics.
 
-### CSS composition
+### CSS composition and theme build
 
-`ui/src/styles.css` imports:
+The custom theme follows Astryx's documented production path:
+
+1. author semantic mapping only in `ui/src/jig-theme.source.ts`;
+2. compile it with pinned `@astryxdesign/cli@0.7.13` using `astryx theme build`;
+3. commit the generated `ui/src/jig.js`, `ui/src/jig.css` and declaration files;
+4. import `jigTheme` only from the generated module at runtime;
+5. run `bun run theme:check` in CI, which delegates to `astryx theme build --check` and fails on stale generated artifacts.
+
+Jig must not hand-write Astryx's internal `__built` marker, call internal/private theme machinery, or substitute an application-owned theme compiler. The generated files may contain Astryx internal implementation data because Astryx owns those files; Jig-authored source may not depend on that data.
+
+`ui/src/styles.css` preserves the published stylesheet order:
 
 1. Astryx reset;
 2. Astryx core;
-3. Jig palette primitives.
+3. Jig palette primitives;
+4. compiler-generated Jig theme CSS;
+5. Jig-owned composition rules.
 
-All Jig layout rules then use semantic tokens. There is no per-screen color palette and no Light/Dark duplication in feature CSS.
+That ordering establishes the library/theme foundation; it is **not** permission for Jig to create a competing override layer.
+
+Jig CSS follows these rules:
+
+- style only Jig-owned composition and root classes supplied intentionally by Jig;
+- consume public Astryx semantic, spacing, radius and typography tokens;
+- never target undocumented Astryx descendants, generated StyleX structure or private custom properties;
+- never add a Jig high-priority cascade layer, `!important`, or selector escalation to reshape an Astryx component;
+- use explicit pixel values only for governed product-level structural budgets; use Astryx tokens/public props for ordinary interior spacing, radii, typography and control sizing;
+- keep each layout property under one rule owner and delete superseded declarations rather than cancelling them with later overrides;
+- use CSS media queries for pure reflow/density only; when the semantic hierarchy differs between desktop and narrow layouts, React/AppShell composition changes at the one application breakpoint.
+
+There is no per-screen color palette, no Light/Dark duplication in feature CSS and no second styling architecture beside Astryx.
 
 ### Theme owner
 
@@ -285,6 +310,8 @@ Do not:
 - create screen-specific brand palettes;
 - use Brand Amber for warning merely because warning is also yellow/orange;
 - add a second theme owner or CSS override layer that bypasses `jigTheme`;
+- depend on private/undocumented Astryx selectors, internal DOM structure, generated StyleX details or private CSS custom properties;
+- use `!important` or specificity escalation to force library components into a different anatomy;
 - copy raw palette values into feature styles.
 
 ## 10. Verification and change control
@@ -293,9 +320,10 @@ Any change to the brand anchors, palette stops, semantic mapping or mark geometr
 
 1. this document;
 2. `ui/src/theme.css` when palette primitives change;
-3. `ui/src/theme.ts` when semantic role mapping changes;
-4. affected assets under `assets/`;
-5. representative Light and Dark browser evidence;
-6. browser acceptance proving the root theme remains `jig` and that Light/Dark accents resolve to the intended functional stops.
+3. `ui/src/jig-theme.source.ts` when semantic role mapping changes;
+4. regenerated `ui/src/jig.js`, `ui/src/jig.css` and declarations via the pinned Astryx CLI, with `bun run theme:check` green;
+5. affected assets under `assets/`;
+6. representative Light and Dark browser evidence;
+7. browser acceptance proving the root theme remains `jig` and that Light/Dark accents resolve to the intended functional stops.
 
 Layout-only UI changes do not redefine this brand contract.

@@ -1,8 +1,12 @@
 import {
+  AlertDialog,
   AppShell,
   Banner,
   Button,
   LayerProvider,
+  SideNav,
+  SideNavItem,
+  useAppShellMobile,
 } from "@astryxdesign/core";
 import { Theme } from "@astryxdesign/core/theme";
 import jigLogoLightUrl from "../../assets/jig-logo.svg";
@@ -15,6 +19,7 @@ import {
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
   addCivilDays,
+  completedForScheduledDate,
   outstandingForDate,
 } from "../../src/core/planning";
 import type { CanonicalState } from "../../src/shell/sqlite";
@@ -41,15 +46,16 @@ import {
   MoveTaskDialog,
   TaskEditor,
 } from "./task-editor";
-import { todayCivilDate } from "./dates";
+import {
+  millisecondsUntilNextLocalDay,
+  todayCivilDate,
+} from "./dates";
 import { WeekView } from "./week";
-import { jigTheme } from "./theme";
+import { jigTheme } from "./jig.js";
 
 type Destination = "week" | "day" | "history" | "settings";
 
 const THEME_STORAGE_KEY = "jig-theme";
-const NARROW_MEDIA = "(max-width: 47.999rem)";
-
 function savedThemePreference(): ThemePreference {
   try {
     const value = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -59,22 +65,6 @@ function savedThemePreference(): ThemePreference {
   }
 }
 
-function useNarrowLayout(): boolean {
-  const [isNarrow, setIsNarrow] = useState(
-    () => window.matchMedia(NARROW_MEDIA).matches,
-  );
-
-  useEffect(() => {
-    const media = window.matchMedia(NARROW_MEDIA);
-    const update = (): void => setIsNarrow(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-
-  return isNarrow;
-}
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -82,13 +72,13 @@ function errorMessage(error: unknown): string {
 function repositoryStatusLabel(status: ServiceStatus | null): string {
   switch (status?.repository_status) {
     case "local-only":
-      return "Saved locally";
+      return "Local only";
     case "pending":
       return "Sync pending";
     case "retrying":
-      return "Sync retrying";
+      return "Retrying";
     case "synchronized":
-      return "Saved · Synced";
+      return "Synced";
     case "sync-issue":
       return "Sync issue";
     default:
@@ -109,9 +99,64 @@ function destinationLabel(destination: Destination): string {
   }
 }
 
+function ResponsiveFrame({
+  destination,
+  statusControl,
+  onToday,
+  children,
+}: Readonly<{
+  destination: Destination;
+  statusControl: React.ReactNode;
+  onToday: () => void;
+  children: (isNarrow: boolean) => React.ReactNode;
+}>): React.ReactElement {
+  const { isMobile, openMobileNav } = useAppShellMobile();
+
+  return (
+    <div className="jig-content-frame">
+      {isMobile ? (
+        <>
+          <header className="jig-mobile-header">
+            <span className="jig-mobile-brand">Jig</span>
+            {statusControl}
+          </header>
+          <div className="jig-mobile-surface-nav">
+            <Button
+              label={destinationLabel(destination)}
+              variant="ghost"
+              size="sm"
+              endContent={<span aria-hidden="true">⌄</span>}
+              onClick={openMobileNav}
+              className="jig-mobile-destination-trigger"
+            />
+            {destination === "day" || destination === "week" ? (
+              <Button
+                label="Today"
+                variant="secondary"
+                size="sm"
+                onClick={onToday}
+                className="jig-mobile-today-control"
+              />
+            ) : null}
+          </div>
+        </>
+      ) : null}
+      <div className="jig-content">{children(isMobile)}</div>
+    </div>
+  );
+}
+
+function ResponsiveTaskEditor(
+  props: Omit<React.ComponentProps<typeof TaskEditor>, "isNarrow">,
+): React.ReactElement {
+  const { isMobile } = useAppShellMobile();
+  return <TaskEditor {...props} isNarrow={isMobile} />;
+}
+
 export function App(): React.ReactElement {
-  const [destination, setDestination] = useState<Destination>("week");
+  const [destination, setDestination] = useState<Destination>("day");
   const [selectedDate, setSelectedDate] = useState(todayCivilDate);
+  const [observedToday, setObservedToday] = useState(todayCivilDate);
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
@@ -125,7 +170,8 @@ export function App(): React.ReactElement {
   const [editorDate, setEditorDate] = useState(selectedDate);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [moveTaskId, setMoveTaskId] = useState<string | null>(null);
-  const isNarrow = useNarrowLayout();
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
 
   const tasks = canonical?.tasks ?? [];
   const editorTask =
@@ -136,6 +182,15 @@ export function App(): React.ReactElement {
     moveTaskId === null
       ? null
       : tasks.find((task) => task.id === moveTaskId) ?? null;
+  const selectedTask =
+    selectedTaskId === null
+      ? null
+      : tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const deleteTask =
+    deleteTaskId === null
+      ? null
+      : tasks.find((task) => task.id === deleteTaskId) ?? null;
+
 
   const refreshCanonical = useCallback(async (): Promise<void> => {
     const next = await readCanonicalTasks();
@@ -178,6 +233,84 @@ export function App(): React.ReactElement {
     }, 15_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let boundaryTimer: number | null = null;
+
+    const checkLocalDay = async (): Promise<boolean> => {
+      const nextToday = todayCivilDate();
+      if (nextToday === observedToday) {
+        return false;
+      }
+
+      setSelectedDate((current) =>
+        current === observedToday ? nextToday : current,
+      );
+      setObservedToday(nextToday);
+
+      try {
+        await refreshCanonical();
+      } catch (error) {
+        if (!cancelled) {
+          setOperationError(
+            `Jig could not refresh after the local day changed: ${errorMessage(error)}. Reload the application.`,
+          );
+        }
+      }
+      return true;
+    };
+
+    const scheduleBoundary = (): void => {
+      boundaryTimer = window.setTimeout(() => {
+        void checkLocalDay().then((changed) => {
+          if (!cancelled && !changed) {
+            scheduleBoundary();
+          }
+        });
+      }, millisecondsUntilNextLocalDay() + 50);
+    };
+
+    const onFocus = (): void => {
+      void checkLocalDay();
+    };
+    const onVisibility = (): void => {
+      if (document.visibilityState === "visible") {
+        void checkLocalDay();
+      }
+    };
+
+    scheduleBoundary();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      if (boundaryTimer !== null) {
+        window.clearTimeout(boundaryTimer);
+      }
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [observedToday, refreshCanonical]);
+
+  useEffect(() => {
+    if (destination !== "day" || canonical === null) {
+      return;
+    }
+
+    const candidates = [
+      ...outstandingForDate(tasks, selectedDate),
+      ...completedForScheduledDate(tasks, selectedDate),
+    ];
+    if (
+      selectedTaskId !== null &&
+      candidates.some((task) => task.id === selectedTaskId)
+    ) {
+      return;
+    }
+    setSelectedTaskId(candidates[0]?.id ?? null);
+  }, [canonical, destination, selectedDate, selectedTaskId, tasks]);
 
   const runCommand = useCallback(
     async (command: TaskCommand): Promise<boolean> => {
@@ -299,78 +432,62 @@ export function App(): React.ReactElement {
     setSelectedDate((current) => addCivilDays(current, amount));
   };
 
-  const topNav = (
-    <div className="jig-topbar">
-      <div className="jig-brand" aria-label="Jig">
-        <span className="jig-brand-logo-wrap" aria-hidden="true">
-          <img
-            className="jig-brand-logo jig-brand-logo-light"
-            src={jigLogoLightUrl}
-            alt=""
-          />
-          <img
-            className="jig-brand-logo jig-brand-logo-dark"
-            src={jigLogoDarkUrl}
-            alt=""
-          />
-        </span>
-        <span className="jig-brand-tagline">Schedules attention</span>
-      </div>
+  const goToToday = (stayInWeek: boolean): void => {
+    setSelectedDate(todayCivilDate());
+    if (!stayInWeek) {
+      setDestination("day");
+    }
+  };
 
-      <nav className="jig-primary-nav" aria-label="Primary">
-        {(["week", "day", "history", "settings"] as const).map(
-          (item) => (
-            <Button
-              key={item}
-              label={destinationLabel(item)}
-              variant={destination === item ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setDestination(item)}
-              aria-current={destination === item ? "page" : undefined}
-            />
-          ),
-        )}
-      </nav>
+  const repositoryStatus = status?.repository_status ?? "unknown";
+  const statusControl = (
+    <Button
+      label={repositoryStatusLabel(status)}
+      variant="ghost"
+      size="sm"
+      icon={<span className="jig-status-dot" aria-hidden="true" />}
+      onClick={() => setDestination("settings")}
+      className={`jig-status-control jig-status-${repositoryStatus}`}
+    />
+  );
 
-      <div className="jig-topbar-actions">
-        {destination === "week" || destination === "day" ? (
-          <>
-            <Button
-              label="Previous"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                navigateDate(destination === "week" ? -7 : -1)
-              }
+  const primarySideNav = (
+    <SideNav
+      className="jig-primary-nav"
+      aria-label="Primary"
+      header={
+        <div className="jig-nav-brand" aria-label="Jig">
+          <span className="jig-brand-logo-wrap" aria-hidden="true">
+            <img
+              className="jig-brand-logo jig-brand-logo-light"
+              src={jigLogoLightUrl}
+              alt=""
             />
-            <Button
-              label="Today"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedDate(todayCivilDate());
-                setDestination("day");
-              }}
+            <img
+              className="jig-brand-logo jig-brand-logo-dark"
+              src={jigLogoDarkUrl}
+              alt=""
             />
-            <Button
-              label="Next"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                navigateDate(destination === "week" ? 7 : 1)
-              }
-            />
-          </>
-        ) : null}
-
-        <Button
-          label={repositoryStatusLabel(status)}
-          variant="ghost"
-          size="sm"
-          onClick={() => setDestination("settings")}
+          </span>
+          <span className="jig-brand-tagline">Schedules attention</span>
+        </div>
+      }
+      footer={
+        <div className="jig-nav-context">
+          <span>Planning data</span>
+          <small>Personal Git repository</small>
+        </div>
+      }
+    >
+      {(["week", "day", "history", "settings"] as const).map((item) => (
+        <SideNavItem
+          key={item}
+          label={destinationLabel(item)}
+          isSelected={destination === item}
+          onClick={() => setDestination(item)}
         />
-      </div>
-    </div>
+      ))}
+    </SideNav>
   );
 
   const durableBanner = operationError !== null ? (
@@ -401,7 +518,7 @@ export function App(): React.ReactElement {
     />
   ) : null;
 
-  const content = canonical === null ? (
+  const renderContent = (isNarrow: boolean): React.ReactNode => canonical === null ? (
     <div className="jig-loading">
       <h1>Jig</h1>
       {loadError === null ? (
@@ -430,6 +547,10 @@ export function App(): React.ReactElement {
       selectedDate={selectedDate}
       isNarrow={isNarrow}
       onSelectDate={setSelectedDate}
+      onPrevious={() => navigateDate(-7)}
+      onToday={() => goToToday(false)}
+      onNext={() => navigateDate(7)}
+      statusControl={isNarrow ? null : statusControl}
       onAdd={openCreate}
       onEdit={openEdit}
       onMoveToDate={openMoveToDate}
@@ -440,7 +561,13 @@ export function App(): React.ReactElement {
     <DayView
       tasks={tasks}
       selectedDate={selectedDate}
+      isNarrow={isNarrow}
       onSelectDate={setSelectedDate}
+      onToday={() => goToToday(false)}
+      statusControl={isNarrow ? null : statusControl}
+      selectedTask={selectedTask}
+      onSelectTask={(task) => setSelectedTaskId(task.id)}
+      onDelete={(task) => setDeleteTaskId(task.id)}
       onAdd={openCreate}
       onEdit={openEdit}
       onMoveToDate={openMoveToDate}
@@ -452,6 +579,8 @@ export function App(): React.ReactElement {
       tasks={tasks}
       onEdit={openEdit}
       onReopen={toggleComplete}
+      onDelete={(task) => setDeleteTaskId(task.id)}
+      statusControl={isNarrow ? null : statusControl}
     />
   ) : (
     <SettingsView
@@ -462,6 +591,7 @@ export function App(): React.ReactElement {
       isOperating={isOperating}
       onThemePreferenceChange={changeTheme}
       onSync={syncNow}
+      statusControl={isNarrow ? null : statusControl}
     />
   );
 
@@ -471,27 +601,38 @@ export function App(): React.ReactElement {
     <Theme theme={jigTheme} mode={themePreference}>
       <LayerProvider>
         <AppShell
-          topNav={topNav}
-          banner={durableBanner}
+          className="jig-app-shell"
+          sideNav={primarySideNav}
+          mobileNav={{
+            breakpoint: "md",
+            hasToggle: false,
+          }}
+          banner={durableBanner ?? undefined}
           contentPadding={0}
           height="fill"
           variant="section"
         >
-          <div className="jig-content">{content}</div>
-        </AppShell>
+          <ResponsiveFrame
+            destination={destination}
+            statusControl={statusControl}
+            onToday={() => goToToday(false)}
+          >
+            {renderContent}
+          </ResponsiveFrame>
 
-        <TaskEditor
-          isOpen={editorOpen}
-          task={editorTask}
-          initiatingDate={editorDate}
-          externalError={operationError}
-          isSaving={isOperating}
-          onOpenChange={setEditorOpen}
-          onSave={runCommand}
-          onDelete={(taskId) =>
-            runCommand({ type: "delete", task_id: taskId })
-          }
-        />
+          <ResponsiveTaskEditor
+            isOpen={editorOpen}
+            task={editorTask}
+            initiatingDate={editorDate}
+            externalError={operationError}
+            isSaving={isOperating}
+            onOpenChange={setEditorOpen}
+            onSave={runCommand}
+            onDelete={(taskId) =>
+              runCommand({ type: "delete", task_id: taskId })
+            }
+          />
+        </AppShell>
 
         <MoveTaskDialog
           task={moveTask}
@@ -513,6 +654,38 @@ export function App(): React.ReactElement {
               destinationDate,
               destinationIndex,
             );
+          }}
+        />
+
+        <AlertDialog
+          isOpen={deleteTask !== null}
+          onOpenChange={(open) => {
+            if (!open && !isOperating) {
+              setDeleteTaskId(null);
+            }
+          }}
+          title="Delete task?"
+          description={
+            deleteTask === null
+              ? "This permanently removes the Task."
+              : `Delete “${deleteTask.title}”? This cannot be undone in Jig.`
+          }
+          actionLabel="Delete task"
+          cancelLabel="Cancel"
+          actionVariant="destructive"
+          isActionLoading={isOperating}
+          onAction={async () => {
+            if (deleteTask === null) {
+              return;
+            }
+            const deleted = await runCommand({
+              type: "delete",
+              task_id: deleteTask.id,
+            });
+            if (deleted) {
+              setDeleteTaskId(null);
+              setSelectedTaskId(null);
+            }
           }}
         />
 

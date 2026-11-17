@@ -8,6 +8,8 @@ import {
   initializeDatabase,
   openDatabase,
   readCanonicalState,
+  readMetadata,
+  rollForwardOutstandingInDatabase,
   StaleRevisionError,
 } from "../../src/shell/sqlite";
 
@@ -35,6 +37,133 @@ beforeEach(async () => {
 afterEach(async () => {
   db.close();
   await rm(root, { recursive: true, force: true });
+});
+
+describe("daily rollover persistence", () => {
+  it("persists all rolled-forward dates in one revision and marks sync pending", () => {
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Yesterday one",
+        scheduled_date: "2026-11-15",
+        reminder_time: "10:00",
+      },
+      0,
+      TIMES[0],
+      () => IDS[0],
+    );
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Yesterday two",
+        scheduled_date: "2026-11-15",
+      },
+      1,
+      TIMES[1],
+      () => IDS[1],
+    );
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Today existing",
+        scheduled_date: "2026-11-16",
+      },
+      2,
+      TIMES[2],
+      () => IDS[2],
+    );
+
+    const result = rollForwardOutstandingInDatabase(
+      db,
+      "2026-11-16",
+      TIMES[3],
+    );
+
+    expect(result.revision).toBe(4);
+    expect(result.moved_task_ids).toEqual([IDS[0], IDS[1]]);
+    const state = readCanonicalState(db);
+    expect(state.revision).toBe(4);
+    expect(
+      state.tasks
+        .filter(
+          (task) =>
+            task.completed_at === null &&
+            task.scheduled_date === "2026-11-16",
+        )
+        .sort(
+          (left, right) =>
+            (left.position ?? 0) - (right.position ?? 0),
+        )
+        .map((task) => [task.title, task.reminder_time]),
+    ).toEqual([
+      ["Yesterday one", "10:00"],
+      ["Yesterday two", null],
+      ["Today existing", null],
+    ]);
+    expect(readMetadata(db).pending_sync).toBe(true);
+  });
+
+  it("does not increment revision when no rollover is required", () => {
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Today",
+        scheduled_date: "2026-11-16",
+      },
+      0,
+      TIMES[0],
+      () => IDS[0],
+    );
+
+    const result = rollForwardOutstandingInDatabase(
+      db,
+      "2026-11-16",
+      TIMES[1],
+    );
+
+    expect(result).toStrictEqual({
+      revision: 1,
+      moved_task_ids: [],
+    });
+    expect(readCanonicalState(db).revision).toBe(1);
+  });
+
+  it("rolls back the entire rollover transaction on SQL failure", () => {
+    applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Will stay yesterday",
+        scheduled_date: "2026-11-15",
+      },
+      0,
+      TIMES[0],
+      () => IDS[0],
+    );
+    const before = readCanonicalState(db);
+    db.exec(`
+      CREATE TRIGGER inject_rollover_failure
+      BEFORE UPDATE OF scheduled_date ON task
+      WHEN NEW.scheduled_date = '2026-11-16'
+      BEGIN
+        SELECT RAISE(ABORT, 'injected rollover failure');
+      END;
+    `);
+
+    expect(() =>
+      rollForwardOutstandingInDatabase(
+        db,
+        "2026-11-16",
+        TIMES[1],
+      ),
+    ).toThrow(/injected rollover failure/);
+
+    expect(readCanonicalState(db)).toStrictEqual(before);
+  });
 });
 
 describe("transactional canonical persistence", () => {

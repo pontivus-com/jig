@@ -2,22 +2,29 @@ import {
   Button,
   List,
 } from "@astryxdesign/core";
+import type { ReactNode } from "react";
 import type { Task } from "../../src/core/task";
 import {
   completedForScheduledDate,
-  dayAttention,
   outstandingForDate,
 } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
 import { formatCivilDate } from "./dates";
 import { DateStrip } from "./date-strip";
 import { SortableTaskRow, TaskRow } from "./task-row";
+import { TaskInspector } from "./task-inspector";
 
 export interface DayViewProps {
   readonly tasks: readonly Task[];
   readonly selectedDate: string;
+  readonly isNarrow: boolean;
   readonly onAdd: (date: string) => void;
   readonly onSelectDate: (date: string) => void;
+  readonly onToday: () => void;
+  readonly statusControl: ReactNode;
+  readonly selectedTask: Task | null;
+  readonly onSelectTask: (task: Task) => void;
+  readonly onDelete: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
   readonly onMoveToDate: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
@@ -31,8 +38,8 @@ export interface DayViewProps {
 function ActiveRow({
   task,
   tasks,
-  selectedDate,
-  carriedOver,
+  isSelected,
+  onSelect,
   onEdit,
   onMoveToDate,
   onToggleComplete,
@@ -40,8 +47,8 @@ function ActiveRow({
 }: Readonly<{
   task: Task;
   tasks: readonly Task[];
-  selectedDate: string;
-  carriedOver: boolean;
+  isSelected: boolean;
+  onSelect?: ((task: Task) => void) | undefined;
   onEdit: (task: Task) => void;
   onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
@@ -55,7 +62,10 @@ function ActiveRow({
       task={task}
       index={position}
       group={task.scheduled_date}
-      carriedOverFrom={carriedOver ? task.scheduled_date : undefined}
+      isSelected={isSelected}
+      {...(onSelect === undefined
+        ? {}
+        : { onSelect: () => onSelect(task) })}
       onToggleComplete={() => {
         void onToggleComplete(task);
       }}
@@ -87,72 +97,65 @@ function ActiveRow({
   );
 }
 
+export interface DayTaskListsProps {
+  readonly tasks: readonly Task[];
+  readonly selectedDate: string;
+  readonly selectedTask?: Task | null;
+  readonly onSelectTask?: ((task: Task) => void) | undefined;
+  readonly onEdit: (task: Task) => void;
+  readonly onMoveToDate: (task: Task) => void;
+  readonly onToggleComplete: (task: Task) => Promise<boolean>;
+  readonly onMove: DayViewProps["onMove"];
+}
+
 export function DayTaskLists({
   tasks,
   selectedDate,
+  selectedTask = null,
+  onSelectTask,
   onEdit,
   onMoveToDate,
   onToggleComplete,
   onMove,
-}: Omit<DayViewProps, "onAdd" | "onSelectDate">): React.ReactElement {
-  const attention = dayAttention(tasks, selectedDate);
+}: DayTaskListsProps): React.ReactElement {
+  const active = outstandingForDate(tasks, selectedDate);
   const completed = completedForScheduledDate(tasks, selectedDate);
 
   return (
     <TaskDragProvider tasks={tasks} onMove={onMove}>
       <div className="jig-day-lists">
-        {attention.carried_over.length === 0 ? null : (
-          <section
-            className="jig-carry-over-section"
-            aria-labelledby="carry-over-heading"
-          >
-            <h2 id="carry-over-heading">Carried over</h2>
-            <p className="jig-secondary-copy">
-              Earlier unfinished work. Original dates remain unchanged until you explicitly move a task.
-            </p>
-            <List density="compact" hasDividers edge="flush">
-              {attention.carried_over.map((task) => (
-                <ActiveRow
-                  key={task.id}
-                  task={task}
-                  tasks={tasks}
-                  selectedDate={selectedDate}
-                  carriedOver
-                  onEdit={onEdit}
-                  onMoveToDate={onMoveToDate}
-                  onToggleComplete={onToggleComplete}
-                  onMove={onMove}
-                />
-              ))}
-            </List>
-          </section>
-        )}
-
         <DateDropZone
           date={selectedDate}
           className="jig-day-scheduled-section"
         >
-          <section aria-labelledby="day-scheduled-heading">
-            <h2 id="day-scheduled-heading">
-              {formatCivilDate(selectedDate, {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </h2>
-            {attention.scheduled.length === 0 ? (
+          <section aria-labelledby="day-attention-heading">
+            <div className="jig-section-heading">
+              <h2 id="day-attention-heading">Attention</h2>
+              <span
+                className="jig-task-count"
+                aria-label={`${active.length} ${active.length === 1 ? "task" : "tasks"}`}
+              >
+                <span>{active.length}</span>
+                <span className="jig-task-count-unit">
+                  {active.length === 1 ? " task" : " tasks"}
+                </span>
+              </span>
+            </div>
+            {active.length === 0 ? (
               <p className="jig-empty-state">
                 Nothing scheduled for this date.
               </p>
             ) : (
-              <List density="balanced" hasDividers edge="flush">
-                {attention.scheduled.map((task) => (
+              <List density="compact" edge="padded" className="jig-task-card-list">
+                {active.map((task) => (
                   <ActiveRow
                     key={task.id}
                     task={task}
                     tasks={tasks}
-                    selectedDate={selectedDate}
-                    carriedOver={false}
+                    isSelected={selectedTask?.id === task.id}
+                    {...(onSelectTask === undefined
+                      ? {}
+                      : { onSelect: onSelectTask })}
                     onEdit={onEdit}
                     onMoveToDate={onMoveToDate}
                     onToggleComplete={onToggleComplete}
@@ -165,13 +168,31 @@ export function DayTaskLists({
         </DateDropZone>
 
         {completed.length === 0 ? null : (
-          <details className="jig-completed-section">
-            <summary>Completed ({completed.length})</summary>
-            <List density="compact" hasDividers edge="flush">
+          <section
+            className="jig-completed-section"
+            aria-labelledby="day-completed-heading"
+          >
+            <div className="jig-section-heading">
+              <h2 id="day-completed-heading">Completed</h2>
+              <span
+                className="jig-task-count"
+                aria-label={`${completed.length} ${completed.length === 1 ? "task" : "tasks"}`}
+              >
+                <span>{completed.length}</span>
+                <span className="jig-task-count-unit">
+                  {completed.length === 1 ? " task" : " tasks"}
+                </span>
+              </span>
+            </div>
+            <List density="compact" edge="padded" className="jig-task-card-list">
               {completed.map((task) => (
                 <TaskRow
                   key={task.id}
                   task={task}
+                  isSelected={selectedTask?.id === task.id}
+                  {...(onSelectTask === undefined
+                    ? {}
+                    : { onSelect: () => onSelectTask(task) })}
                   onToggleComplete={() => {
                     void onToggleComplete(task);
                   }}
@@ -179,7 +200,7 @@ export function DayTaskLists({
                 />
               ))}
             </List>
-          </details>
+          </section>
         )}
       </div>
     </TaskDragProvider>
@@ -189,41 +210,113 @@ export function DayTaskLists({
 export function DayView({
   tasks,
   selectedDate,
+  isNarrow,
   onAdd,
   onSelectDate,
+  onToday,
+  statusControl,
+  selectedTask,
+  onSelectTask,
+  onDelete,
   ...listProps
 }: DayViewProps): React.ReactElement {
-  return (
-    <div className="jig-day-view">
-      <div className="jig-view-heading">
-        <div>
-          <p className="jig-eyebrow">Day</p>
+  if (isNarrow) {
+    return (
+      <div className="jig-day-view jig-day-view-narrow">
+        <DateStrip
+          selectedDate={selectedDate}
+          onSelectDate={onSelectDate}
+        />
+
+        <div className="jig-mobile-day-heading">
           <h1>
             {formatCivilDate(selectedDate, {
               weekday: "long",
               month: "long",
               day: "numeric",
-              year: "numeric",
             })}
           </h1>
+          <p>Your ordered plan</p>
         </div>
+
+        <DayTaskLists
+          tasks={tasks}
+          selectedDate={selectedDate}
+          selectedTask={selectedTask}
+          onSelectTask={onSelectTask}
+          {...listProps}
+        />
+
         <Button
-          label="Add task"
+          label="+"
+          aria-label="Add task"
           variant="primary"
+          size="lg"
+          elevation="med"
+          className="jig-mobile-quick-add"
           onClick={() => onAdd(selectedDate)}
         />
       </div>
+    );
+  }
 
-      <DateStrip
-        selectedDate={selectedDate}
-        onSelectDate={onSelectDate}
-      />
+  return (
+    <div className="jig-day-view">
+      <div className="jig-reference-heading jig-day-desktop-heading">
+        <div>
+          <h1>
+            {formatCivilDate(selectedDate, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </h1>
+          <p>Selected date view · Today is a shortcut, not a destination</p>
+        </div>
+        {statusControl}
+      </div>
 
-      <DayTaskLists
-        tasks={tasks}
-        selectedDate={selectedDate}
-        {...listProps}
-      />
+      <div className="jig-day-toolbar">
+        <div className="jig-reference-toolbar-actions">
+          <Button
+            label="Today"
+            variant="secondary"
+            size="md"
+            className="jig-today-control"
+            onClick={onToday}
+          />
+          <Button
+            label="+ Add task"
+            variant="primary"
+            className="jig-header-add"
+            onClick={() => onAdd(selectedDate)}
+          />
+        </div>
+      </div>
+
+      <div className="jig-day-layout">
+        <div className="jig-day-primary">
+          <DateStrip
+            selectedDate={selectedDate}
+            onSelectDate={onSelectDate}
+          />
+
+          <DayTaskLists
+            tasks={tasks}
+            selectedDate={selectedDate}
+            selectedTask={selectedTask}
+            onSelectTask={onSelectTask}
+            {...listProps}
+          />
+        </div>
+        <TaskInspector
+          task={selectedTask}
+          onToggleComplete={listProps.onToggleComplete}
+          onEdit={listProps.onEdit}
+          onMoveToDate={listProps.onMoveToDate}
+          onDelete={onDelete}
+        />
+      </div>
     </div>
   );
 }

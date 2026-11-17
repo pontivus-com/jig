@@ -1,12 +1,14 @@
 # Jig 1.0.2 UX/UI conformance remediation — implementation plan v1.0
 
-**Status:** Implementation-ready bug-fix plan.  
+**Status:** Implementation-ready bug-fix plan, amended 2026-11-17 with mandatory Astryx/CSS architecture correction.  
 **Target release:** 1.0.2  
 **Date:** 2026-11-17  
 **Governing audit:** [UX/UI conformance audit v1.0](../design/ui-ux-conformance-audit-v1.0.md)  
-**Authority order:** product definition → functional requirements → UI solution → corrected SVG references → brand/theme → implementation.  
+**Authority order:** product definition → functional requirements → technical-solution ownership/dependency contract → UI solution → corrected SVG references → brand/theme → this implementation plan → code.  
 **Scope:** Correct the post-1.0.1 UI/UX implementation so it conforms to the approved structural design and replace the broken derived carry-over behavior with persisted daily rollover.  
 **Non-goal:** Change the Task schema, persistence ownership, synchronization architecture, installer behavior, Git ownership boundaries, Astryx ownership, or dnd-kit semantics. This release intentionally changes rollover semantics by mutating `scheduled_date` for overdue outstanding Tasks.
+
+**Architecture amendment:** The UI library boundary is a release requirement. Any earlier instruction in this document that could be read as authorizing a second application shell, raw parallel navigation, private Astryx CSS/DOM overrides, a Jig cascade override layer, or CSS-only reconstruction of a different semantic mobile hierarchy is superseded by §2.4 and the corrected UX-007/UX-020/UX-024 tasks below. Existing code that violates those constraints must be removed/recomposed, not visually patched.
 
 ---
 
@@ -77,6 +79,24 @@ Keep one application-owned semantic breakpoint:
 - >=48rem = desktop composition.
 
 Do not introduce independent semantic breakpoints inside Week/Day/History/Settings. Pure CSS density adjustments may use viewport ranges, but the semantic composition must remain one of these two modes.
+
+### 2.4 Astryx-first UI and CSS architecture
+
+The pinned Astryx 0.7.13 public contract is determinate and must be used before Jig-owned styling:
+
+1. `AppShell` is the outermost application frame. It already owns `sideNav`, responsive mobile-navigation behavior, the skip link and the single main landmark.
+2. `SideNav` / `SideNavItem` own primary navigation presentation and interaction. Configure rail sizing through supported public props/root styling only.
+3. The AppShell `mobileNav` contract owns the mobile drawer and responsive navigation lifecycle. Its default `md` breakpoint is 768 CSS px, matching Jig's one semantic breakpoint. Jig may control/open that drawer from a public Astryx Button in the governed narrow header; it must not recreate navigation with raw `<details>` or a second menu implementation.
+4. Astryx public primitives own reusable list, field, button/icon-button, link, dialog, feedback, focus and responsive mechanics. Jig React owns only product-specific composition. Use raw `<button>`/`<a>` controls only after documenting a concrete public-API incompatibility; do not recreate Astryx press/focus/disabled/URL-safety mechanics with local CSS.
+5. Jig CSS may style only Jig-owned composition/root classes. It must not target Astryx descendants, generated StyleX anatomy, undocumented/private selectors or private custom properties such as `--_*`.
+6. Do not declare a Jig high-priority cascade layer whose purpose is to outrank Astryx, do not use `!important`, and do not increase selector specificity to force a library component into a different anatomy.
+7. Explicit pixel dimensions are allowed only for governed structural budgets (20 px application inset where the reference requires it, 190 px rail, Week track/gap geometry, Day 650/30/490 split, Settings 560/580 split, mobile frame/Quick Add geometry). Ordinary spacing, radii, typography and control sizing use Astryx public tokens/props.
+8. When desktop and narrow **semantic hierarchy** differs, choose the correct React composition from the one shared layout-mode state. CSS media queries are for pure reflow/density inside that composition, not for mounting desktop DOM and hiding/repositioning fragments into a mobile hierarchy.
+9. Each layout property has one owner. When a structure changes, delete the obsolete CSS/DOM path instead of adding a later override that cancels it.
+10. If a pinned Astryx public primitive is proven incapable of satisfying a governed reference, document the precise incompatibility first, then use the smallest Jig-owned semantic composition built from Astryx public leaves/tokens. No second UI/styling framework.
+11. Jig's custom theme authoring source is `ui/src/jig-theme.source.ts`. It extends the built Neutral theme and is compiled only by pinned `@astryxdesign/cli@0.7.13` through `astryx theme build`. Runtime code consumes the generated `ui/src/jig.js` and `ui/src/jig.css`; authored code must not set Astryx's internal `__built` marker or replace the documented compiler with local theme-generation logic. Generated artifacts are committed and CI runs `theme build --check`; source/artifact drift is a release blocker.
+
+These constraints are release blockers. Geometry tests and screenshots do not waive them.
 
 ---
 
@@ -518,93 +538,85 @@ Regression tests:
 
 ---
 
-## UX-007 — Replace the horizontal top bar with desktop rail + canvas
+## UX-007 — Replace the horizontal top bar with Astryx-owned rail + canvas
 
 **Audit coverage:** UI-01, UI-02, UI-03  
 **Files**
 - `ui/src/app.tsx`
 - `ui/src/styles.css`
 
-### 7.1 Remove
+### 7.1 Remove the competing shell
 
 Delete from `app.tsx`:
-- `topNav` composition;
-- `.jig-topbar`;
-- top-bar Previous/Today/Next controls;
-- top-bar repository status button.
+- the legacy `topNav` composition;
+- the current Jig-owned `.jig-shell` / `.jig-sidebar` application-frame implementation;
+- any second `<main>`/shell wrapper inside `AppShell`;
+- raw/custom primary-navigation mechanics that duplicate Astryx SideNav/AppShell mobile navigation.
 
-Do not pass the current topNav to `AppShell`.
+Delete the CSS that exists only to make those duplicate structures behave like an application shell.
 
-### 7.2 Add desktop frame
+### 7.2 Use the pinned public AppShell contract
 
-Inside `AppShell`, render:
+The application root must use `AppShell` as the real outer frame, not as a banner wrapper around another shell.
+
+Conceptually:
 
 ```tsx
-<div className="jig-shell">
-  <aside className="jig-sidebar">
-    <div className="jig-sidebar-brand">...</div>
-    <nav className="jig-sidebar-nav" aria-label="Primary">...</nav>
-    <div className="jig-sidebar-context">...</div>
-  </aside>
-
-  <main className="jig-main">
-    {durableBanner}
-    {content}
-  </main>
-</div>
+<AppShell
+  sideNav={primarySideNav}
+  mobileNav={{
+    breakpoint: "md",
+    hasToggle: false,
+    isOpen: mobileNavOpen,
+    onOpenChange: setMobileNavOpen,
+  }}
+  banner={durableBanner}
+  contentPadding={0}
+  height="fill"
+  variant="section"
+>
+  {content}
+</AppShell>
 ```
 
-Use the existing light/dark wordmark assets.
+`md` is the pinned Astryx 0.7.13 768 px breakpoint and is therefore the one Jig semantic breakpoint.
 
-### 7.3 Desktop rail contents
+`primarySideNav` uses public `SideNav`, `SideNavHeading`/supported header content and `SideNavItem` primitives. The same SideNav content is reused by AppShell's mobile-navigation path. Do not build a second mobile destination list.
+
+### 7.3 Desktop rail contents and geometry
 
 Order exactly:
-1. wordmark;
-2. supporting line `Schedules attention`;
+1. canonical compact Jig identity;
+2. supporting line `Schedules attention` where supported by the SideNav public header/top-content API;
 3. Week;
 4. Day;
 5. History;
 6. Settings;
-7. low-priority planning-data label/path context only if it fits the corrected SVG; do not show Git mechanics.
+7. low-priority planning-data context only where it fits the reference and public SideNav slots; do not show Git mechanics.
 
-Active destination:
-- `aria-current="page"`;
-- visually distinct through surface + type weight, not color only.
+Active destination uses the public SideNav selected/current semantics and remains distinguishable without color alone.
 
-### 7.4 CSS desktop geometry
+The governed desktop frame remains:
+- 20 px outer application inset where the reference surface requires it;
+- 190 px rail visual budget;
+- planning canvas origin at x=240 at 1440×900.
 
-At >=48rem:
+Achieve those budgets through public AppShell/SideNav/root sizing and Jig-owned outer composition only. Do not style Astryx internal descendants or private variables to obtain them. If the exact 190 px budget requires a public root width/xstyle/style configuration, use that supported API and prove the resulting geometry in Playwright.
 
-```css
-.jig-shell {
-  display: grid;
-  grid-template-columns: 12rem minmax(0, 1fr);
-  min-height: 100dvh;
-}
+### 7.4 AppShell ownership acceptance
 
-.jig-sidebar {
-  position: sticky;
-  inset-block-start: 0;
-  height: 100dvh;
-  overflow: auto;
-}
+Acceptance:
+- exactly one AppShell application frame;
+- exactly one main landmark, provided by AppShell;
+- primary destinations are SideNav-owned;
+- mobile destination navigation is AppShell/mobileNav-owned;
+- no `.jig-shell` or `.jig-sidebar` parallel frame remains;
+- no raw `<details>` navigation replacement;
+- no CSS selector reaches into Astryx shell/navigation internals.
 
-.jig-main {
-  min-width: 0;
-  overflow: auto;
-}
-```
-
-Target rail width: 12rem / ~192px.
-
-### 7.5 AppShell usage
-
-Retain `AppShell` only as the Astryx application frame/banner host if needed. Jig owns the child grid composition.
-
-Do not introduce a second navigation component library.
+Do not introduce a second navigation/component library.
 
 ---
-
 ## UX-008 — Add surface-local header controls and one status pill
 
 **Audit coverage:** UI-02, UI-03, UI-25  
@@ -707,6 +719,12 @@ Use:
 
 The selected card may use the governed subtle selected surface/border.
 
+Component ownership is mandatory:
+- first attempt the card with Astryx `List`/`ListItem` through **public props only** for density, start/label/end content, selection and focus;
+- do not set private ListItem variables, target generated descendants, or impose a second internal grid/padding model on the Astryx row;
+- if browser proof shows that the public ListItem contract cannot produce the governed draggable-card anatomy, record that exact limitation and replace only the row host with the smallest semantic Jig `<li>`/card composition while continuing to use Astryx public `CheckboxInput`, menu/button/link primitives and semantic tokens;
+- the fallback is preferable to forcing a library component through private CSS because it leaves exactly one owner for card geometry.
+
 ### 9.3 Card content hierarchy
 
 Visible content is limited to Task information and compact affordances.
@@ -794,20 +812,14 @@ Do not change `TaskCommand` or move semantics.
 
 ### 9.7 Overflow menu
 
-Add a local `TaskActionMenu` in `task-row.tsx`.
+Add a local `TaskActionMenu` composition in `task-row.tsx`, but do not implement a second menu system.
 
-Do **not** add a dependency.
+Use the pinned Astryx public `DropdownMenu` / `DropdownMenuItem` API (or its documented public trigger/presentation contract) for trigger, focus, keyboard, dismissal and adaptive presentation. Jig owns only the Task-specific action list and callbacks.
 
-Implement with a native disclosure or the smallest Astryx-supported disclosure available:
-
-```tsx
-<details className="jig-task-menu">
-  <summary aria-label={`Actions for ${task.title}`}>•••</summary>
-  <div className="jig-task-menu-panel">
-    ...
-  </div>
-</details>
-```
+Do **not**:
+- add a dependency;
+- use raw `<details>`/custom fixed-position menu mechanics while Astryx provides the required public menu primitive;
+- style DropdownMenu private descendants or internal variables.
 
 Actions for an active Task:
 1. Edit
@@ -838,15 +850,15 @@ Remove/reduce:
 - generic full-width divider-list treatment as the card boundary;
 - title-only `.jig-drag-overlay`.
 
-Add:
+Add only Jig-owned presentation hooks that remain necessary:
 - `.jig-task-card`;
 - `.jig-task-card-selected`;
 - `.jig-task-card-dragging`;
 - `.jig-task-drag-handle`;
-- `.jig-task-menu`;
-- `.jig-task-menu-panel`;
 - `.jig-task-meta-item`;
 - `.jig-drag-card-overlay`.
+
+Do not add local menu-panel positioning/anatomy CSS when Astryx DropdownMenu owns that surface. Do not use private Astryx custom properties such as the current ListItem `--_item-*` family.
 
 The action panel must layer above cards and never increase card width.
 
@@ -1264,51 +1276,46 @@ Do not invent new API fields for 1.0.2.
 
 # 10. Wave 7 — narrow/mobile composition
 
-## UX-020 — Replace wrapped desktop chrome with one compact narrow header
+## UX-020 — Render the governed narrow hierarchy through AppShell mobile navigation
 
 **Audit coverage:** UI-27, UI-31  
 **Files**
 - `ui/src/app.tsx`
+- `ui/src/day.tsx`
+- `ui/src/week.tsx`
 - `ui/src/styles.css`
 - `docs/design/ui-solution.md`
-- mobile reference if needed
 
-At <48rem:
+At <48rem, do **not** render desktop shell/surface chrome and then hide pieces with CSS.
 
-Top row only:
+Use the one AppShell `mobileNav` state from UX-007. The governed 414×900 Day hierarchy is:
 
 ```text
-[Jig wordmark]     [Day ▾]     [status]
+[Jig identity]                         [status]
+[Day destination trigger]              [Today]
+[Mon][Tue][Wed][Thu][Fri][Sat][Sun]
+Thursday, 19 November
+Your ordered plan
+Attention
+...
+                                      [+]
 ```
 
-The destination control is one compact disclosure:
+Requirements:
+- the Day destination trigger is an Astryx public control that opens the AppShell-managed mobile navigation; it is not a raw `<details>`;
+- AppShell/SideNav owns the actual destination list and drawer behavior;
+- all four destinations remain reachable;
+- Today is a shortcut on the same compact surface-navigation row as the destination trigger, matching the governed reference hierarchy;
+- do not add a separate Previous/Today/Next desktop toolbar row on narrow Day;
+- narrow Day does not mount the desktop heading, desktop toolbar or desktop inspector;
+- desktop Day does not mount narrow-only chrome/Quick Add;
+- the same selected date/Task/editor draft state survives the mode switch.
 
-```tsx
-<details className="jig-mobile-destination-menu">
-  <summary>Day</summary>
-  <div>
-    Week
-    Day
-    History
-    Settings
-  </div>
-</details>
-```
+Week may reuse the same narrow application header/navigation owner while retaining its one-date narrow planning semantics.
 
-No new dependency.
-
-The menu choices call `setDestination`.
-
-Do not render the desktop sidebar.
-
-Do not render a separate full-width row of all four destination buttons.
-
-Surface-local Today/Previous/Next remain in the Day/Week surface header below the compact app header.
-
-This keeps destination access complete without recreating the current three-row wrapped top bar.
+CSS may size/reflow the already-correct narrow composition. It must not be responsible for converting desktop DOM into this hierarchy.
 
 ---
-
 ## UX-021 — Fit the seven-date strip at the canonical narrow width
 
 **Audit coverage:** UI-28  
@@ -1414,10 +1421,15 @@ Keep:
 - explicit confirmation;
 - current TaskCommand behavior.
 
-At narrow width:
-- dialog fills most/all viewport height as needed;
+Responsive editor presentation:
+- keep one Task draft/form state and the same ordered Astryx fields across modes;
+- desktop uses the bounded Dialog treatment;
+- narrow uses a supported public Astryx Dialog configuration/variant/width/max-height behavior that naturally matches the governed mobile editor composition;
+- do **not** resize/reposition private Dialog descendants with Jig CSS and do not mount a desktop presentation merely to hide/override it into mobile;
 - Save/Cancel remain visible/reachable;
 - Delete remains visually separated from primary Save.
+
+If the pinned public Dialog API is proven unable to realize the governed narrow composition, document the precise incompatibility before introducing the smallest Jig-owned host around the same Astryx field primitives.
 
 ---
 
@@ -1612,6 +1624,14 @@ Do not modify `theme.css` primitive palette.
 
 Do not hard-code new colors in `styles.css`; use Astryx semantic tokens.
 
+As part of this cleanup, remove architecture-debt CSS rather than layering over it:
+- delete `@layer jig`/application override-layer machinery used to outrank the library;
+- delete rules for the removed custom shell/sidebar/mobile disclosure;
+- delete private Astryx custom-property use (including `--_*`) and descendant selectors that depend on Astryx internals;
+- delete duplicate/counteracting declarations whose only purpose is to cancel earlier layout rules;
+- replace interior pixel tuning with Astryx spacing/radius/type/component props unless the value is one of the governed structural budgets in §2.4;
+- retain CSS breakpoint rules only for pure reflow/density inside the already-correct React composition.
+
 ---
 
 ## UX-026 — Explicit selected/current/focus semantics
@@ -1697,10 +1717,11 @@ Required tests:
 ### C01 — desktop shell
 Viewport 1440×900.
 Assert:
-- sidebar visible;
-- Week/Day/History/Settings in sidebar;
-- `.jig-topbar` absent;
-- main canvas visible.
+- Astryx SideNav is visible through the AppShell sideNav slot;
+- Week/Day/History/Settings are reachable from that SideNav;
+- exactly one `main` landmark exists;
+- legacy/custom `.jig-topbar`, `.jig-shell` and `.jig-sidebar` parallel shell structures are absent;
+- main canvas visible at the governed geometry.
 
 ### C02 — Day is initial destination
 Fresh state.
@@ -1758,11 +1779,13 @@ Assert page does not contain:
 ### C11 — narrow shell
 Viewport 390×844.
 Assert:
-- desktop sidebar absent;
-- one compact app header;
-- destination disclosure accessible;
-- Day content starts without stacked desktop navigation rows;
-- all four destinations reachable via disclosure.
+- desktop SideNav is not inline;
+- one compact governed narrow header composition;
+- Day destination trigger opens AppShell-managed mobile navigation;
+- no raw `<details>` destination menu exists;
+- Day/Today share the governed compact surface-navigation row;
+- desktop Day heading/toolbar/inspector are not mounted;
+- all four destinations remain reachable through the AppShell/SideNav mobile path.
 
 ### C12 — narrow date strip
 390px width.
@@ -1773,6 +1796,23 @@ Assert persistent + Add button visible and last task remains unobscured.
 
 ### C14 — theme parity
 Run representative Day/Week assertions under Light and Dark.
+
+### C15 — library/CSS ownership guard
+Add a small source-level architecture test without a new lint dependency. It must fail if Jig-authored UI CSS/source reintroduces:
+- `@layer jig` as an application override layer;
+- `!important`;
+- private custom properties matching `--_*`;
+- selectors targeting Astryx internal/generated classes;
+- deep/private Astryx package paths such as `/src`, `/dist` or `/internal`;
+- hand-authored Astryx compiler/runtime markers such as `__built` or local `generateThemeCSS` compilation;
+- raw authored `<button>` or `<a>` interaction surfaces where Astryx Button/IconButton/Link satisfies the contract;
+- unknown Astryx global token names;
+- stale `jig.js` / `jig.css` outputs relative to `jig-theme.source.ts`;
+- the removed `.jig-shell`, `.jig-sidebar` or raw `.jig-mobile-destination-menu` parallel navigation implementation.
+
+Astryx-generated `jig.js` / `jig.css` are compiler-owned and may legitimately contain Astryx internal implementation data; the guard applies the private-API prohibition to Jig-authored source and separately verifies the generated artifact header/drift contract.
+
+The guard does not replace visual tests; it protects the implementation boundary that visual tests cannot detect.
 
 ---
 
@@ -1910,13 +1950,14 @@ Must:
 ## `ui/src/styles.css`
 
 Must:
-- remove old topbar rules;
-- add sidebar/main/narrow header;
-- fix Week grid;
-- add compact Task card/menu;
-- add Day inspector grid;
+- remove legacy topbar and the current duplicate custom shell/sidebar/mobile-navigation rules;
+- contain only Jig-owned product geometry/composition;
+- fix Week grid through governed structural budgets;
+- style compact Task card/menu only through Jig-owned roots and public Astryx APIs/tokens;
+- add Day inspector/Settings product grids without reaching into Astryx internals;
 - reduce heavy section cards;
-- preserve semantic tokens.
+- preserve semantic tokens;
+- contain no Jig override cascade layer, `!important`, private Astryx variables/selectors or compensating desktop-to-mobile hiding rules.
 
 ## `ui/src/theme.css`
 
@@ -2069,8 +2110,11 @@ Passing functional tests alone is insufficient.
 
 Passing screenshots alone is insufficient.
 
-The release requires both:
+The release requires all three:
 - **behavioral correctness**, including persisted daily rollover across Week and Day;
-- **structural conformance**, including shell, density, row actions, Day inspector, History semantics and narrow composition.
+- **structural conformance**, including shell, density, row actions, Day inspector, History semantics and narrow composition;
+- **implementation-architecture conformance**, meaning Astryx owns its documented shell/navigation/component mechanics and Jig CSS does not override private library anatomy.
 
-The implementation team should not make additional UX design choices while executing this plan. If a required Astryx primitive is unavailable, use the smallest local semantic HTML composition needed for the behavior described here and document that implementation detail; do not change the target interaction or add a new dependency without a separate architectural decision.
+A screenshot that matches while violating §2.4 is a failed implementation. A green browser suite that does not enforce §2.4 is insufficient evidence.
+
+The implementation team should not make additional UX design choices while executing this plan. If a required Astryx public primitive is unavailable or demonstrably incompatible, record the exact public-API limitation and use the smallest local semantic composition needed for the governed behavior. Do not change the target interaction, reach into Astryx internals, stack CSS overrides, or add a new dependency without a separate architectural decision.

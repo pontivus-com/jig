@@ -8,6 +8,17 @@ export function todayCivilDate(now = new Date()): string {
   ].join("-");
 }
 
+export function millisecondsUntilNextLocalDay(
+  now = new Date(),
+): number {
+  const next = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+  );
+  return Math.max(1, next.getTime() - now.getTime());
+}
+
 export function civilDateAsLocalDate(civilDate: string): Date {
   assertCivilDate(civilDate);
   const [year, month, day] = civilDate.split("-").map(Number);

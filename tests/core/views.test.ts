@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
-  dayAttention,
   historyByCompletionDate,
+  outstandingForDate,
+  rollForwardOutstanding,
   weekDates,
 } from "../../src/core/planning";
 
@@ -41,7 +42,7 @@ describe("derived calendar views", () => {
     ]);
   });
 
-  it("shows unfinished earlier work before selected-date work without mutation", () => {
+  it("reads the rolled-forward canonical bucket consistently", () => {
     const thursday = task(
       "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001",
       "2026-11-12",
@@ -52,23 +53,20 @@ describe("derived calendar views", () => {
       "2026-11-13",
       0,
     );
-    const input = [thursday, friday];
 
-    const fridayView = dayAttention(input, "2026-11-13");
-    const saturdayView = dayAttention(input, "2026-11-14");
+    const rolled = rollForwardOutstanding(
+      [thursday, friday],
+      "2026-11-14",
+      "2026-11-14T00:00:00.000Z",
+    ).tasks;
 
-    expect(fridayView.carried_over.map((candidate) => candidate.id)).toEqual([
-      thursday.id,
-    ]);
-    expect(fridayView.scheduled.map((candidate) => candidate.id)).toEqual([
-      friday.id,
-    ]);
-    expect(saturdayView.carried_over.map((candidate) => candidate.id)).toEqual([
-      thursday.id,
-      friday.id,
-    ]);
-    expect(input[0]!.scheduled_date).toBe("2026-11-12");
-    expect(input[1]!.scheduled_date).toBe("2026-11-13");
+    expect(outstandingForDate(rolled, "2026-11-12")).toEqual([]);
+    expect(outstandingForDate(rolled, "2026-11-13")).toEqual([]);
+    expect(
+      outstandingForDate(rolled, "2026-11-14").map(
+        (candidate) => candidate.id,
+      ),
+    ).toEqual([thursday.id, friday.id]);
   });
 
   it("groups History by actual completion date in the supplied viewing timezone", () => {
