@@ -125,6 +125,15 @@ body {
     font-weight: 700;
   }
 
+  .jig-status-dot {
+    display: inline-block;
+    width: var(--spacing-2);
+    height: var(--spacing-2);
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
   .jig-status-synchronized {
     color: var(--color-text-success);
     background: var(--color-success-muted);
