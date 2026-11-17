@@ -14,6 +14,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 - Task command admission now performs rollover before revision validation so pre-rollover client revisions are rejected safely.
 - Browser notification permission is requested only from an explicit Settings action and shares duplicate-suppression state with in-app reminders.
+- Re-aligned the v1.0.2 UI implementation with Astryx 0.7.13 public ownership: built theme generation, public Section/VStack/elevation contracts, valid semantic tokens, and token-based non-structural CSS.
 
 ### Documentation
 
