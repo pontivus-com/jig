@@ -445,6 +445,7 @@ export function App(): React.ReactElement {
       label={repositoryStatusLabel(status)}
       variant="ghost"
       size="sm"
+      icon={<span className="jig-status-dot" aria-hidden="true" />}
       onClick={() => setDestination("settings")}
       className={`jig-status-control jig-status-${repositoryStatus}`}
     />
