@@ -46,6 +46,7 @@ describe("UI ownership architecture", () => {
     expect(history).toContain("DropdownMenu");
     expect(history).not.toContain("jig-task-menu-panel");
     expect(editor).toContain('variant={isNarrow ? "fullscreen" : "standard"}');
+    expect(editor).toContain("endContent={");
     expect(editor).toContain("FieldLabel");
     expect(editor).toContain("isGroupLabel");
   });
