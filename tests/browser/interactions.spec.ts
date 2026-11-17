@@ -66,7 +66,10 @@ test("unfinished prior-day cards roll into today across Day and Week", async ({
     page.getByRole("button", { name: "Day", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await expect(
-    page.getByText("Rollover contract", { exact: true }),
+    page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Rollover contract" })
+      .first(),
   ).toBeVisible();
 
   await expect
@@ -298,7 +301,7 @@ test("references stay data-only: HTTP(S) opens and non-HTTP stays copy-only", as
     .getByText("Copy-only reference", { exact: true })
     .locator("xpath=ancestor::li[1]");
   await expect(
-    copyOnlyRow.getByRole("button", { name: "Copy reference" }),
+    copyOnlyRow.locator('button[aria-label="Copy reference"]'),
   ).toBeVisible();
   await expect(copyOnlyRow.getByRole("link")).toHaveCount(0);
 });
@@ -347,7 +350,11 @@ test("narrow Week reflows to one selected attention list and Today is a Day shor
   await createTask(page, "Narrow selected task", today);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Week", exact: true }).click();
+  const destinationMenu = page.locator(".jig-mobile-destination-menu");
+  await destinationMenu.locator("summary").click();
+  await destinationMenu
+    .getByRole("button", { name: "Week", exact: true })
+    .click();
 
   await expect(page.locator(".jig-week-board")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(7);
