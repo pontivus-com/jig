@@ -2,7 +2,7 @@ import type { CommunityPalette } from "../community-theme";
 
 /**
  * Nord authority: official Nord Colors and Palettes documentation,
- * reviewed at v0.23.0 on 2026-11-18. Uses nord0..nord15 only.
+ * reviewed at v0.23.0 on 2026-11-18. Uses nord0..nord15 only.\n * License: MIT. Copyright (c) 2016-present Sven Greb.
  */
 export const nordPalette = {
   body: ["#eceff4", "#2e3440"],
