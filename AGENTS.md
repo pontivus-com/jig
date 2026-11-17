@@ -97,6 +97,23 @@ Mandatory rules:
 - Maintain one canonical Task model and one local persistence authority.
 - Do not introduce DTO/mapping hierarchies, service/repository class stacks, workflow frameworks, or parallel semantic owners without a demonstrated requirement.
 
+## Release governance
+
+A merged implementation PR is **not** a release. Release publication is a separate governed transition.
+
+The canonical release contract is `docs/releases/README.md`. Agents preparing or evaluating a release must enforce all of the following:
+
+1. Ordinary implementation/documentation PRs accumulate release notes under `CHANGELOG.md` `[Unreleased]` and **must not** change `package.json.version`.
+2. After the intended implementation candidate is on `master`, create a dedicated branch named exactly `release/vX.Y.Z`.
+3. The release branch **must explicitly set `package.json.version` to `X.Y.Z`**. This is mandatory release metadata, not an optional cleanup step. The branch version, changelog release heading, release-note filename/target tag and intended Git tag must all agree.
+4. The release PR moves the complete accumulated `[Unreleased]` contents into `## [X.Y.Z] - YYYY-MM-DD`, recreates an empty `[Unreleased]`, and contains only the release-metadata files permitted by `scripts/verify-release.ts`.
+5. Do not describe, approve or merge a release PR as complete unless its release-metadata verification passes.
+6. After the release PR merges to `master`, the permanent Release workflow must actually enter the release path. A green workflow that reports `should_release=false`, “already tagged”, or “No release transition/finalization detected” is a **no-op**, not a successful release.
+7. A release is valid only when the permanent release workflow succeeds for the exact merged release commit, the immutable `vX.Y.Z` tag points at that commit, a non-draft GitHub Release is published, and every required asset in the canonical release asset matrix is present with verified checksums.
+8. Never compensate for a missed version transition by moving an existing tag, rebuilding a published version, or publishing assets from an implementation branch. Correct the release metadata through the governed release branch/process.
+
+When asked whether a version is “released”, verify the published tag/release/assets, not merely that implementation code merged or that a workflow completed.
+
 ## v1.0.1 correction context
 
 The v1.0.1 correction exists because v1.0.0 allowed the Git integration mechanism to expand into repository-management responsibilities and the installer was not robust to ordinary developer Git configuration or interrupted initialization.
