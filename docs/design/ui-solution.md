@@ -255,7 +255,7 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 
 | Case | Acceptance |
 |---|---|
-| Header composition | edge-to-edge flat bar; Jig Home left; week range truly page-centered above grouped Previous/Today/Next; Add task + adjacent icon-bearing Planner/History/Settings + sync right; no sidebar; active destination clear; desktop <=44px, narrow <=56px, and outer height does not change across Planner/History/Settings |
+| Header composition | edge-to-edge flat bar; Jig Home left; centered inline Previous · compact week range · Next · Today temporal group; Add task + adjacent icon-bearing Planner/History/Settings + sync right; no sidebar; active destination clear; desktop <=44px, narrow <=56px, and outer height does not change across Planner/History/Settings |
 | Week navigation | Previous/Next shift displayed week exactly seven days; Today restores the current week; no selected-day state and no Task mutation |
 | Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; content-driven heights; open lanes with whitespace/hairline separation rather than boxed panels; full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
 | Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
