@@ -6,7 +6,7 @@ import {
   SegmentedControlItem,
   VStack,
 } from "@astryxdesign/core";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
@@ -27,7 +27,6 @@ export interface SettingsViewProps {
   readonly isOperating: boolean;
   readonly onThemePreferenceChange: (value: ThemePreference) => void;
   readonly onSync: () => Promise<void>;
-  readonly statusControl: ReactNode;
 }
 
 function statusMessage(status: ServiceStatus | null): string {
@@ -70,7 +69,6 @@ export function SettingsView({
   isOperating,
   onThemePreferenceChange,
   onSync,
-  statusControl,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
     useState<BrowserNotificationState>(browserNotificationState);
@@ -90,7 +88,6 @@ export function SettingsView({
           <h1>Settings</h1>
           <p>Repository, synchronization, appearance and diagnostics</p>
         </div>
-        {statusControl}
       </div>
 
       {operationError === null ? null : (
