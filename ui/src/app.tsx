@@ -420,7 +420,7 @@ export function App(): React.ReactElement {
       className="jig-primary-nav"
       aria-label="Primary"
       header={
-        <div className="jig-sidebar-brand" aria-label="Jig">
+        <div className="jig-nav-brand" aria-label="Jig">
           <span className="jig-brand-logo-wrap" aria-hidden="true">
             <img
               className="jig-brand-logo jig-brand-logo-light"
@@ -437,7 +437,7 @@ export function App(): React.ReactElement {
         </div>
       }
       footer={
-        <div className="jig-sidebar-context">
+        <div className="jig-nav-context">
           <span>Planning data</span>
           <small>Personal Git repository</small>
         </div>
