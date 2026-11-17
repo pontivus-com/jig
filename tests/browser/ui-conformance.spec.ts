@@ -95,6 +95,10 @@ async function themeSnapshot(page: Page): Promise<{
   readonly todayBorder: string;
   readonly logoPrimary: string;
   readonly logoAccent: string;
+  readonly statusPairs: readonly {
+    readonly foreground: string;
+    readonly background: string;
+  }[];
 }> {
   return page.evaluate(() => {
     const task = document.querySelector<HTMLElement>(".jig-task-card");
@@ -114,6 +118,23 @@ async function themeSnapshot(page: Page): Promise<{
 
     const bodyStyle = getComputedStyle(document.body);
     const taskStyle = getComputedStyle(task);
+    const statusPairs = (["info", "success", "warning", "error"] as const).map(
+      (status) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-on-${status})`;
+        probe.style.backgroundColor = `var(--color-${status})`;
+        probe.style.position = "fixed";
+        probe.style.inset = "-9999px auto auto -9999px";
+        document.body.append(probe);
+        const style = getComputedStyle(probe);
+        const pair = {
+          foreground: style.color,
+          background: style.backgroundColor,
+        };
+        probe.remove();
+        return pair;
+      },
+    );
     return {
       rootTheme: document.documentElement.getAttribute("data-astryx-theme"),
       explicitMode: document.documentElement.getAttribute("data-theme"),
@@ -125,6 +146,7 @@ async function themeSnapshot(page: Page): Promise<{
       todayBorder: getComputedStyle(today).borderBottomColor,
       logoPrimary: getComputedStyle(logoPrimary).stroke || getComputedStyle(logoPrimary).fill,
       logoAccent: getComputedStyle(logoAccent).fill,
+      statusPairs,
     };
   });
 }
@@ -731,6 +753,14 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
         .toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
       expect(snapshot.logoPrimary).not.toBe(snapshot.logoAccent);
+      expect(contrastRatio(snapshot.logoPrimary, snapshot.bodyBackground))
+        .toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(snapshot.logoAccent, snapshot.bodyBackground))
+        .toBeGreaterThanOrEqual(3);
+      for (const pair of snapshot.statusPairs) {
+        expect(contrastRatio(pair.foreground, pair.background))
+          .toBeGreaterThanOrEqual(4.5);
+      }
     }
 
     await page.emulateMedia({ colorScheme: "light" });
