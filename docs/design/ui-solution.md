@@ -172,12 +172,16 @@ The v1.0.4 published narrow composition did not meet the intended parity standar
 - **Same state vocabulary:** today, Task selection, priority, focus, drag and operational status use the same semantic aliases as desktop.
 - **Same visual legibility:** card/canvas contrast must remain clearly visible in both Light and Dark. The mobile renderer is a reflow, not a separate visual theme.
 
-### 4.3.2 v1.0.5 compact header and Task-card legibility
+### 4.3.2 v1.0.5 flat compact header and Task-card legibility
 
-The published v1.0.4 header is visually too tall. Stability and compactness are separate requirements.
+The published v1.0.4 header is visually too tall and too visually heavy. The corrected header is intentionally almost invisible as chrome.
 
+- **Desktop bar:** use the same application/body background as the page. Do not render a gray header slab, card, panel, radius or shadow.
+- **Separation:** use one subtle bottom hairline across the full width. This is the only persistent visual boundary between header and Planner canvas.
+- **Contents do not change:** Jig Home, week range, Previous/Today/Next, Add task, Planner/History/Settings and synchronization state remain available in the same semantic hierarchy.
+- **Icons are mandatory:** Planner, History, Settings, Add and the temporal/status actions use the governed Astryx semantic icon vocabulary; the flat bar must not degrade into text-only navigation.
 - Desktop outer header target: approximately **60–64 CSS px**, maximum **4rem**.
-- Narrow Planner outer header target: maximum approximately **6rem**, preserving touch-sized controls.
+- Narrow Planner outer header target: maximum approximately **6rem**, preserving touch-sized controls and the same flat-background/hairline principle.
 - Planner/History/Settings remain equal in outer height within the same layout.
 - Reduce padding/min-height at the owning Jig header rules; do not use offsets, negative margins or private Astryx selectors.
 - The centered Planner temporal region remains two lines on desktop: range, then Previous/Today/Next.
