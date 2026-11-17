@@ -852,7 +852,7 @@ The Light/Dark pair and semantic anchors are fixed as follows; no extra contrast
 | Catppuccin | **Latte** | **Mocha** | Base/Mantle/Crust + Surface levels | Mauve | Blue | Teal | Green | Yellow | Red |
 | Tokyo Night | **Day** | **Night** | upstream Day/Night background/surface roles | purple/magenta family | blue | cyan/teal | green | yellow/orange | red |
 
-Community palette values are copied once into committed theme-authoring constants; there is no runtime network lookup. Each source records upstream repository/file and the reviewed source blob/commit plus license attribution. Add/update the repository's third-party notice material as required by those upstream licenses. The upstream sources selected for this design are:
+Community palette values are copied once into committed theme-authoring constants; there is no runtime network lookup. Each source records upstream repository/file and the reviewed source blob/commit plus license attribution. The repository currently has no third-party notice file, so v1.0.6 introduces root `THIRD_PARTY_NOTICES.md` as the single notice owner for copied Gruvbox/Dracula/Solarized/Nord/Catppuccin/Tokyo Night palette material and retains Jig's existing Apache-2.0 `LICENSE` unchanged. The upstream sources selected for this design are:
 
 - Gruvbox: https://github.com/morhetz/gruvbox — its canonical source defaults both light and dark contrast to `medium`, supplies Light/Dark ramps and states MIT/X11.
 - Dracula: https://github.com/dracula/draculatheme.com/blob/main/content/spec.mdx — explicitly defines Dracula Classic dark and Alucard Classic light and requires 4.5:1 minimum text contrast.
@@ -926,7 +926,21 @@ The Jig product-local aliases become **palette-independent references to Astryx 
 --jig-brand-accent               -> --color-icon-accent
 ```
 
-`--jig-task-surface` is the one product owner for Task elevation, but its theme-source value is intentionally allowed to select the correct upstream elevated role. The pinned presets demonstrate why: Neutral dark has card==body and therefore maps Jig Task surface to `--color-background-surface`; Gothic has surface==body and therefore maps Jig Task surface to `--color-background-card`. Other wrappers choose the published surface/card role that is actually elevated from body and pass the same computed-style/contrast certification. Community themes define body/surface/card distinctly and make the same explicit choice. This is not feature-level branching: the Task component always consumes only `--jig-task-surface`.
+`--jig-task-surface` is the one product owner for Task elevation, but its theme-source value is selected once per theme wrapper because the pinned presets do not expose one universally elevated core token. The mapping is fixed, not left to implementation judgment:
+
+| Theme wrapper | `--jig-task-surface` source |
+|---|---|
+| Jig | `--color-background-surface` |
+| Astryx Neutral | `--color-background-surface` |
+| Astryx Butter | `--color-background-surface` |
+| Astryx Chocolate | `--color-background-card` |
+| Astryx Gothic | `--color-background-card` |
+| Astryx Matcha | `--color-background-surface` |
+| Astryx Stone | `--color-background-surface` |
+| Astryx Y2K | `--color-background-surface` |
+| Gruvbox / Dracula / Solarized / Nord / Catppuccin / Tokyo Night | their authored `--color-background-surface`, which must be distinct from body |
+
+This mapping follows the actual 0.7.13 values: Neutral dark has card==body; Chocolate Light has surface==body; Gothic has surface==body; the listed alternate role is elevated in each case. This is not feature-level branching: the Task component always consumes only `--jig-task-surface`.
 
 For **published Astryx presets**, inherit their complete semantic/component mapping and add only the shared Jig aliases above. For each **community theme**, override the entire Astryx color-semantic inventory used by Core/Jig rather than only body/text/accent. At minimum this includes: body/surface/card/popover/muted/inverted backgrounds; accent/accent-muted/on-accent/neutral; primary/secondary/disabled/accent text and icons; overlays/hover/pressed; ordinary/emphasized borders; skeleton/track/shadow/tint; info/success/warning/error strong, muted, on-fill, text, icon and border roles; and the named blue/cyan/gray/green/orange/pink/purple/red/teal/yellow background/border/icon/text families. This prevents a community theme from leaking Neutral blue/green/red or neutral surfaces through an Astryx component.
 
