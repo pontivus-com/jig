@@ -180,8 +180,8 @@ The published v1.0.4 header is visually too tall and too visually heavy. The cor
 - **Separation:** use one subtle bottom hairline across the full width. This is the only persistent visual boundary between header and Planner canvas.
 - **Contents do not change:** Jig Home, week range, Previous/Today/Next, Add task, Planner/History/Settings and synchronization state remain available in the same semantic hierarchy.
 - **Icons are mandatory:** Planner, History, Settings, Add and the temporal/status actions use the governed Astryx semantic icon vocabulary; the flat bar must not degrade into text-only navigation.
-- Desktop outer header target: approximately **60–64 CSS px**, maximum **4rem**.
-- Narrow Planner outer header target: maximum approximately **6rem**, preserving touch-sized controls and the same flat-background/hairline principle.
+- Desktop outer header target: approximately **44 CSS px**, maximum **2.75rem** — roughly half the shipped v1.0.4 height.
+- Narrow Planner outer header target: approximately **56 CSS px**, maximum **3.5rem** — roughly half the shipped v1.0.4 height, preserving touch-operable controls and the same flat-background/hairline principle.
 - Planner/History/Settings remain equal in outer height within the same layout.
 - Reduce padding/min-height at the owning Jig header rules; do not use offsets, negative margins or private Astryx selectors.
 - The centered Planner temporal region remains two lines on desktop: range, then Previous/Today/Next.
