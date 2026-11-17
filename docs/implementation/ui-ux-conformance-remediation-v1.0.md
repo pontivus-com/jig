@@ -87,7 +87,7 @@ The pinned Astryx 0.7.13 public contract is determinate and must be used before 
 1. `AppShell` is the outermost application frame. It already owns `sideNav`, responsive mobile-navigation behavior, the skip link and the single main landmark.
 2. `SideNav` / `SideNavItem` own primary navigation presentation and interaction. Configure rail sizing through supported public props/root styling only.
 3. The AppShell `mobileNav` contract owns the mobile drawer and responsive navigation lifecycle. Its default `md` breakpoint is 768 CSS px, matching Jig's one semantic breakpoint. Jig may control/open that drawer from a public Astryx Button in the governed narrow header; it must not recreate navigation with raw `<details>` or a second menu implementation.
-4. Astryx public primitives own reusable list, field, button, dialog, feedback, focus and responsive mechanics. Jig React owns only product-specific composition.
+4. Astryx public primitives own reusable list, field, button/icon-button, link, dialog, feedback, focus and responsive mechanics. Jig React owns only product-specific composition. Use raw `<button>`/`<a>` controls only after documenting a concrete public-API incompatibility; do not recreate Astryx press/focus/disabled/URL-safety mechanics with local CSS.
 5. Jig CSS may style only Jig-owned composition/root classes. It must not target Astryx descendants, generated StyleX anatomy, undocumented/private selectors or private custom properties such as `--_*`.
 6. Do not declare a Jig high-priority cascade layer whose purpose is to outrank Astryx, do not use `!important`, and do not increase selector specificity to force a library component into a different anatomy.
 7. Explicit pixel dimensions are allowed only for governed structural budgets (20 px application inset where the reference requires it, 190 px rail, Week track/gap geometry, Day 650/30/490 split, Settings 560/580 split, mobile frame/Quick Add geometry). Ordinary spacing, radii, typography and control sizing use Astryx public tokens/props.
@@ -1805,6 +1805,7 @@ Add a small source-level architecture test without a new lint dependency. It mus
 - selectors targeting Astryx internal/generated classes;
 - deep/private Astryx package paths such as `/src`, `/dist` or `/internal`;
 - hand-authored Astryx compiler/runtime markers such as `__built` or local `generateThemeCSS` compilation;
+- raw authored `<button>` or `<a>` interaction surfaces where Astryx Button/IconButton/Link satisfies the contract;
 - unknown Astryx global token names;
 - stale `jig.js` / `jig.css` outputs relative to `jig-theme.source.ts`;
 - the removed `.jig-shell`, `.jig-sidebar` or raw `.jig-mobile-destination-menu` parallel navigation implementation.
