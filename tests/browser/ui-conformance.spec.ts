@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   apiCommand,
   apiState,
@@ -17,7 +17,7 @@ function expectNear(actual: number, expected: number, tolerance = 3): void {
 }
 
 async function createTask(
-  page: Parameters<typeof test>[0] extends never ? never : any,
+  page: Page,
   title: string,
   date: string,
   priority: "HIGH" | "NORMAL" | "LOW" = "NORMAL",
@@ -143,9 +143,7 @@ test("Task selection opens a right Drawer without moving or narrowing the Planne
 
 test("global Add task uses the selected date and initially asks only for title", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const selectedLabel = await page
-    .locator('.jig-date-heading-button[aria-current="date"]')
-    .getAttribute("aria-label");
+  const selectedDate = await browserCivilDate(page);
 
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   const drawer = page.getByRole("dialog", { name: "Add task" });
@@ -158,8 +156,7 @@ test("global Add task uses the selected date and initially asks only for title",
   await drawer.getByRole("button", { name: "Add task", exact: true }).click();
 
   const created = (await apiState(page)).tasks.find((task) => task.title === "Title-only create");
-  expect(created).toBeDefined();
-  expect(selectedLabel).not.toBeNull();
+  expect(created?.scheduled_date).toBe(selectedDate);
 });
 
 test("History remains active while completed Task details use the same right workspace", async ({ page }) => {
