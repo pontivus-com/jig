@@ -11,7 +11,7 @@ import {
   PointerSensor,
 } from "@dnd-kit/dom";
 import { useSortable } from "@dnd-kit/react/sortable";
-import type { Ref } from "react";
+import { useRef, type Ref } from "react";
 import type { Priority, Task } from "../../src/core/task";
 import { formatReminderTime } from "./dates";
 
@@ -219,14 +219,41 @@ export function TaskRow({
   onMoveDown,
 }: TaskRowProps): React.ReactElement {
   const completed = task.completed_at !== null;
+  const pointerStart = useRef<{ readonly x: number; readonly y: number } | null>(
+    null,
+  );
+
+  const bodyPointerProps =
+    onSelect === undefined || dragHandleRef === undefined
+      ? {}
+      : {
+          onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
+            pointerStart.current = { x: event.clientX, y: event.clientY };
+          },
+          onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => {
+            const start = pointerStart.current;
+            pointerStart.current = null;
+            if (start === null) {
+              return;
+            }
+            const moved = Math.hypot(
+              event.clientX - start.x,
+              event.clientY - start.y,
+            );
+            if (moved <= 4) {
+              onSelect();
+            }
+          },
+          onPointerCancel: () => {
+            pointerStart.current = null;
+          },
+        };
 
   return (
     <ListItem
       {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
-      {...(onSelect === undefined || dragHandleRef !== undefined
-        ? {}
-        : { onClick: onSelect })}
+      {...(onSelect === undefined ? {} : { onClick: onSelect })}
       className={[
         "jig-task-card",
         `jig-task-priority-${task.priority.toLowerCase()}`,
@@ -251,14 +278,7 @@ export function TaskRow({
       label={
         <div
           {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
-          {...(onSelect === undefined || dragHandleRef === undefined
-            ? {}
-            : {
-                onClick: (event: React.MouseEvent<HTMLDivElement>) => {
-                  event.stopPropagation();
-                  onSelect();
-                },
-              })}
+          {...bodyPointerProps}
           className={completed ? "jig-task-body" : "jig-task-body jig-task-body-draggable"}
         >
           <div className="jig-task-title-row">
