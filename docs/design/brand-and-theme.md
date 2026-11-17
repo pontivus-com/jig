@@ -9,9 +9,10 @@
 This document is the single human-readable authority for Jig branding and theming. The executable authorities are:
 
 - `ui/src/theme.css` — canonical raw Jig palette primitives;
-- `ui/src/theme.ts` — the only mapping from those primitives into Astryx semantic roles;
-- `ui/src/styles.css` — layout/composition only; it must consume semantic Astryx tokens and must not introduce a second color system;
-- `ui/src/app.tsx` — the single application `<Theme theme={jigTheme}>` owner.
+- `ui/src/jig-theme.source.ts` — the only authored mapping from those primitives into Astryx semantic roles;
+- `ui/src/jig.js`, `ui/src/jig.css` and their declarations — compiler-owned artifacts produced by pinned `@astryxdesign/cli@0.7.13` from that source;
+- `ui/src/styles.css` — layout/composition only; it imports the generated Jig theme CSS, consumes semantic Astryx tokens and must not introduce a second color system;
+- `ui/src/app.tsx` — the single application `<Theme theme={jigTheme}>` owner, consuming the generated `jigTheme` module.
 
 No feature component owns a private palette.
 
@@ -201,7 +202,7 @@ No other application stylesheet may hard-code Jig brand colors.
 
 ### Semantic mapping
 
-`ui/src/theme.ts` defines `jigTheme` by extending the published Astryx Neutral theme and maps Jig primitives only into public semantic roles such as:
+`ui/src/jig-theme.source.ts` defines the authored Jig theme by extending `@astryxdesign/theme-neutral/built` and maps Jig primitives only into public semantic roles such as:
 
 - `--color-background-*`;
 - `--color-text-*`;
@@ -214,13 +215,25 @@ No other application stylesheet may hard-code Jig brand colors.
 
 Astryx continues to own spacing, sizing, typography mechanics, component structure, status families and interaction semantics.
 
-### CSS composition
+### CSS composition and theme build
 
-`ui/src/styles.css` preserves the published Astryx stylesheet ordering:
+The custom theme follows Astryx's documented production path:
+
+1. author semantic mapping only in `ui/src/jig-theme.source.ts`;
+2. compile it with pinned `@astryxdesign/cli@0.7.13` using `astryx theme build`;
+3. commit the generated `ui/src/jig.js`, `ui/src/jig.css` and declaration files;
+4. import `jigTheme` only from the generated module at runtime;
+5. run `bun run theme:check` in CI, which delegates to `astryx theme build --check` and fails on stale generated artifacts.
+
+Jig must not hand-write Astryx's internal `__built` marker, call internal/private theme machinery, or substitute an application-owned theme compiler. The generated files may contain Astryx internal implementation data because Astryx owns those files; Jig-authored source may not depend on that data.
+
+`ui/src/styles.css` preserves the published stylesheet order:
 
 1. Astryx reset;
 2. Astryx core;
-3. Jig palette primitives.
+3. Jig palette primitives;
+4. compiler-generated Jig theme CSS;
+5. Jig-owned composition rules.
 
 That ordering establishes the library/theme foundation; it is **not** permission for Jig to create a competing override layer.
 
@@ -307,9 +320,10 @@ Any change to the brand anchors, palette stops, semantic mapping or mark geometr
 
 1. this document;
 2. `ui/src/theme.css` when palette primitives change;
-3. `ui/src/theme.ts` when semantic role mapping changes;
-4. affected assets under `assets/`;
-5. representative Light and Dark browser evidence;
-6. browser acceptance proving the root theme remains `jig` and that Light/Dark accents resolve to the intended functional stops.
+3. `ui/src/jig-theme.source.ts` when semantic role mapping changes;
+4. regenerated `ui/src/jig.js`, `ui/src/jig.css` and declarations via the pinned Astryx CLI, with `bun run theme:check` green;
+5. affected assets under `assets/`;
+6. representative Light and Dark browser evidence;
+7. browser acceptance proving the root theme remains `jig` and that Light/Dark accents resolve to the intended functional stops.
 
 Layout-only UI changes do not redefine this brand contract.
