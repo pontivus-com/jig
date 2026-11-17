@@ -1,15 +1,15 @@
 import { Button } from "@astryxdesign/core";
-import { weekDates } from "../../src/core/planning";
 import { formatCivilDate, todayCivilDate } from "./dates";
 
 export function DateStrip({
+  dates,
   selectedDate,
   onSelectDate,
 }: Readonly<{
+  dates: readonly string[];
   selectedDate: string;
   onSelectDate: (date: string) => void;
 }>): React.ReactElement {
-  const dates = weekDates(selectedDate);
   const today = todayCivilDate();
 
   return (
