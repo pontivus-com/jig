@@ -258,6 +258,9 @@ test("Task cards expose restrained priority classes without replacing text seman
   const low = page.getByText("Low priority card", { exact: true }).locator("xpath=ancestor::li[1]");
 
   await expect(high).toHaveClass(/jig-task-priority-high/);
+  const highPriorityColor = await high.evaluate(
+    (element) => getComputedStyle(element).borderInlineStartColor,
+  );
   await expect(normal).toHaveClass(/jig-task-priority-normal/);
   await expect(low).toHaveClass(/jig-task-priority-low/);
   await expect(high.getByText("high", { exact: true })).toBeVisible();
@@ -273,6 +276,11 @@ test("Task cards expose restrained priority classes without replacing text seman
     .getByText("High priority card", { exact: true })
     .locator("xpath=ancestor::li[1]");
   await expect(historyRow).toHaveClass(/jig-task-priority-high/);
+  await expect(historyRow).toHaveCSS("border-left-width", "3px");
+  const historyPriorityColor = await historyRow.evaluate(
+    (element) => getComputedStyle(element).borderInlineStartColor,
+  );
+  expect(historyPriorityColor).toBe(highPriorityColor);
 });
 
 test("Settings remains a secondary destination without Planner temporal controls", async ({ page }) => {
