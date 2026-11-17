@@ -249,8 +249,14 @@ export function WeekView({
               >
                 <section aria-labelledby={`week-date-${date}`}>
                   <header className="jig-week-column-header">
-                    <button
-                      type="button"
+                    <Button
+                      label={formatCivilDate(date, {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                      variant="ghost"
+                      size="sm"
                       className="jig-date-heading-button"
                       onClick={() => onSelectDate(date)}
                       aria-current={date === selectedDate ? "date" : undefined}
@@ -259,7 +265,7 @@ export function WeekView({
                         {formatCivilDate(date, { weekday: "short" })}{" "}
                         {formatCivilDate(date, { day: "numeric" })}
                       </strong>
-                    </button>
+                    </Button>
                     <span className="jig-task-count" aria-label={`${dateTasks.length} outstanding tasks`}>
                       {dateTasks.length}
                     </span>
