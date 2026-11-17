@@ -87,13 +87,13 @@ function errorMessage(error: unknown): string {
 function repositoryStatusLabel(status: ServiceStatus | null): string {
   switch (status?.repository_status) {
     case "local-only":
-      return "Saved locally";
+      return "Local only";
     case "pending":
       return "Sync pending";
     case "retrying":
-      return "Sync retrying";
+      return "Retrying";
     case "synchronized":
-      return "Saved · Synced";
+      return "Synced";
     case "sync-issue":
       return "Sync issue";
     default:
@@ -446,7 +446,7 @@ export function App(): React.ReactElement {
 
       <div className="jig-sidebar-context">
         <span>Planning data</span>
-        <small>{status?.repository_path ?? "Local repository"}</small>
+        <small>Personal Git repository</small>
       </div>
     </aside>
   );
