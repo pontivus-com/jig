@@ -1,8 +1,8 @@
 # Jig v1.0.2 browser fidelity evidence
 
-**Captured UI revision:** `06f3cd27a11b2b9116a6b8171ef9e90f4a23d501`  
-**Evidence archive commit:** `3a6432c23571290f5b900e539d7e49e8a24b390b`  
-**Capture run:** GitHub Actions run #24 (`44007330088`)  
+**Captured UI revision:** `2e9223e4b852fd3e891dd830495893ddb65d4600`  
+**Evidence archive commit:** `03fccc0361bd3a78cbb78a9c3a6edccfc2a7fc7b`  
+**Capture run:** GitHub Actions run #27 (`44012732818`)  
 **Runner:** GitHub Actions / Ubuntu / pinned Bun 1.4.4 / pinned Playwright Chromium  
 **Desktop viewport:** 1440 × 900  
 **Mobile Day viewport:** 414 × 900  
@@ -46,7 +46,7 @@ The SVGs govern structure, hierarchy, density and representative visual characte
 
 **PASS — the recaptured implementation conforms to the governed reference design without architecture exceptions.**
 
-The archived screenshots certify the captured visual structure. The final theme architecture uses `ui/src/jig-theme.source.ts` as authoring input, extends `@astryxdesign/theme-neutral/built`, and compiles the runtime `jig.js` / `jig.css` artifacts with pinned `@astryxdesign/cli@0.7.13` via the documented `astryx theme build` path. Jig-authored code does not synthesize `__built` or compile theme CSS itself. Public `Section` / `VStack` / Button elevation and sizing APIs own reusable mechanics, while ordinary non-structural CSS stays on public Astryx tokens.
+The archived screenshots certify the captured visual structure. The final theme architecture uses `ui/src/jig-theme.source.ts` as authoring input, extends `@astryxdesign/theme-neutral/built`, and compiles the runtime `jig.js` / `jig.css` artifacts with pinned `@astryxdesign/cli@0.7.13` via the documented `astryx theme build` path. Jig-authored code does not synthesize `__built` or compile theme CSS itself. Public `Section` / `VStack` / `Button` / `Link` APIs own reusable layout and interaction mechanics, including press, focus, disabled, URL-safety and external-link behavior, while ordinary non-structural CSS stays on public Astryx tokens.
 
 Verified structural budgets include:
 
@@ -92,7 +92,8 @@ Visual fidelity is not permitted to waive architectural ownership. The final imp
 - Astryx `SideNav` / `SideNavItem` as navigation owner;
 - `useAppShellMobile()` as the sole responsive-layout authority;
 - explicit desktop/narrow React composition rather than duplicate DOM plus CSS hiding;
-- Astryx `DropdownMenu`, Dialog, List, FieldLabel, SegmentedControl, Section, VStack and Button public contracts;
+- Astryx `DropdownMenu`, Dialog, List, FieldLabel, SegmentedControl, Section, VStack, Button and Link public contracts;
+- no Jig-authored raw `<button>` / `<a>` interaction surfaces where Astryx public primitives satisfy the contract;
 - custom-theme authoring through `jig-theme.source.ts`, built Neutral inheritance, and Astryx CLI-generated `jig.js` / `jig.css` runtime artifacts;
 - all Astryx global CSS variables consumed by Jig resolve against the pinned 0.7.13 public token inventory;
 - ordinary typography, radius, motion and interior-spacing values use Astryx public tokens/props, with raw dimensions limited to governed structural budgets;
