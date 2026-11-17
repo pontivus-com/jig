@@ -3,7 +3,7 @@ import type { CommunityPalette } from "../community-theme";
 /**
  * Solarized palette authority:
  * https://github.com/altercation/solarized/blob/d18ee9450251ea1b9a02ebd4d6fce022df9eb5e4/README.md
- * Uses the canonical Light/Dark rebase over the same 16 colors.
+ * Uses the canonical Light/Dark rebase over the same 16 colors.\n * License: MIT. Copyright (c) 2011 Ethan Schoonover.
  */
 export const solarizedPalette = {
   body: ["#fdf6e3", "#002b36"],
