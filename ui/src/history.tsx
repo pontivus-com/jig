@@ -42,7 +42,11 @@ function HistoryTaskRow({
       itemKey={task.id}
       className="jig-history-task-row"
       align="first-line"
-      startContent={<span aria-hidden="true">✓</span>}
+      startContent={
+        <span className="jig-history-complete-indicator" aria-hidden="true">
+          ✓
+        </span>
+      }
       label={<span className="jig-task-title">{task.title}</span>}
       description={
         <span className="jig-task-meta">
