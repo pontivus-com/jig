@@ -55,7 +55,6 @@ export function TaskWorkspaceContent({
     return (
       <TaskMovePanel
         task={task}
-        draft={draft}
         externalError={externalError}
         isSaving={isSaving}
         surface={surface}
@@ -78,6 +77,7 @@ export function TaskWorkspaceContent({
       <TaskEditor
         task={editorTask}
         initiatingDate={initiatingDate}
+        draft={draft}
         externalError={externalError}
         isSaving={isSaving}
         surface={surface}
