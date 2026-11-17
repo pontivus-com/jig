@@ -195,7 +195,7 @@ test("capture mobile Day light", async ({ page }) => {
 });
 
 test("capture mobile editor light", async ({ page }) => {
-  const { selected } = await prepare(page, { width: 414, height: 980 });
+  const { selected } = await prepare(page, { width: 1440, height: 900 });
   await navigateTo(page, "Day");
   await chooseDate(page, selected);
 
@@ -208,6 +208,9 @@ test("capture mobile editor light", async ({ page }) => {
     })
     .click();
   await card.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+
+  await page.setViewportSize({ width: 414, height: 980 });
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.screenshot({
     path: `${EVIDENCE}/mobile-editor-light.jpg`,
