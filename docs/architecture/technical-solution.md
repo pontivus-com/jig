@@ -557,17 +557,17 @@ This is the DRY/SoC correction: responsive layout is a presentation projection o
 
 Define the navigation semantics once and render them through desktop and narrow Astryx presentations.
 
-1. In `planner-header.tsx` (or one smaller adjacent UI module if extraction improves readability), define one immutable typed destination tuple containing:
+1. In `planner-header.tsx` (or one smaller adjacent UI module if extraction improves readability), define one immutable typed destination tuple whose icon field is Astryx `ExtendedIconName` (`IconName | NamespacedIconName`), containing:
    - `planner / Planner / viewColumns`;
    - `history / History / jig:history`;
    - `settings / Settings / wrench`.
 2. Derive the exported `Destination` union from that tuple rather than separately maintaining a union and item arrays.
-3. Desktop `DestinationNav` maps that tuple to Astryx Buttons.
-4. Narrow `DropdownMenu.items` maps the exact same tuple to Astryx `DropdownMenuItemData`.
+3. Desktop `DestinationNav` maps that tuple to Astryx Buttons and renders each semantic key through `<Icon icon={destination.icon}>` into the Button's public `ReactNode` icon slot.
+4. Narrow `DropdownMenu.items` maps the exact same tuple to Astryx `DropdownMenuItemData` and renders the same `<Icon icon={destination.icon}>` into the menu item's public `ReactNode` icon slot.
 5. Both projections use the same label, semantic icon and active-destination predicate. The mobile menu therefore contains Planner, History and Settings.
 6. No responsive-specific destination allowlist, copied labels or copied IDs remain.
 
-This is a UI semantic constant, not a transport/domain DTO. It never crosses the UI boundary and contains no application state.
+This is a UI semantic constant, not a transport/domain DTO. It never crosses the UI boundary and contains no application state. Do not cast a namespaced key to `IconName`; use Astryx's exported `ExtendedIconName`/`NamespacedIconName` types.
 
 #### JIG-105-SD-05 — One typed Task-action menu owner
 
@@ -699,7 +699,8 @@ The v1.0.5 verification gate must prove the corrected architecture as well as vi
 4. compare outstanding Task menu items at desktop and narrow widths; verify completed History menu separately;
 5. assert semantic icons for navigation/Add/reference/movement/status and absence of raw `+`, `•••`, `≡` stand-ins in governed controls;
 6. desktop header <= 44px / 2.75rem and narrow <= 56px / 3.5rem, invariant across destinations;
-7. computed Task-card background/border differs from Planner canvas in Light and Dark at desktop and narrow widths.
+7. computed Task-card background/border differs from Planner canvas in Light and Dark at desktop and narrow widths;
+8. application shell/header/content-frame/main bounds are edge-to-edge with zero application-level margin/padding, no content-frame panel chrome, and responsive mode switches at the governed 73rem / 1168px boundary.
 
 **Architecture/static:**
 - no `enableDrag` or `isSortable` responsive capability flag in Planner composition;
@@ -707,6 +708,7 @@ The v1.0.5 verification gate must prove the corrected architecture as well as vi
 - one destination tuple; tests must not encode a different narrow destination set;
 - `TaskActionMenu` remains the sole Task action-menu owner;
 - no layout-specific Task surface token or raw card color;
+- no replacement application/page inset wrapper and no stale 76rem responsive owner;
 - no new `any`, double cast, non-null assertion, DTO/mapping hierarchy, service/repository layer or second state framework;
 - existing localized third-party dnd ref assertions remain permitted only if library typing still requires them and are not widened into product logic.
 
