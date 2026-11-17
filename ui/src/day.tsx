@@ -146,7 +146,7 @@ export function DayTaskLists({
                 Nothing scheduled for this date.
               </p>
             ) : (
-              <List density="compact" edge="flush" className="jig-task-card-list">
+              <List density="compact" edge="padded" className="jig-task-card-list">
                 {active.map((task) => (
                   <ActiveRow
                     key={task.id}
@@ -184,7 +184,7 @@ export function DayTaskLists({
                 </span>
               </span>
             </div>
-            <List density="compact" edge="flush" className="jig-task-card-list">
+            <List density="compact" edge="padded" className="jig-task-card-list">
               {completed.map((task) => (
                 <TaskRow
                   key={task.id}
