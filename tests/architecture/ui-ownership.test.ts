@@ -270,6 +270,8 @@ describe("UI ownership architecture", () => {
     expect(taskRow).not.toContain("dragHandleRef");
     expect(taskRow).not.toContain("pointerStart");
     expect(taskRow).not.toContain("bodyPointerProps");
+    expect(taskRow).toContain("preventActivation: preventTaskDragActivation");
+    expect(taskRow).toContain('data-jig-drag-excluded="true"');
     expect(taskRow).toContain('event.pointerType === "touch"');
 
     expect(existsSync("ui/src/date-strip.tsx")).toBe(false);
