@@ -60,6 +60,7 @@ export interface WeekViewProps {
   readonly onSelectTask: (task: Task) => void;
   readonly onAdd: (date: string) => void;
   readonly onEdit: (task: Task) => void;
+  readonly onMoveToDate: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
   readonly onMove: (
     taskId: string,
@@ -74,6 +75,7 @@ function WeekTaskRow({
   isSelected,
   onSelect,
   onEdit,
+  onMoveToDate,
   onToggleComplete,
   onMove,
 }: Readonly<{
@@ -82,6 +84,7 @@ function WeekTaskRow({
   isSelected: boolean;
   onSelect: (task: Task) => void;
   onEdit: (task: Task) => void;
+  onMoveToDate: (task: Task) => void;
   onToggleComplete: (task: Task) => Promise<boolean>;
   onMove: WeekViewProps["onMove"];
 }>): React.ReactElement {
@@ -99,6 +102,7 @@ function WeekTaskRow({
         void onToggleComplete(task);
       }}
       onEdit={() => onEdit(task)}
+      onMoveToDate={() => onMoveToDate(task)}
       {...(position > 0
         ? {
             onMoveUp: () => {
@@ -170,6 +174,7 @@ export function WeekView({
           selectedTask={selectedTask}
           onSelectTask={onSelectTask}
           onEdit={onEdit}
+          onMoveToDate={onMoveToDate}
           onToggleComplete={onToggleComplete}
           onMove={onMove}
         />
@@ -287,6 +292,7 @@ export function WeekView({
                           isSelected={selectedTask?.id === task.id}
                           onSelect={onSelectTask}
                           onEdit={onEdit}
+                          onMoveToDate={onMoveToDate}
                           onToggleComplete={onToggleComplete}
                           onMove={onMove}
                         />
