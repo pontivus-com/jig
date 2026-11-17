@@ -533,7 +533,7 @@ Remove layout mode as a drag capability switch.
 5. Use the pinned `PointerSensor` for mouse, touch and pen with pointer-specific activation constraints:
    - mouse/pen: 5px distance threshold;
    - touch: approximately 250ms delay with 5px tolerance so vertical page scrolling remains usable until drag intent is established.
-6. Checkbox/menu/reference/form controls remain genuine interactive descendants and are protected by dnd-kit's interactive-element activation behavior plus existing pointer propagation boundaries.
+6. Because Astryx `ListItem onClick` uses its own accessible whole-row interactive control, configure dnd-kit's public `preventActivation` callback rather than relying on generic interactive-element detection. Jig marks only genuine nested controls (completion checkbox, reference/copy action and Task overflow trigger) with the Jig-owned `data-jig-drag-excluded="true"` boundary; `preventActivation` rejects only targets within that boundary. Do not inspect private Astryx classes/DOM. The remaining ordinary card surface, including Astryx's row-selection overlay, may initiate drag.
 7. A pointer sequence that activates drag must not subsequently execute the ListItem selection/open action on release. Ordinary press/release that never activates drag remains the one Task-selection gesture. This is verified in the browser rather than implemented with a second manual pointer-state machine.
 8. Same-day Move up/down and Edit date remain non-drag alternatives using the same canonical commands.
 
