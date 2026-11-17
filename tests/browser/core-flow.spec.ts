@@ -26,8 +26,23 @@ async function navigateTo(
     .click();
 }
 
+async function openGlobalAdd(page: Page): Promise<void> {
+  const desktopAdd = page
+    .locator(".jig-header-right")
+    .getByRole("button", { name: "Add task", exact: true });
+  if (await desktopAdd.isVisible()) {
+    await desktopAdd.click();
+    return;
+  }
+
+  await page
+    .getByRole("button", { name: "Add task", exact: true })
+    .last()
+    .click();
+}
+
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
-  await page.getByRole("button", { name: /Add task$/ }).first().click();
+  await openGlobalAdd(page);
   const workspace = page.locator('section[aria-label="Add task"]');
   await expect(workspace).toBeVisible();
   await workspace.getByLabel("Title").fill(title);
@@ -77,7 +92,7 @@ test("real runtime supports title-first create, completion, History and reopen",
 test("stale revisions refetch canonical state and never blindly replay a mutation", async ({ page }) => {
   await addTitleOnlyTask(page, "Stale view seed");
 
-  await page.getByRole("button", { name: /Add task$/ }).first().click();
+  await openGlobalAdd(page);
   const workspace = page.locator('section[aria-label="Add task"]');
   await workspace.getByLabel("Title").fill("Must not replay");
 
@@ -125,7 +140,7 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
 });
 
 test("responsive reflow preserves an open workspace draft and appearance remains presentation-only", async ({ page }) => {
-  await page.getByRole("button", { name: /Add task$/ }).first().click();
+  await openGlobalAdd(page);
   const desktopWorkspace = page.getByRole("dialog", { name: "Add task" });
   await desktopWorkspace.getByLabel("Title").fill("Draft survives reflow");
 
