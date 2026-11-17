@@ -1,7 +1,8 @@
 # Jig v1.0.2 browser fidelity evidence
 
-**Captured UI revision:** `0db714205cda9bc6287251939a064478ff50b147`  
-**Capture/verification run:** GitHub Actions run #411 (`44001239505`)  
+**Captured UI revision:** `170f367433ee15f3e36aa8632f2a836178207e07`  
+**Evidence archive commit:** `a0e6b44845682f514a798acf5e936e2d0e5cda79`  
+**Capture run:** GitHub Actions run #23 (`44002859507`)  
 **Runner:** GitHub Actions / Ubuntu / pinned Bun 1.4.4 / pinned Playwright Chromium  
 **Desktop viewport:** 1440 × 900  
 **Mobile Day viewport:** 414 × 900  
@@ -43,9 +44,9 @@ The SVGs govern structure, hierarchy, density and representative visual characte
 
 ## Fidelity verdict
 
-**CAPTURED REVISION PASS; CURRENT BRANCH PENDING FINAL RECAPTURE.**
+**PASS — the recaptured implementation conforms to the governed reference design without architecture exceptions.**
 
-The archived screenshots certify the captured UI revision above. Subsequent fidelity corrections were made through public Astryx APIs: the semantic status marker now uses the public `Button.icon` slot and the narrow editor's top-right Cancel action uses `DialogHeader.endContent` instead of the generic close-icon presentation. These are architecture-conforming changes, but they alter visible output and therefore require a final screenshot recapture before release.
+The archived screenshots certify the captured UI revision above, including the final public-API fidelity corrections: the semantic status marker uses the public Astryx `Button.icon` slot and the narrow editor's top-right Cancel action uses `DialogHeader.endContent`. The temporary capture harness/workflow were removed after archival; those removals do not alter production UI output.
 
 Verified structural budgets include:
 
@@ -55,9 +56,11 @@ Verified structural budgets include:
 - Day: approximately 650 px planning region + 30 px gap + 490 px inspector;
 - Settings: 560 px / 580 px two-column composition;
 - mobile shell: x=12, width=390 at 414 px viewport;
-- mobile first date: approximately x=26, y=108, width=44, height=56;
+- mobile first date: measured x=27, y=109, width≈44.6, height=56, within the governed reference tolerance;
 - mobile Quick Add: x=318, y=803, width=62, height=52;
-- mobile editor frame: x=12, y=12, width=390, height=956.
+- mobile editor frame: x=12, y=12, width=390, height=956;
+- desktop Day recapture: planning region x=241/w=649 and inspector x=920/w=490, within the governed 240/650 and 920/490 budgets;
+- Settings recapture: planning card x=241/w=560 and sync card x=831/w=579, within the governed 240/560 and 830/580 budgets.
 
 The review also verified hierarchy and density that geometry alone cannot prove: compact Week cards, low-chrome empty Week columns, active/completed Day density, History date/count hierarchy, Settings panel semantics, mobile Day card rhythm, editor field order, destructive-action placement, and the Cancel/Save footer.
 
