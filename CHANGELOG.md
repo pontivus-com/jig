@@ -4,6 +4,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-11-17
+
 ### Fixed
 
 - v1.0.4 restores card-body drag-and-drop with exact same-day/cross-day ordering while keeping checkbox, menu and reference controls independent.
