@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1 brand and application-theme contract, amended 2026-11-17 with the Astryx-first CSS ownership rule.  
+**Status:** Canonical v1.0.4 brand and application-theme contract, amended 2026-11-17 with the Astryx-first CSS ownership rule and the v1.0.4 product-state color vocabulary.  
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, brand palette, Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -51,7 +51,7 @@ The J geometry and the outlined **ig** suffix must not be redrawn per surface. A
 The identity uses three related tonal scales:
 
 1. **Ink** — structure, typography, dark surfaces and the cool complement to Amber.
-2. **Amber** — identity, interaction emphasis, selection and focus.
+2. **Amber** — identity, primary action, keyboard/pointer focus and transient direct-manipulation emphasis. Amber is **not** the generic persistent-selection color.
 3. **Paper** — warm Light-mode layering.
 
 White remains an explicit utility color.
@@ -153,7 +153,7 @@ Color never replaces labels, icons, focus geometry or state text.
 | Emphasized border | Ink 200 |
 | Primary accent | Amber 700 |
 | Accent text | Amber 800 |
-| Accent-muted/selection | Amber 100 |
+| Accent-muted/transient interaction | Amber 100 |
 | Content on accent | Ink 950 |
 | Focus ring | Amber 700 |
 
@@ -173,7 +173,7 @@ Light mode should read as warm, quiet and high-clarity. Amber is selective empha
 | Emphasized border | Ink 700 |
 | Primary accent | Amber 500 |
 | Accent text | Amber 300 |
-| Accent-muted/selection | Amber 500 mixed into Ink 900 |
+| Accent-muted/transient interaction | Amber 500 mixed into Ink 900 |
 | Content on accent | Ink 950 |
 | Focus ring | Amber 500 |
 
@@ -191,6 +191,35 @@ Jig inherits Astryx Neutral 0.7.13 status families for:
 - error.
 
 Do not remap warning to brand Amber. A sync warning, save error or success state must remain semantically distinct from ordinary Jig selection/focus.
+
+## 6.1 v1.0.4 product-state color vocabulary
+
+Persistent product state, transient interaction state, priority and operational status are separate semantic planes. They must not all resolve to Amber.
+
+| State | Semantic family | Required treatment | Must not use |
+|---|---|---|---|
+| Primary action / keyboard focus | Brand Amber | primary control fill/text as governed by Astryx; focus ring uses Amber | status colors |
+| Drag source / drop target | Brand Amber | transient outline/drag overlay emphasis only; disappears when drag ends | persistent selected-card fill |
+| Desktop current day | Ink / neutral structure | exact-date-only emphasized neutral border/header typography; no whole-column Amber fill | Amber selected-column treatment |
+| Desktop selected Planner date | no persistent column color | selection remains Planner state for Add/navigation but does not color an entire desktop column | any “same weekday every week” highlight |
+| Narrow/mobile selected date | compact navigation selection | selected date chip may use the ordinary controlled accent treatment because the date strip is the active navigation control; exact today remains independently identifiable | whole-list/column fill |
+| Selected Task card | cool Ink/neutral selection | subtle cool neutral surface plus emphasized neutral border; focus ring remains separately Amber when keyboard-focused | Amber fill/border as the persistent selection state |
+| Priority High | semantic error | narrow leading error cue; optional restrained error label | Amber/warning |
+| Priority Normal | Ink / neutral | narrow quiet neutral cue; no loud badge | Amber |
+| Priority Low | semantic success / calm | narrow success-family cue; optional restrained label | info/Amber |
+| Completed Task | neutral content + success completion affordance | title/content may be subdued; completion check may use success semantics | success-filled whole row |
+| Active History/Settings navigation | neutral selection | quiet neutral surface/border or text weight; no dominant Amber fill | selected-Task color as a full surface |
+| Local only | semantic success | restrained success family with explicit `Local only` label | neutral/unknown grey |
+| Synced | semantic success | restrained success family with explicit `Synced` label | Local-only label substitution |
+| Pending / retrying | semantic warning | warning family | brand Amber |
+| Sync/save failure | semantic error | error family | brand Amber |
+| Unknown operational status | neutral | secondary/neutral grey | success/warning/error |
+
+The visual system therefore reads as **Amber + cool Ink structure + semantic status colors**, not as a collection of unrelated hues. The cool Ink family is Amber's existing brand complement and is the default persistent-selection family.
+
+The generic Astryx accent/selected mechanics may still be used inside contained controls such as buttons, segmented controls and focus rings. Jig-owned **persistent product selections** (Task cards, desktop date structure and active destination chrome) must follow the table above rather than mapping every selected state to `--color-accent` / `--color-accent-muted`.
+
+
 
 ## 7. Theme implementation contract
 
@@ -309,6 +338,8 @@ Do not:
 - add gradients, metallic effects or shadows to the canonical flat logo;
 - create screen-specific brand palettes;
 - use Brand Amber for warning merely because warning is also yellow/orange;
+- use Brand Amber as the persistent fill/border for selected Task cards or desktop current-day columns;
+- use the same visual treatment for current day, Task selection, priority and drag target;
 - add a second theme owner or CSS override layer that bypasses `jigTheme`;
 - depend on private/undocumented Astryx selectors, internal DOM structure, generated StyleX details or private CSS custom properties;
 - use `!important` or specificity escalation to force library components into a different anatomy;
