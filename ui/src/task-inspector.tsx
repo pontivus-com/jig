@@ -123,10 +123,8 @@ export function TaskInspector({
       <div className="jig-task-inspector-summary">
         <strong>
           Scheduled{" "}
-          {formatCivilDate(task.scheduled_date, {
-            weekday: "short",
-            day: "numeric",
-          })}
+          {formatCivilDate(task.scheduled_date, { weekday: "short" })}{" "}
+          {formatCivilDate(task.scheduled_date, { day: "numeric" })}
           {task.reminder_time === null
             ? ""
             : ` · ${formatReminderTime(task.reminder_time)}`}
