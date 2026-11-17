@@ -220,7 +220,9 @@ export function TaskRow({
     <ListItem
       {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
-      {...(onSelect === undefined ? {} : { onClick: onSelect })}
+      {...(onSelect === undefined || dragHandleRef !== undefined
+        ? {}
+        : { onClick: onSelect })}
       className={[
         "jig-task-card",
         `jig-task-priority-${task.priority.toLowerCase()}`,
@@ -245,6 +247,14 @@ export function TaskRow({
       label={
         <div
           {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
+          {...(onSelect === undefined || dragHandleRef === undefined
+            ? {}
+            : {
+                onClick: (event: React.MouseEvent<HTMLDivElement>) => {
+                  event.stopPropagation();
+                  onSelect();
+                },
+              })}
           className={completed ? "jig-task-body" : "jig-task-body jig-task-body-draggable"}
         >
           <div className="jig-task-title-row">
