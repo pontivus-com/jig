@@ -28,10 +28,11 @@ async function navigateTo(
 
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
   await page.getByRole("button", { name: /Add task$/ }).first().click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Title").fill(title);
-  await dialog.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  const workspace = page.locator('section[aria-label="Add task"]');
+  await expect(workspace).toBeVisible();
+  await workspace.getByLabel("Title").fill(title);
+  await workspace.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(workspace).toBeHidden();
   await expect(
     page.locator(".jig-task-card").filter({ hasText: title }).first(),
   ).toBeVisible();
@@ -72,8 +73,8 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   await addTitleOnlyTask(page, "Stale view seed");
 
   await page.getByRole("button", { name: /Add task$/ }).first().click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Title").fill("Must not replay");
+  const workspace = page.locator('section[aria-label="Add task"]');
+  await workspace.getByLabel("Title").fill("Must not replay");
 
   await page.evaluate(async () => {
     const state = await fetch("/api/v1/tasks").then((response) => response.json()) as {
@@ -104,8 +105,8 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
     if (!response.ok) throw new Error("concurrent mutation failed");
   });
 
-  await dialog.getByRole("button", { name: "Add task", exact: true }).click();
-  await expect(dialog.getByText("This view was out of date.", { exact: false })).toBeVisible();
+  await workspace.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(workspace.getByText("This view was out of date.", { exact: false })).toBeVisible();
   const tasks = await page.evaluate(async () => {
     const state = await fetch("/api/v1/tasks").then((response) => response.json()) as {
       tasks: Array<{ title: string }>;
@@ -115,17 +116,19 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   expect(tasks).toContain("Concurrent canonical task");
   expect(tasks.filter((title) => title === "Must not replay")).toHaveLength(0);
 
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
+  await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
 });
 
-test("responsive reflow preserves an open editor draft and appearance remains presentation-only", async ({ page }) => {
+test("responsive reflow preserves an open workspace draft and appearance remains presentation-only", async ({ page }) => {
   await page.getByRole("button", { name: /Add task$/ }).first().click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Title").fill("Draft survives reflow");
+  const dockedWorkspace = page.locator('section[aria-label="Add task"]');
+  await dockedWorkspace.getByLabel("Title").fill("Draft survives reflow");
 
   await page.setViewportSize({ width: 640, height: 900 });
-  await expect(dialog.getByLabel("Title")).toHaveValue("Draft survives reflow");
-  await dialog.getByRole("button", { name: "Cancel", exact: true }).last().click();
+  const drawer = page.getByRole("dialog", { name: "Add task" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByLabel("Title")).toHaveValue("Draft survives reflow");
+  await drawer.getByRole("button", { name: "Cancel", exact: true }).click();
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
   await navigateTo(page, "Settings");
