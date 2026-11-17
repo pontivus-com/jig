@@ -161,6 +161,7 @@ test("capture current-head reference surfaces", async ({ page }) => {
     .click();
   await page.setViewportSize({ width: 414, height: 900 });
   await expect(page.locator(".jig-mobile-header")).toBeVisible();
+  await page.locator(".jig-week-strip-date").nth(3).click();
   console.log(
     "JIG_REFERENCE_METRICS:mobile-day:" +
       JSON.stringify({
@@ -195,7 +196,6 @@ test("capture current-head reference surfaces", async ({ page }) => {
     "JIG_REFERENCE_METRICS:mobile-editor:" +
       JSON.stringify({
         frame: await page.locator(".jig-editor-mobile-frame").boundingBox(),
-        title: await page.getByRole("heading", { name: "Edit task", exact: true }).boundingBox(),
         save: await page.getByRole("button", { name: "Save", exact: true }).boundingBox(),
         cancel: await page.getByRole("button", { name: "Cancel", exact: true }).last().boundingBox(),
       }),
