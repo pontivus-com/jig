@@ -579,12 +579,24 @@ body {
     gap: var(--spacing-4);
   }
 
-  .jig-history-group,
+  .jig-history-group {
+    padding-block: var(--spacing-2) var(--spacing-4);
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .jig-history-group:last-child {
+    border-block-end: 0;
+  }
+
   .jig-settings-section {
-    padding: var(--spacing-3);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-container);
-    background: var(--color-background-surface);
+    display: grid;
+    gap: var(--spacing-3);
+    padding-block: var(--spacing-2) var(--spacing-4);
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .jig-settings-section:last-child {
+    border-block-end: 0;
   }
 
   .jig-settings-view {
@@ -594,11 +606,6 @@ body {
 
   .jig-settings-view > .jig-view-heading {
     margin-block-end: 0;
-  }
-
-  .jig-settings-section {
-    display: grid;
-    gap: var(--spacing-3);
   }
 
   .jig-settings-notifications {
@@ -611,6 +618,18 @@ body {
   .jig-settings-notifications p {
     margin-block: var(--spacing-0-5) 0;
     color: var(--color-text-secondary);
+  }
+
+  .jig-history-task-row {
+    border-radius: var(--radius-element);
+  }
+
+  .jig-history-end {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
   }
 
   .jig-diagnostics {
@@ -760,7 +779,7 @@ body {
     }
 
     .jig-mobile-destination-panel button[aria-current="page"] {
-      background: var(--color-background-highlight);
+      background: var(--color-background-body);
       font-weight: 700;
     }
 
