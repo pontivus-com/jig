@@ -12,10 +12,8 @@ import {
   validateTask,
 } from "../core/task";
 import { assertTaskSet } from "../core/planning";
-import {
-  PORTABLE_FORMAT_VERSION,
-  type RepositoryStatus,
-} from "./sqlite";
+import type { RepositoryStatus } from "../protocol";
+import { PORTABLE_FORMAT_VERSION } from "./sqlite";
 
 const DATA_REF = "refs/heads/jig-data";
 
