@@ -260,11 +260,24 @@ export function SortableTaskRow({
     accept: "jig-task",
   });
 
+  const setSortableCard = (node: HTMLLIElement | null): void => {
+    const assign = (ref: Ref<HTMLElement>): void => {
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref !== null) {
+        ref.current = node;
+      }
+    };
+
+    assign(sortable.ref as Ref<HTMLElement>);
+    assign(sortable.handleRef as Ref<HTMLElement>);
+  };
+
   return (
     <TaskRow
       {...rowProps}
       task={task}
-      rowRef={sortable.ref as Ref<HTMLLIElement>}
+      rowRef={setSortableCard}
     />
   );
 }
