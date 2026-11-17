@@ -342,6 +342,59 @@ test("whole-card desktop drag moves exactly once without runtime errors or selec
   expect(runtimeErrors).toEqual([]);
 });
 
+test("whole-card desktop drag reorders within a date at the exact target index", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Desktop reorder first", today);
+  await createTask(page, "Desktop reorder second", today);
+  await createTask(page, "Desktop reorder third", today);
+  await page.reload();
+
+  const source = await taskCard(page, "Desktop reorder first");
+  const target = await taskCard(page, "Desktop reorder third");
+  await mouseDrag(page, source, target);
+
+  await expect
+    .poll(async () =>
+      (await apiState(page)).tasks
+        .filter(
+          (task) =>
+            task.completed_at === null &&
+            task.scheduled_date === today,
+        )
+        .sort(
+          (left, right) =>
+            (left.position ?? 0) - (right.position ?? 0),
+        )
+        .map((task) => task.title),
+    )
+    .toEqual([
+      "Desktop reorder second",
+      "Desktop reorder third",
+      "Desktop reorder first",
+    ]);
+
+  await page.reload();
+  const persisted = (await apiState(page)).tasks
+    .filter(
+      (task) =>
+        task.completed_at === null &&
+        task.scheduled_date === today,
+    )
+    .sort(
+      (left, right) =>
+        (left.position ?? 0) - (right.position ?? 0),
+    )
+    .map((task) => task.title);
+  expect(persisted).toEqual([
+    "Desktop reorder second",
+    "Desktop reorder third",
+    "Desktop reorder first",
+  ]);
+});
+
 test("narrow touch drag reorders within a date and does not open the workspace", async ({
   page,
 }) => {
@@ -371,6 +424,62 @@ test("narrow touch drag reorders within a date and does not open the workspace",
     )
     .toEqual(["Touch second", "Touch first"]);
   await expect(page.getByRole("dialog", { name: "Touch first" })).toHaveCount(0);
+});
+
+test("narrow touch drag moves to the exact index in a non-empty adjacent date", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const today = await browserCivilDate(page);
+  const dates = await page.locator("[data-date]").evaluateAll((elements) =>
+    elements
+      .map((element) => element.getAttribute("data-date"))
+      .filter((value): value is string => value !== null),
+  );
+  const sourceIndex = dates.indexOf(today);
+  const destinationDate =
+    sourceIndex >= 0 && sourceIndex < dates.length - 1
+      ? dates[sourceIndex + 1]
+      : sourceIndex > 0
+        ? dates[sourceIndex - 1]
+        : undefined;
+  if (sourceIndex < 0 || destinationDate === undefined) {
+    throw new Error("Planner current/adjacent dates unavailable");
+  }
+
+  await createTask(page, "Touch cross source", today);
+  await createTask(page, "Touch target first", destinationDate);
+  await createTask(page, "Touch target second", destinationDate);
+  await page.reload();
+
+  const source = await taskCard(page, "Touch cross source");
+  const target = await taskCard(page, "Touch target first");
+  await touchDrag(page, source, target);
+
+  await expect
+    .poll(async () =>
+      (await apiState(page)).tasks
+        .filter(
+          (task) =>
+            task.completed_at === null &&
+            task.scheduled_date === destinationDate,
+        )
+        .sort(
+          (left, right) =>
+            (left.position ?? 0) - (right.position ?? 0),
+        )
+        .map((task) => task.title),
+    )
+    .toEqual([
+      "Touch cross source",
+      "Touch target first",
+      "Touch target second",
+    ]);
+
+  await page.reload();
+  expect(
+    (await taskByTitle(page, "Touch cross source")).scheduled_date,
+  ).toBe(destinationDate);
 });
 
 test("narrow touch drag moves into an empty adjacent date and persists", async ({
