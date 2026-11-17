@@ -592,15 +592,29 @@ export function addCivilDays(
   ].join("-");
 }
 
-export function startOfWeekMonday(civilDate: string): string {
+export function weekdayOffsetFromMonday(civilDate: string): number {
   assertCivilDate(civilDate);
   const [yearText, monthText, dayText] = civilDate.split("-");
   const date = new Date(
     Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText)),
   );
   const dayOfWeek = date.getUTCDay();
-  const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  return addCivilDays(civilDate, -daysSinceMonday);
+  return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+}
+
+export function startOfWeekMonday(civilDate: string): string {
+  return addCivilDays(civilDate, -weekdayOffsetFromMonday(civilDate));
+}
+
+export function defaultAddDate(
+  displayedWeekStart: string,
+  currentLocalDate: string,
+): string {
+  assertCivilDate(displayedWeekStart, "displayed_week_start");
+  return addCivilDays(
+    displayedWeekStart,
+    weekdayOffsetFromMonday(currentLocalDate),
+  );
 }
 
 export function weekDates(displayedWeekStart: string): readonly string[] {
