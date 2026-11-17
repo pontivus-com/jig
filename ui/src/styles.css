@@ -28,9 +28,8 @@ body {
 }
 
 .jig-primary-nav {
-  width: 112px;
   height: 100%;
-  margin-inline-end: var(--spacing-4);
+  margin-inline-end: var(--spacing-2);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-container);
   background: var(--color-background-surface);
@@ -59,8 +58,8 @@ body {
   .jig-brand-logo-wrap {
     position: relative;
     display: block;
-    width: 4rem;
-    height: 2.5rem;
+    width: var(--spacing-8);
+    height: var(--spacing-8);
     flex: 0 0 auto;
   }
 
@@ -258,7 +257,7 @@ body {
   .jig-week-board {
     display: grid;
     grid-template-columns: repeat(7, minmax(10rem, 1fr));
-    gap: var(--spacing-2);
+    gap: var(--spacing-1);
     width: 100%;
     min-width: 0;
     padding-block-end: var(--spacing-3);
@@ -633,6 +632,26 @@ body {
     border: 0;
     border-radius: 0;
     background: transparent;
+  }
+
+  .jig-task-sheet-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    padding-block-end: var(--spacing-3);
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+
+  .jig-task-sheet-header > div {
+    display: grid;
+    gap: var(--spacing-0-5);
+    min-width: 0;
+  }
+
+  .jig-task-sheet-header span {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .jig-task-editor-surface {
