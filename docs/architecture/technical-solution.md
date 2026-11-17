@@ -100,7 +100,7 @@ The application binary and runtime may be installed under normal user applicatio
 
 **Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, daily rollover, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser reminder presentation. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
 
-Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to active destination (`planner | history | settings`), displayed Planner week start, selected date/task, Task-workspace mode/draft, transient drag preview and local appearance preference. Theme preference is presentation state and never part of canonical Task or Git-synchronized planning data. Planner and History are queries over the same canonical Task set; desktop and narrow Planner compositions are presentations of the same Planner state, not parallel view authorities.
+Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to active destination (`planner | history | settings`), displayed Planner week start, selected Task/workspace draft, transient drag preview and local appearance preference. There is no selected-day state. Theme preference is presentation state and never part of canonical Task or Git-synchronized planning data. Planner and History are queries over the same canonical Task set; desktop and narrow Planner compositions are presentations of the same Planner state, not parallel view authorities.
 
 **Local HTTP:** bind only to `127.0.0.1`. The default port is **47831**; `install.sh --port <1024..65535>` is the only supported override and persists the chosen value in local configuration. The HTTP API is `/api/v1`; reads return canonical Task values plus the current SQLite revision, and mutations return success only after the SQLite transaction commits. Repository status is exactly `local-only | pending | retrying | synchronized | sync-issue`. The user can continue editing regardless of repository synchronization status.
 
@@ -218,7 +218,7 @@ Task references are treated as data: safe http(s) links may open with normal bro
 
 **Delete:** Only after explicit UI confirmation, delete the Task in one SQLite transaction. For an outstanding Task, remove it and compact the remaining positions on its scheduled date to 0..N-1; for a completed Task, delete it without active-order compaction. Increment the normal durable revision. Do not write deleted_at, a tombstone, trash row or delete-event log. Git history, if an earlier export exists, is the only recovery mechanism.
 
-**Read:** Planner derives seven consecutive local civil dates beginning Monday from `displayedWeekStart`. Desktop renders all seven outstanding sequences; narrow/mobile renders the selected date's outstanding sequence while keeping the same seven-date week selector. Before normal planning reads/commands, the service ensures daily rollover is current, so overdue outstanding Tasks have already been moved into the current local date and are visible in the same canonical Planner bucket on every responsive composition. History is grouped by local completion date. Date/week navigation is presentation state and never writes Task data.
+**Read:** Planner derives seven consecutive local civil dates beginning Monday from `displayedWeekStart`. Desktop renders all seven outstanding sequences as columns; narrow/mobile renders the same seven outstanding sequences as vertically stacked dated sections. There is no selected-day projection or selector. Before normal planning reads/commands, the service ensures daily rollover is current, so overdue outstanding Tasks have already been moved into the current local date and are visible in the same canonical Planner bucket on every responsive composition. History is grouped by local completion date. Date/week navigation is presentation state and never writes Task data.
 
 ### 4.3 Persistence representation
 
@@ -291,16 +291,32 @@ Planner presentation state is singular:
 ```ts
 type PlannerState = {
   displayedWeekStart: LocalCivilDate // Monday
-  selectedDate: LocalCivilDate       // always inside displayed week
 }
 ```
 
 Initialize both from the browser's current local civil date. Implement the navigation operations as pure calendar transforms:
 
-- `previousWeek()`: subtract seven calendar days from both `displayedWeekStart` and `selectedDate`;
-- `nextWeek()`: add seven calendar days to both values;
-- `today()`: set `displayedWeekStart = startOfWeek(currentLocalDate)` and `selectedDate = currentLocalDate`;
-- `selectDate(date)`: require `date` to be one of the seven displayed dates and update only `selectedDate`.
+- `previousWeek()`: subtract seven calendar days from `displayedWeekStart`;
+- `nextWeek()`: add seven calendar days to `displayedWeekStart`;
+- `today()`: set `displayedWeekStart = startOfWeek(currentLocalDate)`.
+
+There is no `selectDate()` operation.
+
+Global Add uses a **derived value, not state**:
+
+```ts
+function defaultAddDate(
+  displayedWeekStart: LocalCivilDate,
+  currentLocalDate: LocalCivilDate,
+): LocalCivilDate {
+  return addCivilDays(
+    displayedWeekStart,
+    weekdayOffsetFromMonday(currentLocalDate),
+  );
+}
+```
+
+This keeps Add contextually inside the viewed week without reintroducing day selection.
 
 None of these operations crosses the HTTP/SQLite command boundary.
 
@@ -325,7 +341,7 @@ The range label is not an interactive element and must not sit between the chevr
 
 The Planner board uses seven equal-width tracks with a product-level 160px minimum. Track **height is content-driven**; do not stretch tracks merely to equalize bottoms or anchor a lane action. Empty tracks keep only the minimum usable drop-target area. The desktop semantic breakpoint is **76rem / 1216 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and 48px total outer inset. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
 
-The date column header owns the desktop date-selection control **and** the date-specific Add action. Render the date label/number plus one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. Date-label activation selects the date. `+` activation selects the same date and opens the unified create draft. Stop propagation where needed so the icon action does not double-fire the date control. Selected date, exact today/current date and drag-over remain separate states.
+The date column header is non-selectable and owns only date presentation plus the date-specific Add action. Render the date label/number plus one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. `+` opens the unified create draft for that explicit date. Exact today/current date and drag-over remain separate states; there is no selected-day state.
 
 Task cards may render a thin leading priority accent for rapid scanning. The visual mapping is singular across Planner/History/detail and derived from theme roles, never hard-coded literals. Priority text/icon semantics remain available so color is not the sole carrier. Normal priority is visually quieter than High.
 
@@ -344,7 +360,7 @@ type TaskWorkspaceState =
 
 Do not add `view`, `edit`, or `move` submodes. An existing Task workspace is immediately editable (`mode: 'task'`); create is the same field surface with no Task ID. Drag owns exact direct movement; editing `scheduled_date` owns explicit non-drag rescheduling.
 
-Global Add task creates from `selectedDate`. The desktop date-header `+` first selects its column date and then creates from it. Both routes open the same full editable create draft with canonical defaults; there is no bottom-of-lane Add control and no reduced title-only create path.
+Global Add task derives its default date from the displayed week and current local weekday: `addCivilDays(displayedWeekStart, weekdayOffset(currentLocalDate))`. In the current week this equals today; in another viewed week it is the corresponding weekday in that week. The desktop date-header `+` creates from its explicit date. Both routes open the same full editable create draft with canonical defaults, and the Date field is immediately editable.
 
 Permanent Delete confirmation alone uses Astryx `AlertDialog`.
 
@@ -362,7 +378,7 @@ The top region has:
 
 The hamburger uses Astryx `DropdownMenu` or `Popover` mechanics and contains only History and Settings. Do not use AppShell MobileNav/SideNav or a side drawer.
 
-A prominent touch Add task control remains outside the constrained header (sticky/fixed within the Planner safe area is permitted) and originates from `selectedDate`.
+A prominent touch Add task control remains available in narrow/mobile composition and uses the same derived week-context default date as global Add. Each stacked date section also exposes its explicit date-header `+`.
 
 Task create/edit uses the public Astryx **BottomSheet** rising from the bottom with `hasScrim={false}`, reusing the exact same `TaskWorkspaceState`. Existing Tasks are immediately editable and Add uses the same field surface. Responsive mode changes presentation only: desktop Drawer ⇄ narrow BottomSheet without destroying or duplicating draft state.
 
@@ -370,7 +386,7 @@ When narrow drag is not enabled, touch-operable Move up/Move down commands call 
 
 ### 5.5.1 v1.0.4 date-header Add and lane geometry
 
-- `week.tsx` owns the compact per-date header Add control because it already owns the seven dated tracks and date-selection callback.
+- `week.tsx` owns the compact per-date header Add control because it already owns the seven dated tracks. No date-selection callback exists.
 - The control is an Astryx IconButton/Button leaf; Jig owns only its placement beside the date label.
 - The header Add handler uses the same canonical App callback as global Add, supplying the explicit originating date. It does not create another command path.
 - Remove the existing `.jig-week-add-task` footer action and any CSS/grid rules whose sole purpose is pinning that action to the bottom.
@@ -380,8 +396,8 @@ When narrow drag is not enabled, touch-operable Move up/Move down commands call 
 
 ### 5.6 v1.0.4 state and interaction corrections
 
-- **Today identity:** derive current-day treatment only from exact local civil-date equality (`date === currentLocalDate`). Never derive today's styling from weekday identity or from `selectedDate`. Desktop `selectedDate` remains operational Planner state for Add/navigation but does not receive a whole-column persistent highlight.
-- **Visual state ownership:** product state follows the canonical [brand/theme state vocabulary](../design/brand-and-theme.md#61-v104-product-state-color-vocabulary). Desktop exact-today uses only cool neutral structural emphasis; desktop `selectedDate` does not produce a persistent column highlight. Selected Task uses a cool Ink/neutral surface + emphasized neutral border. Drag target/source uses transient Brand Amber. Priority uses High=error, Normal=quiet Ink/neutral, Low=success. Focus remains Amber and is not a selection fill. Do not reuse one accent fill for these states.
+- **Today identity:** derive current-day treatment only from exact local civil-date equality (`date === currentLocalDate`). No selected-day state exists, so no other weekday/column receives persistent day-selection styling.
+- **Visual state ownership:** product state follows the canonical [brand/theme state vocabulary](../design/brand-and-theme.md#61-v104-product-state-color-vocabulary). Exact-today uses only cool neutral structural emphasis; there is no selected-day visual state. Selected Task uses a cool Ink/neutral surface + emphasized neutral border. Drag target/source uses transient Brand Amber. Priority uses High=error, Normal=quiet Ink/neutral, Low=success. Focus remains Amber and is not a selection fill. Do not reuse one accent fill for these states.
 - **Header geometry:** the desktop app-header outer block has one stable product-level minimum height large enough for the two-line Planner temporal centerpiece; History/Settings titles occupy the same center slot without collapsing the outer header. Apply the equivalent stable-height principle in narrow composition.
 - **Outside dismissal:** the main Planner/History content owner handles pointer-down outside Task rows and closes the open workspace. Workspace portals and Task rows/actions are excluded. Destination navigation continues to close workspace explicitly.
 - **Task menu commands:** menu priority changes issue the ordinary canonical `edit` command with only priority changed; completion/reopen and delete use existing commands; movement uses the existing exact-position command. No alternate Task mutation path is introduced.
@@ -395,7 +411,7 @@ The v1.0.4 implementation must correct the failure mechanism, not merely restyle
 | Reported issue | v1.0.3 mechanism | v1.0.4 technical correction |
 |---|---|---|
 | Card drag appears broken | `useSortable().handleRef` is attached only to the small `≡` span while the whole Task body displays a grab cursor; the browser test drags that tiny handle, so it certifies a different interaction than the user attempts | attach the sortable handle ref to the non-interactive Task body/title/meta region; keep checkbox/menu/reference outside the activation region; browser test must drag from card body |
-| “Every Tuesday”/same weekday is highlighted in adjacent weeks | exact-today logic is correct, but a second Amber desktop column state is applied for `date === selectedDate`; Previous/Next intentionally shift `selectedDate` by ±7 days, so the same weekday remains highlighted and is visually indistinguishable from today | remove persistent desktop selected-date column styling; exact `date === currentLocalDate` alone gets current-day structural treatment; keep selectedDate as operational state and retain visible selection only in narrow date strip |
+| “Every Tuesday”/same weekday is highlighted in adjacent weeks | v1.0.3 carries `selectedDate` across Previous/Next by ±7 days and styles that date as selected, so the same weekday appears highlighted every week | delete `selectedDate` from Planner state and remove date-selection UI entirely; exact `date === currentLocalDate` alone gets persistent current-day treatment |
 | Current day, selected Task and Normal priority all read yellow | CSS maps desktop selected column, selected Task card, Normal priority and drop target to `--color-accent` / `--color-accent-muted` | use the canonical state vocabulary; delete superseded accent selectors rather than layering overrides |
 | Task workspace never dismisses from blank content | workspace closes only through explicit close, navigation, completion or deletion; Planner/History content has no outside-interaction owner | content surface owns outside pointer-down dismissal, excluding Task rows/actions and workspace portals; no document-global shadow state |
 | Header jumps between Planner and History/Settings | header height is content-driven; Planner center has range + controls while secondary destination center has one title line | one stable header outer min-height per responsive layout, sized to the maximum Planner composition; destination title occupies the same center budget |
@@ -503,7 +519,7 @@ The already-open browser must also revalidate canonical state across a local-day
 - schedules a recheck for the next local day boundary;
 - rechecks on `focus` and `visibilitychange`;
 - when the observed civil date changes, calls the existing canonical-state refresh path;
-- if the selected date represented the previous "today", advances that selection to the new current date;
+- if the displayed week was the week containing the previous observed local date and the day boundary enters a new week, advance `displayedWeekStart` to the week containing the new current date; otherwise preserve the user's viewed week;
 - preserves an explicitly selected historical/future date;
 - refreshes the Task array used by Planner, History where relevant, and the reminder monitor without a manual user action.
 
@@ -609,7 +625,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | Requirement | Technical ownership | Required evidence |
 |---|---|---|
 | JIG-FR-01 quick create | Task creation through the unified Task form | Originating date/defaults are pre-populated; Title and Date are required; optional fields remain optional |
-| JIG-FR-02 navigate dates | Pure Planner calendar helpers + header/date-strip UI | Previous/Next shift week + selected date by seven days; Today restores current date/week; visible-date selection makes no DB writes |
+| JIG-FR-02 navigate weeks | Pure Planner calendar helpers + header UI | Previous/Next shift displayed week by seven days; Today restores the current week; no date-selection state exists and no Task write occurs |
 | JIG-FR-03 within-day order | dnd-kit + core move + SQLite transaction | Reorder persists through reload/restart |
 | JIG-FR-04 cross-day move | Dated droppables + core move | Exact target position, no duplicate ID; empty day works |
 | JIG-FR-05 priority insertion | Pure insert function | Mixed-list insertion preserves all earlier relative order |
@@ -620,7 +636,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-10 reminder delivery | One browser reminder monitor + Astryx Toast + browser Notification API | Visible page => one toast; hidden/open + granted permission => one browser Notification; one shared delivery key prevents duplicates; no closed-app guarantee |
 | JIG-FR-11 external context | Reference open/copy UI | Link/path accessible; no source-content import |
 | JIG-FR-12 honest outcome | HTTP/SQLite/repository-boundary outcome and UI | Failed local save or repository sync never rendered as success |
-| JIG-FR-13 responsive continuity | One PlannerState + one TaskWorkspaceState; Drawer/BottomSheet are presentation adapters | Narrow/wide reflow preserves displayed week, selected date/task, workspace mode and unsaved draft |
+| JIG-FR-13 responsive continuity | One PlannerState + one TaskWorkspaceState; Drawer/BottomSheet are presentation adapters | Narrow/wide reflow preserves displayed week, selected Task/workspace state and unsaved draft |
 | JIG-FR-14 local retention | SQLite inside configured personal Git repository | All Task fields survive service restart, checkout/re-import restores complete state |
 | JIG-FR-15 installer | scripts/install.sh, pinned runtime, user service | Single invocation configures source install, repo data area and launcher |
 | JIG-FR-16 data locality / continuity | selected repository `.jig/local` plus portable repository snapshot through the adapter | Existing valid Jig data is adopted on install; no separate migration subsystem |
@@ -666,7 +682,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **dnd-kit instead of Astryx same-list reordering plus custom cross-day dragging:** One coordinated drag system across all seven date columns with a single canonical move command.
 - **Browser-side reminder monitor instead of background infrastructure:** Toast while visible and browser Notification while hidden/open with granted permission, with no closed-app delivery guarantee.
 - **One Task and derived views instead of multiple planning objects:** Satisfies all Task semantics without building a project manager.
-- **One Planner state instead of Day/Week destinations:** One displayed week + selected date drives both the desktop seven-column board and narrow selected-date list; responsive composition never creates another planning authority.
+- **One Planner state instead of Day/Week destinations:** `displayedWeekStart` alone drives both the desktop seven-column board and narrow seven-section stack; responsive composition never creates another planning authority or selected-day subview.
 - **Header composition instead of SideNav:** AppShell remains the shell but omits SideNav/auto mobile drawer; Jig's small topNav composition owns the approved home/date/actions/navigation hierarchy using public Astryx leaves.
 - **Drawer on desktop, BottomSheet on narrow:** one TaskWorkspaceState is rendered through the public Astryx surface appropriate to the layout; presentation changes without draft/state duplication.
 
