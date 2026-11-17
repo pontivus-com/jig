@@ -51,6 +51,12 @@ async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
   await expect(
     page.locator(".jig-task-card").filter({ hasText: title }).first(),
   ).toBeVisible();
+
+  const detail = page.getByRole("dialog", { name: title });
+  if (await detail.isVisible()) {
+    await detail.getByRole("button", { name: "Close" }).click();
+    await expect(detail).toBeHidden();
+  }
 }
 
 test("real runtime supports title-first create, completion, History and reopen", async ({ page }) => {
