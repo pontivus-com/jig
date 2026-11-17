@@ -36,6 +36,9 @@ test("desktop shell uses the governed rail and Day is the initial destination", 
       exact: true,
     }),
   ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.locator(".jig-status-control .jig-status-dot"),
+  ).toBeVisible();
 });
 
 function expectNear(actual: number, expected: number, tolerance = 2): void {
@@ -450,8 +453,8 @@ test("mobile editor uses the governed 414×980 framed hierarchy", async ({
     page.getByRole("button", { name: "Delete task…", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Cancel", exact: true }).last(),
-  ).toBeVisible();
+    editor.getByRole("button", { name: "Cancel", exact: true }),
+  ).toHaveCount(2);
   await expect(
     page.getByRole("button", { name: "Save", exact: true }),
   ).toBeVisible();
