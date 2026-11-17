@@ -22,13 +22,20 @@ test("desktop shell uses the governed rail and Day is the initial destination", 
   await expect(page.locator(".jig-shell")).toHaveCount(0);
   await expect(page.locator(".jig-sidebar")).toHaveCount(0);
   await expect(page.getByRole("main")).toHaveCount(1);
-  for (const destination of ["Week", "Day", "History", "Settings"]) {
-    await expect(
-      page.locator(".jig-primary-nav").getByRole("button", {
-        name: destination,
-        exact: true,
-      }),
-    ).toBeVisible();
+  const navigation = page.locator(".jig-primary-nav");
+  const destinationButtons = navigation.getByRole("button");
+  await expect(destinationButtons).toHaveCount(4);
+  await expect(destinationButtons.nth(0)).toHaveText("Day");
+  await expect(destinationButtons.nth(1)).toHaveText("Week");
+  await expect(destinationButtons.nth(2)).toHaveText("History");
+  await expect(destinationButtons.nth(3)).toHaveText("Settings");
+  for (const destination of ["Day", "Week", "History", "Settings"]) {
+    const button = navigation.getByRole("button", {
+      name: destination,
+      exact: true,
+    });
+    await expect(button).toBeVisible();
+    await expect(button.locator("svg")).toHaveCount(1);
   }
   await expect(
     page.locator(".jig-primary-nav").getByRole("button", {
@@ -46,7 +53,7 @@ function expectNear(actual: number, expected: number, tolerance = 2): void {
 }
 
 
-test("desktop geometry matches the canonical 1440×900 reference coordinates", async ({
+test("desktop shell uses a compact rail and Week expands into reclaimed canvas", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -56,32 +63,39 @@ test("desktop geometry matches the canonical 1440×900 reference coordinates", a
   if (sidebar === null) return;
   expectNear(sidebar.x, 20);
   expectNear(sidebar.y, 20);
-  expectNear(sidebar.width, 190);
+  expectNear(sidebar.width, 96);
   expectNear(sidebar.height, 860);
 
   const heading = await page.locator(".jig-reference-heading").boundingBox();
   expect(heading).not.toBeNull();
   if (heading === null) return;
-  expectNear(heading.x, 240);
+  expectNear(heading.x, 132);
   expectNear(heading.y, 34);
 
   await page.getByRole("button", { name: "Week", exact: true }).click();
   const board = await page.locator(".jig-week-board").boundingBox();
   expect(board).not.toBeNull();
   if (board === null) return;
-  expectNear(board.x, 240);
-  expectNear(board.y, 145);
-  expectNear(board.width, 1168);
+  expectNear(board.x, 132);
+  expect(board.width).toBeGreaterThan(1200);
 
   const columns = page.locator(".jig-week-column");
   await expect(columns).toHaveCount(7);
-  for (let index = 0; index < 7; index += 1) {
-    const box = await columns.nth(index).boundingBox();
-    expect(box).not.toBeNull();
-    if (box === null) continue;
-    expectNear(box.width, 160);
-    expectNear(box.x, 240 + index * 168);
-    expectNear(box.y, 145);
+  const first = await columns.first().boundingBox();
+  expect(first).not.toBeNull();
+  if (first !== null) {
+    expect(first.width).toBeGreaterThan(170);
+    expectNear(first.x, 132);
+  }
+
+  await page.setViewportSize({ width: 1920, height: 900 });
+  const wideBoard = await board.boundingBox();
+  const wideFirst = await columns.first().boundingBox();
+  expect(wideBoard).not.toBeNull();
+  expect(wideFirst).not.toBeNull();
+  if (wideBoard !== null && wideFirst !== null) {
+    expect(wideBoard.width).toBeGreaterThan(1650);
+    expect(wideFirst.width).toBeGreaterThan(230);
   }
 });
 
@@ -95,9 +109,9 @@ test("Day and Settings use the canonical desktop split geometry", async ({
   expect(primary).not.toBeNull();
   expect(inspector).not.toBeNull();
   if (primary !== null && inspector !== null) {
-    expectNear(primary.x, 240);
+    expectNear(primary.x, 132);
     expectNear(primary.width, 650);
-    expectNear(inspector.x, 920);
+    expectNear(inspector.x, 812);
     expectNear(inspector.y, 145);
     expectNear(inspector.width, 490);
   }
@@ -114,9 +128,9 @@ test("Day and Settings use the canonical desktop split geometry", async ({
   const planning = await cards.nth(0).boundingBox();
   const sync = await cards.nth(1).boundingBox();
   if (planning !== null && sync !== null) {
-    expectNear(planning.x, 240);
+    expectNear(planning.x, 132);
     expectNear(planning.width, 560);
-    expectNear(sync.x, 830);
+    expectNear(sync.x, 722);
     expectNear(sync.width, 580);
   }
 });
@@ -158,7 +172,7 @@ test("414px mobile geometry matches the canonical framed Day reference", async (
   }
 });
 
-test("Week fits seven visible columns at the canonical desktop viewport", async ({
+test("Week keeps seven usable columns visible while consuming the desktop canvas", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -189,6 +203,78 @@ test("Week fits seven visible columns at the canonical desktop viewport", async 
 
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
   expect(geometry.visible).toBe(true);
+});
+
+test("Week card selection keeps Week active and opens a non-modal right task workspace", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await apiCommand(page, {
+    type: "create",
+    title: "Week workspace contract",
+    scheduled_date: today,
+    priority: "NORMAL",
+    context: "Planning",
+    reference: null,
+    note: "Keep the board in sight.",
+    reminder_time: null,
+  });
+  await page.reload();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Week", exact: true }).click();
+
+  const card = page
+    .getByText("Week workspace contract", { exact: true })
+    .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
+  await card.click();
+
+  await expect(
+    page.locator(".jig-primary-nav").getByRole("button", {
+      name: "Week",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.locator(".jig-week-board")).toBeVisible();
+
+  const drawer = page.getByRole("dialog", {
+    name: "Week workspace contract",
+  });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText("Keep the board in sight.")).toBeVisible();
+
+  await drawer.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Edit task" })).toBeVisible();
+  await expect(page.getByLabel("Title")).toHaveValue("Week workspace contract");
+  await expect(page.locator(".jig-week-board")).toBeVisible();
+});
+
+test("Day Add task edits in the docked workspace without opening a task dialog", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page
+    .locator(".jig-day-toolbar")
+    .getByRole("button", { name: "Add task", exact: true })
+    .click();
+
+  await expect(page.getByRole("dialog", { name: "Add task" })).toHaveCount(0);
+  const workspace = page.locator('section[aria-label="Add task"]');
+  await expect(workspace).toBeVisible();
+  await expect(workspace.getByLabel("Title")).toBeVisible();
+  await expect(workspace.getByRole("button", { name: "Add task" })).toBeVisible();
+});
+
+test("Week Quick add uses the right Drawer instead of a centered task modal", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Week", exact: true }).click();
+  await page.getByRole("button", { name: "Quick add", exact: false }).click();
+
+  const drawer = page.getByRole("dialog", { name: "Add task" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByLabel("Title")).toBeVisible();
+  await expect(page.locator(".jig-week-board")).toBeVisible();
 });
 
 test("Task cards expose content, grip and one overflow affordance without action words", async ({
@@ -399,7 +485,7 @@ test("Day card density matches active/completed reference hierarchy", async ({
   }
 });
 
-test("mobile editor uses the governed 414×980 framed hierarchy", async ({
+test("mobile task editing uses the right-side task workspace rather than the old editor modal", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -419,23 +505,22 @@ test("mobile editor uses the governed 414×980 framed hierarchy", async ({
   const card = page
     .getByText("Editor geometry", { exact: true })
     .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
-  await card
-    .getByRole("button", { name: "Actions for Editor geometry" })
-    .click();
-  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await card.click();
 
-  const frame = await page.locator(".jig-editor-mobile-frame").boundingBox();
+  const details = page.getByRole("dialog", { name: "Editor geometry" });
+  await expect(details).toBeVisible();
+  await details.getByRole("button", { name: "Edit", exact: true }).click();
+
+  const editor = page.getByRole("dialog", { name: "Edit task" });
+  await expect(editor).toBeVisible();
+  const frame = await editor.boundingBox();
   expect(frame).not.toBeNull();
   if (frame !== null) {
-    expectNear(frame.x, 12);
-    expectNear(frame.y, 12);
-    expectNear(frame.width, 390);
-    expectNear(frame.height, 956);
+    expectNear(frame.x + frame.width, 414, 3);
+    expect(frame.width).toBeGreaterThanOrEqual(350);
+    expect(frame.height).toBeGreaterThan(900);
   }
 
-  const editor = page.locator(".jig-editor-mobile-frame");
-  const formText = await editor.locator("form").innerText();
   const fieldLabels = [
     "Title",
     "Date",
@@ -445,19 +530,12 @@ test("mobile editor uses the governed 414×980 framed hierarchy", async ({
     "Reference",
     "Notes",
   ];
-  const positions = fieldLabels.map((label) => formText.indexOf(label));
-  expect(positions.every((position) => position >= 0)).toBe(true);
-  expect(positions).toEqual([...positions].sort((a, b) => a - b));
-
-  await expect(
-    page.getByRole("button", { name: "Delete task…", exact: true }),
-  ).toBeVisible();
-  await expect(
-    editor.getByRole("button", { name: "Cancel", exact: true }),
-  ).toHaveCount(2);
-  await expect(
-    page.getByRole("button", { name: "Save", exact: true }),
-  ).toBeVisible();
+  for (const label of fieldLabels) {
+    await expect(editor.getByLabel(label, { exact: true })).toBeVisible();
+  }
+  await expect(editor.getByRole("button", { name: "Cancel" })).toBeVisible();
+  await expect(editor.getByRole("button", { name: "Save" })).toBeVisible();
+  await expect(page.locator(".jig-editor-mobile-frame")).toHaveCount(0);
 });
 
 test("narrow shell keeps all destinations reachable and the seven-date strip fits", async ({
