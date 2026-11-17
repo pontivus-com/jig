@@ -100,6 +100,9 @@ Mandatory rules:
 - Implementation plans cannot use an earlier technical choice as justification for new scope.
 - Prefer deleting or collapsing unnecessary machinery over hardening an abstraction Jig should not own.
 - Maintain one canonical Task model and one local persistence authority.
+- Preserve the functional-core/imperative-shell dependency direction: pure Task/planning rules in `src/core`; SQLite/HTTP/Git/process/filesystem I/O in `src/shell`; browser presentation state in `ui/src`. UI/shell code must not duplicate core planning semantics.
+- TypeScript strictness is architectural. Do not add `any`, double casts, non-null assertions, or unchecked type assertions to silence the compiler. Untyped external data must be narrowed/validated at the smallest boundary; justified third-party interop assertions stay local to that adapter.
+- Apply DRY at the semantic-owner level: one state/algorithm/mapping for one meaning. Consolidate duplicate Planner sequence rendering, status mapping, date-header behavior and command construction rather than maintaining responsive or destination-specific copies.
 - Do not introduce DTO/mapping hierarchies, service/repository class stacks, workflow frameworks, or parallel semantic owners without a demonstrated requirement.
 
 ## Release governance
