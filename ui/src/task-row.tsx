@@ -14,7 +14,7 @@ export interface TaskRowProps {
   readonly task: Task;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
-  readonly dragHandleRef?: Ref<HTMLDivElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -225,18 +225,16 @@ export function TaskRow({
         </span>
       }
       label={
-        <div
-          {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
-          className="jig-task-body"
-          {...(completed ? {} : { tabIndex: 0 })}
-          {...(onSelect === undefined ? {} : { onFocus: onSelect })}
-        >
+        <div className="jig-task-body">
           <div className="jig-task-title-row">
             {completed ? null : (
               <span
+                {...(dragHandleRef === undefined ? {} : { ref: dragHandleRef })}
                 className="jig-task-drag-handle"
                 aria-hidden="true"
                 title="Drag task"
+                onPointerDown={stopPointer}
+                onClick={(event) => event.stopPropagation()}
               >
                 ≡
               </span>
@@ -292,7 +290,7 @@ export function SortableTaskRow({
       {...rowProps}
       task={task}
       rowRef={sortable.ref as Ref<HTMLLIElement>}
-      dragHandleRef={sortable.handleRef as Ref<HTMLDivElement>}
+      dragHandleRef={sortable.handleRef as Ref<HTMLSpanElement>}
     />
   );
 }
