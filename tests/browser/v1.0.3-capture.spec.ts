@@ -102,6 +102,7 @@ test("capture finalized v1.0.3 single Planner evidence", async ({ page }) => {
     context: "Planning",
   });
   await create(page, "Completed implementation check", today, {
+    priority: "HIGH",
     context: "Jig",
   });
 
@@ -176,6 +177,10 @@ test("capture finalized v1.0.3 single Planner evidence", async ({ page }) => {
   ).toBeVisible();
   await capture(page, "sync-issue");
   await page.unroute("**/api/v1/status");
+  await page.reload();
+  await expect(
+    page.getByText("Repository synchronization issue", { exact: true }),
+  ).toHaveCount(0);
 
   await page.getByRole("button", { name: "Planner home" }).click();
   await page.route("**/api/v1/commands", async (route) => {
