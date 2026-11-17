@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding v1.0.4 functional design v0.10, finalized 2026-11-17 with the v1.0.3 single-Planner model plus the v1.0.4 interaction-correction contract for drag behavior, complete visual-state semantics, unified Task editing, workspace dismissal, stable header geometry, complete Task actions, removal of selected-day state, date-header Add, full weekday labels, explicit top navigation and reduced-chrome Planner presentation. Persisted rollover, deletion, repository ownership, installation and synchronization semantics are unchanged.  
+**Status:** Binding v1.0.5 functional design v0.11, amended 2026-11-17 after post-release validation of published v1.0.4. v1.0.5 is a corrective patch for crash-free drag ownership, required narrow/mobile drag parity, compact header geometry, complete semantic iconography/menu normalization, Task-card surface legibility and desktop/narrow presentation parity. Canonical Task, persistence, rollover, reminder, repository ownership, installer and synchronization semantics are unchanged.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -15,7 +15,7 @@ On narrow/mobile layouts, the same Planner reflows to seven vertically stacked d
 The primary planning interaction is master-detail:
 
 - clicking/tapping a Task **selects it and opens the unified editable Task workspace**; selection never moves the Task and never changes application destination;
-- direct visual movement/reordering is performed by dragging the non-interactive body of the Task card where supported; checkbox/menu/reference controls never initiate drag;
+- direct visual movement/reordering is performed by dragging the non-interactive body of the Task card on desktop and narrow/mobile; checkbox/menu/reference controls never initiate drag;
 - explicit non-drag rescheduling is performed by editing the Task's scheduled date;
 - existing Task selection and Add Task use the same editable field surface; there is no separate read-only inspection step and no second Edit click;
 - clicking outside both a Task card and the contextual workspace dismisses the workspace without saving; clicking another Task retargets the workspace to that Task;
@@ -93,6 +93,23 @@ The following requirements supersede the affected v1.0.3 interaction wording whi
 | JIG-104-FR-14 | Global Add derives a date without selection | Global Add task opens the unified full Task form with a derived default date inside the displayed week: the date whose weekday matches the current local weekday. In the current week this is today; in another displayed week it is the corresponding weekday in that week. The Date field is immediately editable before Save. Per-date `+` always uses its explicit date. |
 | JIG-104-FR-15 | Weekday labels are written in full | Planner date headers use the full English weekday names `Monday`, `Tuesday`, `Wednesday`, `Thursday`, `Friday`, `Saturday`, `Sunday`; do not abbreviate them to Mon/Tue/Wed/etc. The header remains a non-selectable date signifier plus its compact `+` action. |
 | JIG-104-FR-16 | Planner uses reduced chrome and explicit top navigation | Desktop keeps the existing three-zone application-header placement and centered temporal controls, but the right-side navigation explicitly contains `Planner`, `History` and `Settings` together, with Planner visibly active on the planning surface. The weekly board is visually lightweight: no boxed lane containers, no thick lane borders, no decorative panel framing, and no redundant separators. Structure is conveyed primarily by whitespace, typography, subtle hairline separators where needed, semantic state color and iconography. Task cards remain discrete interactive units but use restrained borders/shadows rather than heavy chrome. Icons may communicate Task metadata/status/action meaning when accompanied by accessible labels/tooltips or text where needed. |
+
+
+### v1.0.5 post-release corrective requirements
+
+Published v1.0.4 did not satisfy several binding v1.0.4 interaction/presentation outcomes in real use. v1.0.5 is the corrective patch. These requirements supersede only the affected v1.0.4 acceptance behavior; they do not change Jig's Task/domain/integration model.
+
+| ID | Requirement | Observable acceptance |
+|---|---|---|
+| JIG-105-FR-01 | Drag must be crash-free and preserve React ownership | Dragging an outstanding Task within a date or across dates never raises a browser/React DOM exception, including `NotFoundError: removeChild`. The visible list remains coherent before, during and after drop, and after persistence/reload the Task occupies exactly the chosen date/index. A failed/cancelled drag leaves canonical order unchanged. |
+| JIG-105-FR-02 | Narrow/mobile card drag is required | Narrow/mobile supports direct touch/pen/mouse drag from the same non-interactive Task body used on desktop. Same-date reorder, cross-date move and empty-date drop use the same canonical exact-position move semantics. Completion checkbox, menu, links/copy and form controls remain independently usable. Move up/down remains an accessibility/non-drag alternative, not a substitute for missing mobile drag. |
+| JIG-105-FR-03 | Responsive rendering has one visual/interaction model | Desktop and narrow/mobile render the same dated-section and Task-card semantics. Breakpoint changes may reflow geometry but must not switch to stale card surfaces, obsolete chrome, different state colors, different menu semantics or a reduced icon system. A Task that is visually distinct on desktop remains equally distinct on narrow/mobile in the same theme. |
+| JIG-105-FR-04 | Mobile header/menu and semantic iconography are normalized | Header actions, Planner/History/Settings navigation, narrow hamburger menu, date Add controls, Task metadata/actions and operational status use the pinned Astryx semantic icon system consistently. Do not mix raw Unicode stand-ins with semantic icons when Astryx provides the meaning. Narrow menu items use the same semantic meanings, icon sizing, labeling and active-state vocabulary as desktop. |
+| JIG-105-FR-05 | Application header is compact as well as stable | The header remains invariant across Planner/History/Settings, but the v1.0.4 shipped vertical budget is reduced materially. Desktop Planner target height is approximately 60–64 CSS px (maximum 4rem), sufficient for the two-line temporal center without oversized blank space. Narrow Planner keeps touch usability while remaining compact, with a maximum outer budget of approximately 6rem. |
+| JIG-105-FR-06 | Task cards are visibly separated from the Planner canvas | In Light and Dark, desktop and narrow/mobile, the base Task-card surface is immediately distinguishable from the surrounding Planner canvas before hover/selection. Dark Task cards use a visibly lighter/elevated neutral surface than the canvas; Light Task cards retain a clear surface/border distinction. Narrow/mobile must not collapse the card surface to the page/section background. |
+| JIG-105-FR-07 | Jig brand/navigation presentation uses the governed assets and semantics | The application header uses the canonical complete Jig wordmark treatment rather than composing the standalone J symbol beside a second live “Jig” word. Navigation/action iconography remains secondary to accessible labels and does not introduce a second icon package. |
+| JIG-105-FR-08 | Release acceptance must exercise the failed interaction classes | A v1.0.5 candidate is not acceptable until real-browser validation covers desktop and narrow/mobile drag, records zero page/runtime exceptions during those interactions, checks compact header geometry, opens the narrow navigation menu, and visually reviews Task-card contrast/icon parity in Light and Dark on both responsive compositions. |
+
 
 ## 4. Functional requirements
 
