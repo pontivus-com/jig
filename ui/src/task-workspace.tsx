@@ -1,14 +1,11 @@
 import {
   BottomSheet,
   Button,
-  DateInput,
   Drawer,
   DrawerHeader,
   Layout,
   LayoutContent,
 } from "@astryxdesign/core";
-import type { ISODateString } from "@astryxdesign/core/utils";
-import { useEffect, useState } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
 import { formatCivilDate } from "./dates";
 import {
@@ -17,7 +14,7 @@ import {
 } from "./task-editor";
 import { TaskInspector } from "./task-inspector";
 
-export type TaskWorkspaceMode = "view" | "edit" | "create" | "move";
+export type TaskWorkspaceMode = "view" | "edit" | "create";
 
 export interface TaskWorkspaceContentProps {
   readonly mode: TaskWorkspaceMode;
@@ -31,93 +28,8 @@ export interface TaskWorkspaceContentProps {
   readonly onModeChange: (mode: TaskWorkspaceMode | null) => void;
   readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
-  readonly onMove: (task: Task, destinationDate: string) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
-}
-
-function TaskMovePanel({
-  task,
-  externalError,
-  isSaving,
-  surface,
-  showHeading,
-  onCancel,
-  onMove,
-}: Readonly<{
-  task: Task;
-  externalError: string | null;
-  isSaving: boolean;
-  surface: "docked" | "drawer";
-  showHeading: boolean;
-  onCancel: () => void;
-  onMove: (destinationDate: string) => Promise<boolean>;
-}>): React.ReactElement {
-  const [destinationDate, setDestinationDate] = useState(task.scheduled_date);
-
-  useEffect(() => {
-    setDestinationDate(task.scheduled_date);
-  }, [task.id, task.scheduled_date]);
-
-  return (
-    <section
-      className={[
-        "jig-task-inspector",
-        "jig-task-editor-surface",
-        surface === "drawer" ? "jig-task-inspector-drawer" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      aria-label={`Move task ${task.title}`}
-    >
-      {showHeading ? (
-        <div className="jig-task-inspector-heading">
-          <p className="jig-eyebrow">Move task</p>
-          <h2>{task.title}</h2>
-        </div>
-      ) : null}
-
-      {externalError === null ? null : (
-        <div className="jig-form-error" role="alert">
-          {externalError}
-        </div>
-      )}
-
-      <DateInput
-        label="Destination date"
-        value={destinationDate as ISODateString}
-        onChange={(value) => {
-          if (value !== undefined) {
-            setDestinationDate(value);
-          }
-        }}
-        isRequired
-        weekStartsOn="mon"
-      />
-
-      <p className="jig-secondary-copy">
-        Move to date appends the task on that date using the exact-position
-        move operation. Editing the task date uses priority-guided insertion.
-      </p>
-
-      <div className="jig-editor-primary-actions">
-        <Button
-          label="Cancel"
-          variant="secondary"
-          onClick={onCancel}
-          isDisabled={isSaving}
-        />
-        <Button
-          label="Move task"
-          variant="primary"
-          isLoading={isSaving}
-          onClick={() => {
-            void onMove(destinationDate);
-          }}
-        />
-      </div>
-    </section>
-  );
 }
 
 export function TaskWorkspaceContent({
@@ -132,30 +44,9 @@ export function TaskWorkspaceContent({
   onModeChange,
   onDraftChange,
   onSave,
-  onMove,
   onDelete,
   onToggleComplete,
 }: TaskWorkspaceContentProps): React.ReactElement {
-  if (mode === "move" && task !== null) {
-    return (
-      <TaskMovePanel
-        task={task}
-        externalError={externalError}
-        isSaving={isSaving}
-        surface={surface}
-        showHeading={showHeading}
-        onCancel={() => onModeChange("view")}
-        onMove={async (destinationDate) => {
-          const moved = await onMove(task, destinationDate);
-          if (moved) {
-            onModeChange("view");
-          }
-          return moved;
-        }}
-      />
-    );
-  }
-
   if (mode === "create" || mode === "edit") {
     const editorTask = mode === "edit" ? task : null;
     return (
@@ -187,7 +78,6 @@ export function TaskWorkspaceContent({
       showHeading={showHeading}
       onToggleComplete={onToggleComplete}
       onEdit={() => onModeChange("edit")}
-      onMoveToDate={() => onModeChange("move")}
       onDelete={onDelete}
     />
   );
@@ -202,9 +92,6 @@ function workspaceTitle(
   }
   if (mode === "edit") {
     return "Edit task";
-  }
-  if (mode === "move") {
-    return "Move task";
   }
   return task?.title ?? "Task details";
 }
@@ -244,7 +131,6 @@ export function TaskWorkspaceDrawer({
   onModeChange,
   onDraftChange,
   onSave,
-  onMove,
   onDelete,
   onToggleComplete,
   onClose,
@@ -296,7 +182,6 @@ export function TaskWorkspaceDrawer({
               onModeChange={onModeChange}
               onDraftChange={onDraftChange}
               onSave={onSave}
-              onMove={onMove}
               onDelete={onDelete}
               onToggleComplete={onToggleComplete}
             />
@@ -317,7 +202,6 @@ export function TaskWorkspaceBottomSheet({
   onModeChange,
   onDraftChange,
   onSave,
-  onMove,
   onDelete,
   onToggleComplete,
   onClose,
@@ -368,7 +252,6 @@ export function TaskWorkspaceBottomSheet({
         onModeChange={onModeChange}
         onDraftChange={onDraftChange}
         onSave={onSave}
-        onMove={onMove}
         onDelete={onDelete}
         onToggleComplete={onToggleComplete}
       />
