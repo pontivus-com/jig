@@ -12,9 +12,8 @@ import {
   TaskEditor,
   type TaskDraft,
 } from "./task-editor";
-import { TaskInspector } from "./task-inspector";
 
-export type TaskWorkspaceMode = "view" | "edit" | "create";
+export type TaskWorkspaceMode = "task" | "create";
 
 export interface TaskWorkspaceContentProps {
   readonly mode: TaskWorkspaceMode;
@@ -23,55 +22,59 @@ export interface TaskWorkspaceContentProps {
   readonly draft: TaskDraft;
   readonly externalError: string | null;
   readonly isSaving: boolean;
-  readonly onModeChange: (mode: TaskWorkspaceMode | null) => void;
   readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
+  readonly onClose: () => void;
 }
 
 export function TaskWorkspaceContent({
-  mode,
   task,
   initiatingDate,
   draft,
   externalError,
   isSaving,
-  onModeChange,
   onDraftChange,
   onSave,
   onDelete,
   onToggleComplete,
+  onClose,
 }: TaskWorkspaceContentProps): React.ReactElement {
-  if (mode === "create" || mode === "edit") {
-    const editorTask = mode === "edit" ? task : null;
-    return (
+  return (
+    <div className="jig-task-workspace-form">
       <TaskEditor
-        task={editorTask}
+        task={task}
         initiatingDate={initiatingDate}
         draft={draft}
         externalError={externalError}
         isSaving={isSaving}
         onDraftChange={onDraftChange}
-        onCancel={() => onModeChange(editorTask === null ? null : "view")}
-        onSave={async (command) => {
-          const saved = await onSave(command);
-          if (saved) {
-            onModeChange("view");
-          }
-          return saved;
-        }}
+        onCancel={onClose}
+        onSave={onSave}
       />
-    );
-  }
-
-  return (
-    <TaskInspector
-      task={task}
-      onToggleComplete={onToggleComplete}
-      onEdit={() => onModeChange("edit")}
-      onDelete={onDelete}
-    />
+      {task === null ? null : (
+        <div className="jig-task-workspace-actions">
+          <Button
+            label={task.completed_at === null ? "Mark complete" : "Reopen"}
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              void onToggleComplete(task);
+            }}
+            isDisabled={isSaving}
+          />
+          <Button
+            label="Delete…"
+            variant="ghost"
+            size="sm"
+            className="jig-inspector-delete"
+            onClick={() => onDelete(task)}
+            isDisabled={isSaving}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -79,13 +82,7 @@ function workspaceTitle(
   mode: TaskWorkspaceMode,
   task: Task | null,
 ): string {
-  if (mode === "create") {
-    return "Add task";
-  }
-  if (mode === "edit") {
-    return "Edit task";
-  }
-  return task?.title ?? "Task details";
+  return mode === "create" ? "Add task" : task?.title ?? "Task";
 }
 
 function workspaceSubtitle(
@@ -105,12 +102,8 @@ function workspaceSubtitle(
 }
 
 export interface TaskWorkspaceOverlayProps
-  extends Omit<
-    TaskWorkspaceContentProps,
-    "mode"
-  > {
+  extends Omit<TaskWorkspaceContentProps, "mode"> {
   readonly mode: TaskWorkspaceMode | null;
-  readonly onClose: () => void;
 }
 
 export function TaskWorkspaceDrawer({
@@ -120,14 +113,13 @@ export function TaskWorkspaceDrawer({
   draft,
   externalError,
   isSaving,
-  onModeChange,
   onDraftChange,
   onSave,
   onDelete,
   onToggleComplete,
   onClose,
 }: TaskWorkspaceOverlayProps): React.ReactElement {
-  const effectiveMode = mode ?? "view";
+  const effectiveMode = mode ?? "task";
   const title = workspaceTitle(effectiveMode, task);
   const subtitle = workspaceSubtitle(effectiveMode, task, initiatingDate);
 
@@ -143,7 +135,7 @@ export function TaskWorkspaceDrawer({
       side="end"
       width="30rem"
       hasScrim={false}
-      purpose={effectiveMode === "view" ? "info" : "form"}
+      purpose="form"
       padding={4}
     >
       <Layout
@@ -169,11 +161,11 @@ export function TaskWorkspaceDrawer({
               draft={draft}
               externalError={externalError}
               isSaving={isSaving}
-              onModeChange={onModeChange}
               onDraftChange={onDraftChange}
               onSave={onSave}
               onDelete={onDelete}
               onToggleComplete={onToggleComplete}
+              onClose={onClose}
             />
           </LayoutContent>
         }
@@ -189,14 +181,13 @@ export function TaskWorkspaceBottomSheet({
   draft,
   externalError,
   isSaving,
-  onModeChange,
   onDraftChange,
   onSave,
   onDelete,
   onToggleComplete,
   onClose,
 }: TaskWorkspaceOverlayProps): React.ReactElement {
-  const effectiveMode = mode ?? "view";
+  const effectiveMode = mode ?? "task";
   const title = workspaceTitle(effectiveMode, task);
   const subtitle = workspaceSubtitle(effectiveMode, task, initiatingDate);
 
@@ -209,9 +200,9 @@ export function TaskWorkspaceBottomSheet({
         }
       }}
       label={title}
-      height={effectiveMode === "view" ? "capped" : "tall"}
+      height="tall"
       hasScrim={false}
-      purpose={effectiveMode === "view" ? "info" : "form"}
+      purpose="form"
       padding={4}
     >
       <div className="jig-task-sheet-header">
@@ -237,11 +228,11 @@ export function TaskWorkspaceBottomSheet({
         draft={draft}
         externalError={externalError}
         isSaving={isSaving}
-        onModeChange={onModeChange}
         onDraftChange={onDraftChange}
         onSave={onSave}
         onDelete={onDelete}
         onToggleComplete={onToggleComplete}
+        onClose={onClose}
       />
     </BottomSheet>
   );
