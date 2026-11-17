@@ -4,6 +4,11 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Changed
+
+- Constrained desktop History and Settings content to a centered 50rem / approximately 800px measure while preserving the full-width Planner and full-bleed application frame; Settings now uses fluid two-column tracks within that bounded content area.
+
+
 ## [1.0.5] - 2026-11-17
 
 ### Fixed
