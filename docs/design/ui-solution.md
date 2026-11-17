@@ -9,7 +9,7 @@
 
 The early design exploration used the temporary product name **Day** and separate Day/Week destinations. Those assets remain provenance only. The v1.0.3 review supersedes that navigation model with one responsive Planner.
 
-The binding structural references for this batch are:
+The v1.0.3 assets below are retained as historical structural baselines where explicitly noted. The binding v1.0.4 interaction and visual authority is this document together with the functional design and brand/theme contract:
 
 | Governing artifact | Screen | Structural meaning |
 |---|---|---|
@@ -26,7 +26,7 @@ The original raster provenance recorded in repository history remains useful for
 
 ## 2. Information architecture
 
-Jig has one primary destination: **Planner**. Planner is implicit Home and therefore does not appear as a redundant navigation item.
+Jig has one primary planning destination: **Planner**. Planner remains the default/Home destination and is also shown explicitly in the desktop right-side navigation beside History and Settings so destination state is immediately legible. The Jig mark remains an additional Home affordance. Narrow/mobile keeps Planner as the current/Home surface while the compact menu contains only History and Settings.
 
 The only secondary destinations are **History** and **Settings**.
 
@@ -132,7 +132,7 @@ Remove descriptive/meta copy. The desktop interface must not display phrases suc
 
 ### 4.2 Desktop History and Settings
 
-History and Settings retain the same global application-header language. Their active destination is clear without reintroducing a sidebar.
+Planner, History and Settings share the same global application-header language and adjacent desktop navigation group. The active destination is clear through the governed neutral active-navigation treatment without reintroducing a sidebar.
 
 On History, selecting a completed Task opens the same right-side Task workspace while History remains active. Settings has no Planner week navigator because week controls operate only on Planner state. Clicking Jig returns to Planner and preserves the session's Planner date/week state.
 
@@ -209,7 +209,7 @@ Final production evidence is the running Astryx UI in Playwright/browser screens
 
 ## 7. Design change control
 
-The v1.0.3 Planner references and this document supersede earlier Day/Week/sidebar structure. When an interaction hierarchy changes, update this document and the corresponding v1.0.3 reference SVG together.
+The v1.0.3 Planner references are immutable historical baselines. The v1.0.4 functional design, this UI solution and the brand/theme contract supersede their selected-day, navigation and heavier-chrome details. Do not edit historical v1.0.3 reference assets to represent v1.0.4. If a new governed visual reference is needed, add a versioned v1.0.4 reference asset and identify it here explicitly.
 
 Production color/logo/theme behavior remains governed by [Brand and theme system](brand-and-theme.md). The accepted priority color cue is a restrained scanning aid, not a second status system and never the sole semantic carrier.
 
