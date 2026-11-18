@@ -8,6 +8,27 @@ import {
   type SqlValue,
 } from "../persistence/sqlite";
 
+function sqlRow(value: unknown): SqlRow {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError("SQLite query returned a non-object row");
+  }
+
+  const entries = Object.entries(value).map(([key, field]) => {
+    if (
+      field !== null &&
+      typeof field !== "string" &&
+      typeof field !== "number"
+    ) {
+      throw new TypeError(
+        `SQLite query returned unsupported value for ${key}`,
+      );
+    }
+    return [key, field] as const;
+  });
+
+  return Object.fromEntries(entries);
+}
+
 function executionResult(
   value: { readonly changes?: number; readonly lastInsertRowid?: number | bigint },
 ): SqlExecutionResult {
@@ -30,7 +51,7 @@ export function bunSqlConnection(database: Database): JigSqlConnection {
       return executionResult(database.query(sql).run(...bindings));
     },
     async query(sql, bindings = []) {
-      return database.query(sql).all(...bindings) as readonly SqlRow[];
+      return database.query(sql).all(...bindings).map(sqlRow);
     },
     async begin() {
       database.exec("BEGIN IMMEDIATE;");
