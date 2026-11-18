@@ -897,6 +897,10 @@ test("Settings shows local Git and configured remote synchronization separately"
   await expect(synchronization.getByText("Remote Git", { exact: true }))
     .toBeVisible();
 
+  await synchronization
+    .getByRole("button", { name: "Sync now", exact: true })
+    .click();
+
   await expect
     .poll(async () => {
       const localGit = synchronization
