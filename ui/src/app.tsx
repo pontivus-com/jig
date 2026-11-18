@@ -200,13 +200,48 @@ function ConfiguredApp({
     }, 15_000);
     return () => window.clearInterval(interval);
   }, []);
+  useEffect(() => {
+    const onOnline = (): void => {
+      void triggerSync()
+        .then((repositoryStatus) => {
+          setStatus((current) =>
+            current === null
+              ? current
+              : {
+                  ...current,
+                  repository_status: repositoryStatus,
+                },
+          );
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+    };
+  }, []);
+
 
   useEffect(() => {
     let disposed = false;
     let cleanup: (() => Promise<void>) | null = null;
 
     void installNativeActiveListener(() => {
-      void refreshCanonical().catch((error: unknown) => {
+      void Promise.all([
+        refreshCanonical(),
+        triggerSync().then((next) => {
+          if (!disposed) {
+            setStatus((current) =>
+              current === null
+                ? current
+                : {
+                    ...current,
+                    repository_status: next,
+                  },
+            );
+          }
+        }),
+      ]).catch((error: unknown) => {
         if (!disposed) {
           setOperationError(
             `Jig could not refresh after Android resumed: ${errorMessage(error)}. Reload the application.`,
