@@ -13,9 +13,11 @@ import {
   ensureJigLocalExclude,
   ensurePortableData,
   GitAdapterError,
+  inspectSynchronizationRemote,
   readCurrentPortableSnapshot,
   repositorySynchronizationMode,
   runGit,
+  sanitizeSynchronizationRemoteLocation,
   serializeSnapshot,
   writePortableSnapshot,
 } from "../../src/shell/git";
@@ -201,6 +203,34 @@ describe("isolated jig-data adapter", () => {
     expect(await repositorySynchronizationMode(config)).toBe(
       "remote",
     );
+  });
+
+  it("reports the selected synchronization remote without exposing credentials", async () => {
+    const repo = await fixture();
+    await git(repo, [
+      "remote",
+      "add",
+      "origin",
+      "https://user:secret@example.com/team/planning.git?token=hidden#fragment",
+    ]);
+
+    await expect(
+      inspectSynchronizationRemote({ repository_path: repo }),
+    ).resolves.toStrictEqual({
+      name: "origin",
+      location: "https://example.com/team/planning.git",
+    });
+
+    expect(
+      sanitizeSynchronizationRemoteLocation(
+        "git@github.com:pontivus-com/private-planning.git",
+      ),
+    ).toBe("github.com:pontivus-com/private-planning.git");
+    expect(
+      sanitizeSynchronizationRemoteLocation(
+        "ssh://git:secret@github.com/pontivus-com/private-planning.git?token=hidden#fragment",
+      ),
+    ).toBe("ssh://github.com/pontivus-com/private-planning.git");
   });
 
   it("uses the Git common dir for local exclusion from linked worktrees", async () => {
