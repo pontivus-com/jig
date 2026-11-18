@@ -773,7 +773,7 @@ The following facts were verified before selecting the design and are implementa
 
 - `@astryxdesign/core@0.7.13` `defineTheme()` accepts a string or a `[light, dark]` token pair, resolves pairs through CSS `light-dark()`, supports `extends`, `localTokens`, component overrides and built themes, and flattens an extended theme so the built output is self-contained.
 - `Theme` in Astryx 0.7.13 accepts one `DefinedTheme` plus `mode: "system" | "light" | "dark"`. The root Theme synchronizes the active theme name to `data-astryx-theme`; explicit Light/Dark set `data-theme`; System removes that explicit attribute and lets `color-scheme: light dark` and `light-dark()` follow the platform preference. Jig therefore does **not** need a second `matchMedia`-driven color-mode owner.
-- Astryx 0.7.13 publishes seven application-theme packages: Neutral, Butter, Chocolate, Gothic, Matcha, Stone and Y2K. Its Gothic source explicitly declares **“Gothic Theme — dark only”** and uses single-value color tokens. JIG-106-FR-02 requires Gothic in the governed Astryx catalogue while JIG-106-FR-03 requires every selectable theme to provide coherent Light and Dark, so Jig exposes all seven through wrappers. Neutral, Butter, Chocolate, Matcha, Stone and Y2K remain thin wrappers; `astryx-gothic` preserves Gothic's released Dark tokens, typography, motion, component overrides and icons while adding a bounded Light application-color layer from Gothic's published semantic/palette anchors. This is a Jig semantic adaptation through `defineTheme()`, not a generic inversion engine or parallel theme system.
+- Astryx 0.7.13 publishes seven application-theme packages, but its Gothic source explicitly declares **“Gothic Theme — dark only”** and uses single-value color tokens. JIG-106-FR-02 selects the six coherent dual-mode pinned presets **Neutral, Butter, Chocolate, Matcha, Stone and Y2K** and explicitly excludes Gothic because JIG-106-FR-03 requires every selectable v1.0.6 theme to provide coherent Light and Dark. Jig does not fabricate a light inversion for an upstream dark-only preset.
 - The current Jig implementation already has one root `<Theme>`, one generated Jig theme, a browser-local appearance preference, a Settings Appearance panel, semantic product aliases, and a browser Notification permission adapter. v1.0.6 extends those owners instead of creating parallel state or services.
 - The current width CSS has the correct base `max-width: 50rem`, but a `max-width: 72.999rem` media rule removes that cap. The resulting 1168px→1167px transition expands a secondary screen from about 800px to about 1167px. That media reset is the defect.
 - The current reminder monitor explicitly chooses Astryx Toast when `document.visibilityState === "visible"` and browser `Notification` only while hidden. That code matches the old technical contract but contradicts JIG-106-FR-06; both the contract and code path must become single-channel browser Notification.
@@ -813,7 +813,7 @@ Expected width function is simply `min(availableWidth, 50rem)`. Representative a
 
 **Functional owner:** JIG-106-FR-02.
 
-v1.0.6 has exactly fourteen selectable application themes. The type and registry are closed and compile-time exhaustive:
+v1.0.6 has exactly thirteen selectable application themes. The type and registry are closed and compile-time exhaustive:
 
 ```ts
 type ThemePreset =
@@ -821,7 +821,6 @@ type ThemePreset =
   | "astryx-neutral"
   | "astryx-butter"
   | "astryx-chocolate"
-  | "astryx-gothic"
   | "astryx-matcha"
   | "astryx-stone"
   | "astryx-y2k"
@@ -835,7 +834,7 @@ type ThemePreset =
 
 There is one registry entry per value containing the user-facing label/group and the compiled `DefinedTheme`. Settings derives its options from this registry; no second theme list is allowed.
 
-**Astryx presets.** Add the six missing exact-pinned packages at 0.7.13 (Butter, Chocolate, Gothic, Matcha, Stone, Y2K); Neutral remains. Create one Jig wrapper for each preset through public `defineTheme` and the pinned built theme. Neutral, Butter, Chocolate, Matcha, Stone and Y2K add only the shared Jig product-local aliases and their governed Task-surface mapping. Gothic is the single documented exception: because upstream 0.7.13 is dark-only, its wrapper additionally supplies paired Light application-color semantics while retaining the upstream Dark values and Gothic typography/motion/component/icon mechanics. Do not copy another Astryx palette or introduce a runtime inversion engine. Because Astryx flattens inheritance, each compiled wrapper is self-contained. Import the published `fonts.css` for every selectable Astryx preset whose typography is exposed to the user, including Neutral and Gothic.
+**Astryx presets.** Add the five missing dual-mode exact-pinned packages at 0.7.13 (Butter, Chocolate, Matcha, Stone, Y2K); Neutral remains. Do not add `@astryxdesign/theme-gothic` to the selectable Jig catalogue because the pinned upstream theme is explicitly dark-only. Do not copy Astryx palettes into Jig. Create a thin Jig theme source for each selectable preset that `extends` the corresponding pinned Astryx built theme and adds the shared Jig product-local tokens from JIG-106-SD-04. Because Astryx flattens inheritance, each compiled Jig wrapper is self-contained. Import the published `fonts.css` for every selectable Astryx preset whose typography is exposed to the user, including Neutral.
 
 **Jig default.** The existing Jig theme remains the default and retains its governed Ink/Amber/Paper palette. It also consumes the exact same shared product-local token contract as every other preset.
 
@@ -872,7 +871,7 @@ Community palette values are copied once into committed theme-authoring constant
 | Catppuccin | official `palette.json` version `1.8.0`, blob `2a5d25cb0b00033bb049d11ab12c8bed478bf4e8`; select Latte and Mocha only. |
 | Tokyo Night | `storm.lua` blob `dfba7a1b2277628e6a9b87ad4a1dad8387b4d2f6`, `night.lua` blob `09ea61be78bf57946bf429de17973ceff19e8195`, and `day.lua` blob `653a12e652ea3a5756e50e071a01da528818c356`. Author the resulting Day/Night constants into Jig; do not execute Lua or fetch upstream at runtime/build time. |
 
-**Theme build and loading.** Every Jig-owned theme source is compiled ahead of time with the pinned `@astryxdesign/cli@0.7.13`; runtime code imports built theme objects only. Extend `theme:check` to enumerate the explicit 14-source manifest and run the CLI `--check` for each Jig-owned compiled theme. Generated CSS for all fourteen themes is imported once before Jig composition CSS; its `data-astryx-theme` scoping means inactive themes do not paint the application. Do not dynamically inject unbuilt themes at runtime and do not create one stylesheet of feature-level overrides per theme.
+**Theme build and loading.** Every Jig-owned theme source is compiled ahead of time with the pinned `@astryxdesign/cli@0.7.13`; runtime code imports built theme objects only. Extend `theme:check` to enumerate the explicit 13-source manifest and run the CLI `--check` for each Jig-owned compiled theme. Generated CSS for all thirteen themes is imported once before Jig composition CSS; its `data-astryx-theme` scoping means inactive themes do not paint the application. Do not dynamically inject unbuilt themes at runtime and do not create one stylesheet of feature-level overrides per theme.
 
 **No plugin subsystem.** v1.0.6 has no arbitrary JSON theme import, user-authored palette loader, marketplace, runtime theme discovery or external theme API.
 
@@ -1047,7 +1046,7 @@ Do not introduce a notification service class, server scheduler, new shell proce
 
 Keep appearance configuration inside the existing Settings → Appearance panel:
 
-1. Add one Astryx `Selector` bound to `ThemePreset`. It renders the registry-derived catalogue grouped as **Jig**, **Astryx** and **Community**. Fourteen options are well within Selector's intended bounded-list use; do not build a custom picker.
+1. Add one Astryx `Selector` bound to `ThemePreset`. It renders the registry-derived catalogue grouped as **Jig**, **Astryx** and **Community**. Thirteen options are well within Selector's intended bounded-list use; do not build a custom picker.
 2. Keep one Astryx `SegmentedControl` for exactly `System | Light | Dark`, now bound to `AppearanceMode`.
 3. The App/root owns the two values and passes setters only to Settings. Planner, `PlannerHeader`, Task cards, Task workspace and History receive no theme setter or theme-specific props.
 4. Browser-notification permission can remain an independent Settings row; changing notification permission is not a theme action.
