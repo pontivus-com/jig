@@ -15,12 +15,28 @@ import { JigLogo } from "./jig-logo";
 import type { LayoutMode } from "./use-layout-mode";
 
 const DESTINATIONS = [
-  { id: "planner", label: "Planner", icon: "viewColumns" },
-  { id: "history", label: "History", icon: JIG_ICON_KEYS.history },
-  { id: "settings", label: "Settings", icon: "wrench" },
+  {
+    id: "planner",
+    label: "Planner",
+    subtitle: null,
+    icon: "viewColumns",
+  },
+  {
+    id: "history",
+    label: "History",
+    subtitle: "Completed work grouped by actual completion date",
+    icon: JIG_ICON_KEYS.history,
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    subtitle: "Repository, synchronization, appearance and diagnostics",
+    icon: "wrench",
+  },
 ] as const satisfies readonly {
   readonly id: string;
   readonly label: string;
+  readonly subtitle: string | null;
   readonly icon: IconName | NamespacedIconName;
 }[];
 
@@ -140,15 +156,19 @@ function TemporalNavigator({
   );
 }
 
-function DestinationTitle({
+function DestinationHeading({
   destination,
 }: Readonly<{
   destination: Exclude<Destination, "planner">;
 }>): React.ReactElement {
+  const definition = destinationDefinition(destination);
   return (
-    <strong className="jig-header-destination-title">
-      {destinationDefinition(destination).label}
-    </strong>
+    <div className="jig-header-destination-heading">
+      <h1 className="jig-header-destination-title">{definition.label}</h1>
+      <span className="jig-header-destination-subtitle">
+        {definition.subtitle}
+      </span>
+    </div>
   );
 }
 
@@ -221,7 +241,7 @@ function DesktopHeader(props: PlannerHeaderProps): React.ReactElement {
             onNextWeek={onNextWeek}
           />
         ) : (
-          <DestinationTitle destination={destination} />
+          <DestinationHeading destination={destination} />
         )}
       </div>
       <div className="jig-header-right">
