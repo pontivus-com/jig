@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  GitHubOnboardingController,
-} from "../../src/shell/github-onboarding";
 import type {
   GitHubAppRegistration,
-} from "../../src/shell/github-auth";
-import type { GitHubCredential } from "../../src/shell/secret-service";
+  GitHubCredential,
+} from "../../src/github";
+import { GitHubDeviceFlowSession } from "../../src/shell/github-device-flow";
+import { GitHubOnboardingController } from "../../src/shell/github-onboarding";
 
 const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-mobile-test",
@@ -24,18 +23,48 @@ const CREDENTIAL: GitHubCredential = {
   user_id: 42,
   access_token: "access-token",
   refresh_token: "refresh-token",
-  access_token_expires_at: "2030-01-01T00:00:00.000Z",
+  access_token_expires_at: "2030-01-01T08:00:00.000Z",
   refresh_token_expires_at: "2030-07-01T00:00:00.000Z",
 };
+
+function deviceFlow(options: {
+  readonly registration?: GitHubAppRegistration | null;
+  readonly now: () => Date;
+  readonly store?: (credential: GitHubCredential) => Promise<void>;
+  readonly poll?: () => Promise<
+    | { readonly status: "authorized"; readonly credential: GitHubCredential }
+    | { readonly status: "pending"; readonly retry_after_seconds: number }
+  >;
+}): GitHubDeviceFlowSession {
+  return new GitHubDeviceFlowSession({
+    registration:
+      options.registration === undefined
+        ? REGISTRATION
+        : options.registration,
+    assert_credential_store: async () => undefined,
+    store_credential:
+      options.store ?? (async () => undefined),
+    start_device_authorization: async () => DEVICE_AUTHORIZATION,
+    poll_device_authorization:
+      options.poll ??
+      (async () => ({
+        status: "authorized" as const,
+        credential: CREDENTIAL,
+      })),
+    now: options.now,
+  });
+}
 
 describe("GitHub onboarding orchestration", () => {
   it("stays honestly unavailable without governed registration", async () => {
     const controller = new GitHubOnboardingController({
       registration: null,
+      device_flow: deviceFlow({
+        registration: null,
+        now: () => new Date("2030-01-01T00:00:00.000Z"),
+      }),
       config_path: "/tmp/jig-config.json",
       http_port: 47831,
-      on_configured: () => undefined,
-      assert_secret_service: async () => undefined,
     });
 
     expect(controller.snapshot()).toMatchObject({
@@ -48,30 +77,22 @@ describe("GitHub onboarding orchestration", () => {
     );
   });
 
-  it("authorizes through Device Flow, lists app-visible repositories, acquires and canonically configures", async () => {
+  it("continues from shared Device Flow into repository selection and canonical adoption", async () => {
     let stored: GitHubCredential | null = null;
-    let configuredPath: string | null = null;
     let acquiredRepositoryId: number | null = null;
     let installationListCount = 0;
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
 
     const controller = new GitHubOnboardingController({
       registration: REGISTRATION,
+      device_flow: deviceFlow({
+        now: () => new Date(nowMs),
+        store: async (credential) => {
+          stored = credential;
+        },
+      }),
       config_path: "/tmp/jig-config.json",
       http_port: 47831,
-      on_configured: (config) => {
-        configuredPath = config.repository_path;
-      },
-      assert_secret_service: async () => undefined,
-      now: () => new Date(nowMs),
-      start_device_authorization: async () => DEVICE_AUTHORIZATION,
-      poll_device_authorization: async () => ({
-        status: "authorized" as const,
-        credential: CREDENTIAL,
-      }),
-      store_credential: async (credential) => {
-        stored = credential;
-      },
       list_installations: async () => {
         installationListCount += 1;
         return [
@@ -112,24 +133,16 @@ describe("GitHub onboarding orchestration", () => {
       }),
     });
 
-    const started = await controller.start();
-    expect(started).toMatchObject({
-      available: true,
+    expect(await controller.start()).toMatchObject({
       phase: "authorizing",
       authorization: {
-        mode: "device",
-        verification_uri: "https://github.com/login/device",
         user_code: "ABCD-EFGH",
         retry_after_seconds: 5,
       },
     });
 
     nowMs += DEVICE_AUTHORIZATION.interval * 1000;
-    await controller.refreshAccess();
-
-    expect(stored).toStrictEqual(CREDENTIAL);
-    expect(installationListCount).toBe(1);
-    expect(controller.snapshot()).toMatchObject({
+    expect(await controller.refreshAccess()).toMatchObject({
       phase: "repository-selection",
       repositories: [
         {
@@ -142,140 +155,43 @@ describe("GitHub onboarding orchestration", () => {
       ],
     });
 
+    expect(stored).toStrictEqual(CREDENTIAL);
+    expect(installationListCount).toBe(1);
+
     const config = await controller.acquire(99);
     expect(acquiredRepositoryId).toBe(99);
     expect(config.repository_path).toBe(
       "/tmp/jig-managed/pontivus-com/planning",
     );
-    expect(configuredPath).toBe(config.repository_path);
   });
 
-  it("reconnects a credential without re-entering repository setup", async () => {
+  it("exposes grant and manage access after authorization without changing Device Flow ownership", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
-    let stored: GitHubCredential | null = null;
-    let installationListCount = 0;
-    const controller = new GitHubOnboardingController({
-      registration: REGISTRATION,
-      config_path: "/tmp/jig-config.json",
-      http_port: 47831,
-      on_configured: () => undefined,
-      assert_secret_service: async () => undefined,
-      now: () => new Date(nowMs),
-      start_device_authorization: async () => DEVICE_AUTHORIZATION,
-      poll_device_authorization: async () => ({
-        status: "authorized" as const,
-        credential: CREDENTIAL,
-      }),
-      store_credential: async (credential) => {
-        stored = credential;
-      },
-      list_installations: async () => {
-        installationListCount += 1;
-        return [];
-      },
-      list_repositories: async () => [],
-    });
-
-    await controller.start();
-    nowMs += DEVICE_AUTHORIZATION.interval * 1000;
-    const reconnected = await controller.refreshAuthorization();
-
-    expect(stored).toStrictEqual(CREDENTIAL);
-    expect(installationListCount).toBe(0);
-    expect(reconnected).toMatchObject({
-      phase: "idle",
-      authorization: null,
-      repositories: [],
-      error: null,
-    });
-  });
-
-  it("does not poll GitHub before the returned Device Flow interval", async () => {
-    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
-    let pollCount = 0;
-    const controller = new GitHubOnboardingController({
-      registration: REGISTRATION,
-      config_path: "/tmp/jig-config.json",
-      http_port: 47831,
-      on_configured: () => undefined,
-      assert_secret_service: async () => undefined,
-      now: () => new Date(nowMs),
-      start_device_authorization: async () => DEVICE_AUTHORIZATION,
-      poll_device_authorization: async () => {
-        pollCount += 1;
-        return {
-          status: "pending" as const,
-          retry_after_seconds: DEVICE_AUTHORIZATION.interval,
-        };
-      },
-      store_credential: async () => undefined,
-    });
-
-    await controller.start();
-    await controller.refreshAccess();
-    expect(pollCount).toBe(0);
-    expect(controller.snapshot().authorization).toMatchObject({
-      retry_after_seconds: 5,
-    });
-
-    nowMs += 4_000;
-    await controller.refreshAccess();
-    expect(pollCount).toBe(0);
-    expect(controller.snapshot().authorization).toMatchObject({
-      retry_after_seconds: 1,
-    });
-
-    nowMs += 1_000;
-    await controller.refreshAccess();
-    expect(pollCount).toBe(1);
-  });
-
-  it("exposes Grant and Manage access states without broadening repository scope", async () => {
-    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
-    const startDevice = async () => DEVICE_AUTHORIZATION;
-    const pollDevice = async () => ({
-      status: "authorized" as const,
-      credential: CREDENTIAL,
-    });
 
     const grantController = new GitHubOnboardingController({
       registration: REGISTRATION,
+      device_flow: deviceFlow({ now: () => new Date(nowMs) }),
       config_path: "/tmp/jig-config.json",
       http_port: 47831,
-      on_configured: () => undefined,
-      assert_secret_service: async () => undefined,
-      now: () => new Date(nowMs),
-      start_device_authorization: startDevice,
-      poll_device_authorization: pollDevice,
-      store_credential: async () => undefined,
       list_installations: async () => [],
       list_repositories: async () => [],
     });
 
-    const started = await grantController.start();
-    expect(started.authorization).toMatchObject({
-      mode: "device",
-      user_code: "ABCD-EFGH",
-    });
+    await grantController.start();
     nowMs += DEVICE_AUTHORIZATION.interval * 1000;
-    const grant = await grantController.refreshAccess();
-    expect(grant).toMatchObject({
+    expect(await grantController.refreshAccess()).toMatchObject({
       phase: "repository-access",
       grant_access_url:
         "https://github.com/apps/jig-desktop-mobile-test/installations/new",
       repositories: [],
     });
 
+    nowMs += 60_000;
     const manageController = new GitHubOnboardingController({
       registration: REGISTRATION,
+      device_flow: deviceFlow({ now: () => new Date(nowMs) }),
       config_path: "/tmp/jig-config.json",
       http_port: 47831,
-      on_configured: () => undefined,
-      assert_secret_service: async () => undefined,
-      now: () => new Date(nowMs),
-      start_device_authorization: startDevice,
-      poll_device_authorization: pollDevice,
-      store_credential: async () => undefined,
       list_installations: async () => [
         {
           id: 23,
@@ -289,11 +205,9 @@ describe("GitHub onboarding orchestration", () => {
       list_repositories: async () => [],
     });
 
-    nowMs += 60_000;
     await manageController.start();
     nowMs += DEVICE_AUTHORIZATION.interval * 1000;
-    const manage = await manageController.refreshAccess();
-    expect(manage).toMatchObject({
+    expect(await manageController.refreshAccess()).toMatchObject({
       phase: "repository-access",
       grant_access_url: null,
       repositories: [],
