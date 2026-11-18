@@ -40,6 +40,8 @@ jobs:
           java-version: "21"
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Ensure Android SDK 36
         run: |
           yes | sdkmanager --licenses >/dev/null || true
