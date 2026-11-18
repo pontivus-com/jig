@@ -9,7 +9,10 @@ import {
 } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
-import { runGit } from "./git";
+import {
+  discoverSynchronizationRemote,
+  runGit,
+} from "./git";
 import {
   normalizedGitHubRepository,
   validateSelectedRepository,
@@ -112,8 +115,8 @@ async function writeAskpassHelper(root: string): Promise<string> {
       "#!/usr/bin/env bash",
       "set -euo pipefail",
       'case "${1:-}" in',
-      '  *Username*) printf "%s\\n" "x-access-token" ;;',
-      '  *Password*) printf "%s\\n" "${JIG_GITHUB_ACCESS_TOKEN:?}" ;;',
+      '  "Username for \'https://github.com\':"|"Username for \'https://github.com/"*) printf "%s\\n" "x-access-token" ;;',
+      '  "Password for \'https://x-access-token@github.com\':"|"Password for \'https://x-access-token@github.com/"*) printf "%s\\n" "${JIG_GITHUB_ACCESS_TOKEN:?}" ;;',
       '  *) exit 1 ;;',
       "esac",
       "",
@@ -138,6 +141,86 @@ export async function createGitHubAskpassHelper(): Promise<GitHubAskpassHelper> 
   };
 }
 
+function managedGitHubSelectionFromPath(
+  repositoryPath: string,
+  home = homedir(),
+): GitHubRepositorySelection | null {
+  const root = resolve(
+    home,
+    ".local",
+    "share",
+    "jig-data",
+    "repositories",
+    "github",
+  );
+  const absolute = resolve(repositoryPath);
+  const relation = relative(root, absolute);
+  if (
+    relation.length === 0 ||
+    relation.startsWith("..") ||
+    resolve(root, relation) !== absolute
+  ) {
+    return null;
+  }
+  const segments = relation.split(sep);
+  if (segments.length !== 2) {
+    return null;
+  }
+  try {
+    return {
+      id: 1,
+      owner: validateGitHubSegment(segments[0] ?? "", "owner"),
+      name: validateGitHubSegment(segments[1] ?? "", "repository name"),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function assertManagedGitHubSynchronizationRemote(
+  repositoryPath: string,
+  home = homedir(),
+): Promise<void> {
+  const selection = managedGitHubSelectionFromPath(repositoryPath, home);
+  if (selection === null) {
+    throw new InstallationError(
+      "Repository is not a Jig-managed GitHub checkout",
+    );
+  }
+  const remoteName = await discoverSynchronizationRemote(repositoryPath);
+  if (remoteName === null) {
+    throw new InstallationError(
+      "Managed GitHub checkout has no unambiguous synchronization remote",
+    );
+  }
+  const urls = await runGit(repositoryPath, [
+    "remote",
+    "get-url",
+    "--push",
+    "--all",
+    remoteName,
+  ]);
+  if (urls.exit_code !== 0 || urls.stdout.length === 0) {
+    throw new InstallationError(
+      "Unable to inspect managed GitHub synchronization remote",
+    );
+  }
+  const expected = selectedRepositorySlug(selection);
+  const pushUrls = urls.stdout.split("\n").filter(Boolean);
+  if (
+    pushUrls.length === 0 ||
+    pushUrls.some(
+      (url) =>
+        !/^https:\/\/github\.com\//i.test(url) ||
+        normalizedGitHubRepository(url) !== expected,
+    )
+  ) {
+    throw new InstallationError(
+      "Managed GitHub checkout synchronization remote no longer matches its selected repository",
+    );
+  }
+}
+
 export function githubGitEnvironment(
   helperPath: string,
   accessToken: string,
@@ -156,33 +239,7 @@ export function isManagedGitHubRepositoryPath(
   repositoryPath: string,
   home = homedir(),
 ): boolean {
-  const root = resolve(
-    home,
-    ".local",
-    "share",
-    "jig-data",
-    "repositories",
-    "github",
-  );
-  const relation = relative(root, resolve(repositoryPath));
-  if (
-    relation.length === 0 ||
-    relation.startsWith("..") ||
-    resolve(root, relation) !== resolve(repositoryPath)
-  ) {
-    return false;
-  }
-  const segments = relation.split(sep);
-  if (segments.length !== 2) {
-    return false;
-  }
-  try {
-    validateGitHubSegment(segments[0] ?? "", "owner");
-    validateGitHubSegment(segments[1] ?? "", "repository name");
-    return true;
-  } catch {
-    return false;
-  }
+  return managedGitHubSelectionFromPath(repositoryPath, home) !== null;
 }
 
 export async function acquireManagedGitHubRepository(
