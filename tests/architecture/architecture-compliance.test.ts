@@ -381,6 +381,18 @@ describe("architecture compliance", () => {
       "registerPlugin(JigSecureCredentialsPlugin.class)",
     );
     expect(manifest).toContain('android:allowBackup="false"');
+    expect(manifest).toContain('android:dataExtractionRules="@xml/data_extraction_rules"');
+    expect(manifest).toContain('android:fullBackupContent="@xml/backup_rules"');
+    const dataExtractionRules = source(
+      "android/app/src/main/res/xml/data_extraction_rules.xml",
+    );
+    const backupRules = source(
+      "android/app/src/main/res/xml/backup_rules.xml",
+    );
+    for (const rules of [dataExtractionRules, backupRules]) {
+      expect(rules).toContain("jig_secure_credentials_v1.xml");
+      expect(rules).toContain("jig_notification_registry_v1.xml");
+    }
     expect(plugin).toContain(
       '"com.pontivus.jig.github.credentials.v1"',
     );
