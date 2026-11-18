@@ -4,6 +4,14 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Added
+
+- Started Jig v1.1 implementation: Android-first native delivery, in-application repository onboarding, corrected reminder attention/delivery, persistent narrow/mobile chrome and precise Task drag/drop placement are governed by the complete JIG-110 functional/technical/implementation contract.
+
+### Documentation
+
+- Canonicalized product, functional, technical, UI/theme and repository-governance authorities for v1.1 while retaining v1.0.6 clauses as historical release provenance where superseded.
+
 ## [1.0.6] - 2026-11-18
 
 ### Changed
