@@ -12,6 +12,7 @@ import { JigIcon } from "./jig-icons";
 
 export interface WeekViewProps {
   readonly tasks: readonly Task[];
+  readonly now: Date;
   readonly displayedDates: readonly string[];
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
@@ -34,6 +35,7 @@ interface DatedSectionProps extends Omit<WeekViewProps, "displayedDates"> {
 
 function DatedSection({
   tasks,
+  now,
   date,
   isToday,
   selectedTask,
@@ -84,6 +86,7 @@ function DatedSection({
       <div className="jig-week-task-area">
         <PlannerTaskList
           tasks={tasks}
+          now={now}
           date={date}
           selectedTask={selectedTask}
           onSelectTask={onSelectTask}
