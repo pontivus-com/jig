@@ -25,7 +25,6 @@ export interface ServiceStatus {
   readonly ready: true;
   readonly repository_path: string;
   readonly repository_status: RepositoryStatus;
-  readonly github_reconnect_available: boolean;
 }
 
 export interface Diagnostics {
