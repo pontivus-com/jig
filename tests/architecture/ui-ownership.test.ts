@@ -312,6 +312,26 @@ describe("UI ownership architecture", () => {
     );
   });
 
+  it("keeps History and Settings heading ownership in the application header", () => {
+    const header = source("ui/src/planner-header.tsx");
+    const history = source("ui/src/history.tsx");
+    const settings = source("ui/src/settings.tsx");
+    const css = source("ui/src/styles.css");
+
+    expect(header).toContain("function DestinationHeading");
+    expect(header).toContain("Completed work grouped by actual completion date");
+    expect(header).toContain("Repository, synchronization, appearance and diagnostics");
+    expect(header).toContain('<h1 className="jig-header-destination-title">');
+    expect(header).toContain('className="jig-header-destination-subtitle"');
+    expect(history).not.toContain("jig-reference-heading");
+    expect(settings).not.toContain("jig-reference-heading");
+    expect(history).not.toContain("<h1>History</h1>");
+    expect(settings).not.toContain("<h1>Settings</h1>");
+    expect(css).toContain(".jig-header-destination-heading {");
+    expect(css).toContain(".jig-header-destination-subtitle {");
+    expect(css).not.toContain(".jig-reference-heading {");
+  });
+
   it("keeps appearance controls in Settings and reminder delivery browser-native", () => {
     const app = source("ui/src/app.tsx");
     const settings = source("ui/src/settings.tsx");
