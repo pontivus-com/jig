@@ -1,6 +1,7 @@
 import {
   add,
   addRemote,
+  checkout,
   clone,
   commit,
   currentBranch,
@@ -385,7 +386,24 @@ async function writeAndroidPortableFiles(
   effects: AndroidGitEffects,
   snapshot: PortableSnapshot,
 ): Promise<void> {
-  await writeAndroidPortableFiles(effects, snapshot);
+  await ensureDirectory(effects.fs, `${effects.dir}/tasks`);
+  await ensureDirectory(
+    effects.fs,
+    `${effects.dir}/recurrences`,
+  );
+
+  for (const [path, value] of snapshot.files) {
+    if (!isPortablePath(path)) {
+      throw new AndroidGitAdapterError(
+        `Refusing to write non-Jig portable path ${path}`,
+      );
+    }
+    await effects.fs.promises.writeFile(
+      `${effects.dir}/${path}`,
+      value,
+      "utf8",
+    );
+  }
 }
 
 export async function commitAndroidPortableSnapshot(
@@ -567,6 +585,12 @@ export async function synchronizeAndroidPortableRepository(
       ours: ANDROID_DATA_BRANCH,
       theirs: `refs/remotes/${ANDROID_REMOTE}/${ANDROID_DATA_BRANCH}`,
       fastForwardOnly: true,
+    });
+    await checkout({
+      fs: effects.fs,
+      dir: effects.dir,
+      ref: ANDROID_DATA_BRANCH,
+      force: true,
     });
     return {
       state: "remote-adopted",
