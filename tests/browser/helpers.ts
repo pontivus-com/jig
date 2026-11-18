@@ -102,12 +102,7 @@ export async function resetCanonicalTasks(
         expectedRevision: state.revision,
       },
     );
-    state = {
-      revision: result.revision,
-      tasks: state.tasks.filter(
-        (candidate) => candidate.id !== task.id,
-      ),
-    };
+    state = await apiState(page);
   }
 }
 
