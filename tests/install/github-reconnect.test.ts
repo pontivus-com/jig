@@ -3,8 +3,8 @@ import type {
   GitHubAppRegistration,
   GitHubCredential,
 } from "../../src/github";
-import { GitHubDeviceFlowSession } from "../../src/shell/github-device-flow";
-import { GitHubReconnectController } from "../../src/shell/github-reconnect";
+import { GitHubDeviceFlowSession } from "../../src/github-device-flow";
+import { GitHubReconnectController } from "../../src/github-reconnect";
 
 const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-mobile-test",
