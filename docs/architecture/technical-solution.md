@@ -813,7 +813,7 @@ Expected width function is simply `min(availableWidth, 50rem)`. Representative a
 
 **Functional owner:** JIG-106-FR-02.
 
-v1.0.6 has exactly fourteen selectable application themes. The type and registry are closed and compile-time exhaustive:
+v1.0.6 has exactly thirteen selectable application themes. The type and registry are closed and compile-time exhaustive:
 
 ```ts
 type ThemePreset =
@@ -1046,7 +1046,7 @@ Do not introduce a notification service class, server scheduler, new shell proce
 
 Keep appearance configuration inside the existing Settings → Appearance panel:
 
-1. Add one Astryx `Selector` bound to `ThemePreset`. It renders the registry-derived catalogue grouped as **Jig**, **Astryx** and **Community**. Fourteen options are well within Selector's intended bounded-list use; do not build a custom picker.
+1. Add one Astryx `Selector` bound to `ThemePreset`. It renders the registry-derived catalogue grouped as **Jig**, **Astryx** and **Community**. Thirteen options are well within Selector's intended bounded-list use; do not build a custom picker.
 2. Keep one Astryx `SegmentedControl` for exactly `System | Light | Dark`, now bound to `AppearanceMode`.
 3. The App/root owns the two values and passes setters only to Settings. Planner, `PlannerHeader`, Task cards, Task workspace and History receive no theme setter or theme-specific props.
 4. Browser-notification permission can remain an independent Settings row; changing notification permission is not a theme action.
