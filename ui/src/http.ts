@@ -57,7 +57,7 @@ async function responsePayload(response: Response): Promise<unknown> {
   }
 }
 
-async function fetchJson(
+export async function fetchJson(
   input: string,
   init?: RequestInit,
 ): Promise<unknown> {
@@ -97,7 +97,7 @@ function writeToken(): string {
   return token;
 }
 
-async function postJson(
+export async function postJson(
   path: string,
   body: unknown,
 ): Promise<unknown> {
