@@ -15,7 +15,9 @@ export const nordPalette = {
   textDisabled: ["#7b8496", "#7f899b"],
   accent: ["#5e81ac", "#88c0d0"],
   info: ["#5e81ac", "#81a1c1"],
-  success: ["#6a8f5c", "#a3be8c"],
+  // Light success is minimally darkened from the application-adapted green
+  // so strong success fill + light on-success content clears the 4.5:1 floor.
+  success: ["#698c5b", "#a3be8c"],
   warning: ["#9a741d", "#ebcb8b"],
   error: ["#a54851", "#bf616a"],
   red: ["#a54851", "#bf616a"],
