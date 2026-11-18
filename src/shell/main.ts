@@ -13,7 +13,7 @@ import {
 } from "./http";
 import { createBootstrapHttpHandler } from "./bootstrap-http";
 import { GitHubOnboardingController } from "./github-onboarding";
-import { GITHUB_APP_REGISTRATION } from "./github-registration";
+import { GITHUB_DESKTOP_APP_REGISTRATION } from "./github-registration";
 import { createSyncController } from "./sync";
 import {
   defaultConfigPath,
@@ -151,7 +151,7 @@ async function runBootstrap(): Promise<void> {
     resolveConfigured = null;
   };
   const githubOnboarding = new GitHubOnboardingController({
-    registration: GITHUB_APP_REGISTRATION,
+    registration: GITHUB_DESKTOP_APP_REGISTRATION,
     config_path: defaultConfigPath(),
     http_port: DEFAULT_HTTP_PORT,
     on_configured: onConfigured,
