@@ -18,6 +18,7 @@ import {
   StaleRevisionError,
   type JigSqlConnection,
 } from "../persistence/sqlite";
+import type { GitHubOnboardingController } from "./github-onboarding";
 
 export interface HttpDependencies {
   readonly db: JigSqlConnection;
@@ -29,6 +30,7 @@ export interface HttpDependencies {
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
   readonly trigger_sync: () => Promise<RepositoryStatus>;
+  readonly github_reconnect?: GitHubOnboardingController;
   readonly ensure_current_day_rollover: () => Promise<void>;
   readonly on_task_mutation: () => void;
 }
@@ -399,6 +401,46 @@ export function createHttpHandler(
       pathname === "/api/v1/diagnostics"
     ) {
       return json(dependencies.get_diagnostics());
+    }
+
+    if (
+      request.method === "POST" &&
+      [
+        "/api/v1/github/reconnect/start",
+        "/api/v1/github/reconnect/refresh",
+      ].includes(pathname)
+    ) {
+      const unauthorized = authorizeMutation(
+        request,
+        dependencies.write_token,
+      );
+      if (unauthorized !== null) {
+        return unauthorized;
+      }
+      const reconnect = dependencies.github_reconnect;
+      if (reconnect === undefined) {
+        return json(
+          { error: "GitHub reconnect is unavailable for this repository" },
+          409,
+        );
+      }
+      try {
+        return json(
+          pathname.endsWith("/start")
+            ? await reconnect.start()
+            : await reconnect.refreshAuthorization(),
+        );
+      } catch (error) {
+        return json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "GitHub reconnect failed",
+          },
+          400,
+        );
+      }
     }
 
     if (
