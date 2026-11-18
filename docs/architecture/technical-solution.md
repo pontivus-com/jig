@@ -238,7 +238,8 @@ Task references are treated as data: safe http(s) links may open with normal bro
 9. A failed mutation leaves all affected dates unchanged; UI reports failure without implying a save.
 10. Every imported complete snapshot passes the same invariants before it can replace local state; after validation, its Task membership is authoritative for that adopted snapshot.
 11. `recurrence_series_id` and `recurrence_occurrence_date` are either both null or both non-null. A recurring occurrence's `recurrence_occurrence_date` is immutable even when `scheduled_date` changes through rollover or explicit movement.
-12. Recurrence never changes completion/move/delete semantics: each generated occurrence is an independent Task. A recurrence rule determines future calendar slots only.
+12. Recurrence never changes ordinary Task semantics: each materialized occurrence is an independent Task and owns its own title, priority, context, reference, note, reminder, scheduled date/position and completion state. A recurrence rule determines series calendar slots only.
+13. Recurrence has exactly two write scopes. Occurrence-scope commands may mutate only the addressed Task. Series-scope recurrence commands may mutate only the shared `RecurrenceSeries` plus series membership by retaining/removing/creating occurrence rows; they must not rewrite ordinary Task fields on a retained sibling. There is no bulk Task-content propagation command in v1.1.
 
 ### 4.2 Operation algorithms
 
@@ -317,19 +318,21 @@ create { ..., recurrence? }
 set_recurrence { task_id, recurrence: RecurrencePattern + end_date | null }
 ~~~
 
-`create.recurrence` creates the seed and bounded series atomically. `set_recurrence` is the Repeat control for an existing occurrence. Ordinary `edit`, `move`, `complete`, `reopen` and `delete` remain occurrence-only commands. Every occurrence resolves its visible Repeat configuration by `recurrence_series_id` from the same canonical `RecurrenceSeries`; there is no per-Task recurrence configuration copy to synchronize.
+`create.recurrence` creates the seed and bounded series atomically. `set_recurrence` is the series-scope Repeat control for an existing occurrence. Ordinary `edit`, `move`, `complete`, `reopen` and `delete` are occurrence-scope commands and may mutate only the addressed Task. Every occurrence resolves its visible Repeat configuration by `recurrence_series_id` from the same canonical `RecurrenceSeries`; there is no per-Task recurrence configuration copy to synchronize.
 
-Changing Repeat is explicitly **this-and-future** scheduling, but the configuration may be opened from any occurrence because every occurrence links to the same series owner:
+Changing Repeat is a **series-membership reconciliation** anchored at the invoking occurrence's immutable `recurrence_occurrence_date`. It updates the one shared series configuration rather than creating a per-occurrence rule or propagating Task content:
 
-- preserve the selected occurrence, all earlier occurrences and every completed occurrence;
-- keep an existing later outstanding occurrence when its immutable `recurrence_occurrence_date` is still in the new future date set, preserving that Task ID and any occurrence-specific edits;
-- delete only later outstanding occurrences whose recurrence slot is no longer present;
-- create newly introduced slots from the invoking occurrence's current Task fields using the normal insertion law; this is creation-time copying only and never rewrites already-existing sibling Tasks;
-- update the one shared series rule/effective date/end date in the same transaction;
+- preserve the invoking occurrence, all earlier occurrences and every completed occurrence;
+- enumerate the updated recurrence slot set from the invoking immutable slot through the inclusive end date;
+- keep an existing later outstanding occurrence when its immutable `recurrence_occurrence_date` remains in that slot set, preserving its Task ID, scheduled date/position and every occurrence-local field exactly as stored;
+- delete only later outstanding occurrences whose immutable recurrence slot is no longer in that slot set;
+- create only newly introduced later slots, copying the invoking occurrence's current title, priority, context, reference, note and reminder time once at creation and assigning the normal initial position for each date;
+- update the one shared series `effective_from`, pattern and end date in the same transaction, with `effective_from` equal to the invoking occurrence's immutable recurrence slot for the newly effective schedule;
+- never rewrite ordinary Task fields on any retained occurrence as part of a Repeat change;
 - **Stop repeating / remove recurrence** retains the invoking Task, clears its recurrence link so it becomes one-off, preserves completed History and removes **every other outstanding Task linked to that series** in the same transaction, regardless of whether its recurrence slot is earlier or later than the invoking occurrence. This includes older occurrences that rolled forward; the user never deletes those cards individually;
 - individual Task Delete remains occurrence-only and must not invoke series removal.
 
-A normal title/context/priority/reference/note/reminder edit changes only the selected occurrence and never rewrites an existing sibling. Only the recurrence rule/end date is shared series state. Changing Repeat is the explicit action that may add/remove occurrence Tasks; if it creates a new slot, that new Task copies the invoking occurrence at creation time only. There is intentionally no "apply title/details to all occurrences" operation in v1.1; if the user wants a different common Task definition across the whole set, they create a new recurring Task.
+The two write scopes are deliberately non-overlapping. Occurrence-scope Task edits never mutate `RecurrenceSeries`. Series-scope Repeat edits never propagate title/priority/context/reference/note/reminder/scheduled-date/position/completion state into retained sibling Tasks. There is intentionally no "all occurrences", "this and following Task details" or template-propagation command in v1.1; a different common Task definition is represented by creating a new recurring Task.
 
 Daily rollover changes only `scheduled_date`/position. It **never** changes `recurrence_occurrence_date` or the series rule. Therefore an overdue Monday occurrence may roll into Tuesday while the Wednesday occurrence still appears on Wednesday exactly as scheduled.
 
@@ -1523,11 +1526,11 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-20 low-friction idle | one Bun service, bounded timers/backoff | Measured low idle CPU/RSS and responsive reopen |
 | JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
 | JIG-FR-22 appearance | JIG-106-SD-02 through SD-05 + SD-07 | One 13-preset registry + independent System/Light/Dark mode fully re-theme all governed surfaces/states and in-app branding from Settings only, without Task/Git mutation |
-| JIG-FR-23 bounded recurrence | §4.2.1 recurrence core + schema v3 + portable format v2 | Weekly/multi-week/monthly exact dates materialize as independent Tasks through required end date; reminder time copies per occurrence; rollover/reschedule of one occurrence does not shift cadence; repeat edits preserve completed history |
+| JIG-FR-23 bounded recurrence | §4.2.1 recurrence core + schema v3 + portable format v2 | One shared series owns recurrence configuration; materialized Tasks own occurrence-local content/lifecycle; Repeat performs membership reconciliation from the invoking immutable slot without rewriting retained siblings; Stop repeating keeps the invoking Task, preserves completed History and removes every other outstanding series occurrence |
 
 ### 10.1 Test boundaries
 
-**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, completed-task rescheduling, reopening, outstanding/completed deletion, recurrence enumeration/reconciliation and edge dates including month/year boundaries. Recurrence coverage includes multiple weekdays, all-seven daily pattern, every-four-weeks cadence, inclusive end date, monthly 28/29/30/31 behavior, rollover without cadence shift, occurrence-only completion/move/delete and repeat-off/history preservation.
+**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, completed-task rescheduling, reopening, outstanding/completed deletion, recurrence enumeration/reconciliation and edge dates including month/year boundaries. Recurrence coverage includes multiple weekdays, all-seven daily pattern, every-four-weeks cadence, inclusive end date, monthly 28/29/30/31 behavior, rollover without cadence shift, occurrence-only completion/move/delete/edit, shared-series visibility from every occurrence, Repeat membership reconciliation that preserves retained sibling IDs/content, creation-time-only copying into new slots, no bulk content propagation, and Stop repeating that preserves completed History while removing every other outstanding series occurrence including rolled/overdue siblings.
 
 **SQLite integration:** One failed transaction rolls back every affected position/date; uniqueness and completeness checks; restart with WAL; task query by scheduled and completion dates; migration from a fresh empty database; corrupted input rejected before persistence.
 
