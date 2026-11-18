@@ -26,10 +26,6 @@ export interface GitHubSetupSnapshot {
   readonly phase: GitHubSetupPhase;
   readonly authorization:
     | {
-        readonly mode: "browser";
-        readonly authorization_url: string;
-      }
-    | {
         readonly mode: "device";
         readonly verification_uri: string;
         readonly user_code: string;
@@ -141,14 +137,6 @@ function asGitHubSetupSnapshot(value: unknown): GitHubSetupSnapshot {
   if (payload.authorization !== null) {
     const auth = asObject(payload.authorization);
     if (
-      auth.mode === "browser" &&
-      typeof auth.authorization_url === "string"
-    ) {
-      authorization = {
-        mode: "browser",
-        authorization_url: auth.authorization_url,
-      };
-    } else if (
       auth.mode === "device" &&
       typeof auth.verification_uri === "string" &&
       typeof auth.user_code === "string" &&
