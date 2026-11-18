@@ -26,7 +26,15 @@ public final class JigSqlitePlugin extends Plugin {
         }
         File root = getContext().getFilesDir().getCanonicalFile();
         File target = new File(root, relativePath).getCanonicalFile();
-        if (!target.toPath().startsWith(root.toPath())) {
+        String rootPath = root.getPath();
+        String targetPath = target.getPath();
+        String rootPrefix = rootPath.endsWith(File.separator)
+            ? rootPath
+            : rootPath + File.separator;
+        if (
+            !targetPath.equals(rootPath) &&
+            !targetPath.startsWith(rootPrefix)
+        ) {
             throw new IOException("SQLite path escapes app-private storage");
         }
         return target;
