@@ -13,6 +13,7 @@ import type { Task } from "../../src/core/task";
 import type {
   GitAdapterConfig,
   PortableSnapshot,
+  RepositoryPushStatus,
 } from "../../src/shell/git";
 import { serializeSnapshot } from "../../src/shell/git";
 import {
@@ -28,6 +29,7 @@ import {
 } from "../../src/shell/sync";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
+const REMOTE_LOCATION = "https://example.invalid/personal/jig-data.git";
 let root = "";
 let db: JigSqlConnection;
 
@@ -48,11 +50,40 @@ function task(): Task {
   };
 }
 
+function configuredStatus(
+  remoteState: "pending" | "retrying" | "synchronized" | "sync-issue",
+  localGit: "pending" | "committed" | "issue" = "committed",
+) {
+  return {
+    local_git: localGit,
+    remote: {
+      state: remoteState,
+      remote_name: "origin",
+      remote_location: REMOTE_LOCATION,
+    },
+  } as const;
+}
+
+function localOnlyStatus(
+  localGit: "pending" | "committed" | "issue" = "committed",
+) {
+  return {
+    local_git: localGit,
+    remote: {
+      state: "not-configured",
+      remote_name: null,
+      remote_location: null,
+    },
+  } as const;
+}
+
 function fakeEffects(options: {
   readonly head?: string | null;
   readonly snapshot?: PortableSnapshot;
-  readonly pushResults?: readonly ("synchronized" | "sync-issue")[];
+  readonly pushResults?: readonly RepositoryPushStatus[];
   readonly remoteName?: string | null;
+  readonly remoteLocation?: string;
+  readonly writeFails?: boolean;
 } = {}): {
   readonly effects: SyncEffects;
   readonly commitCalls: { count: number };
@@ -61,6 +92,8 @@ function fakeEffects(options: {
   const commitCalls = { count: 0 };
   const pushCalls = { count: 0 };
   const pushResults = [...(options.pushResults ?? ["synchronized"])];
+  const remoteName =
+    options.remoteName === undefined ? "origin" : options.remoteName;
 
   const effects: SyncEffects = {
     ensurePortableData: async () => undefined,
@@ -80,6 +113,9 @@ function fakeEffects(options: {
       revision: number,
     ) => {
       commitCalls.count += 1;
+      if (options.writeFails === true) {
+        throw new Error("Synthetic local Git commit failure");
+      }
       return revision.toString(16).padStart(40, "0");
     },
     synchronize: async () => {
@@ -90,10 +126,13 @@ function fakeEffects(options: {
         retryable: status === "sync-issue",
       };
     },
-    mode: async () =>
-      (options.remoteName === undefined ? "origin" : options.remoteName) === null
-        ? "local-only"
-        : "remote",
+    inspectRemote: async () =>
+      remoteName === null
+        ? null
+        : {
+            name: remoteName,
+            location: options.remoteLocation ?? REMOTE_LOCATION,
+          },
   };
 
   return {
@@ -117,7 +156,7 @@ afterEach(async () => {
 });
 
 describe("serialized synchronization worker", () => {
-  it("does not claim synchronization merely because a remote target exists", async () => {
+  it("does not claim remote synchronization merely because a remote exists", async () => {
     const { effects, pushCalls } = fakeEffects();
     const controller = createSyncController(
       db,
@@ -126,16 +165,20 @@ describe("serialized synchronization worker", () => {
     );
 
     await controller.start();
-    expect(controller.status()).toBe("pending");
+    expect(controller.status()).toStrictEqual(
+      configuredStatus("pending", "pending"),
+    );
     expect(pushCalls.count).toBe(0);
 
     await vi.advanceTimersByTimeAsync(0);
     expect(pushCalls.count).toBe(1);
-    expect(controller.status()).toBe("synchronized");
+    expect(controller.status()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
     controller.stop();
   });
 
-  it("surfaces a non-retryable transport issue without generic backoff", async () => {
+  it("surfaces a non-retryable remote issue while preserving the local Git commit", async () => {
     let calls = 0;
     const { effects } = fakeEffects();
     const controller = createSyncController(
@@ -153,12 +196,30 @@ describe("serialized synchronization worker", () => {
       },
     );
 
-    expect(await controller.trigger()).toBe("sync-issue");
-    expect(controller.status()).toBe("sync-issue");
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("sync-issue"),
+    );
+    expect(controller.status()).toStrictEqual(
+      configuredStatus("sync-issue"),
+    );
     expect(calls).toBe(1);
 
     await vi.advanceTimersByTimeAsync(5_000);
     expect(calls).toBe(1);
+    controller.stop();
+  });
+
+  it("reports a local Git issue only when the snapshot commit itself fails", async () => {
+    const { effects, pushCalls } = fakeEffects({ writeFails: true });
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(localOnlyStatus("issue"));
+    expect(controller.status().local_git).toBe("issue");
+    expect(pushCalls.count).toBe(0);
     controller.stop();
   });
 
@@ -185,6 +246,9 @@ describe("serialized synchronization worker", () => {
     controller.notifyMutation();
 
     expect((await readCanonicalState(db)).revision).toBe(1);
+    expect(controller.status()).toStrictEqual(
+      configuredStatus("pending", "pending"),
+    );
     expect(commitCalls.count).toBe(0);
 
     await vi.advanceTimersByTimeAsync(2_999);
@@ -192,6 +256,9 @@ describe("serialized synchronization worker", () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(commitCalls.count).toBe(1);
+    expect(controller.status()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
     controller.stop();
   });
 
@@ -234,7 +301,7 @@ describe("serialized synchronization worker", () => {
     controller.stop();
   });
 
-  it("uses fixed retry backoff and resets after success", async () => {
+  it("uses fixed remote retry backoff and resets after success", async () => {
     const { effects, pushCalls } = fakeEffects({
       pushResults: ["sync-issue", "sync-issue", "synchronized"],
     });
@@ -244,8 +311,12 @@ describe("serialized synchronization worker", () => {
       effects,
     );
 
-    expect(await controller.trigger()).toBe("sync-issue");
-    expect(controller.status()).toBe("retrying");
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("retrying"),
+    );
+    expect(controller.status()).toStrictEqual(
+      configuredStatus("retrying"),
+    );
     expect(pushCalls.count).toBe(1);
 
     await vi.advanceTimersByTimeAsync(4_999);
@@ -257,12 +328,31 @@ describe("serialized synchronization worker", () => {
     expect(pushCalls.count).toBe(2);
     await vi.advanceTimersByTimeAsync(1);
     expect(pushCalls.count).toBe(3);
-    expect(controller.status()).toBe("synchronized");
+    expect(controller.status()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
 
     await vi.advanceTimersByTimeAsync(59_999);
     expect(pushCalls.count).toBe(3);
     await vi.advanceTimersByTimeAsync(1);
     expect(pushCalls.count).toBe(4);
+    controller.stop();
+  });
+
+  it("keeps a committed local snapshot healthy when no remote is configured", async () => {
+    const { effects, pushCalls } = fakeEffects({ remoteName: null });
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    await controller.start();
+    expect(controller.status()).toStrictEqual(localOnlyStatus("pending"));
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(controller.status()).toStrictEqual(localOnlyStatus());
+    expect(pushCalls.count).toBe(0);
     controller.stop();
   });
 
@@ -301,6 +391,7 @@ describe("serialized synchronization worker", () => {
       last_exported_head: "a".repeat(40),
       pending_sync: false,
     });
+    expect(controller.status()).toStrictEqual(localOnlyStatus());
     expect(commitCalls.count).toBe(0);
     controller.stop();
   });
@@ -328,6 +419,9 @@ describe("serialized synchronization worker", () => {
       last_adopted_head: "b".repeat(40),
       pending_sync: false,
     });
+    expect(controller.status()).toStrictEqual(
+      configuredStatus("pending"),
+    );
     controller.stop();
   });
 });
