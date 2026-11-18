@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1.0.6 brand and application-theme contract v0.18, 2026-11-18. v1.0.5 remains the default Jig palette/identity baseline; v1.0.6 adds the curated multi-theme application catalogue, independent System/Light/Dark appearance, palette-independent Jig product-state semantics and theme-aware in-application wordmark paint.
+**Status:** Canonical v1.0.6 brand and application-theme contract v0.19, 2026-11-18. v1.0.5 remains the default Jig palette/identity baseline; v1.0.6 adds the curated multi-theme application catalogue, independent System/Light/Dark appearance, palette-independent Jig product-state semantics and theme-aware in-application wordmark paint.
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, default Jig brand palette, multi-theme Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -9,7 +9,7 @@
 This document is the single human-readable authority for Jig branding and theming. The executable v1.0.6 authorities are:
 
 - `ui/src/theme.css` — canonical raw **default Jig** Ink/Amber/Paper primitives only;
-- the typed appearance/theme registry — the single list of the fourteen supported application themes and the independent `System | Light | Dark` appearance mode;
+- the typed appearance/theme registry — the single list of the thirteen supported application themes and the independent `System | Light | Dark` appearance mode;
 - Jig-authored Astryx theme sources — default Jig, six dual-mode Astryx wrappers and six community semantic palette themes, all compiled by pinned `@astryxdesign/cli@0.7.13`;
 - one shared Jig product-local token mapping for current day, Task selection/elevation, navigation, drag, priority, repository status and in-application brand paint;
 - compiler-owned generated theme modules/styles/declarations — never hand-edited;
