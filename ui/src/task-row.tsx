@@ -14,11 +14,13 @@ import {
 import { useSortable } from "@dnd-kit/react/sortable";
 import type { Ref } from "react";
 import type { Priority, Task } from "../../src/core/task";
+import { isReminderDue } from "../../src/core/reminder";
 import { formatReminderTime } from "./dates";
 import { JigIcon } from "./jig-icons";
 
 export interface TaskRowProps {
   readonly task: Task;
+  readonly now: Date;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
   readonly onSelect?: (() => void) | undefined;
@@ -248,6 +250,7 @@ export function TaskCardPreview({
 
 export function TaskRow({
   task,
+  now,
   isSelected = false,
   rowRef,
   onSelect,
@@ -259,6 +262,7 @@ export function TaskRow({
   onMoveDown,
 }: TaskRowProps): React.ReactElement {
   const completed = task.completed_at !== null;
+  const reminderDue = isReminderDue(task, now);
 
   return (
     <ListItem
@@ -270,6 +274,7 @@ export function TaskRow({
         `jig-task-priority-${task.priority.toLowerCase()}`,
         isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
+        reminderDue ? "jig-task-card-reminder-due" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -303,6 +308,12 @@ export function TaskRow({
             </span>
           </div>
           <TaskMetadata task={task} />
+          {reminderDue ? (
+            <span className="jig-reminder-due-indicator" aria-label="Reminder due">
+              <Icon icon="clock" size="xsm" color="inherit" />
+              Reminder due
+            </span>
+          ) : null}
         </div>
       }
       endContent={
