@@ -6,8 +6,10 @@ import {
   Layout,
   LayoutContent,
 } from "@astryxdesign/core";
+import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Task, TaskCommand } from "../../src/core/task";
 import { formatCivilDate } from "./dates";
+import { RecurrenceEditor } from "./recurrence-editor";
 import { TaskEditor, type TaskDraft } from "./task-editor";
 
 export type TaskWorkspaceState =
@@ -39,6 +41,7 @@ interface TaskWorkspaceContentProps {
   readonly workspace: TaskWorkspacePresentation;
   readonly externalError: string | null;
   readonly isSaving: boolean;
+  readonly recurrenceSeries: RecurrenceSeries | null;
   readonly onDraftChange: (draft: TaskDraft) => void;
   readonly onSave: (command: TaskCommand) => Promise<boolean>;
   readonly onDelete: (task: Task) => void;
@@ -56,6 +59,7 @@ function TaskWorkspaceContent({
   workspace,
   externalError,
   isSaving,
+  recurrenceSeries,
   onDraftChange,
   onSave,
   onDelete,
@@ -75,6 +79,20 @@ function TaskWorkspaceContent({
         onCancel={onClose}
         onSave={onSave}
       />
+      {task === null ? null : (
+        <RecurrenceEditor
+          task={task}
+          series={recurrenceSeries}
+          isSaving={isSaving}
+          onSetRecurrence={async (recurrence) =>
+            onSave({
+              type: "set_recurrence",
+              task_id: task.id,
+              recurrence,
+            })
+          }
+        />
+      )}
       {task === null ? null : (
         <div className="jig-task-workspace-actions">
           <Button
@@ -133,6 +151,7 @@ export function TaskWorkspaceDrawer({
   workspace,
   externalError,
   isSaving,
+  recurrenceSeries,
   onDraftChange,
   onSave,
   onDelete,
@@ -177,6 +196,7 @@ export function TaskWorkspaceDrawer({
                 workspace={workspace}
                 externalError={externalError}
                 isSaving={isSaving}
+                recurrenceSeries={recurrenceSeries}
                 onDraftChange={onDraftChange}
                 onSave={onSave}
                 onDelete={onDelete}
@@ -195,6 +215,7 @@ export function TaskWorkspaceBottomSheet({
   workspace,
   externalError,
   isSaving,
+  recurrenceSeries,
   onDraftChange,
   onSave,
   onDelete,
@@ -239,6 +260,7 @@ export function TaskWorkspaceBottomSheet({
             workspace={workspace}
             externalError={externalError}
             isSaving={isSaving}
+            recurrenceSeries={recurrenceSeries}
             onDraftChange={onDraftChange}
             onSave={onSave}
             onDelete={onDelete}
