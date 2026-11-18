@@ -12,7 +12,7 @@ const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-test",
   client_id: "desktop-client-id",
   client_secret: "public-desktop-client-secret",
-  callback_url: "http://127.0.0.1:47832/setup/github/callback",
+  redirect_uri: "http://127.0.0.1:47832/setup/github/callback",
 };
 
 const AUTHORIZATION: GitHubAuthorizationRequest = {
@@ -20,7 +20,7 @@ const AUTHORIZATION: GitHubAuthorizationRequest = {
   code_verifier: "verifier",
   authorization_url:
     "https://github.com/login/oauth/authorize?client_id=client-id",
-  redirect_uri: REGISTRATION.callback_url,
+  redirect_uri: REGISTRATION.redirect_uri,
 };
 
 const CREDENTIAL: GitHubCredential = {
@@ -161,7 +161,7 @@ describe("GitHub onboarding orchestration", () => {
   it("exposes Grant and Manage access states without broadening repository scope", async () => {
     const fallbackRegistration: GitHubAppRegistration = {
       ...REGISTRATION,
-      callback_url: "https://example.invalid/callback",
+      redirect_uri: "https://example.invalid/callback",
     };
     const startDevice = async () => ({
       device_code: "device",
@@ -183,7 +183,7 @@ describe("GitHub onboarding orchestration", () => {
       assert_secret_service: async () => undefined,
       create_authorization_request: async () => ({
         ...AUTHORIZATION,
-        redirect_uri: fallbackRegistration.callback_url,
+        redirect_uri: fallbackRegistration.redirect_uri,
       }),
       start_device_authorization: startDevice,
       poll_device_authorization: pollDevice,
@@ -213,7 +213,7 @@ describe("GitHub onboarding orchestration", () => {
       assert_secret_service: async () => undefined,
       create_authorization_request: async () => ({
         ...AUTHORIZATION,
-        redirect_uri: fallbackRegistration.callback_url,
+        redirect_uri: fallbackRegistration.redirect_uri,
       }),
       start_device_authorization: startDevice,
       poll_device_authorization: pollDevice,
