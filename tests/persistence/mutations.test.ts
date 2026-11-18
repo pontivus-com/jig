@@ -192,7 +192,7 @@ describe("transactional canonical persistence", () => {
       TIMES[1],
     );
     expect(completed.revision).toBe(2);
-    expect(readCanonicalState(db).revision).toBe(2);
+    expect((await readCanonicalState(db)).revision).toBe(2);
   });
 
   it("rejects a stale revision without mutation", async () => {
@@ -209,8 +209,8 @@ describe("transactional canonical persistence", () => {
     );
     const before = await readCanonicalState(db);
 
-    expect(() =>
-      await applyTaskCommand(
+    await expect(
+      applyTaskCommand(
         db,
         {
           type: "create",
@@ -260,8 +260,8 @@ describe("transactional canonical persistence", () => {
       END;
     `);
 
-    expect(() =>
-      await applyTaskCommand(
+    await expect(
+      applyTaskCommand(
         db,
         {
           type: "move",
@@ -272,7 +272,7 @@ describe("transactional canonical persistence", () => {
         2,
         TIMES[2],
       ),
-    ).toThrow(/injected move failure/);
+    ).rejects.toThrow(/injected move failure/);
 
     expect(await readCanonicalState(db)).toStrictEqual(before);
   });
@@ -292,7 +292,7 @@ describe("transactional canonical persistence", () => {
       () => IDS[0],
     );
     const before = await readCanonicalState(db);
-    db.close();
+    await db.close();
 
     db = await openDatabase(join(root, "jig.sqlite"));
 
