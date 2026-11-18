@@ -223,9 +223,12 @@ describe("UI ownership architecture", () => {
     expect(app).toContain('useState<Destination>("planner")');
 
     expect(header).toContain("const DESTINATIONS = [");
-    expect(header).toContain('{ id: "planner", label: "Planner"');
-    expect(header).toContain('{ id: "history", label: "History"');
-    expect(header).toContain('{ id: "settings", label: "Settings"');
+    expect(header).toContain('id: "planner"');
+    expect(header).toContain('label: "Planner"');
+    expect(header).toContain('id: "history"');
+    expect(header).toContain('label: "History"');
+    expect(header).toContain('id: "settings"');
+    expect(header).toContain('label: "Settings"');
     expect(header).toContain("type Destination = (typeof DESTINATIONS)[number]");
     expect(header).toContain("IconName");
     expect(header).toContain("NamespacedIconName");
