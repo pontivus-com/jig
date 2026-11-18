@@ -14,6 +14,7 @@ declare global {
       tag: string | null;
     }>;
     __JIG_PERMISSION_REQUESTS__?: number;
+    __JIG_NOTIFICATION_SHOULD_THROW__?: boolean;
   }
 }
 
@@ -220,6 +221,143 @@ test("due reminder without permission stays undelivered until explicit grant", a
     title: "Jig reminder",
     body: "Permission-gated reminder",
   });
+});
+
+test("denied notification permission leaves a due reminder undelivered", async ({
+  page,
+}) => {
+  await prepareReminderPage(page, "denied");
+  await apiCommand(page, {
+    type: "create",
+    title: "Denied reminder",
+    scheduled_date: civilDate(reminderStart()),
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "10:00",
+  });
+  await page.reload();
+  await page.clock.fastForward(60_000);
+
+  expect(await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []))
+    .toEqual([]);
+  expect(
+    await page.evaluate(() =>
+      Object.keys(localStorage).filter((key) =>
+        key.startsWith("jig-reminder-delivered:"),
+      ),
+    ),
+  ).toEqual([]);
+});
+
+test("unsupported Notification capability does not claim reminder delivery", async ({
+  page,
+}) => {
+  await page.clock.install({ time: reminderStart() });
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: undefined,
+    });
+  });
+  await page.goto("/");
+  await resetCanonicalTasks(page);
+  await apiCommand(page, {
+    type: "create",
+    title: "Unsupported reminder",
+    scheduled_date: civilDate(reminderStart()),
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "10:00",
+  });
+  await page.reload();
+  await page.clock.fastForward(60_000);
+
+  expect(
+    await page.evaluate(() =>
+      Object.keys(localStorage).filter((key) =>
+        key.startsWith("jig-reminder-delivered:"),
+      ),
+    ),
+  ).toEqual([]);
+  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
+});
+
+test("Notification constructor failure remains retryable until delivery succeeds", async ({
+  page,
+}) => {
+  await page.clock.install({ time: reminderStart() });
+  await page.addInitScript(() => {
+    window.__JIG_NOTIFICATION_CALLS__ = [];
+    window.__JIG_NOTIFICATION_SHOULD_THROW__ = true;
+
+    class RetryableNotification {
+      static permission: NotificationPermission = "granted";
+
+      static async requestPermission(): Promise<NotificationPermission> {
+        return "granted";
+      }
+
+      constructor(title: string, options?: NotificationOptions) {
+        if (window.__JIG_NOTIFICATION_SHOULD_THROW__ === true) {
+          throw new Error("synthetic Notification constructor failure");
+        }
+        window.__JIG_NOTIFICATION_CALLS__?.push({
+          title,
+          body: options?.body ?? null,
+          tag: options?.tag ?? null,
+        });
+      }
+    }
+
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: RetryableNotification,
+    });
+  });
+  await page.goto("/");
+  await resetCanonicalTasks(page);
+  await apiCommand(page, {
+    type: "create",
+    title: "Retryable reminder",
+    scheduled_date: civilDate(reminderStart()),
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "10:00",
+  });
+  await page.reload();
+
+  await page.clock.fastForward(60_000);
+  expect(await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []))
+    .toEqual([]);
+  expect(
+    await page.evaluate(() =>
+      Object.keys(localStorage).filter((key) =>
+        key.startsWith("jig-reminder-delivered:"),
+      ),
+    ),
+  ).toEqual([]);
+
+  await page.evaluate(() => {
+    window.__JIG_NOTIFICATION_SHOULD_THROW__ = false;
+  });
+  await page.clock.fastForward(30_000);
+
+  await expect
+    .poll(() => page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__?.length ?? 0))
+    .toBe(1);
+  expect(
+    await page.evaluate(() =>
+      Object.keys(localStorage).filter((key) =>
+        key.startsWith("jig-reminder-delivered:"),
+      ).length,
+    ),
+  ).toBe(1);
 });
 
 test("rolled-forward reminder uses today's canonical date and preserved time", async ({
