@@ -821,7 +821,6 @@ type ThemePreset =
   | "astryx-neutral"
   | "astryx-butter"
   | "astryx-chocolate"
-  | "astryx-gothic"
   | "astryx-matcha"
   | "astryx-stone"
   | "astryx-y2k"
@@ -945,7 +944,6 @@ The Jig product-local aliases become **palette-independent references to Astryx 
 | Astryx Neutral | `--color-background-surface` |
 | Astryx Butter | `--color-background-surface` |
 | Astryx Chocolate | `--color-background-card` |
-| Astryx Gothic | `--color-background-card` |
 | Astryx Matcha | `--color-background-surface` |
 | Astryx Stone | `--color-background-surface` |
 | Astryx Y2K | `--color-background-surface` |
