@@ -882,6 +882,56 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
   await page.emulateMedia({ colorScheme: "no-preference" });
 });
 
+test("Settings shows local Git and configured remote synchronization separately", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+  const synchronization = page
+    .getByRole("heading", { name: "Synchronization", exact: true })
+    .locator("xpath=following-sibling::*[1]");
+
+  await expect(synchronization.getByText("Local Git", { exact: true }))
+    .toBeVisible();
+  await expect(synchronization.getByText("Remote Git", { exact: true }))
+    .toBeVisible();
+
+  await expect
+    .poll(async () => {
+      const localGit = synchronization
+        .locator("dt", { hasText: "Local Git" })
+        .locator("xpath=following-sibling::dd[1]");
+      return (await localGit.textContent())?.trim() ?? "";
+    }, { timeout: 10_000 })
+    .toBe("Committed");
+
+  await expect
+    .poll(async () => {
+      const remoteGit = synchronization
+        .locator("dt", { hasText: "Remote Git" })
+        .locator("xpath=following-sibling::dd[1]");
+      return (await remoteGit.textContent())?.trim() ?? "";
+    }, { timeout: 10_000 })
+    .toBe("Synchronized");
+
+  const remoteRepository = synchronization
+    .locator("dt", { hasText: "Remote repository" })
+    .locator("xpath=following-sibling::dd[1]");
+  await expect(remoteRepository).toContainText("/tmp/jig-playwright-remote.git");
+  await expect(remoteRepository).toContainText("Git remote: origin");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
+  ).toHaveCount(1);
+  await expect(synchronization.getByText("Local Git", { exact: true }))
+    .toBeVisible();
+  await expect(synchronization.getByText("Remote Git", { exact: true }))
+    .toBeVisible();
+});
+
 test("Theme and Appearance controls exist only in Settings and apply independently", async ({
   page,
 }) => {
