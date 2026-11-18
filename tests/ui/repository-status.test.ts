@@ -9,6 +9,7 @@ function status(
     ready: true,
     repository_path: "/tmp/jig",
     repository_status,
+    github_reconnect_available: false,
   };
 }
 
