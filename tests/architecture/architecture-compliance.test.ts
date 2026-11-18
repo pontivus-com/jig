@@ -481,7 +481,10 @@ describe("architecture compliance", () => {
     const native = source("ui/src/runtime-native.ts");
 
     expect(runtime).toContain("Capacitor.isNativePlatform()");
-    expect(runtime).toContain('from "./runtime-native"');
+    expect(runtime).toContain('import("./runtime-native")');
+    expect(runtime).not.toMatch(
+      /from\\s+["']\\.\\/runtime-native["']/,
+    );
     expect(native.toLowerCase()).not.toContain("github");
     expect(native).not.toContain("client_id");
     expect(native).not.toContain("TaskDTO");
