@@ -10,7 +10,7 @@ This document is the single human-readable authority for Jig branding and themin
 
 - `ui/src/theme.css` — canonical raw **default Jig** Ink/Amber/Paper primitives only;
 - the typed appearance/theme registry — the single list of the fourteen supported application themes and the independent `System | Light | Dark` appearance mode;
-- Jig-authored Astryx theme sources — default Jig, seven Astryx wrappers (including the Gothic dual-mode application adaptation) and six community semantic palette themes, all compiled by pinned `@astryxdesign/cli@0.7.13`;
+- Jig-authored Astryx theme sources — default Jig, six dual-mode Astryx wrappers and six community semantic palette themes, all compiled by pinned `@astryxdesign/cli@0.7.13`;
 - one shared Jig product-local token mapping for current day, Task selection/elevation, navigation, drag, priority, repository status and in-application brand paint;
 - compiler-owned generated theme modules/styles/declarations — never hand-edited;
 - `ui/src/styles.css` — layout/composition only; it consumes active semantic Astryx/Jig tokens and must not introduce a second color system or theme-name branch;
@@ -419,13 +419,13 @@ Astryx 0.7.13 has no true semantic names for Add, History, Edit or Delete. Jig t
 
 ### 7.1 Theme catalogue and ownership
 
-v1.0.6 supports exactly fourteen application themes:
+v1.0.6 supports exactly thirteen application themes:
 
 - **Jig:** Jig;
-- **Astryx:** Neutral, Butter, Chocolate, Gothic, Matcha, Stone, Y2K;
+- **Astryx:** Neutral, Butter, Chocolate, Matcha, Stone, Y2K;
 - **Community:** Gruvbox, Dracula, Solarized, Nord, Catppuccin, Tokyo Night.
 
-The exact pairings/provenance and complete semantic color requirements are binding in JIG-106-SD-02 and JIG-106-SD-04. Astryx Gothic 0.7.13 is dark-only upstream; Jig's `astryx-gothic` wrapper retains its released Dark semantics and mechanics while supplying the coherent Light application-color layer required by FR-03 from Gothic's published semantic/palette anchors. It is not a generic light inversion or separate theme engine. Community palette literals live only in governed theme-authoring palette sources; feature styles never copy them. The default Jig primitives remain in `ui/src/theme.css`.
+The exact pairings/provenance and complete semantic color requirements are binding in JIG-106-SD-02 and JIG-106-SD-04. Astryx Gothic 0.7.13 is dark-only upstream and is therefore not part of the selectable Jig catalogue; no synthetic light variant is authored. Community palette literals live only in governed theme-authoring palette sources; feature styles never copy them. The default Jig primitives remain in `ui/src/theme.css`.
 
 Theme family and appearance mode are independent browser-local presentation values. The root application mounts exactly one Astryx owner:
 
@@ -557,7 +557,7 @@ Any change to brand anchors, theme palette sources, semantic mapping or mark geo
 4. regenerated compiler-owned theme artifacts through pinned Astryx CLI, with the exhaustive `bun run theme:check` green;
 5. `THIRD_PARTY_NOTICES.md` when copied community palette provenance/license material changes;
 6. affected external assets under `assets/` when their fixed artwork changes;
-7. browser acceptance for all fourteen presets in Light/Dark and System-Light/System-Dark, including live System preference change, semantic state coexistence, Task/canvas separation and in-application wordmark contrast;
+7. browser acceptance for all thirteen presets in Light/Dark and System-Light/System-Dark, including live System preference change, semantic state coexistence, Task/canvas separation and in-application wordmark contrast;
 8. architecture checks proving one root Theme owner and no feature-level raw palette/theme-name branching.
 
 Layout-only UI changes do not redefine this brand contract.
