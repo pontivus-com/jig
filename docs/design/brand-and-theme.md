@@ -9,7 +9,7 @@
 This document is the single human-readable authority for Jig branding and theming. The executable v1.0.6 authorities are:
 
 - `ui/src/theme.css` — canonical raw **default Jig** Ink/Amber/Paper primitives only;
-- the typed appearance/theme registry — the single list of the fourteen supported application themes and the independent `System | Light | Dark` appearance mode;
+- the typed appearance/theme registry — the single list of the thirteen supported application themes and the independent `System | Light | Dark` appearance mode;
 - Jig-authored Astryx theme sources — default Jig, six dual-mode Astryx wrappers and six community semantic palette themes, all compiled by pinned `@astryxdesign/cli@0.7.13`;
 - one shared Jig product-local token mapping for current day, Task selection/elevation, navigation, drag, priority, repository status and in-application brand paint;
 - compiler-owned generated theme modules/styles/declarations — never hand-edited;
