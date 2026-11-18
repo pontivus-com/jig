@@ -21,9 +21,21 @@ export const tokyoNightPalette = {
   textSecondary: ["#6172b0", "#a9b1d6"],
   textDisabled: ["#848cb5", "#565f89"],
   accent: ["#9854f1", "#bb9af7"],
-  info: ["#2e7de9", "#7aa2f7"],
-  success: ["#587539", "#9ece6a"],
-  warning: ["#8c6c3e", "#e0af68"],
+  // Official Day status hues are adapted only for strong application roles:
+  // they are shaded minimally toward the Night/body anchor so light on-status
+  // content clears the 4.5:1 floor. Named Blue/Green/Yellow stay canonical.
+  info: [
+    "color-mix(in srgb, #2e7de9 75%, #1a1b26)",
+    "#7aa2f7",
+  ],
+  success: [
+    "color-mix(in srgb, #587539 95%, #1a1b26)",
+    "#9ece6a",
+  ],
+  warning: [
+    "color-mix(in srgb, #8c6c3e 90%, #1a1b26)",
+    "#e0af68",
+  ],
   error: ["#c64343", "#f7768e"],
   red: ["#c64343", "#f7768e"],
   orange: ["#b15c00", "#ff9e64"],
