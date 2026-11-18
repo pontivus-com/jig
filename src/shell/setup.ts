@@ -209,7 +209,11 @@ export async function initializeRepositoryInstallation(options: {
 
       if (candidate !== null) {
         const state = await readCanonicalState(existing);
-        const expected = serializeSnapshot(state.tasks, datasetId);
+        const expected = serializeSnapshot(
+          state.tasks,
+          datasetId,
+          state.recurrences,
+        );
         if (
           !snapshotsEqual(expected.files, candidate.snapshot.files) &&
           !(await readMetadata(existing)).pending_sync
@@ -242,13 +246,18 @@ export async function initializeRepositoryInstallation(options: {
       await adoptCanonicalSnapshot(
         db,
         candidate.snapshot.tasks,
+        candidate.snapshot.recurrences,
         candidate.head,
       );
       adoptedExistingSnapshot = true;
     }
 
     const state = await readCanonicalState(db);
-    const snapshot = serializeSnapshot(state.tasks, datasetId);
+    const snapshot = serializeSnapshot(
+      state.tasks,
+      datasetId,
+      state.recurrences,
+    );
     await writePortableSnapshot(
       adapter,
       snapshot,
