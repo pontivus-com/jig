@@ -215,9 +215,18 @@ export async function createGitHubAuthorizationRequest(
     !/^[a-z0-9-]+$/.test(registration.app_slug) ||
     registration.client_id.length === 0 ||
     registration.client_secret.length === 0 ||
-    redirectUri.length === 0
+    registration.linux_callback_url.length === 0 ||
+    registration.android_callback_url.length === 0
   ) {
     throw new GitHubAuthError("GitHub App registration is incomplete");
+  }
+  if (
+    redirectUri !== registration.linux_callback_url &&
+    redirectUri !== registration.android_callback_url
+  ) {
+    throw new GitHubAuthError(
+      "GitHub redirect URI is not one of the registered Jig callbacks",
+    );
   }
   const state = randomBase64Url();
   const codeVerifier = randomBase64Url();
