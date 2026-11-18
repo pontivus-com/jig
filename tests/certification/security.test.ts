@@ -146,21 +146,25 @@ describe("V1 security and trust boundaries", () => {
     expect(portable).not.toContain(process.cwd());
   });
 
-  it("keeps GitHub public registration material distinct from user credentials", async () => {
+  it("keeps GitHub client_secret out of native registration and device credential owners", async () => {
     const registration = await source("src/shell/github-registration.ts");
     const auth = await source("src/shell/github-auth.ts");
     const secretService = await source("src/shell/secret-service.ts");
 
-    // GitHub's protocol terminology is authoritative at the integration boundary.
+    // GitHub's terminology remains authoritative where the legacy direct adapter
+    // still exists during broker remediation; no Jig-owned synonym may appear.
     expect(auth).toContain("readonly client_secret: string");
     expect(auth).not.toContain("public_client_secret");
     expect(registration).not.toContain("public_client_secret");
-    expect(registration).toContain("client_secret:");
-    expect(registration).toContain("client_id:");
-    expect(registration).toContain("redirect_uri:");
 
-    // The GitHub-named client_secret is public registration material for this
-    // open-source public/native client, not part of the device-local user token payload.
+    // Live native registration is disabled until the confidential broker exists,
+    // and no concrete GitHub client_secret may be shipped in source.
+    expect(registration).toContain("GITHUB_DESKTOP_APP_REGISTRATION");
+    expect(registration).toContain("GITHUB_ANDROID_APP_REGISTRATION");
+    expect(registration).toMatch(/GitHubAppRegistration \| null = null/g);
+    expect(registration).not.toMatch(/client_secret\s*:\s*["']/);
+    expect(registration).not.toMatch(/\b[a-f0-9]{40}\b/i);
+
     expect(secretService).not.toContain("client_secret");
     expect(registration).not.toContain("access_token");
     expect(registration).not.toContain("refresh_token");
