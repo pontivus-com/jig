@@ -20,11 +20,12 @@ import {
 } from "../../src/portable";
 import type { CanonicalState } from "../../src/protocol";
 import {
+  acquireAndroidPortableRepository,
   cloneAndroidPortableRepository,
   commitAndroidCanonicalState,
-  fetchAndroidPortableRepository,
   pushAndroidPortableRepository,
   reopenAndroidPortableRepository,
+  synchronizeAndroidPortableRepository,
   type AndroidGitEffects,
 } from "../../ui/src/native/git";
 import {
@@ -247,7 +248,9 @@ function task(
   };
 }
 
-async function fixture(): Promise<{
+async function fixture(
+  options: Readonly<{ dataBranch?: boolean }> = {},
+): Promise<{
   readonly remote: string;
   readonly remoteUrl: string;
 }> {
@@ -276,15 +279,17 @@ async function fixture(): Promise<{
     "refs/heads/main",
   ]);
 
-  await runGit(seed, ["checkout", "--orphan", "jig-data"]);
-  await runGit(seed, ["rm", "-rf", "."]);
-  await writeSnapshot(
-    seed,
-    serializeSnapshot([], DATASET_ID),
-  );
-  await runGit(seed, ["add", "format.json"]);
-  await runGit(seed, ["commit", "-m", "Initialize Jig data"]);
-  await runGit(seed, ["push", "origin", "jig-data"]);
+  if (options.dataBranch !== false) {
+    await runGit(seed, ["checkout", "--orphan", "jig-data"]);
+    await runGit(seed, ["rm", "-rf", "."]);
+    await writeSnapshot(
+      seed,
+      serializeSnapshot([], DATASET_ID),
+    );
+    await runGit(seed, ["add", "format.json"]);
+    await runGit(seed, ["commit", "-m", "Initialize Jig data"]);
+    await runGit(seed, ["push", "origin", "jig-data"]);
+  }
   await runGit(root, [
     "--git-dir",
     remote,
@@ -417,9 +422,20 @@ describe("Android Git smart-HTTP feasibility", () => {
     await runGit(desktop, ["push", "origin", "jig-data"]);
     const desktopHead = await runGit(desktop, ["rev-parse", "HEAD"]);
 
-    await expect(
-      fetchAndroidPortableRepository(effects, credential),
-    ).resolves.toBe(desktopHead);
+    const synchronized =
+      await synchronizeAndroidPortableRepository(
+        effects,
+        DATASET_ID,
+        credential,
+      );
+    expect(synchronized).toMatchObject({
+      state: "remote-adopted",
+      head: desktopHead,
+    });
+    expect(synchronized.snapshot?.tasks).toStrictEqual([
+      firstTask,
+      secondTask,
+    ]);
 
     const restarted: AndroidGitEffects = {
       fs: createAndroidGitFilesystem(filesystemPort),
@@ -430,7 +446,139 @@ describe("Android Git smart-HTTP feasibility", () => {
       restarted,
       DATASET_ID,
     );
-    expect(reopened.tasks).toStrictEqual([firstTask]);
+    expect(reopened.tasks).toStrictEqual([
+      firstTask,
+      secondTask,
+    ]);
+  });
+
+  it("initializes only jig-data when the selected repository has no portable branch", async () => {
+    const { remote, remoteUrl } = await fixture({
+      dataBranch: false,
+    });
+    const port = server?.port;
+    if (port === undefined) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+    const { port: filesystemPort } = fakeFilesystem();
+    const effects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+
+    const acquired = await acquireAndroidPortableRepository(
+      effects,
+      remoteUrl,
+      async () => USER,
+      () => DATASET_ID,
+    );
+    expect(acquired).toMatchObject({
+      dataset_id: DATASET_ID,
+      tasks: [],
+      recurrences: [],
+    });
+    expect(
+      await runGit(root ?? "", [
+        "--git-dir",
+        remote,
+        "show",
+        "main:README.md",
+      ]),
+    ).toBe("Unrelated repository content");
+    expect(
+      await runGit(root ?? "", [
+        "--git-dir",
+        remote,
+        "show",
+        "jig-data:format.json",
+      ]),
+    ).toContain(DATASET_ID);
+  });
+
+  it("refuses true portable-history divergence instead of auto-merging", async () => {
+    const { remote, remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+    const { port: filesystemPort } = fakeFilesystem();
+    const effects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const credential = async (): Promise<string> => USER;
+    await cloneAndroidPortableRepository(
+      effects,
+      remoteUrl,
+      credential,
+    );
+
+    const localTask = task(
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4010",
+      "Local divergent",
+      0,
+    );
+    await commitAndroidCanonicalState(
+      effects,
+      {
+        revision: 1,
+        tasks: [localTask],
+        recurrences: [],
+      },
+      DATASET_ID,
+    );
+
+    const desktop = join(root ?? "", "divergent-desktop");
+    await runGit(root ?? "", [
+      "clone",
+      "--branch",
+      "jig-data",
+      remote,
+      desktop,
+    ]);
+    await runGit(desktop, ["config", "user.name", "Fixture"]);
+    await runGit(desktop, [
+      "config",
+      "user.email",
+      "fixture@example.invalid",
+    ]);
+    const remoteTask = task(
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4011",
+      "Remote divergent",
+      0,
+    );
+    await writeSnapshot(
+      desktop,
+      serializeSnapshot([remoteTask], DATASET_ID),
+    );
+    await runGit(desktop, ["add", "-A"]);
+    await runGit(desktop, [
+      "commit",
+      "-m",
+      "Remote divergent update",
+    ]);
+    await runGit(desktop, ["push", "origin", "jig-data"]);
+
+    await expect(
+      synchronizeAndroidPortableRepository(
+        effects,
+        DATASET_ID,
+        credential,
+      ),
+    ).resolves.toMatchObject({
+      state: "diverged",
+      snapshot: null,
+    });
+    expect(
+      (
+        await reopenAndroidPortableRepository(
+          effects,
+          DATASET_ID,
+        )
+      ).tasks,
+    ).toStrictEqual([localTask]);
   });
 
   it("reports authentication failure without putting credentials in the remote URL", async () => {
