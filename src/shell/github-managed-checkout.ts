@@ -60,7 +60,7 @@ export function managedGitHubRepositoryPath(
 }
 
 function selectedRepositorySlug(
-  repository: GitHubRepositorySelection,
+  repository: Pick<GitHubRepositorySelection, "owner" | "name">,
 ): string {
   return `${repository.owner}/${repository.name}`.toLowerCase();
 }
@@ -144,7 +144,7 @@ export async function createGitHubAskpassHelper(): Promise<GitHubAskpassHelper> 
 function managedGitHubSelectionFromPath(
   repositoryPath: string,
   home = homedir(),
-): GitHubRepositorySelection | null {
+): Pick<GitHubRepositorySelection, "owner" | "name"> | null {
   const root = resolve(
     home,
     ".local",
@@ -168,7 +168,6 @@ function managedGitHubSelectionFromPath(
   }
   try {
     return {
-      id: 1,
       owner: validateGitHubSegment(segments[0] ?? "", "owner"),
       name: validateGitHubSegment(segments[1] ?? "", "repository name"),
     };
