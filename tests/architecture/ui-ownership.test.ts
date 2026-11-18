@@ -110,7 +110,9 @@ describe("UI ownership architecture", () => {
     expect(css).not.toContain(".jig-sidebar");
     expect(css).not.toContain(".jig-week-column-selected");
     expect(css).not.toContain(".jig-week-add-task");
-    expect(css).not.toContain(".jig-task-drag-handle");
+    expect(css).toContain(".jig-task-drag-handle");
+    expect(css).toContain(".jig-task-drop-indicator");
+    expect(css).not.toContain("dashed var(--jig-state-drag-border)");
     expect(css).not.toContain(".jig-mobile-quick-add");
     expect(css).not.toContain(".jig-planner-selected-date-heading");
     expect(css).not.toContain(".jig-task-inspector");
@@ -264,6 +266,7 @@ describe("UI ownership architecture", () => {
     expect(taskRow).toContain('icon="copy"');
     expect(taskRow).toContain('icon="moreHorizontal"');
     expect(taskRow).toContain('icon="clock"');
+    expect(taskRow).toContain('<JigIcon name="drag"');
 
     expect(icons).toContain("satisfies Record<JigIconName, NamespacedIconName>");
     expect(icons).not.toContain("as IconName");
@@ -281,7 +284,13 @@ describe("UI ownership architecture", () => {
     expect(css).toContain(".jig-app-shell {");
     expect(css).toContain("padding: 0;");
     expect(css).toContain("height: 2.75rem;");
-    expect(css).toContain("height: 3.5rem;");
+    expect(css).toContain(".jig-app-header-narrow {");
+    expect(css).toContain("position: sticky;");
+    expect(css).toContain("padding: env(safe-area-inset-top, 0px) 0 0;");
+    expect(css).toContain(".jig-header-mobile-application-row {");
+    expect(css).toContain(".jig-header-mobile-temporal-row {");
+    expect(css).toContain("min-height: 44px;");
+    expect(css).not.toContain("height: 3.5rem;");
     expect(css).toContain("@media (max-width: 72.999rem)");
     expect(css).not.toContain("@media (max-width: 75.999rem)");
     expect(css).not.toContain(".jig-planner-narrow");
@@ -308,6 +317,7 @@ describe("UI ownership architecture", () => {
     const settings = source("ui/src/settings.tsx");
     const header = source("ui/src/planner-header.tsx");
     const reminder = source("ui/src/reminder.tsx");
+    const browserNotifications = source("ui/src/browser-notifications.ts");
 
     expect(settings).toContain("<Selector");
     expect(settings).toContain('label="Theme"');
@@ -320,11 +330,15 @@ describe("UI ownership architecture", () => {
     expect(app).toContain("onThemePresetChange={changeThemePreset}");
     expect(app).toContain("onAppearanceModeChange={changeAppearanceMode}");
 
-    expect(reminder).toContain('new Notification("Jig reminder"');
+    expect(reminder).toContain('displayBrowserNotification("Jig reminder"');
+    expect(reminder).toContain("export function useReminderClock(): Date");
+    expect(reminder).toContain('document.visibilityState === "visible"');
+    expect(reminder).not.toContain("new Notification(");
     expect(reminder).not.toContain("useToast");
     expect(reminder).not.toContain("showToast");
     expect(reminder).not.toContain("jig-reminder-toast-content");
-    expect(reminder).not.toContain('document.visibilityState === "visible"');
+    expect(browserNotifications).toContain("registration.showNotification(title, options)");
+    expect(browserNotifications).toContain('navigator.serviceWorker.register(SERVICE_WORKER_URL)');
   });
 
   it("keeps Planner and Task workspace state singular", () => {
@@ -362,9 +376,10 @@ describe("UI ownership architecture", () => {
     expect(week).not.toContain("jig-planner-narrow");
     expect(week).not.toContain("SortableTaskRow");
 
-    expect(list).toContain("<SortableTaskRow");
-    expect(list).not.toContain("<TaskRow");
+    expect(list).toContain("<DraggableTaskRow");
+    expect(list).not.toContain("<SortableTaskRow");
     expect(list).not.toContain("isSortable");
+    expect(list).toContain("useTaskDragState");
 
     expect(editor).not.toContain("optionalText");
     expect(editor).not.toContain("normalizeOptionalText");
@@ -374,12 +389,13 @@ describe("UI ownership architecture", () => {
     expect(history).toContain("<TaskActionMenu");
     expect(taskRow).toContain('icon="moreHorizontal"');
     expect(taskRow).toContain('icon="clock"');
-    expect(taskRow).not.toContain("dragHandleRef");
-    expect(taskRow).not.toContain("pointerStart");
-    expect(taskRow).not.toContain("bodyPointerProps");
-    expect(taskRow).toContain("preventActivation: preventTaskDragActivation");
-    expect(taskRow).toContain('data-jig-drag-excluded="true"');
-    expect(taskRow).toContain('event.pointerType === "touch"');
+    expect(taskRow).toContain('import {\n  Draggable,');
+    expect(taskRow).toContain("dragProvided.dragHandleProps");
+    expect(taskRow).toContain('className="jig-task-drag-handle"');
+    expect(taskRow).toContain('<JigIcon name="drag"');
+    expect(taskRow).not.toContain("@dnd-kit/");
+    expect(taskRow).not.toContain("PointerSensor");
+    expect(taskRow).not.toContain("preventTaskDragActivation");
 
     expect(existsSync("ui/src/date-strip.tsx")).toBe(false);
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
