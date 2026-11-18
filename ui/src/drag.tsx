@@ -206,14 +206,18 @@ export function DateDropZone({
           ]
             .filter(Boolean)
             .join(" ")}
-          data-date={date}
         >
           {children}
           {emptyIntent ? (
-            <span
-              className="jig-task-drop-indicator jig-task-drop-indicator-empty"
-              aria-hidden="true"
-            />
+            <>
+              <span
+                className="jig-task-drop-indicator jig-task-drop-indicator-empty"
+                aria-hidden="true"
+              />
+              <span className="jig-visually-hidden">
+                Drop task at start of {date}
+              </span>
+            </>
           ) : null}
           {provided.placeholder}
         </div>
