@@ -14,6 +14,12 @@ import {
   taskByTitle,
 } from "./helpers";
 
+declare global {
+  interface Window {
+    __jigTouchDragTarget?: EventTarget;
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await resetCanonicalTasks(page);
@@ -129,10 +135,7 @@ async function touchDrag(
     const payload = { type, x: point.x, y: point.y };
     if (type === "touchstart") {
       await source.evaluate((element, start) => {
-        const dragWindow = window as Window & {
-          __jigTouchDragTarget?: EventTarget;
-        };
-        dragWindow.__jigTouchDragTarget = element;
+        window.__jigTouchDragTarget = element;
         const touch = new Touch({
           identifier: 1,
           target: element,
@@ -162,10 +165,7 @@ async function touchDrag(
     }
 
     await page.evaluate((next) => {
-      const dragWindow = window as Window & {
-        __jigTouchDragTarget?: EventTarget;
-      };
-      const target = dragWindow.__jigTouchDragTarget;
+      const target = window.__jigTouchDragTarget;
       if (!(target instanceof Element)) {
         throw new Error("Synthetic touch drag target is unavailable");
       }
@@ -195,7 +195,7 @@ async function touchDrag(
         }),
       );
       if (ending) {
-        delete dragWindow.__jigTouchDragTarget;
+        delete window.__jigTouchDragTarget;
       }
     }, payload);
   };
