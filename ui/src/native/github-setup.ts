@@ -24,6 +24,7 @@ import {
   acquireAndroidPortableRepository,
   androidPortableHead,
   createAndroidGitEffects,
+  removeAndroidManagedCheckout,
 } from "./git";
 import { createAndroidGitHubFetch } from "./github-fetch";
 import {
@@ -80,27 +81,42 @@ const onboarding = new GitHubOnboardingController<string>({
     ),
   acquire_repository: async (repository, credential) => {
     const effects = createAndroidGitEffects();
-    const snapshot = await acquireAndroidPortableRepository(
-      effects,
-      repository.clone_url,
-      async () => credential.access_token,
-    );
-    const head = await androidPortableHead(effects);
-    const database = await initializeNativeDatabase(
-      ANDROID_DATABASE_PATH,
-      snapshot.dataset_id,
-    );
+    let database:
+      Awaited<ReturnType<typeof initializeNativeDatabase>> | null = null;
     try {
+      const snapshot = await acquireAndroidPortableRepository(
+        effects,
+        repository.clone_url,
+        async () => credential.access_token,
+      );
+      const head = await androidPortableHead(effects);
+      database = await initializeNativeDatabase(
+        ANDROID_DATABASE_PATH,
+        snapshot.dataset_id,
+      );
       await adoptCanonicalSnapshot(
         database,
         snapshot.tasks,
         snapshot.recurrences,
         head,
       );
+      return `app-private://${ANDROID_REPOSITORY_ROOT}`;
+    } catch (error) {
+      try {
+        await Filesystem.deleteFile({
+          directory: Directory.Data,
+          path: ANDROID_DATABASE_PATH,
+        });
+      } catch {
+        // The database may not have been created yet.
+      }
+      await removeAndroidManagedCheckout(effects);
+      throw error;
     } finally {
-      await database.close();
+      if (database !== null) {
+        await database.close();
+      }
     }
-    return `app-private://${ANDROID_REPOSITORY_ROOT}`;
   },
 });
 
@@ -115,8 +131,19 @@ async function databaseExists(): Promise<boolean> {
       path: ANDROID_DATABASE_PATH,
     });
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (
+      error !== null &&
+      typeof error === "object" &&
+      "code" in error &&
+      (
+        error.code === "OS-PLUG-FILE-0008" ||
+        error.code === "OS-PLUG-FILE-0011"
+      )
+    ) {
+      return false;
+    }
+    throw error;
   }
 }
 
