@@ -78,7 +78,6 @@ describe("GitHub App public-client primitives", () => {
   it("exchanges an authorization code with PKCE and resolves the GitHub user id", async () => {
     const request = await createGitHubAuthorizationRequest(
       DESKTOP_REGISTRATION,
-      DESKTOP_REGISTRATION.callback_url,
     );
     const calls: Array<{ url: string; body: string | null }> = [];
     const fetcher: GitHubFetch = async (input, init) => {
