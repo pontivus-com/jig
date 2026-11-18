@@ -78,6 +78,7 @@ interface DeviceState {
   readonly authorization: GitHubDeviceAuthorization;
   readonly retry_after_seconds: number;
   readonly started_at_ms: number;
+  readonly next_poll_at_ms: number;
 }
 
 export class GitHubOnboardingController {
@@ -119,10 +120,12 @@ export class GitHubOnboardingController {
       this.dependencies.start_device_authorization ??
       startGitHubDeviceAuthorization
     )(registration);
+    const startedAtMs = this.now().getTime();
     this.deviceState = {
       authorization: device,
       retry_after_seconds: device.interval,
-      started_at_ms: this.now().getTime(),
+      started_at_ms: startedAtMs,
+      next_poll_at_ms: startedAtMs + device.interval * 1000,
     };
     this.authorization = {
       mode: "device",
@@ -287,13 +290,32 @@ export class GitHubOnboardingController {
     if (device === null) {
       return;
     }
+    const nowMs = this.now().getTime();
     const elapsedSeconds =
-      (this.now().getTime() - device.started_at_ms) / 1000;
+      (nowMs - device.started_at_ms) / 1000;
     if (elapsedSeconds >= device.authorization.expires_in) {
       this.deviceState = null;
       this.phase = "idle";
       this.authorization = null;
       this.error = "GitHub device authorization expired";
+      return;
+    }
+
+    if (nowMs < device.next_poll_at_ms) {
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((device.next_poll_at_ms - nowMs) / 1000),
+      );
+      this.deviceState = {
+        ...device,
+        retry_after_seconds: retryAfterSeconds,
+      };
+      if (this.authorization !== null) {
+        this.authorization = {
+          ...this.authorization,
+          retry_after_seconds: retryAfterSeconds,
+        };
+      }
       return;
     }
 
@@ -330,6 +352,7 @@ export class GitHubOnboardingController {
     this.deviceState = {
       ...device,
       retry_after_seconds: result.retry_after_seconds,
+      next_poll_at_ms: nowMs + result.retry_after_seconds * 1000,
     };
     if (this.authorization !== null) {
       this.authorization = {
