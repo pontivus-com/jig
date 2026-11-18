@@ -11,9 +11,13 @@ permissions:
 jobs:
   generate-v106-theme-artifacts:
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
@@ -21,23 +25,20 @@ jobs:
         run: bun install
       - name: Generate all Astryx theme artifacts
         run: bun run theme:build
-      - name: Upload generated theme artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: v106-generated-theme-artifacts
-          if-no-files-found: error
-          path: |
-            bun.lock
-            ui/src/jig.js
-            ui/src/jig.css
-            ui/src/jig.css.d.ts
-            ui/src/jig.d.ts
-            ui/src/jig.variants.d.ts
-            ui/src/themes/*.js
-            ui/src/themes/*.css
-            ui/src/themes/*.css.d.ts
-            ui/src/themes/*.d.ts
-            ui/src/themes/*.variants.d.ts
+      - name: Commit generated v1.0.6 theme artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add bun.lock ui/src/jig.js ui/src/jig.css ui/src/jig.css.d.ts ui/src/jig.d.ts ui/src/jig.variants.d.ts
+          git add 'ui/src/themes/*.js' 'ui/src/themes/*.css' 'ui/src/themes/*.css.d.ts' 'ui/src/themes/*.d.ts' 'ui/src/themes/*.variants.d.ts'
+          if git diff --cached --quiet; then
+            echo "Generated artifacts already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build: regenerate v1.0.6 theme artifacts"
+          git push origin "HEAD:${{ github.head_ref }}"
 
   verify:
     runs-on: ubuntu-latest
