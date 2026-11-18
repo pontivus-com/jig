@@ -12,26 +12,17 @@ import {
   type ServiceStatus,
 } from "./http";
 import { createBootstrapHttpHandler } from "./bootstrap-http";
+import { GitHubDeviceFlowSession } from "./github-device-flow";
 import { GitHubOnboardingController } from "./github-onboarding";
+import { GitHubReconnectController } from "./github-reconnect";
 import { GITHUB_APP_REGISTRATION } from "./github-registration";
+import { createGitHubHttpHandler } from "./github-http";
+import { createManagedGitHubTransport } from "./github-transport";
 import {
-  GitHubAuthError,
-  refreshGitHubCredential,
-} from "./github-auth";
-import {
-  assertManagedGitHubSynchronizationRemote,
-  createGitHubAskpassHelper,
-  githubGitEnvironment,
-  isManagedGitHubRepositoryPath,
-} from "./github-managed-checkout";
-import {
-  loadCurrentGitHubCredential,
+  assertSecretServiceAvailable,
   storeGitHubCredential,
 } from "./secret-service";
-import {
-  createSyncController,
-  SyncAuthenticationError,
-} from "./sync";
+import { createSyncController } from "./sync";
 import {
   defaultConfigPath,
   loadConfigIfPresent,
@@ -55,13 +46,11 @@ function writeToken(): string {
 function createStatus(
   config: JigConfig,
   repositoryStatus: RepositoryStatus,
-  githubReconnectAvailable: boolean,
 ): ServiceStatus {
   return {
     ready: true,
     repository_path: config.repository_path,
     repository_status: repositoryStatus,
-    github_reconnect_available: githubReconnectAvailable,
   };
 }
 
@@ -85,74 +74,28 @@ async function runConfigured(config: JigConfig): Promise<void> {
     resolve(config.repository_path, ".jig", "local", "jig.sqlite"),
   );
 
-  const githubAskpass = isManagedGitHubRepositoryPath(
+  const managedGitHub = await createManagedGitHubTransport(
     config.repository_path,
-  )
-    ? await createGitHubAskpassHelper()
-    : null;
-  const getGitHubNetworkEnvironment =
-    githubAskpass === null
-      ? undefined
-      : async (): Promise<Readonly<Record<string, string>>> => {
-          await assertManagedGitHubSynchronizationRemote(
-            config.repository_path,
-          );
-          let credential = await loadCurrentGitHubCredential();
-          if (credential === null) {
-            throw new SyncAuthenticationError(
-              "GitHub credential is unavailable; reconnect GitHub",
-            );
-          }
-
-          if (credential.access_token_expires_at !== null) {
-            const expiryMs = Date.parse(
-              credential.access_token_expires_at,
-            );
-            if (!Number.isFinite(expiryMs)) {
-              throw new SyncAuthenticationError(
-                "Stored GitHub access-token expiry is invalid; reconnect GitHub",
-              );
-            }
-            if (expiryMs - Date.now() <= 5 * 60 * 1000) {
-              try {
-                credential = await refreshGitHubCredential(
-                  GITHUB_APP_REGISTRATION,
-                  credential,
-                );
-                await storeGitHubCredential(credential);
-              } catch (error) {
-                if (error instanceof GitHubAuthError) {
-                  throw new SyncAuthenticationError(
-                    "GitHub authorization expired; reconnect GitHub",
-                  );
-                }
-                throw error;
-              }
-            }
-          }
-
-          return githubGitEnvironment(
-            githubAskpass.path,
-            credential.access_token,
-          );
-        };
-
+    { registration: GITHUB_APP_REGISTRATION },
+  );
   const githubReconnect =
-    githubAskpass === null
+    managedGitHub === null
       ? undefined
-      : new GitHubOnboardingController({
-          registration: GITHUB_APP_REGISTRATION,
-          config_path: defaultConfigPath(),
-          http_port: config.http_port,
-          on_configured: () => undefined,
-        });
+      : new GitHubReconnectController(
+          new GitHubDeviceFlowSession({
+            registration: GITHUB_APP_REGISTRATION,
+            assert_credential_store: assertSecretServiceAvailable,
+            store_credential: storeGitHubCredential,
+          }),
+        );
 
-  const sync = createSyncController(db, {
-    repository_path: config.repository_path,
-    ...(getGitHubNetworkEnvironment === undefined
+  const sync = createSyncController(
+    db,
+    { repository_path: config.repository_path },
+    managedGitHub === null
       ? {}
-      : { get_network_environment: getGitHubNetworkEnvironment }),
-  });
+      : { synchronize: managedGitHub.synchronize },
+  );
 
   const startupNow = new Date();
   await rollForwardOutstandingInDatabase(
@@ -192,8 +135,8 @@ async function runConfigured(config: JigConfig): Promise<void> {
       rolloverTimer = null;
     }
     sync.stop();
-    if (githubAskpass !== null) {
-      await githubAskpass.dispose();
+    if (managedGitHub !== null) {
+      await managedGitHub.dispose();
     }
     await db.close();
     await lease.release();
@@ -209,32 +152,33 @@ async function runConfigured(config: JigConfig): Promise<void> {
   await sync.start();
   scheduleNextDayBoundary();
 
-  const handler = createHttpHandler({
+  const token = writeToken();
+  const genericHandler = createHttpHandler({
     db,
-    write_token: writeToken(),
+    write_token: token,
     repository_path: config.repository_path,
     ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
     now: () => new Date().toISOString(),
     create_id: () => crypto.randomUUID(),
-    get_status: () =>
-      createStatus(
-        config,
-        sync.status(),
-        githubReconnect !== undefined,
-      ),
+    get_status: () => createStatus(config, sync.status()),
     get_diagnostics: () => createDiagnostics(config, sync.status()),
     trigger_sync: sync.trigger,
-    ...(githubReconnect === undefined
-      ? {}
-      : { github_reconnect: githubReconnect }),
     ensure_current_day_rollover: ensureCurrentDayRollover,
     on_task_mutation: sync.notifyMutation,
+  });
+  const githubHandler = createGitHubHttpHandler({
+    write_token: token,
+    is_configured: () => true,
+    ...(githubReconnect === undefined
+      ? {}
+      : { reconnect: githubReconnect }),
   });
 
   Bun.serve({
     hostname: "127.0.0.1",
     port: config.http_port,
-    fetch: handler,
+    fetch: async (request) =>
+      (await githubHandler(request)) ?? genericHandler(request),
   });
 }
 
@@ -243,29 +187,47 @@ async function runBootstrap(): Promise<void> {
   const configured = new Promise<JigConfig>((resolvePromise) => {
     resolveConfigured = resolvePromise;
   });
+  let isConfigured = false;
   const token = writeToken();
+
   const onConfigured = (config: JigConfig): void => {
+    isConfigured = true;
     resolveConfigured?.(config);
     resolveConfigured = null;
   };
+
+  const deviceFlow = new GitHubDeviceFlowSession({
+    registration: GITHUB_APP_REGISTRATION,
+    assert_credential_store: assertSecretServiceAvailable,
+    store_credential: storeGitHubCredential,
+  });
   const githubOnboarding = new GitHubOnboardingController({
     registration: GITHUB_APP_REGISTRATION,
+    device_flow: deviceFlow,
     config_path: defaultConfigPath(),
     http_port: DEFAULT_HTTP_PORT,
+  });
+
+  const bootstrapHandler = createBootstrapHttpHandler({
+    write_token: token,
+    ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
+    config_path: defaultConfigPath(),
+    http_port: DEFAULT_HTTP_PORT,
+    is_configured: () => isConfigured,
+    on_configured: onConfigured,
+  });
+  const githubHandler = createGitHubHttpHandler({
+    write_token: token,
+    onboarding: githubOnboarding,
+    is_configured: () => isConfigured,
     on_configured: onConfigured,
   });
 
   const server = Bun.serve({
     hostname: "127.0.0.1",
     port: DEFAULT_HTTP_PORT,
-    fetch: createBootstrapHttpHandler({
-      write_token: token,
-      ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
-      config_path: defaultConfigPath(),
-      http_port: DEFAULT_HTTP_PORT,
-      on_configured: onConfigured,
-      github_onboarding: githubOnboarding,
-    }),
+    fetch: async (request) =>
+      (await githubHandler(request)) ?? bootstrapHandler(request),
   });
 
   const nextConfig = await configured;
