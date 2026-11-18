@@ -16,7 +16,7 @@ A Jig release `X.Y.Z` is valid only when **all** of these statements are true:
 6. The release PR contains only the release-metadata files allowed by `scripts/verify-release.ts` and passes the `release/vX.Y.Z` PR metadata gate.
 7. The release PR is merged to `master`; that exact merged commit is the release candidate.
 8. The permanent `Release` workflow detects that commit as a release transition/finalization and runs the release path. A workflow that exits with `should_release=false` is a successful **no-op**, not a release.
-9. The complete permanent release certification succeeds, including native arm64 certification and packaged-bundle smoke verification.
+9. The complete permanent release certification succeeds, including native arm64 certification, non-publishing Android certification and packaged-bundle smoke verification.
 10. Immutable tag `vX.Y.Z` points to the exact certified release commit.
 11. A non-draft GitHub Release for `vX.Y.Z` is published.
 12. The GitHub Release contains every asset in the exact asset matrix below, and `SHA256SUMS` verifies the published release payload.
@@ -94,13 +94,14 @@ The release workflow must run, not skip:
 
 - release metadata verification;
 - native Linux arm64 verification;
+- non-publishing Android source/build certification for the exact release commit, including application/version identity, FLOSS dependency gates and F-Droid candidate lint;
 - typecheck and core/integration tests;
 - production UI build;
 - browser acceptance where defined by the workflow;
 - installer/shell lifecycle gates;
 - packaging for Linux x64 and arm64;
 - package checksum verification;
-- packaged x64/arm64 installation smoke tests.
+- packaged x64/arm64 installation smoke tests covering both configured `--repo` automation and fresh no-repository bootstrap mode.
 
 ### 5. Publish immutable release artifacts
 
@@ -121,7 +122,7 @@ Before stating that `X.Y.Z` is released, verify all of the following directly:
 - [ ] `master:package.json` reports `X.Y.Z`;
 - [ ] `CHANGELOG.md` has the dated `[X.Y.Z]` section and empty `[Unreleased]`;
 - [ ] `docs/releases/vX.Y.Z.md` exists;
-- [ ] permanent Release workflow completed successfully **with the release jobs executed rather than skipped**;
+- [ ] permanent Release workflow completed successfully **with the release jobs executed rather than skipped**, including Android certification;
 - [ ] tag `vX.Y.Z` exists and targets the certified release commit;
 - [ ] GitHub Release `vX.Y.Z` is published and not draft;
 - [ ] `jig-linux-x64.tar.gz` exists;
@@ -150,6 +151,8 @@ The release bundles carry the pinned Bun runtime for the selected architecture p
 | `jig-install.sh` | Architecture-selecting bootstrap that downloads, verifies and delegates to the canonical bundled `scripts/install.sh`. |
 
 GitHub-generated source archives remain provenance artifacts; they are not the primary supported installation channel.
+
+Android is deliberately not part of the GitHub Release asset matrix. For v1.1.0 the first public Android distribution target is F-Droid. The permanent Release workflow certifies the exact Android source/build state before Linux publication, but it does not upload an APK and does not publish to F-Droid. The external F-Droid submission is derived from `distribution/fdroid/metadata/com.pontivus.jig.yml` only after the immutable `v1.1.0` source tag exists. Android availability must not be described as public until F-Droid has actually published `com.pontivus.jig`.
 
 ## Bundle contents
 
