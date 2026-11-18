@@ -37,6 +37,11 @@ export interface GitHubSetupSnapshot {
       }
     | null;
   readonly grant_access_url: string | null;
+  readonly manage_access: readonly {
+    readonly installation_id: number;
+    readonly account_login: string;
+    readonly manage_url: string;
+  }[];
   readonly repositories: readonly GitHubSetupRepository[];
   readonly error: string | null;
 }
@@ -80,6 +85,26 @@ function asGitHubSetupSnapshot(value: unknown): GitHubSetupSnapshot {
   ) {
     throw new TypeError("Jig setup service returned invalid GitHub state");
   }
+
+  if (!Array.isArray(payload.manage_access)) {
+    throw new TypeError("Jig setup service returned invalid GitHub access state");
+  }
+  const manageAccess = payload.manage_access.map((entry) => {
+    const access = asObject(entry);
+    if (
+      typeof access.installation_id !== "number" ||
+      !Number.isInteger(access.installation_id) ||
+      typeof access.account_login !== "string" ||
+      typeof access.manage_url !== "string"
+    ) {
+      throw new TypeError("Jig setup service returned invalid GitHub access link");
+    }
+    return {
+      installation_id: access.installation_id,
+      account_login: access.account_login,
+      manage_url: access.manage_url,
+    };
+  });
 
   const repositories = payload.repositories.map((entry) => {
     const repository = asObject(entry);
@@ -142,6 +167,7 @@ function asGitHubSetupSnapshot(value: unknown): GitHubSetupSnapshot {
       typeof payload.grant_access_url === "string"
         ? payload.grant_access_url
         : null,
+    manage_access: manageAccess,
     repositories,
     error: typeof payload.error === "string" ? payload.error : null,
   };
