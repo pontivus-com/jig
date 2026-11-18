@@ -345,7 +345,7 @@ export class GitHubOnboardingController {
       !Number.isInteger(port) ||
       port <= 0
     ) {
-      throw new Error("GitHub Linux callback URL is not a loopback HTTP URL");
+      throw new Error("GitHub Linux Redirect URI is not a loopback HTTP URL");
     }
 
     this.callbackServer = Bun.serve({
