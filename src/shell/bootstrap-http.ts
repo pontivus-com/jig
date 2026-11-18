@@ -69,7 +69,9 @@ async function parseLocalRepositoryRequest(
     );
   }
 
-  const object = value as Record<string, unknown>;
+  const object: Record<string, unknown> = Object.fromEntries(
+    Object.entries(value),
+  );
   if (
     Object.keys(object).length !== 1 ||
     typeof object.repository_path !== "string"
