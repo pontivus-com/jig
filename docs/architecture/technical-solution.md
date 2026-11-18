@@ -134,7 +134,7 @@ A repo-wide architecture guard must scan production source for the same violatio
 
 Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to active destination (`planner | history | settings`), displayed Planner week start, selected Task/workspace draft, transient drag preview, one local `ThemePreset` and one local `AppearanceMode`. There is no selected-day state. Theme family and appearance mode are presentation state only and never part of canonical Task, SQLite, HTTP protocol or Git-synchronized planning data. Planner and History are queries over the same canonical Task set; desktop and narrow Planner compositions are presentations of the same Planner state, not parallel view authorities.
 
-**Local HTTP:** bind only to `127.0.0.1`. The default port is **47831**; `install.sh --port <1024..65535>` is the only supported override and persists the chosen value in local configuration. The HTTP API is `/api/v1`; reads return canonical Task values plus the current SQLite revision, and mutations return success only after the SQLite transaction commits. Repository status is exactly `local-only | pending | retrying | synchronized | sync-issue`. The user can continue editing regardless of repository synchronization status.
+**Local HTTP:** bind only to `127.0.0.1`. The default port is **47831**; `install.sh --port <1024..65535>` is the only supported override and persists the chosen value in local configuration. The HTTP API is `/api/v1`; reads return canonical Task values plus the current SQLite revision, and mutations return success only after the SQLite transaction commits. v1.1 repository status has one structured owner that distinguishes the local Git snapshot from remote synchronization; the compact `Local only | Pending | Retrying | Synced | Sync issue` header label is derived from that structure rather than stored independently. The user can continue editing regardless of either repository state.
 
 **Idle behavior:** One service, no worker farm, no browser needed for task storage/sync, no polling-heavy UI while closed. Coalesce edits into short Git bursts, use a timer/backoff instead of permanent busy loops, and never wake a job per drag animation frame. Resource limits are verified in a real idle/workload test rather than inferred from technology choice.
 
@@ -172,8 +172,39 @@ The local configuration file is **`~/.config/jig/config.json`** and contains onl
 
 The browser API serializes canonical core types directly; do not create transport DTO classes or a second Task/command schema.
 
+The v1.1 operational repository status is a shell-owned typed contract, not domain state and not a DTO hierarchy:
+
+~~~ts
+type LocalGitSnapshotState = "pending" | "committed" | "issue";
+
+type RemoteGitSynchronization =
+  | {
+      readonly state: "not-configured";
+      readonly remote_name: null;
+      readonly remote_location: null;
+    }
+  | {
+      readonly state: "pending" | "retrying" | "synchronized" | "sync-issue";
+      readonly remote_name: string;
+      readonly remote_location: string;
+    };
+
+interface RepositorySynchronizationStatus {
+  readonly local_git: LocalGitSnapshotState;
+  readonly remote: RemoteGitSynchronization;
+}
+~~~
+
+`local_git = "committed"` means the current canonical SQLite revision has a corresponding successfully committed Jig portable snapshot at the local `jig-data` ref. A successful local commit remains committed even if the later remote push is pending, retrying or failing. `local_git = "pending"` means the current revision has not yet reached that local Git commit boundary. `local_git = "issue"` is used only when the current export/commit phase itself has failed; a remote transport failure must never downgrade local Git state.
+
+Remote identity is observed from the same Git-selected synchronization remote used by the adapter. The adapter exposes only the selected remote name plus a **credential-free display location** derived from its current push target. Strip userinfo/password/token/query/fragment material and never surface askpass/environment credentials. This value is informational presentation data only: it is not persisted in `JigConfig`, SQLite planning state or portable records. When no unambiguous synchronization remote exists, the remote state is `not-configured`; Jig does not invent or persist one.
+
+Remote `synchronized` is valid only after the current locally committed Jig head has been successfully pushed to the selected remote. If another local mutation becomes current before/while that push completes, the presentation returns to pending rather than claiming the new revision is synchronized. The existing retry/backoff outcomes apply only to the remote stage once a local commit exists.
+
+The compact header repository label is a pure presentation projection of `RepositorySynchronizationStatus`: local Git issue → Sync issue; local Git pending → Pending; committed + no remote → Local only; committed + remote pending/retrying/sync-issue/synchronized → the corresponding Pending/Retrying/Sync issue/Synced label. Settings renders the two constituent facts separately.
+
 - `GET /api/v1/tasks` → `{ revision, tasks }`, where `tasks` is the complete canonical Task set.
-- `GET /api/v1/status` → service readiness, selected repository path, and one synchronization status from `local-only | pending | retrying | synchronized | sync-issue`.
+- `GET /api/v1/status` → service readiness, selected repository path, and one structured `RepositorySynchronizationStatus` containing local Git snapshot state plus read-only remote identity/synchronization state.
 - `GET /api/v1/diagnostics` → sanitized **Jig** health only: service health, SQLite availability/schema version, repository accessibility, portable-format validity and coarse adapter health. It contains no Git topology repair model, credentials, Task content or secrets.
 - `POST /api/v1/commands` accepts one canonical Task command plus `expected_revision`.
 - `POST /api/v1/sync` requests an immediate synchronization attempt through the existing serialized repository worker and returns HTTP **202** with the current synchronization status.
@@ -916,6 +947,8 @@ Pinned Astryx evidence:
 
 **Functional owner:** JIG-106-FR-01.
 
+v1.1 adds one heading-ownership refinement without changing this width owner: History/Settings destination title and subtitle are rendered exactly once by the application header. Their bounded 50rem content surfaces begin with semantic page content and contain no duplicate page-level heading block. The versioned v1.1 solution specifies the exact header composition and accessibility semantics.
+
 The 50rem budget belongs continuously to the History/Settings screen content. It is **not** a desktop-only rule and it is unrelated to the Planner's 73rem semantic composition breakpoint.
 
 1. Keep the existing base owner:
@@ -1527,6 +1560,8 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
 | JIG-FR-22 appearance | JIG-106-SD-02 through SD-05 + SD-07 | One 13-preset registry + independent System/Light/Dark mode fully re-theme all governed surfaces/states and in-app branding from Settings only, without Task/Git mutation |
 | JIG-FR-23 bounded recurrence | §4.2.1 recurrence core + schema v3 + portable format v2 | One shared series owns recurrence configuration; materialized Tasks own occurrence-local content/lifecycle; Repeat performs membership reconciliation from the invoking immutable slot without rewriting retained siblings; Stop repeating keeps the invoking Task, preserves completed History and removes every other outstanding series occurrence |
+| JIG-110-FR-30 secondary heading ownership | v1.1 SD-40 + UI solution | Application header owns the sole History/Settings title+subtitle; body-level duplicate heading is removed |
+| JIG-110-FR-31 local/remote Git transparency | structured repository status above + v1.1 SD-41 | Current revision's local Git commit state is distinct from credential-free configured remote identity and remote synchronization state; compact status is derived |
 
 ### 10.1 Test boundaries
 
@@ -1584,6 +1619,8 @@ The detailed normative solution contracts are [JIG-110-SD-01..39](v1.1-mobile-te
 - narrow header is one sticky application region with the governed two-row Planner composition and Astryx compact menu; the old <=56px total narrow height is removed;
 - Task drag/drop removes dnd-kit and uses the single Pangea list/touch owner with a dedicated handle, explicit destination index, exact insertion indicator and physical-Android proof gate;
 - bounded recurrence is owned by one pure recurrence-date enumerator plus canonical series/occurrence persistence; finite weekly/monthly series materialize ordinary Tasks, reminders copy per occurrence, rollover never shifts the recurrence slot, SQLite advances to schema v3 and portable snapshots advance to format v2 with v1 upgrade acceptance;
+- History/Settings destination title + subtitle have one application-header owner; their content surfaces contain no duplicate page-heading block;
+- repository synchronization presentation has one structured shell owner with separate local Git commit and remote synchronization facts; Settings shows the sanitized actual synchronization remote while the compact header label is derived from the same state;
 - development APKs are local certification artifacts; F-Droid is the first public Android distribution target; no Google Play/iOS release work is part of v1.1.
 
 The complete FR→SD traceability remains owned by the versioned v1.1 functional/technical documents and the complete v1.1 implementation plan.
