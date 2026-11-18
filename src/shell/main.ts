@@ -3,8 +3,8 @@ import {
   PORTABLE_FORMAT_VERSION,
   rollForwardOutstandingInDatabase,
   SQLITE_SCHEMA_VERSION,
-  type RepositoryStatus,
 } from "../persistence/sqlite";
+import type { RepositorySynchronizationStatus } from "../protocol";
 import { openDatabase } from "./sqlite-bun";
 import {
   createHttpHandler,
@@ -45,7 +45,7 @@ function writeToken(): string {
 
 function createStatus(
   config: JigConfig,
-  repositoryStatus: RepositoryStatus,
+  repositoryStatus: RepositorySynchronizationStatus,
 ): ServiceStatus {
   return {
     ready: true,
@@ -56,7 +56,7 @@ function createStatus(
 
 function createDiagnostics(
   config: JigConfig,
-  repositoryStatus: RepositoryStatus,
+  repositoryStatus: RepositorySynchronizationStatus,
 ): Diagnostics {
   return {
     service_healthy: true,
@@ -64,7 +64,9 @@ function createDiagnostics(
     sqlite_schema_version: SQLITE_SCHEMA_VERSION,
     repository_path: config.repository_path,
     portable_format_version: PORTABLE_FORMAT_VERSION,
-    repository_adapter_healthy: repositoryStatus !== "sync-issue",
+    repository_adapter_healthy:
+      repositoryStatus.local_git !== "issue" &&
+      repositoryStatus.remote.state !== "sync-issue",
   };
 }
 
