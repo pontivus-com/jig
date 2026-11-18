@@ -16,8 +16,17 @@ export const catppuccinPalette = {
   textDisabled: ["#9ca0b0", "#6c7086"],
   accent: ["#8839ef", "#cba6f7"],
   info: ["#1e66f5", "#89b4fa"],
-  success: ["#40a02b", "#a6e3a1"],
-  warning: ["#df8e1d", "#f9e2af"],
+  // Latte success/warning are too bright as strong application status fills.
+  // Blend only those Light semantic-role inputs toward Latte text so content
+  // clears Jig's 4.5:1 status-fill floor; named Green/Yellow remain canonical.
+  success: [
+    "color-mix(in srgb, #40a02b 70%, #4c4f69)",
+    "#a6e3a1",
+  ],
+  warning: [
+    "color-mix(in srgb, #df8e1d 55%, #4c4f69)",
+    "#f9e2af",
+  ],
   error: ["#d20f39", "#f38ba8"],
   red: ["#d20f39", "#f38ba8"],
   orange: ["#fe640b", "#fab387"],
