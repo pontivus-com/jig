@@ -296,8 +296,6 @@ Feature CSS must consume these aliases for the product states below and must not
 | `--jig-state-nav-active-text` | Ink 900 `#162034` | Ink 50 `#F9FAFD` | active History/Settings label/icon |
 | `--jig-state-drag-border` | Amber 700 `#B86C00` | Amber 500 `#F59E0B` | transient drag source/drop target outline |
 | `--jig-state-drag-bg` | Amber 50 `#FEF3E7` | Amber 500 mixed 18% into Ink 900 | transient drag destination-area tint only |
-| `--jig-state-reminder-due-border` | Astryx warning border | Astryx warning border | reminder-due Task attention boundary; never delivery state |
-| `--jig-state-reminder-due-bg` | Astryx warning-muted | Astryx warning-muted | subtle reminder-due Task attention surface |
 | `--jig-priority-high` | Astryx error text role | Astryx error text role | High priority leading cue |
 | `--jig-priority-normal` | Ink 500 `#788499` | Ink 400 `#9BA5B8` | Normal priority leading cue |
 | `--jig-priority-low` | Astryx success text role | Astryx success text role | Low priority leading cue |
@@ -567,6 +565,6 @@ Layout-only UI changes do not redefine this brand contract.
 
 ## v1.1 reminder attention and drag precision
 
-Reminder due is a user-attention state, not notification-delivery state. It uses the governed warning family through `--jig-state-reminder-due-border` / `--jig-state-reminder-due-bg` plus accessible non-color text/icon meaning. It must remain distinguishable from High priority, save/sync error, selection, focus and drag.
+Reminder due is a user-attention state, not notification-delivery state. It consumes the existing Astryx warning semantic roles (`--color-border-warning`, `--color-warning-muted`, `--color-text-warning`) plus accessible non-color text/icon meaning; it does not introduce a second theme palette. It must remain distinguishable from High priority, save/sync error, selection, focus and drag.
 
 v1.1 direct manipulation uses `--jig-state-drag-border` for the exact insertion rule and `--jig-state-drag-bg` only as supplementary cross-date/empty-target tint. A whole date-column outline is no longer sufficient placement feedback.
