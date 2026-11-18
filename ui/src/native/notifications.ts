@@ -1,7 +1,7 @@
+import type { PermissionState } from "@capacitor/core";
 import {
   LocalNotifications,
   type LocalNotificationsPlugin,
-  type PermissionState,
 } from "@capacitor/local-notifications";
 import type { Task } from "../../../src/core/task";
 
