@@ -15,20 +15,24 @@ import {
   type GitHubFetch,
 } from "../../src/shell/github-auth";
 
-const REGISTRATION: GitHubAppRegistration = {
-  app_slug: "jig",
-  client_id: "Iv1.fixture",
-  client_secret: "public-fixture-secret",
-  linux_callback_url:
-    "http://127.0.0.1:47832/setup/github/callback",
-  android_callback_url: "com.pontivus.jig://oauth/github",
+const DESKTOP_REGISTRATION: GitHubAppRegistration = {
+  app_slug: "jig-desktop",
+  client_id: "Iv1.desktop-fixture",
+  client_secret: "public-desktop-fixture-secret",
+  callback_url: "http://127.0.0.1:47832/setup/github/callback",
+};
+
+const ANDROID_REGISTRATION: GitHubAppRegistration = {
+  app_slug: "jig-android",
+  client_id: "Iv1.android-fixture",
+  client_secret: "public-android-fixture-secret",
+  callback_url: "com.pontivus.jig://oauth/github",
 };
 
 describe("GitHub App public-client primitives", () => {
   it("creates a PKCE S256 authorization request with offline access", async () => {
     const request = await createGitHubAuthorizationRequest(
-      REGISTRATION,
-      REGISTRATION.linux_callback_url,
+      DESKTOP_REGISTRATION,
     );
     const url = new URL(request.authorization_url);
 
@@ -36,10 +40,10 @@ describe("GitHub App public-client primitives", () => {
       "https://github.com/login/oauth/authorize",
     );
     expect(url.searchParams.get("client_id")).toBe(
-      REGISTRATION.client_id,
+      DESKTOP_REGISTRATION.client_id,
     );
     expect(url.searchParams.get("redirect_uri")).toBe(
-      REGISTRATION.linux_callback_url,
+      DESKTOP_REGISTRATION.callback_url,
     );
     expect(url.searchParams.get("scope")).toBe("offline_access");
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
@@ -50,34 +54,31 @@ describe("GitHub App public-client primitives", () => {
     expect(request.code_verifier).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
-  it("selects the Android callback explicitly from the same GitHub App registration", async () => {
-    const request = await createGitHubAuthorizationRequest(
-      REGISTRATION,
-      REGISTRATION.android_callback_url,
+  it("uses the callback owned by the selected GitHub App registration", async () => {
+    const desktop = await createGitHubAuthorizationRequest(
+      DESKTOP_REGISTRATION,
     );
-    const url = new URL(request.authorization_url);
-
-    expect(url.searchParams.get("redirect_uri")).toBe(
-      REGISTRATION.android_callback_url,
+    const android = await createGitHubAuthorizationRequest(
+      ANDROID_REGISTRATION,
     );
-    expect(request.redirect_uri).toBe(REGISTRATION.android_callback_url);
-  });
 
-  it("rejects redirect URIs outside the two registered Jig callbacks", async () => {
-    await expect(
-      createGitHubAuthorizationRequest(
-        REGISTRATION,
-        "https://example.invalid/oauth/github",
-      ),
-    ).rejects.toThrow(
-      "GitHub redirect URI is not one of the registered Jig callbacks",
+    expect(new URL(desktop.authorization_url).searchParams.get("redirect_uri"))
+      .toBe(DESKTOP_REGISTRATION.callback_url);
+    expect(desktop.redirect_uri).toBe(DESKTOP_REGISTRATION.callback_url);
+
+    expect(new URL(android.authorization_url).searchParams.get("redirect_uri"))
+      .toBe(ANDROID_REGISTRATION.callback_url);
+    expect(android.redirect_uri).toBe(ANDROID_REGISTRATION.callback_url);
+
+    expect(DESKTOP_REGISTRATION.client_id).not.toBe(
+      ANDROID_REGISTRATION.client_id,
     );
   });
 
   it("exchanges an authorization code with PKCE and resolves the GitHub user id", async () => {
     const request = await createGitHubAuthorizationRequest(
-      REGISTRATION,
-      REGISTRATION.linux_callback_url,
+      DESKTOP_REGISTRATION,
+      DESKTOP_REGISTRATION.callback_url,
     );
     const calls: Array<{ url: string; body: string | null }> = [];
     const fetcher: GitHubFetch = async (input, init) => {
@@ -106,7 +107,7 @@ describe("GitHub App public-client primitives", () => {
 
     const now = new Date("2030-01-01T00:00:00.000Z");
     const credential = await exchangeGitHubAuthorizationCode(
-      REGISTRATION,
+      DESKTOP_REGISTRATION,
       request,
       "code-123",
       now,
@@ -121,9 +122,9 @@ describe("GitHub App public-client primitives", () => {
       refresh_token_expires_at: "2030-07-04T00:00:00.000Z",
     });
     const params = new URLSearchParams(calls[0]?.body ?? "");
-    expect(params.get("client_id")).toBe(REGISTRATION.client_id);
+    expect(params.get("client_id")).toBe(DESKTOP_REGISTRATION.client_id);
     expect(params.get("client_secret")).toBe(
-      REGISTRATION.client_secret,
+      DESKTOP_REGISTRATION.client_secret,
     );
     expect(params.get("code")).toBe("code-123");
     expect(params.get("code_verifier")).toBe(request.code_verifier);
@@ -153,7 +154,7 @@ describe("GitHub App public-client primitives", () => {
     };
 
     const refreshed = await refreshGitHubCredential(
-      REGISTRATION,
+      DESKTOP_REGISTRATION,
       {
         user_id: 456,
         access_token: "old-access",
@@ -260,12 +261,12 @@ describe("GitHub App public-client primitives", () => {
     };
 
     const authorization = await startGitHubDeviceAuthorization(
-      REGISTRATION,
+      DESKTOP_REGISTRATION,
       fetcher,
     );
     await expect(
       pollGitHubDeviceAuthorization(
-        REGISTRATION,
+        DESKTOP_REGISTRATION,
         authorization,
         authorization.interval,
         new Date("2030-01-01T00:00:00.000Z"),
@@ -276,7 +277,7 @@ describe("GitHub App public-client primitives", () => {
       retry_after_seconds: 5,
     });
     const authorized = await pollGitHubDeviceAuthorization(
-      REGISTRATION,
+      DESKTOP_REGISTRATION,
       authorization,
       5,
       new Date("2030-01-01T00:00:00.000Z"),
