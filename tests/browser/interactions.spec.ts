@@ -120,6 +120,10 @@ async function touchDrag(
     y: sourceBox.y + sourceBox.height / 2,
   };
   const client = await page.context().newCDPSession(page);
+  await client.send("Emulation.setTouchEmulationEnabled", {
+    enabled: true,
+    maxTouchPoints: 1,
+  });
   const point = (x: number, y: number) => ({
     x,
     y,
@@ -173,6 +177,9 @@ async function touchDrag(
   await client.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],
+  });
+  await client.send("Emulation.setTouchEmulationEnabled", {
+    enabled: false,
   });
   await client.detach();
   return intent;
