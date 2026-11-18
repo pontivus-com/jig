@@ -9,6 +9,7 @@ import {
   SYNC_HEALTHY_POLL_MS,
   SYNC_RETRY_SECONDS,
   type GitAdapterConfig,
+  type RepositorySynchronizationResult,
   synchronizePortableData,
   writePortableSnapshot,
 } from "./git";
@@ -24,16 +25,6 @@ import {
 
 export interface SyncConfiguration {
   readonly repository_path: string;
-  readonly get_network_environment?: () => Promise<
-    Readonly<Record<string, string>>
-  >;
-}
-
-export class SyncAuthenticationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "SyncAuthenticationError";
-  }
 }
 
 export interface SyncController {
@@ -50,8 +41,7 @@ export interface SyncEffects {
   readonly writeSnapshot: typeof writePortableSnapshot;
   readonly synchronize: (
     config: GitAdapterConfig,
-    networkEnvironment?: Readonly<Record<string, string>>,
-  ) => Promise<RepositoryStatus>;
+  ) => Promise<RepositorySynchronizationResult>;
   readonly mode: typeof repositorySynchronizationMode;
 }
 
@@ -81,8 +71,12 @@ function snapshotsEqual(
 export function createSyncController(
   db: JigSqlConnection,
   config: SyncConfiguration,
-  effects: SyncEffects = REAL_EFFECTS,
+  effectOverrides: Partial<SyncEffects> = {},
 ): SyncController {
+  const effects: SyncEffects = {
+    ...REAL_EFFECTS,
+    ...effectOverrides,
+  };
   const adapter: GitAdapterConfig = {
     repository_path: config.repository_path,
   };
@@ -171,32 +165,28 @@ export function createSyncController(
         await markExported(db, state.revision, head);
       }
 
-      const networkEnvironment =
-        config.get_network_environment === undefined
-          ? undefined
-          : await config.get_network_environment();
-      const pushed = await effects.synchronize(
-        adapter,
-        networkEnvironment,
-      );
-      failureCount = pushed === "sync-issue" ? failureCount + 1 : 0;
+      const pushed = await effects.synchronize(adapter);
       firstDirtyAt = null;
 
-      if (pushed === "sync-issue") {
+      if (pushed.status === "sync-issue") {
+        if (!pushed.retryable) {
+          failureCount = SYNC_RETRY_SECONDS.length;
+          currentStatus = "sync-issue";
+          schedule(SYNC_HEALTHY_POLL_MS);
+          return pushed.status;
+        }
+
+        failureCount += 1;
         currentStatus = failureCount >= 7 ? "sync-issue" : "retrying";
         schedule(retryDelayMs(failureCount));
-      } else {
-        currentStatus = pushed;
-        schedule(SYNC_HEALTHY_POLL_MS);
+        return pushed.status;
       }
-      return pushed;
-    } catch (error) {
-      if (error instanceof SyncAuthenticationError) {
-        failureCount = SYNC_RETRY_SECONDS.length;
-        currentStatus = "sync-issue";
-        schedule(SYNC_HEALTHY_POLL_MS);
-        return "sync-issue";
-      }
+
+      failureCount = 0;
+      currentStatus = pushed.status;
+      schedule(SYNC_HEALTHY_POLL_MS);
+      return pushed.status;
+    } catch {
       failureCount += 1;
       currentStatus = failureCount >= 7 ? "sync-issue" : "retrying";
       schedule(retryDelayMs(failureCount));
