@@ -37,6 +37,12 @@ export interface GitHubRepositoryChoice extends GitHubRepository {
   readonly account_type: string;
 }
 
+export interface GitHubManageAccess {
+  readonly installation_id: number;
+  readonly account_login: string;
+  readonly manage_url: string;
+}
+
 export interface GitHubOnboardingSnapshot {
   readonly available: boolean;
   readonly phase: GitHubOnboardingPhase;
@@ -53,6 +59,7 @@ export interface GitHubOnboardingSnapshot {
       }
     | null;
   readonly grant_access_url: string | null;
+  readonly manage_access: readonly GitHubManageAccess[];
   readonly installations: readonly GitHubInstallation[];
   readonly repositories: readonly GitHubRepositoryChoice[];
   readonly error: string | null;
@@ -87,6 +94,7 @@ export class GitHubOnboardingController {
   private authorization:
     GitHubOnboardingSnapshot["authorization"] = null;
   private grantAccessUrl: string | null = null;
+  private manageAccess: readonly GitHubManageAccess[] = [];
   private installations: readonly GitHubInstallation[] = [];
   private repositories: readonly GitHubRepositoryChoice[] = [];
   private error: string | null = null;
@@ -103,6 +111,7 @@ export class GitHubOnboardingController {
       phase: this.phase,
       authorization: this.authorization,
       grant_access_url: this.grantAccessUrl,
+      manage_access: this.manageAccess,
       installations: this.installations,
       repositories: this.repositories,
       error: this.error,
@@ -251,6 +260,7 @@ export class GitHubOnboardingController {
     this.phase = "idle";
     this.authorization = null;
     this.grantAccessUrl = null;
+    this.manageAccess = [];
     this.installations = [];
     this.repositories = [];
     this.error = null;
@@ -308,6 +318,11 @@ export class GitHubOnboardingController {
         installations.length === 0
           ? `https://github.com/apps/${registration.app_slug}/installations/new`
           : null;
+      this.manageAccess = installations.map((installation) => ({
+        installation_id: installation.id,
+        account_login: installation.account.login,
+        manage_url: `https://github.com/settings/installations/${installation.id}`,
+      }));
       this.phase =
         choices.length === 0
           ? "repository-access"
