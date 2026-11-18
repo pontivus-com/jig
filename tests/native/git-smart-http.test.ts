@@ -171,6 +171,13 @@ async function gitBackendResponse(
   return parseCgiResponse(new Uint8Array(stdout));
 }
 
+function requestBody(value: string): ArrayBuffer {
+  const bytes = base64ToBytes(value);
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
 function nativeHttpFor(
   port: number,
 ): NativeHttpPort {
@@ -185,7 +192,7 @@ function nativeHttpFor(
         headers: options.headers,
         ...(options.data === undefined
           ? {}
-          : { body: base64ToBytes(options.data) }),
+          : { body: requestBody(options.data) }),
       });
       const responseHeaders: Record<string, string> = {};
       response.headers.forEach((value, key) => {
