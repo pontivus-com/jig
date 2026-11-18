@@ -162,7 +162,11 @@ test("responsive reflow preserves an open workspace draft and appearance remains
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
   await navigateTo(page, "Settings");
   await page.getByText("Dark", { exact: true }).click();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("jig-theme"))).toBe("dark");
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem("jig-appearance-mode")),
+    )
+    .toBe("dark");
   const after = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
   expect(after).toEqual(before);
 });
@@ -170,7 +174,7 @@ test("responsive reflow preserves an open workspace draft and appearance remains
 test("System, Light and Dark use the canonical Jig theme and remain presentation-only", async ({
   page,
 }) => {
-  await expect(page.locator(".jig-brand-logo:visible")).toHaveCount(1);
+  await expect(page.locator(".jig-logo:visible")).toHaveCount(1);
   await expect
     .poll(() =>
       page.evaluate(() =>
@@ -207,7 +211,7 @@ test("System, Light and Dark use the canonical Jig theme and remain presentation
   for (const [label, stored] of [
     ["Light", "light"],
     ["Dark", "dark"],
-    ["System", null],
+    ["System", "system"],
   ] as const) {
     const option = page.getByRole("radio", {
       name: label,
@@ -220,7 +224,7 @@ test("System, Light and Dark use the canonical Jig theme and remain presentation
     ).toBeVisible();
     await expect
       .poll(() =>
-        page.evaluate(() => localStorage.getItem("jig-theme")),
+        page.evaluate(() => localStorage.getItem("jig-appearance-mode")),
       )
       .toBe(stored);
 
