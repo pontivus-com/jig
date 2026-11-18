@@ -8,7 +8,7 @@ import {
   type SqlValue,
 } from "../../../src/persistence/sqlite";
 
-interface NativeJigSqlitePlugin {
+export interface NativeJigSqlitePlugin {
   open(options: {
     readonly path: string;
     readonly create: boolean;
@@ -98,29 +98,31 @@ function queryRows(value: unknown): readonly SqlRow[] {
   });
 }
 
-function connection(): JigSqlConnection {
+export function createJigSqlConnection(
+  plugin: NativeJigSqlitePlugin,
+): JigSqlConnection {
   return {
     async execute(sql, bindings = []) {
       return executionResult(
-        await nativeSqlite.execute({ sql, bindings }),
+        await plugin.execute({ sql, bindings }),
       );
     },
     async query(sql, bindings = []) {
       return queryRows(
-        await nativeSqlite.query({ sql, bindings }),
+        await plugin.query({ sql, bindings }),
       );
     },
     async begin() {
-      await nativeSqlite.begin();
+      await plugin.begin();
     },
     async commit() {
-      await nativeSqlite.commit();
+      await plugin.commit();
     },
     async rollback() {
-      await nativeSqlite.rollback();
+      await plugin.rollback();
     },
     async close() {
-      await nativeSqlite.close();
+      await plugin.close();
     },
   };
 }
@@ -130,7 +132,7 @@ async function openNativeConnection(
   create: boolean,
 ): Promise<JigSqlConnection> {
   await nativeSqlite.open({ path, create });
-  return connection();
+  return createJigSqlConnection(nativeSqlite);
 }
 
 export async function initializeNativeDatabase(
