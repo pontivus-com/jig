@@ -8,10 +8,9 @@ import {
 } from "@astryxdesign/core";
 import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
 import {
-  PointerActivationConstraints,
-  PointerSensor,
-} from "@dnd-kit/dom";
-import { useSortable } from "@dnd-kit/react/sortable";
+  Draggable,
+  type DraggableProvided,
+} from "@hello-pangea/dnd";
 import type { Ref } from "react";
 import type { Priority, Task } from "../../src/core/task";
 import { isReminderDue } from "../../src/core/reminder";
@@ -23,6 +22,9 @@ export interface TaskRowProps {
   readonly now: Date;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragProvided?: DraggableProvided | undefined;
+  readonly isDragging?: boolean | undefined;
+  readonly dropIndicator?: "before" | "after" | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -41,18 +43,8 @@ function isSafeWebReference(value: string): boolean {
   }
 }
 
-const DRAG_EXCLUDED_SELECTOR = '[data-jig-drag-excluded="true"]';
-
 function stopPointer(event: React.PointerEvent): void {
   event.stopPropagation();
-}
-
-function preventTaskDragActivation(event: PointerEvent): boolean {
-  const { target } = event;
-  return (
-    target instanceof Element &&
-    target.closest(DRAG_EXCLUDED_SELECTOR) !== null
-  );
 }
 
 function TaskMetadata({
@@ -253,6 +245,9 @@ export function TaskRow({
   now,
   isSelected = false,
   rowRef,
+  dragProvided,
+  isDragging = false,
+  dropIndicator,
   onSelect,
   onToggleComplete,
   onEdit,
@@ -266,7 +261,9 @@ export function TaskRow({
 
   return (
     <ListItem
-      {...(rowRef === undefined ? {} : { ref: rowRef })}
+      {...(dragProvided === undefined
+        ? (rowRef === undefined ? {} : { ref: rowRef })
+        : { ref: dragProvided.innerRef, ...dragProvided.draggableProps })}
       itemKey={task.id}
       {...(onSelect === undefined ? {} : { onClick: onSelect })}
       className={[
@@ -275,6 +272,7 @@ export function TaskRow({
         isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
         reminderDue ? "jig-task-card-reminder-due" : "",
+        isDragging ? "jig-task-card-dragging" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -285,6 +283,17 @@ export function TaskRow({
           className="jig-task-card-leading"
           data-jig-drag-excluded="true"
         >
+          {dragProvided?.dragHandleProps === null ||
+          dragProvided?.dragHandleProps === undefined ? null : (
+            <span
+              {...dragProvided.dragHandleProps}
+              className="jig-task-drag-handle"
+              aria-label={`Move ${task.title}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <JigIcon name="drag" color="inherit" size="sm" />
+            </span>
+          )}
           <CheckboxInput
             label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
             isLabelHidden
@@ -296,6 +305,12 @@ export function TaskRow({
       }
       label={
         <div className="jig-task-body">
+          {dropIndicator === undefined ? null : (
+            <span
+              className={`jig-task-drop-indicator jig-task-drop-indicator-${dropIndicator}`}
+              aria-hidden="true"
+            />
+          )}
           <div className="jig-task-title-row">
             <span
               className={
@@ -331,49 +346,32 @@ export function TaskRow({
   );
 }
 
-export interface SortableTaskRowProps
-  extends Omit<TaskRowProps, "rowRef"> {
+export interface DraggableTaskRowProps
+  extends Omit<
+    TaskRowProps,
+    "rowRef" | "dragProvided" | "isDragging" | "dropIndicator"
+  > {
   readonly index: number;
-  readonly group: string;
+  readonly dropIndicator?: "before" | "after" | undefined;
 }
 
-export function SortableTaskRow({
+export function DraggableTaskRow({
   task,
   index,
-  group,
+  dropIndicator,
   ...rowProps
-}: SortableTaskRowProps): React.ReactElement {
-  const sortable = useSortable({
-    id: task.id,
-    index,
-    group,
-    type: "jig-task",
-    accept: "jig-task",
-    sensors: [
-      PointerSensor.configure({
-        preventActivation: preventTaskDragActivation,
-        activationConstraints(event) {
-          return event.pointerType === "touch"
-            ? [
-                new PointerActivationConstraints.Delay({
-                  value: 250,
-                  tolerance: 5,
-                }),
-              ]
-            : [new PointerActivationConstraints.Distance({ value: 5 })];
-        },
-      }),
-    ],
-  });
-
-  // The Astryx ListItem <li> is both dnd-kit's sortable geometry element and
-  // pointer source. Both public refs therefore receive the same root element.
-  // PointerSensor excludes genuine interactive descendants, while activation
-  // constraints preserve ordinary press/release for Task selection.
-  const rowRef = (element: HTMLLIElement | null): void => {
-    sortable.ref(element);
-    sortable.sourceRef(element);
-  };
-
-  return <TaskRow {...rowProps} task={task} rowRef={rowRef} />;
+}: DraggableTaskRowProps): React.ReactElement {
+  return (
+    <Draggable draggableId={task.id} index={index}>
+      {(provided, snapshot) => (
+        <TaskRow
+          {...rowProps}
+          task={task}
+          dragProvided={provided}
+          isDragging={snapshot.isDragging}
+          {...(dropIndicator === undefined ? {} : { dropIndicator })}
+        />
+      )}
+    </Draggable>
+  );
 }
