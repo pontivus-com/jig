@@ -91,6 +91,48 @@ describe("architecture compliance", () => {
     }
   });
 
+  it("keeps recurrence configuration single-owner and Task linkage-only", () => {
+    const recurrenceOwners = production.filter(([, content]) =>
+      /export interface RecurrenceSeries\s*\{/.test(content),
+    );
+    expect(recurrenceOwners.map(([path]) => path)).toEqual([
+      "src/core/recurrence.ts",
+    ]);
+
+    const taskSource = source("src/core/task.ts");
+    const taskStart = taskSource.indexOf("export interface Task {");
+    const taskEnd = taskSource.indexOf(
+      "\n}",
+      taskStart,
+    );
+    expect(taskStart).toBeGreaterThanOrEqual(0);
+    expect(taskEnd).toBeGreaterThan(taskStart);
+    const taskInterface = taskSource.slice(taskStart, taskEnd);
+    expect(taskInterface).toContain("recurrence_series_id");
+    expect(taskInterface).toContain("recurrence_occurrence_date");
+    expect(taskInterface).not.toContain("interval_weeks");
+    expect(taskInterface).not.toContain("weekdays");
+    expect(taskInterface).not.toContain("day_of_month");
+    expect(taskInterface).not.toContain("end_date");
+
+    const recurrence = source("src/core/recurrence.ts");
+    const planning = source("src/core/recurrence-planning.ts");
+    const editor = source("ui/src/recurrence-editor.tsx");
+    const nativeRuntime = source("ui/src/runtime-native.ts");
+
+    expect(recurrence).toContain("export type RecurrencePattern");
+    expect(planning).toContain("setTaskRecurrence");
+    expect(editor).toContain("type RecurrenceSeries");
+    expect(editor).toContain("type RecurrenceSpec");
+    expect(editor).not.toMatch(
+      /(?:interface|type)\s+(?:RecurrenceSeries|RecurrencePattern)\b/,
+    );
+    expect(nativeRuntime).not.toContain("RecurrenceSeries");
+    expect(nativeRuntime).not.toContain("RecurrencePattern");
+    expect(nativeRuntime).not.toContain("interval_weeks");
+    expect(nativeRuntime).not.toContain("day_of_month");
+  });
+
   it("keeps v1.0.4 Planner and editor semantics single-owner", () => {
     const app = source("ui/src/app.tsx");
     const planner = source("ui/src/planner.tsx");
