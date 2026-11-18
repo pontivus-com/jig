@@ -17,10 +17,20 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
           : {
               mode: "bootstrap",
               local_repository_available: true,
-              github_available: false,
             },
       ),
     });
+
+  await page.route("**/api/v1/github/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        onboarding_available: false,
+        reconnect_available: false,
+      }),
+    });
+  });
   });
 
   await page.route("**/api/v1/setup/local-repository", async (route) => {
@@ -57,7 +67,6 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
         ready: true,
         repository_path: "/tmp/planning",
         repository_status: "local-only",
-        github_reconnect_available: false,
       }),
     });
   });
@@ -104,9 +113,19 @@ test("bootstrap keeps invalid repository errors on the setup surface", async ({
       body: JSON.stringify({
         mode: "bootstrap",
         local_repository_available: true,
-        github_available: false,
       }),
     });
+
+  await page.route("**/api/v1/github/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        onboarding_available: false,
+        reconnect_available: false,
+      }),
+    });
+  });
   });
   await page.route("**/api/v1/setup/local-repository", async (route) => {
     await route.fulfill({
@@ -141,9 +160,19 @@ test("Connect GitHub presents the direct Device Flow code and verification actio
       body: JSON.stringify({
         mode: "bootstrap",
         local_repository_available: true,
-        github_available: true,
       }),
     });
+
+  await page.route("**/api/v1/github/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        onboarding_available: true,
+        reconnect_available: false,
+      }),
+    });
+  });
   });
 
   await page.route("**/api/v1/setup/github/start", async (route) => {
@@ -197,6 +226,17 @@ test("configured managed repository reconnects GitHub through Device Flow withou
       contentType: "application/json",
       body: JSON.stringify({ mode: "configured" }),
     });
+
+  await page.route("**/api/v1/github/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        onboarding_available: false,
+        reconnect_available: true,
+      }),
+    });
+  });
   });
   await page.route("**/api/v1/tasks", async (route) => {
     await route.fulfill({
@@ -214,7 +254,6 @@ test("configured managed repository reconnects GitHub through Device Flow withou
         repository_path:
           "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
         repository_status: repositoryStatus,
-        github_reconnect_available: true,
       }),
     });
   });
@@ -246,10 +285,6 @@ test("configured managed repository reconnects GitHub through Device Flow withou
           user_code: "WXYZ-1234",
           retry_after_seconds: 5,
         },
-        grant_access_url: null,
-        manage_access: [],
-        installations: [],
-        repositories: [],
         error: null,
       }),
     });
@@ -262,10 +297,6 @@ test("configured managed repository reconnects GitHub through Device Flow withou
         available: true,
         phase: "idle",
         authorization: null,
-        grant_access_url: null,
-        manage_access: [],
-        installations: [],
-        repositories: [],
         error: null,
       }),
     });
