@@ -259,11 +259,43 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
 
   return (
     <header className="jig-app-header jig-app-header-narrow">
-      <div className="jig-header-left">
-        <BrandHome onHome={onHome} />
+      <div className="jig-header-mobile-application-row">
+        <div className="jig-header-left">
+          <BrandHome onHome={onHome} />
+        </div>
+        <div className="jig-header-mobile-title">
+          {destination === "planner" ? null : (
+            <DestinationTitle destination={destination} />
+          )}
+        </div>
+        <div className="jig-header-mobile-actions">
+          {destination === "planner" ? (
+            <IconButton
+              label="Add task"
+              icon={<JigIcon name="add" color="inherit" />}
+              variant="primary"
+              size="sm"
+              onClick={onAdd}
+            />
+          ) : null}
+          {compactStatusControl}
+          <DropdownMenu
+            presentation="popover"
+            button={{
+              label: "Open navigation menu",
+              icon: <Icon icon="menu" color="inherit" />,
+              isIconOnly: true,
+              variant: "ghost",
+              size: "sm",
+            }}
+            items={destinationMenuItems(destination, onNavigate)}
+            placement="below"
+            alignment="end"
+          />
+        </div>
       </div>
-      <div className="jig-header-center">
-        {destination === "planner" ? (
+      {destination === "planner" ? (
+        <div className="jig-header-mobile-temporal-row">
           <TemporalNavigator
             weekLabel={weekLabel}
             compact
@@ -271,35 +303,8 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
             onToday={onToday}
             onNextWeek={onNextWeek}
           />
-        ) : (
-          <DestinationTitle destination={destination} />
-        )}
-      </div>
-      <div className="jig-header-mobile-actions">
-        {destination === "planner" ? (
-          <IconButton
-            label="Add task"
-            icon={<JigIcon name="add" color="inherit" />}
-            variant="primary"
-            size="sm"
-            onClick={onAdd}
-          />
-        ) : null}
-        {compactStatusControl}
-        <DropdownMenu
-          presentation="popover"
-          button={{
-            label: "Open navigation menu",
-            icon: <Icon icon="menu" color="inherit" />,
-            isIconOnly: true,
-            variant: "ghost",
-            size: "sm",
-          }}
-          items={destinationMenuItems(destination, onNavigate)}
-          placement="below"
-          alignment="end"
-        />
-      </div>
+        </div>
+      ) : null}
     </header>
   );
 }
