@@ -40,6 +40,7 @@ export interface ManagedGitHubTransportDependencies {
   readonly load_credential?: () => Promise<GitHubCredential | null>;
   readonly store_credential?: (credential: GitHubCredential) => Promise<void>;
   readonly refresh_credential?: typeof refreshGitHubCredential;
+  readonly synchronize?: typeof synchronizePortableData;
   readonly now?: () => Date;
 }
 
@@ -104,7 +105,7 @@ export function isManagedGitHubRepositoryPath(
   return managedGitHubIdentity(repositoryPath, home) !== null;
 }
 
-async function assertSynchronizationRemote(
+export async function assertManagedGitHubSynchronizationRemote(
   repositoryPath: string,
   home = homedir(),
 ): Promise<void> {
@@ -170,7 +171,9 @@ export async function createManagedGitHubTransport(
       config: GitAdapterConfig,
     ): Promise<RepositorySynchronizationResult> => {
       try {
-        await assertSynchronizationRemote(config.repository_path);
+        await assertManagedGitHubSynchronizationRemote(
+          config.repository_path,
+        );
 
         let credential = await (
           dependencies.load_credential ??
@@ -204,7 +207,10 @@ export async function createManagedGitHubTransport(
           }
         }
 
-        return synchronizePortableData(
+        return (
+          dependencies.synchronize ??
+          synchronizePortableData
+        )(
           config,
           githubGitEnvironment(
             askpass.path,
