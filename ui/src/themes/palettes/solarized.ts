@@ -26,11 +26,20 @@ export const solarizedPalette = {
   // Canonical Solarized accent hues are too light as strong application
   // status fills on base3. Preserve each hue at 70% and shade only the Light
   // strong-role input toward base03; the shared semantic mapper then derives
-  // accessible strong/text/border roles. Dark keeps the canonical accents.
-  info: ["color-mix(in srgb, #268bd2 70%, #002b36)", "#268bd2"],
+  // accessible strong/text/border roles. In Dark, info is nudged toward
+  // base1 and error is substantially lifted toward base1 because the
+  // canonical blue/red strong fills miss the 4.5:1 floor against base03
+  // content. Success and warning remain canonical in Dark.
+  info: [
+    "color-mix(in srgb, #268bd2 70%, #002b36)",
+    "color-mix(in srgb, #268bd2 80%, #93a1a1)",
+  ],
   success: ["color-mix(in srgb, #859900 70%, #002b36)", "#859900"],
   warning: ["color-mix(in srgb, #b58900 70%, #002b36)", "#b58900"],
-  error: ["color-mix(in srgb, #dc322f 70%, #002b36)", "#dc322f"],
+  error: [
+    "color-mix(in srgb, #dc322f 70%, #002b36)",
+    "color-mix(in srgb, #dc322f 30%, #93a1a1)",
+  ],
   red: ["#dc322f", "#dc322f"],
   orange: ["#cb4b16", "#cb4b16"],
   yellow: ["#b58900", "#b58900"],
