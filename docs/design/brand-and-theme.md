@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1.0.6 brand and application-theme contract v0.16, 2026-11-18. v1.0.5 remains the default Jig palette/identity baseline; v1.0.6 adds the curated multi-theme application catalogue, independent System/Light/Dark appearance, palette-independent Jig product-state semantics and theme-aware in-application wordmark paint.
+**Status:** Canonical v1.0.6 brand and application-theme contract v0.17, 2026-11-18. v1.0.5 remains the default Jig palette/identity baseline; v1.0.6 adds the curated multi-theme application catalogue, independent System/Light/Dark appearance, palette-independent Jig product-state semantics and theme-aware in-application wordmark paint.
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, default Jig brand palette, multi-theme Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -10,7 +10,7 @@ This document is the single human-readable authority for Jig branding and themin
 
 - `ui/src/theme.css` — canonical raw **default Jig** Ink/Amber/Paper primitives only;
 - the typed appearance/theme registry — the single list of the fourteen supported application themes and the independent `System | Light | Dark` appearance mode;
-- Jig-authored Astryx theme sources — default Jig, seven Astryx wrappers and six community semantic palette themes, all compiled by pinned `@astryxdesign/cli@0.7.13`;
+- Jig-authored Astryx theme sources — default Jig, six dual-mode Astryx wrappers and six community semantic palette themes, all compiled by pinned `@astryxdesign/cli@0.7.13`;
 - one shared Jig product-local token mapping for current day, Task selection/elevation, navigation, drag, priority, repository status and in-application brand paint;
 - compiler-owned generated theme modules/styles/declarations — never hand-edited;
 - `ui/src/styles.css` — layout/composition only; it consumes active semantic Astryx/Jig tokens and must not introduce a second color system or theme-name branch;
@@ -419,13 +419,13 @@ Astryx 0.7.13 has no true semantic names for Add, History, Edit or Delete. Jig t
 
 ### 7.1 Theme catalogue and ownership
 
-v1.0.6 supports exactly fourteen application themes:
+v1.0.6 supports exactly thirteen application themes:
 
 - **Jig:** Jig;
-- **Astryx:** Neutral, Butter, Chocolate, Gothic, Matcha, Stone, Y2K;
+- **Astryx:** Neutral, Butter, Chocolate, Matcha, Stone, Y2K;
 - **Community:** Gruvbox, Dracula, Solarized, Nord, Catppuccin, Tokyo Night.
 
-The exact pairings/provenance and complete semantic color requirements are binding in JIG-106-SD-02 and JIG-106-SD-04. Community palette literals live only in governed theme-authoring palette sources; feature styles never copy them. The default Jig primitives remain in `ui/src/theme.css`.
+The exact pairings/provenance and complete semantic color requirements are binding in JIG-106-SD-02 and JIG-106-SD-04. Astryx Gothic 0.7.13 is dark-only upstream and is therefore not part of the selectable Jig catalogue; no synthetic light variant is authored. Community palette literals live only in governed theme-authoring palette sources; feature styles never copy them. The default Jig primitives remain in `ui/src/theme.css`.
 
 Theme family and appearance mode are independent browser-local presentation values. The root application mounts exactly one Astryx owner:
 
