@@ -796,6 +796,7 @@ export async function readSnapshotAtRef(
 
 async function pushJigDataRef(
   config: GitAdapterConfig,
+  networkEnvironment: Readonly<Record<string, string>> = {},
 ): Promise<RepositoryStatus> {
   assertAdapterPaths(config);
   const remoteName = await discoverSynchronizationRemote(
@@ -805,11 +806,16 @@ async function pushJigDataRef(
     return "local-only";
   }
 
-  const result = await runGit(config.repository_path, [
-    "push",
-    remoteName,
-    `${DATA_REF}:refs/heads/jig-data`,
-  ]);
+  const result = await runGit(
+    config.repository_path,
+    [
+      "push",
+      remoteName,
+      `${DATA_REF}:refs/heads/jig-data`,
+    ],
+    undefined,
+    networkEnvironment,
+  );
 
   return result.exit_code === 0 ? "synchronized" : "sync-issue";
 }
@@ -832,8 +838,9 @@ export async function writePortableSnapshot(
 
 export async function synchronizePortableData(
   config: GitAdapterConfig,
+  networkEnvironment: Readonly<Record<string, string>> = {},
 ): Promise<RepositoryStatus> {
-  return pushJigDataRef(config);
+  return pushJigDataRef(config, networkEnvironment);
 }
 
 export function retryDelayMs(failureCount: number): number {
