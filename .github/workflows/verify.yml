@@ -135,9 +135,7 @@ jobs:
               raise SystemExit("Pinned F-Droid category authority has no Task category")
           target.write_text(yaml.safe_dump({"Task": categories["Task"]}, sort_keys=False))
           PY
-          curl -fsSLo "${RUNNER_TEMP}/fdroid-data/config/category_task.png" "https://raw.githubusercontent.com/f-droid/fdroiddata/6e52e1ad56721f12c49f48d936e9da05ef740d91/config/category_task.png"
           grep -Fq "Task:" "${RUNNER_TEMP}/fdroid-data/config/categories.yml"
-          test -s "${RUNNER_TEMP}/fdroid-data/config/category_task.png"
           cp distribution/fdroid/metadata/com.pontivus.jig.yml "${RUNNER_TEMP}/fdroid-data/metadata/"
           (
             cd "${RUNNER_TEMP}/fdroid-data"
