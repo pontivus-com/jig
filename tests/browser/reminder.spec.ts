@@ -49,6 +49,7 @@ async function installDeliveryProbe(page: import("@playwright/test").Page): Prom
 test.beforeEach(async ({ page }) => {
   await page.context().grantPermissions(["notifications"]);
   await page.clock.install({ time: reminderStart() });
+  await installDeliveryProbe(page);
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
