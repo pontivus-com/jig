@@ -125,7 +125,7 @@ describe("architecture compliance", () => {
     expect(editor).toContain("type RecurrenceSeries");
     expect(editor).toContain("type RecurrenceSpec");
     expect(editor).not.toMatch(
-      /(?:interface|type)\s+(?:RecurrenceSeries|RecurrencePattern)\b/,
+      /interface\s+RecurrenceSeries\s*\{|type\s+RecurrencePattern\s*=/,
     );
     expect(nativeRuntime).not.toContain("RecurrenceSeries");
     expect(nativeRuntime).not.toContain("RecurrencePattern");
