@@ -14,6 +14,7 @@ import {
 } from "vitest";
 import {
   acquireManagedGitHubRepository,
+  isManagedGitHubRepositoryPath,
   managedGitHubRepositoryPath,
 } from "../../src/shell/github-managed-checkout";
 import { runGit } from "../../src/shell/git";
@@ -45,6 +46,28 @@ describe("managed GitHub checkout", () => {
     ).toBe(
       "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
     );
+  });
+
+  it("recognizes only the exact Jig-managed GitHub checkout shape", () => {
+    const home = "/home/example";
+    expect(
+      isManagedGitHubRepositoryPath(
+        "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
+        home,
+      ),
+    ).toBe(true);
+    expect(
+      isManagedGitHubRepositoryPath(
+        "/home/example/projects/planning",
+        home,
+      ),
+    ).toBe(false);
+    expect(
+      isManagedGitHubRepositoryPath(
+        "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning/nested",
+        home,
+      ),
+    ).toBe(false);
   });
 
   it("reuses an existing checkout only when its remote matches the selected repository", async () => {
