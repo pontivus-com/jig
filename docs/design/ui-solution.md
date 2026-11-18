@@ -1,7 +1,7 @@
 # Jig — UI solution design and visual reference contract
 
 **Status:** Canonical UI solution through v1.1, amended 2026-11-18. v1.0.x sections below remain release history; the v1.1 composition section supersedes affected narrow-header, reminder and drag/drop interactions.
-**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07 and JIG-FR-01–22.
+**Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–31.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
 
@@ -96,9 +96,11 @@ Visual rules:
 | Drag source/target | transient Amber/accent outline/overlay only during direct manipulation |
 | Keyboard focus | Amber focus ring only; does not change the persistent state color |
 | Active History/Settings destination | quiet neutral active treatment, not the selected-Task or drag-target treatment |
-| Local only / Synced | restrained success family, distinguished by label |
-| Pending/retrying | warning family |
-| Sync/save error | error family |
+| Local Git committed | restrained success family with explicit `Committed` text |
+| Local Git pending/issue | warning/error family respectively; never presented as remote state |
+| Remote synchronized / Local only | restrained success family, distinguished by explicit remote label/state |
+| Remote pending/retrying | warning family |
+| Remote sync issue / local-save issue | error family, with the failing layer named |
 | Unknown status | neutral grey |
 
 6. **Theme and appearance parity.** Theme family and appearance are independent. Every one of the thirteen v1.0.6 Theme presets supports System, Light and Dark; System follows browser/platform preference changes while explicit Light/Dark stays explicit. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics remain clear without relying on color alone.
@@ -138,9 +140,25 @@ Remove descriptive/meta copy. The desktop interface must not display phrases suc
 
 Planner, History and Settings share the same global application-header language and adjacent desktop navigation group. The active destination is clear through the governed neutral active-navigation treatment without reintroducing a sidebar.
 
+For History and Settings, the **application header is the sole destination-heading owner**. Its center region renders a compact semantic heading group instead of Planner's temporal navigator:
+
+- History: **History** + `Completed work grouped by actual completion date`;
+- Settings: **Settings** + `Repository, synchronization, appearance and diagnostics`.
+
+The title is the page's semantic `h1` even though it is physically inside application chrome; the subtitle is secondary text in the same heading group. The body must not render another `h1`/subtitle block. History body begins with the first completion-date group or empty state; Settings begins with the first settings section. This same ownership applies at narrow/mobile widths, where the title/subtitle group remains inside the single sticky application row and may use compact wrapping without creating another header row.
+
 Unlike Planner's seven-track canvas, History and Settings are reading/configuration surfaces and continuously use a centered **50rem / approximately 800px maximum width** whenever that much space is available. The full-width application header and content frame remain edge-to-edge; only the semantic History/Settings content column is bounded. The outer measure does **not** switch at the 73rem Planner composition breakpoint: below 50rem available width it simply becomes full available width.
 
 Settings keeps its internal two-column grouping inside that bounded measure using two equal fluid columns rather than fixed 560px/580px tracks. Its internal grid may reflow to one column at the existing 73rem layout boundary without removing or changing the outer 50rem content measure.
+
+The Settings **Synchronization** section presents one ordered two-stage state:
+
+1. **Local Git** — `Committed`, `Pending commit` or `Local Git issue` for the current canonical Jig revision.
+2. **Remote Git** — the credential-free identity of the configured synchronization remote plus `Synchronized`, `Pending`, `Retrying`, `Sync issue`, or `No remote configured`.
+
+A remote failure never changes a successfully committed Local Git row back to pending/error. When no remote is configured, Local Git may still be committed and healthy. The existing compact header status remains a concise projection of these same facts; it is not a separate state store.
+
+The remote identity is rendered as informational text such as the Git remote name plus a sanitized host/repository locator. Do not show credentials, access tokens, query secrets, raw askpass material or provider-specific internal IDs. Do not offer remote editing from this surface.
 
 On History, selecting a completed Task opens the same right-side Task workspace while History remains active. Settings has no Planner week navigator because week controls operate only on Planner state. Clicking Jig returns to Planner and preserves the session's Planner date/week state.
 
@@ -273,6 +291,8 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Mobile header/menu | compact Jig/sync/Add/hamburger application band; centered week range + grouped controls; seven dated Task sections follow; hamburger menu contains the same Planner/History/Settings destination set as desktop from one semantic owner, uses normalized semantic icons/text, and is not a drawer |
 | Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
 | Secondary screen measure | History and Settings follow `min(available width, 50rem)` continuously at 1440/1168/1167/1024/900/800/600/390px; no discontinuity at 73rem; Planner remains full-width; Settings column reflow is independent |
+| Secondary destination heading | History/Settings title + governed subtitle exist exactly once in the application header on desktop and narrow/mobile; body contains no duplicate page heading/subtitle and begins with actual destination content |
+| Repository synchronization transparency | Settings shows Local Git and Remote Git as separate rows/states; a successful local commit remains successful during remote failure; configured remote identity is visible and credential-free; no remote reads `No remote configured`; compact header status agrees with the same underlying state |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
 | Same/cross-day drag | desktop and narrow/mobile dedicated-handle drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
 | Narrow drag/order | touch dedicated-handle drag supports same-date/cross-date/empty-date movement through the same sortable/drop owners as desktop; Move up/down remains a non-drag alternative without a second order representation |
@@ -298,7 +318,9 @@ Implementation plans must link to this document, [Planning workbench functional 
 
 ## v1.1 UI composition
 
-- **Narrow header:** one sticky header region. Planner renders application row (theme-aware Jig wordmark, Planner-only Add, compact sync, Astryx compact Planner/History/Settings menu) plus temporal row (Previous, compact week range, Next, Today). History/Settings render only the application row and active-destination identity. Each primary row owns >=44 CSS px interaction height; the old <=56px total header budget is removed.
+- **Narrow header:** one sticky header region. Planner renders application row (theme-aware Jig wordmark, Planner-only Add, compact sync, Astryx compact Planner/History/Settings menu) plus temporal row (Previous, compact week range, Next, Today). History/Settings render only the application row, with the active destination's title + governed subtitle as the sole page-heading instance. Their body-level reference heading is removed. Each primary row owns >=44 CSS px interaction height; the old <=56px total header budget is removed.
+- **Secondary desktop heading:** History/Settings replace the center temporal navigator with the same compact title + subtitle semantic heading group; the body begins directly with History groups/empty state or Settings sections.
+- **Synchronization transparency:** Settings presents Local Git commit state separately from Remote Git identity/synchronization state. The compact header status is derived from this structured state. Remote identity is sanitized, informational and read-only; it is never persisted as Jig configuration.
 - **Reminder attention:** an incomplete current-day Task whose reminder time has passed receives a persistent, accessible reminder-due treatment independent of OS/browser notification success. The treatment uses governed warning semantics plus non-color meaning and composes with selection/focus/priority/drag state rather than replacing them.
 - **Task movement:** every incomplete Task exposes a dedicated visible grip. Dragging leaves Task state uncommitted until drop and displays one exact 2px insertion rule with governed drag color at the destination index. Cross-date targets additionally use the subtle governed drag background. Empty dates expose one index-0 target. Inter-card whitespace must not clear/oscillate intent. Move up/down and date edit remain non-drag alternatives.
 - **Android:** the same Planner/History/Settings React composition runs inside the native shell. Safe-area padding is owned by the sticky header; Task-body touch scroll remains independent from grip dragging.
