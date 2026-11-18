@@ -451,6 +451,20 @@ function ConfiguredApp({
       }
     }, [isOperating, refreshOperationalState]);
 
+  useEffect(() => {
+    const authorization = githubReconnect?.authorization;
+    if (
+      githubReconnect?.phase !== "authorizing" ||
+      authorization?.mode !== "device"
+    ) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void refreshGitHubReconnectAuthorization();
+    }, authorization.retry_after_seconds * 1000);
+    return () => window.clearTimeout(timer);
+  }, [githubReconnect, refreshGitHubReconnectAuthorization]);
+
   const previousWeek = useCallback((): void => {
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
