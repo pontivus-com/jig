@@ -21,7 +21,7 @@ export function configuredNativeSynchronization(
       currentAndroidGitHubToken,
     );
     await controller.start();
-    void controller.trigger();
+    void controller.trigger().catch(() => undefined);
     return controller;
   })().catch((error: unknown) => {
     controllerPromise = null;
