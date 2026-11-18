@@ -3,6 +3,7 @@ import { WeekView } from "./week";
 
 export interface PlannerProps {
   readonly tasks: readonly Task[];
+  readonly now: Date;
   readonly displayedDates: readonly string[];
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
@@ -22,6 +23,7 @@ export function Planner(props: PlannerProps): React.ReactElement {
   return (
     <WeekView
       tasks={props.tasks}
+      now={props.now}
       displayedDates={props.displayedDates}
       selectedTask={props.selectedTask}
       onSelectTask={props.onSelectTask}
