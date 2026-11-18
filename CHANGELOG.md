@@ -18,6 +18,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 - Completed JIG-106-FR-01…07 → JIG-106-SD-01…07 technical traceability and added the binding J106-IMP-01…08 implementation/certification plan.
 - Reconciled repository governance, UI and brand/theme authorities with the complete v1.0.6 scope; the former width-only implementation plan is superseded.
+- Added v1.0.6 implementation evidence for product/test candidate `2f3de2f6ad43d2f2b84a9bb41db08d71f0e34cd9`, which passed permanent Verify run `44210396948` with 18/107 core/integration/architecture tests and 53 real-browser acceptance tests.
 
 
 ## [1.0.5] - 2026-11-17
