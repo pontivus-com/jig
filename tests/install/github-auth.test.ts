@@ -13,14 +13,9 @@ import {
   type GitHubFetch,
 } from "../../src/shell/github-auth";
 
-const DESKTOP_REGISTRATION: GitHubAppRegistration = {
-  app_slug: "jig-desktop",
-  client_id: "Iv1.desktop-fixture",
-};
-
-const ANDROID_REGISTRATION: GitHubAppRegistration = {
-  app_slug: "jig-android",
-  client_id: "Iv1.android-fixture",
+const REGISTRATION: GitHubAppRegistration = {
+  app_slug: "jig-desktop-mobile",
+  client_id: "Iv1.shared-fixture",
 };
 
 describe("GitHub App Device Flow primitives", () => {
@@ -42,12 +37,12 @@ describe("GitHub App Device Flow primitives", () => {
     };
 
     const authorization = await startGitHubDeviceAuthorization(
-      DESKTOP_REGISTRATION,
+      REGISTRATION,
       fetcher,
     );
     const params = new URLSearchParams(requestBody);
 
-    expect(params.get("client_id")).toBe(DESKTOP_REGISTRATION.client_id);
+    expect(params.get("client_id")).toBe(REGISTRATION.client_id);
     expect(params.get("scope")).toBe("offline_access");
     expect(params.has("client_secret")).toBe(false);
     expect(params.has("redirect_uri")).toBe(false);
@@ -58,15 +53,6 @@ describe("GitHub App Device Flow primitives", () => {
       expires_in: 900,
       interval: 5,
     });
-  });
-
-  it("keeps Desktop and Android as independent public client registrations", () => {
-    expect(DESKTOP_REGISTRATION.client_id).not.toBe(
-      ANDROID_REGISTRATION.client_id,
-    );
-    expect(DESKTOP_REGISTRATION.app_slug).not.toBe(
-      ANDROID_REGISTRATION.app_slug,
-    );
   });
 
   it("polls Device Flow without client_secret and resolves the GitHub user id", async () => {
@@ -110,7 +96,7 @@ describe("GitHub App Device Flow primitives", () => {
 
     await expect(
       pollGitHubDeviceAuthorization(
-        DESKTOP_REGISTRATION,
+        REGISTRATION,
         authorization,
         5,
         new Date("2030-01-01T00:00:00.000Z"),
@@ -122,7 +108,7 @@ describe("GitHub App Device Flow primitives", () => {
     });
 
     const authorized = await pollGitHubDeviceAuthorization(
-      DESKTOP_REGISTRATION,
+      REGISTRATION,
       authorization,
       5,
       new Date("2030-01-01T00:00:00.000Z"),
@@ -141,7 +127,7 @@ describe("GitHub App Device Flow primitives", () => {
 
     for (const body of requestBodies) {
       const params = new URLSearchParams(body);
-      expect(params.get("client_id")).toBe(DESKTOP_REGISTRATION.client_id);
+      expect(params.get("client_id")).toBe(REGISTRATION.client_id);
       expect(params.get("device_code")).toBe("device-code");
       expect(params.get("grant_type")).toBe(
         "urn:ietf:params:oauth:grant-type:device_code",
@@ -174,7 +160,7 @@ describe("GitHub App Device Flow primitives", () => {
     };
 
     const refreshed = await refreshGitHubCredential(
-      DESKTOP_REGISTRATION,
+      REGISTRATION,
       {
         user_id: 456,
         access_token: "old-access",
@@ -187,7 +173,7 @@ describe("GitHub App Device Flow primitives", () => {
     );
 
     const params = new URLSearchParams(requestBody);
-    expect(params.get("client_id")).toBe(DESKTOP_REGISTRATION.client_id);
+    expect(params.get("client_id")).toBe(REGISTRATION.client_id);
     expect(params.get("grant_type")).toBe("refresh_token");
     expect(params.get("refresh_token")).toBe("old-refresh");
     expect(params.has("client_secret")).toBe(false);
