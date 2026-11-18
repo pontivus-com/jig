@@ -5,8 +5,11 @@ import {
   commit,
   currentBranch,
   fetch,
+  getConfig,
   init,
+  isDescendent,
   listFiles,
+  merge,
   listServerRefs,
   push,
   remove,
@@ -498,6 +501,106 @@ export async function commitAndroidCanonicalState(
     ),
     state.revision,
   );
+}
+
+export interface AndroidGitSynchronizationResult {
+  readonly state:
+    | "unchanged"
+    | "remote-adopted"
+    | "local-pushed"
+    | "diverged";
+  readonly head: string;
+  readonly snapshot: PortableSnapshot | null;
+}
+
+export async function androidSynchronizationRemote(
+  effects: AndroidGitEffects,
+): Promise<{
+  readonly name: "origin";
+  readonly location: string;
+}> {
+  const location = await getConfig({
+    fs: effects.fs,
+    dir: effects.dir,
+    path: `remote.${ANDROID_REMOTE}.url`,
+  });
+  if (location === undefined || location.length === 0) {
+    throw new AndroidGitAdapterError(
+      "Android managed repository has no origin remote",
+    );
+  }
+  assertCredentialFreeHttpsRemote(location);
+  return {
+    name: ANDROID_REMOTE,
+    location,
+  };
+}
+
+export async function synchronizeAndroidPortableRepository(
+  effects: AndroidGitEffects,
+  expectedDatasetId: string,
+  credential: GitCredentialProvider,
+): Promise<AndroidGitSynchronizationResult> {
+  const localHead = await androidPortableHead(effects);
+  const remoteHead = await fetchAndroidPortableRepository(
+    effects,
+    credential,
+  );
+  if (remoteHead === localHead) {
+    return {
+      state: "unchanged",
+      head: localHead,
+      snapshot: null,
+    };
+  }
+
+  const remoteDescendsFromLocal = await isDescendent({
+    fs: effects.fs,
+    dir: effects.dir,
+    oid: remoteHead,
+    ancestor: localHead,
+  });
+  if (remoteDescendsFromLocal) {
+    await merge({
+      fs: effects.fs,
+      dir: effects.dir,
+      ours: ANDROID_DATA_BRANCH,
+      theirs: `refs/remotes/${ANDROID_REMOTE}/${ANDROID_DATA_BRANCH}`,
+      fastForwardOnly: true,
+    });
+    return {
+      state: "remote-adopted",
+      head: remoteHead,
+      snapshot: await readAndroidPortableSnapshot(
+        effects,
+        expectedDatasetId,
+      ),
+    };
+  }
+
+  const localDescendsFromRemote = await isDescendent({
+    fs: effects.fs,
+    dir: effects.dir,
+    oid: localHead,
+    ancestor: remoteHead,
+  });
+  if (localDescendsFromRemote) {
+    await pushAndroidPortableRepository(
+      effects,
+      credential,
+    );
+    return {
+      state: "local-pushed",
+      head: localHead,
+      snapshot: null,
+    };
+  }
+
+  return {
+    state: "diverged",
+    head: localHead,
+    snapshot: null,
+  };
 }
 
 export async function pushAndroidPortableRepository(
