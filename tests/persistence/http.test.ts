@@ -13,6 +13,30 @@ import { initializeDatabase } from "../../src/shell/sqlite-bun";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 const TOKEN = "a".repeat(64);
+const LOCAL_ONLY_STATUS = {
+  local_git: "committed",
+  remote: {
+    state: "not-configured",
+    remote_name: null,
+    remote_location: null,
+  },
+} as const;
+const PENDING_STATUS = {
+  local_git: "pending",
+  remote: {
+    state: "pending",
+    remote_name: "origin",
+    remote_location: "https://example.invalid/personal/jig-data.git",
+  },
+} as const;
+const SYNCHRONIZED_STATUS = {
+  local_git: "committed",
+  remote: {
+    state: "synchronized",
+    remote_name: "origin",
+    remote_location: "https://example.invalid/personal/jig-data.git",
+  },
+} as const;
 let root = "";
 let db: JigSqlConnection;
 
@@ -38,7 +62,7 @@ function handler() {
     get_status: () => ({
       ready: true,
       repository_path: root,
-      repository_status: "local-only",
+      repository_status: LOCAL_ONLY_STATUS,
     }),
     get_diagnostics: () => ({
       service_healthy: true,
@@ -48,7 +72,7 @@ function handler() {
       portable_format_version: 1,
       repository_adapter_healthy: true,
     }),
-    trigger_sync: async () => "local-only",
+    trigger_sync: async () => LOCAL_ONLY_STATUS,
     ensure_current_day_rollover: async () => undefined,
     on_task_mutation: () => undefined,
   });
@@ -180,7 +204,7 @@ describe("loopback HTTP admission", () => {
       get_status: () => ({
         ready: true,
         repository_path: root,
-        repository_status: "pending",
+        repository_status: PENDING_STATUS,
       }),
       get_diagnostics: () => ({
         service_healthy: true,
@@ -190,7 +214,7 @@ describe("loopback HTTP admission", () => {
         portable_format_version: 1,
         repository_adapter_healthy: true,
       }),
-      trigger_sync: async () => "pending",
+      trigger_sync: async () => PENDING_STATUS,
       ensure_current_day_rollover: async () => {
         rolloverCalls += 1;
         await rollForwardOutstandingInDatabase(
@@ -253,7 +277,7 @@ describe("loopback HTTP admission", () => {
       get_status: () => ({
         ready: true,
         repository_path: root,
-          repository_status: "pending",
+          repository_status: PENDING_STATUS,
       }),
       get_diagnostics: () => ({
         service_healthy: true,
@@ -265,7 +289,7 @@ describe("loopback HTTP admission", () => {
       }),
       trigger_sync: async () => {
         syncCalls += 1;
-        return "synchronized";
+        return SYNCHRONIZED_STATUS;
       },
       ensure_current_day_rollover: async () => undefined,
       on_task_mutation: () => undefined,
@@ -276,5 +300,8 @@ describe("loopback HTTP admission", () => {
     );
     expect(response.status).toBe(202);
     expect(syncCalls).toBe(1);
+    expect(await response.json()).toStrictEqual({
+      repository_status: SYNCHRONIZED_STATUS,
+    });
   });
 });
