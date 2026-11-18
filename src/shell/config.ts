@@ -79,18 +79,51 @@ export function validateConfig(value: unknown): JigConfig {
   };
 }
 
-export async function loadConfig(
+function isMissingFile(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ENOENT"
+  );
+}
+
+export async function loadConfigIfPresent(
   path = defaultConfigPath(),
-): Promise<JigConfig> {
-  let parsed: unknown;
+): Promise<JigConfig | null> {
+  let text: string;
   try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
+    text = await readFile(path, "utf8");
   } catch (error) {
+    if (isMissingFile(error)) {
+      return null;
+    }
     throw new RuntimeConfigurationError(
       `Unable to read Jig configuration at ${path}: ${String(error)}`,
     );
   }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new RuntimeConfigurationError(
+      `Unable to parse Jig configuration at ${path}: ${String(error)}`,
+    );
+  }
   return validateConfig(parsed);
+}
+
+export async function loadConfig(
+  path = defaultConfigPath(),
+): Promise<JigConfig> {
+  const config = await loadConfigIfPresent(path);
+  if (config === null) {
+    throw new RuntimeConfigurationError(
+      `Jig configuration does not exist at ${path}`,
+    );
+  }
+  return config;
 }
 
 export async function writeConfigAtomic(
