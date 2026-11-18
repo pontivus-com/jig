@@ -183,3 +183,123 @@ test("Connect GitHub presents the direct Device Flow code and verification actio
   ).toBeVisible();
   await expect(page.getByText(/client_secret|Redirect URI/i)).toHaveCount(0);
 });
+
+
+test("configured managed repository reconnects GitHub through Device Flow without repository setup", async ({
+  page,
+}) => {
+  let repositoryStatus = "sync-issue";
+  let syncCalls = 0;
+
+  await page.route("**/api/v1/setup/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ mode: "configured" }),
+    });
+  });
+  await page.route("**/api/v1/tasks", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ revision: 0, tasks: [] }),
+    });
+  });
+  await page.route("**/api/v1/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ready: true,
+        repository_path:
+          "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
+        repository_status: repositoryStatus,
+        github_reconnect_available: true,
+      }),
+    });
+  });
+  await page.route("**/api/v1/diagnostics", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        service_healthy: true,
+        sqlite_available: true,
+        sqlite_schema_version: 2,
+        repository_path:
+          "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
+        portable_format_version: 1,
+        repository_adapter_healthy: repositoryStatus !== "sync-issue",
+      }),
+    });
+  });
+  await page.route("**/api/v1/github/reconnect/start", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        available: true,
+        phase: "authorizing",
+        authorization: {
+          mode: "device",
+          verification_uri: "https://github.com/login/device",
+          user_code: "WXYZ-1234",
+          retry_after_seconds: 5,
+        },
+        grant_access_url: null,
+        manage_access: [],
+        installations: [],
+        repositories: [],
+        error: null,
+      }),
+    });
+  });
+  await page.route("**/api/v1/github/reconnect/refresh", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        available: true,
+        phase: "idle",
+        authorization: null,
+        grant_access_url: null,
+        manage_access: [],
+        installations: [],
+        repositories: [],
+        error: null,
+      }),
+    });
+  });
+  await page.route("**/api/v1/sync", async (route) => {
+    syncCalls += 1;
+    repositoryStatus = "synchronized";
+    await route.fulfill({
+      status: 202,
+      contentType: "application/json",
+      body: JSON.stringify({ repository_status: "synchronized" }),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+
+  await expect(
+    page.getByRole("button", { name: "Reconnect GitHub" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Reconnect GitHub" }).click();
+
+  await expect(page.getByText("WXYZ-1234", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open GitHub device authorization" }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Refresh GitHub authorization" })
+    .click();
+
+  await expect.poll(() => syncCalls).toBe(1);
+  await expect(page.getByText("Local planning data and the configured repository are synchronized.")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Reconnect GitHub" }),
+  ).toHaveCount(0);
+});
