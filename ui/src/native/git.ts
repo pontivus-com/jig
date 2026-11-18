@@ -14,8 +14,8 @@ import {
   serializeSnapshot,
   validateSnapshot,
   type PortableSnapshot,
-} from "../../src/portable";
-import type { CanonicalState } from "../../src/protocol";
+} from "../../../src/portable";
+import type { CanonicalState } from "../../../src/protocol";
 import {
   AndroidFsError,
   createAndroidGitFilesystem,
