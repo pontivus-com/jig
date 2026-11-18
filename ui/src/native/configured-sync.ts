@@ -1,5 +1,5 @@
 import type { JigSqlConnection } from "../../../src/persistence/sqlite";
-import { currentAndroidGitHubToken } from "./github-credential";
+import { createAndroidManagedGitHubCredentialProvider } from "./github-managed-transport";
 import {
   createAndroidGitEffects,
 } from "./git";
@@ -15,10 +15,11 @@ export function configuredNativeSynchronization(
   database: JigSqlConnection,
 ): Promise<AndroidSyncController> {
   controllerPromise ??= (async () => {
+    const effects = createAndroidGitEffects();
     const controller = createAndroidSyncController(
       database,
-      createAndroidGitEffects(),
-      currentAndroidGitHubToken,
+      effects,
+      createAndroidManagedGitHubCredentialProvider(effects),
     );
     await controller.start();
     void controller.trigger().catch(() => undefined);
