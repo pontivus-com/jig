@@ -7,6 +7,17 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 ### Added
 
 - Started Jig v1.1 implementation: Android-first native delivery, in-application repository onboarding, corrected reminder attention/delivery, persistent narrow/mobile chrome and precise Task drag/drop placement are governed by the complete JIG-110 functional/technical/implementation contract.
+- Settings now presents the current local Jig Git commit state separately from remote synchronization and shows the actual configured synchronization remote through a credential-free read-only identity.
+
+### Changed
+
+- History and Settings use the application header as the single title/subtitle owner; their content surfaces begin directly with destination content instead of repeating page headings.
+- Repository status is one structured provider-neutral contract: local Git pending/committed/issue and remote not-configured/pending/retrying/synchronized/sync-issue remain distinct, while the compact header status is derived from those facts.
+
+### Fixed
+
+- Remote synchronization failure no longer obscures a successful local Jig Git commit; Settings and operational feedback preserve the committed local state while reporting the remote problem separately.
+- CLI status/sync output and browser/native runtime adapters consume the same structured repository status rather than rendering or maintaining a parallel scalar status.
 
 ### Documentation
 
