@@ -307,7 +307,7 @@ Enabling recurrence on an existing Task:
 1. creates one `RecurrenceSeries`;
 2. attaches the seed Task to that series with `recurrence_occurrence_date = seed.scheduled_date`;
 3. enumerates every later recurrence slot through `end_date`;
-4. creates one ordinary Task for each slot, copying the seed Task's title, priority, context, reference, note and `reminder_time`, while assigning a fresh Task ID, the slot as both `scheduled_date` and `recurrence_occurrence_date`, and normal initial priority-based position for that date;
+4. creates one ordinary Task for each slot, copying the seed Task's title, priority, context, reference, note and `reminder_time` **at that moment only**, while assigning a fresh Task ID, the slot as both `scheduled_date` and `recurrence_occurrence_date`, and normal initial priority-based position for that date;
 5. persists the series + all Task changes in one transaction and increments the canonical revision once.
 
 The canonical command surface adds recurrence without folding it into ordinary single-Task edits:
@@ -324,12 +324,12 @@ Changing Repeat is explicitly **this-and-future** scheduling, but the configurat
 - preserve the selected occurrence, all earlier occurrences and every completed occurrence;
 - keep an existing later outstanding occurrence when its immutable `recurrence_occurrence_date` is still in the new future date set, preserving that Task ID and any occurrence-specific edits;
 - delete only later outstanding occurrences whose recurrence slot is no longer present;
-- create newly introduced later slots from the selected occurrence's current repeatable fields using the normal insertion law;
+- create newly introduced slots from the invoking occurrence's current Task fields using the normal insertion law; this is creation-time copying only and never rewrites already-existing sibling Tasks;
 - update the one shared series rule/effective date/end date in the same transaction;
-- **Stop repeating / remove recurrence** retains the invoking Task, preserves completed History and removes all later outstanding generated occurrences in the same transaction. The invoking Task becomes a one-off Task from that point; the user never deletes the later cards individually;
+- **Stop repeating / remove recurrence** retains the invoking Task, clears its recurrence link so it becomes one-off, preserves completed History and removes **every other outstanding Task linked to that series** in the same transaction, regardless of whether its recurrence slot is earlier or later than the invoking occurrence. This includes older occurrences that rolled forward; the user never deletes those cards individually;
 - individual Task Delete remains occurrence-only and must not invoke series removal.
 
-A normal title/context/priority/reference/note/reminder edit changes only the selected occurrence. Changing Repeat is the explicit action that may reconcile later occurrences. This prevents an ordinary Task edit from silently rewriting many future Tasks.
+A normal title/context/priority/reference/note/reminder edit changes only the selected occurrence and never rewrites an existing sibling. Only the recurrence rule/end date is shared series state. Changing Repeat is the explicit action that may add/remove occurrence Tasks; if it creates a new slot, that new Task copies the invoking occurrence at creation time only. There is intentionally no "apply title/details to all occurrences" operation in v1.1; if the user wants a different common Task definition across the whole set, they create a new recurring Task.
 
 Daily rollover changes only `scheduled_date`/position. It **never** changes `recurrence_occurrence_date` or the series rule. Therefore an overdue Monday occurrence may roll into Tuesday while the Wednesday occurrence still appears on Wednesday exactly as scheduled.
 
