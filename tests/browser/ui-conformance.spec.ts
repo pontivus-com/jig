@@ -99,6 +99,12 @@ async function themeSnapshot(page: Page): Promise<{
     readonly background: string;
   }[];
 }> {
+  await expect(page.locator(".jig-task-card").first()).toBeVisible();
+  await expect(
+    page.locator(".jig-week-column-today .jig-week-column-header"),
+  ).toBeVisible();
+  await expect(page.locator(".jig-logo")).toBeVisible();
+
   return page.evaluate(() => {
     const task = document.querySelector<HTMLElement>(".jig-task-card");
     const today = document.querySelector<HTMLElement>(
