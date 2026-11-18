@@ -3,7 +3,7 @@ import type {
   CanonicalState,
   CommandResult,
   Diagnostics,
-  RepositoryStatus,
+  RepositorySynchronizationStatus,
   ServiceStatus,
 } from "../../src/protocol";
 
@@ -39,6 +39,6 @@ export async function submitTaskCommand(
   return unavailable("Task mutation");
 }
 
-export async function triggerSync(): Promise<RepositoryStatus> {
+export async function triggerSync(): Promise<RepositorySynchronizationStatus> {
   return unavailable("Synchronization");
 }
