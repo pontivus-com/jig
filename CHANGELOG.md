@@ -18,7 +18,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 - Completed JIG-106-FR-01…07 → JIG-106-SD-01…07 technical traceability and added the binding J106-IMP-01…08 implementation/certification plan.
 - Reconciled repository governance, UI and brand/theme authorities with the complete v1.0.6 scope; the former width-only implementation plan is superseded.
-- Certified the final v1.0.6 product/test candidate `9d02fad799348b17a3e65297b36b1be23a40df06` in permanent Verify run `44213103554`: 18/18 test files, 107/107 core/integration/architecture tests and 55/55 real-browser acceptance tests passed, including the 14-theme matrix and Gothic dual-mode application adaptation.
+- Superseded the earlier v1.0.6 certification after architectural review found the 14-theme/Gothic implementation contradicted JIG-106-FR-02 and AGENTS.md; the release candidate was remediated back to the governed 13-theme catalogue and requires fresh permanent certification before release.
 
 
 ## [1.0.5] - 2026-11-17
