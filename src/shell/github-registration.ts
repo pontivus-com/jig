@@ -24,16 +24,11 @@ import type { GitHubAppRegistration } from "./github-auth";
  * GitHub App private keys are never shipped. Placeholder registration values
  * are forbidden.
  */
-export const GITHUB_DESKTOP_APP_REGISTRATION: GitHubAppRegistration = {
-  app_slug: "jig-desktop",
-  client_id: "Iv23li8CqXS4x6hKPByI",
-  client_secret: "01886f67e0b3368285c061b8fc688ffe7d94f382",
-  redirect_uri: "http://127.0.0.1:47832/setup/github/callback",
-};
+// Direct native authorization is deliberately disabled until the governed
+// confidential OAuth broker is available. GitHub client_secret values must
+// never be committed to, shipped with, or read by the Jig native clients.
+export const GITHUB_DESKTOP_APP_REGISTRATION:
+  GitHubAppRegistration | null = null;
 
-export const GITHUB_ANDROID_APP_REGISTRATION: GitHubAppRegistration = {
-  app_slug: "jig-android",
-  client_id: "Iv23liWxxIXGsQcBONup",
-  client_secret: "d6434745bd1a6f3e49251ee5fe5fa6756a52e0d8",
-  redirect_uri: "com.pontivus.jig://oauth/github",
-};
+export const GITHUB_ANDROID_APP_REGISTRATION:
+  GitHubAppRegistration | null = null;
