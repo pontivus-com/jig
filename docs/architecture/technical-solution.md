@@ -200,7 +200,7 @@ At service start generate a fresh **256-bit random write token**. Inject it into
 
 ## 4. Canonical Task model
 
-One Task is the sole durable representation of an intended item. Planner and History are queries/views of it; completed Tasks are excluded from Planner and queried through History. Store the fields below in SQLite and the portable JSON files.
+One Task is the sole durable representation of one intended occurrence. Planner and History are queries/views of canonical Tasks; completed Tasks are excluded from Planner and queried through History. Recurrence does not introduce virtual Task rows: a bounded recurrence series owns only the repeat rule, while every actual occurrence is an ordinary Task. Store the Task fields below in SQLite and the portable JSON files.
 
 | Field | Type / constraint | Semantic ownership |
 |---|---|---|
@@ -213,6 +213,8 @@ One Task is the sole durable representation of an intended item. Planner and His
 | reference | optional string | External URL/path/repository locator only |
 | note | optional string | Brief personal context, not authoritative requirements |
 | reminder_time | optional local HH:mm | Alert time on scheduled_date, not a time estimate |
+| recurrence_series_id | null or UUID | Optional recurrence-series membership; null for one-off Tasks |
+| recurrence_occurrence_date | null or ISO local civil date | Immutable recurrence slot; remains unchanged if the Task is later rolled or manually rescheduled |
 | completed_at | null or UTC ISO instant | Null = outstanding; otherwise completed |
 | created_at | UTC ISO instant | Historical creation time |
 | updated_at | UTC ISO instant | Last committed change time |
@@ -235,6 +237,8 @@ Task references are treated as data: safe http(s) links may open with normal bro
 8. Deletion creates no tombstone, deleted status, trash record or application-level undo history.
 9. A failed mutation leaves all affected dates unchanged; UI reports failure without implying a save.
 10. Every imported complete snapshot passes the same invariants before it can replace local state; after validation, its Task membership is authoritative for that adopted snapshot.
+11. `recurrence_series_id` and `recurrence_occurrence_date` are either both null or both non-null. A recurring occurrence's `recurrence_occurrence_date` is immutable even when `scheduled_date` changes through rollover or explicit movement.
+12. Recurrence never changes completion/move/delete semantics: each generated occurrence is an independent Task. A recurrence rule determines future calendar slots only.
 
 ### 4.2 Operation algorithms
 
@@ -252,11 +256,110 @@ Task references are treated as data: safe http(s) links may open with normal bro
 
 **Read:** Planner derives seven consecutive local civil dates beginning Monday from `displayedWeekStart`. Desktop renders all seven outstanding sequences as columns; narrow/mobile renders the same seven outstanding sequences as vertically stacked dated sections. There is no selected-day projection or selector. Before normal planning reads/commands, the service ensures daily rollover is current, so overdue outstanding Tasks have already been moved into the current local date and are visible in the same canonical Planner bucket on every responsive composition. History is grouped by local completion date. Date/week navigation is presentation state and never writes Task data.
 
+### 4.2.1 Bounded recurrence series
+
+Recurrence is a pure planning-core capability, not a background scheduler and not a second Task model.
+
+Canonical types are intentionally small:
+
+~~~ts
+type Weekday =
+  | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
+
+type RecurrencePattern =
+  | {
+      readonly kind: "weekly";
+      readonly interval_weeks: number;
+      readonly weekdays: readonly Weekday[];
+    }
+  | {
+      readonly kind: "monthly";
+      readonly day_of_month: number;
+    };
+
+interface RecurrenceSeries {
+  readonly id: string;
+  readonly effective_from: string;
+  readonly end_date: string;
+  readonly pattern: RecurrencePattern;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+~~~
+
+Validation is exact:
+
+- `effective_from` and `end_date` are valid local civil dates and `end_date >= effective_from`;
+- weekly `interval_weeks` is a positive whole number and `weekdays` is non-empty, unique and canonical Monday→Sunday order;
+- monthly `day_of_month` is an integer `1..31`;
+- every series is finite; there is no null/unbounded end date.
+
+One pure owner enumerates recurrence dates. The seed Task itself is retained as the first occurrence. Additional dates are strictly after the seed/effective date and no later than the inclusive end date.
+
+**Weekly:** the local Monday-based week containing `effective_from` is recurrence week zero. Active weeks are every `interval_weeks`; selected weekdays inside active weeks produce occurrences. Selecting all seven weekdays is the daily pattern. A four-week interval with one selected weekday is the governed "every four weeks" case.
+
+**Monthly:** each later month contributes the configured `day_of_month` only when that civil date exists. A day-31 series therefore skips February/April/etc.; it is never silently clamped to month-end.
+
+Because every recurrence has a required finite end date, v1.1 **materializes the complete bounded occurrence set transactionally**. It does not create virtual Planner rows, a lazy recurrence daemon, a device-local recurrence cache or a second recurrence scheduler. This keeps Linux and Android on one canonical Task set and keeps portable Git snapshots deterministic.
+
+Enabling recurrence on an existing Task:
+
+1. creates one `RecurrenceSeries`;
+2. attaches the seed Task to that series with `recurrence_occurrence_date = seed.scheduled_date`;
+3. enumerates every later recurrence slot through `end_date`;
+4. creates one ordinary Task for each slot, copying the seed Task's title, priority, context, reference, note and `reminder_time`, while assigning a fresh Task ID, the slot as both `scheduled_date` and `recurrence_occurrence_date`, and normal initial priority-based position for that date;
+5. persists the series + all Task changes in one transaction and increments the canonical revision once.
+
+The canonical command surface adds recurrence without folding it into ordinary single-Task edits:
+
+~~~text
+create { ..., recurrence? }
+set_recurrence { task_id, recurrence: RecurrencePattern + end_date | null }
+~~~
+
+`create.recurrence` creates the seed and bounded series atomically. `set_recurrence` is the Repeat control for an existing occurrence. Ordinary `edit`, `move`, `complete`, `reopen` and `delete` remain occurrence-only commands.
+
+Changing Repeat is explicitly **this-and-future** scheduling:
+
+- preserve the selected occurrence, all earlier occurrences and every completed occurrence;
+- keep an existing later outstanding occurrence when its immutable `recurrence_occurrence_date` is still in the new future date set, preserving that Task ID and any occurrence-specific edits;
+- delete only later outstanding occurrences whose recurrence slot is no longer present;
+- create newly introduced later slots from the selected occurrence's current repeatable fields using the normal insertion law;
+- update the series rule/effective date/end date in the same transaction;
+- turning Repeat off ends the series at the selected occurrence and removes only later outstanding occurrences; completed history is never deleted.
+
+A normal title/context/priority/reference/note/reminder edit changes only the selected occurrence. Changing Repeat is the explicit action that may reconcile later occurrences. This prevents an ordinary Task edit from silently rewriting many future Tasks.
+
+Daily rollover changes only `scheduled_date`/position. It **never** changes `recurrence_occurrence_date` or the series rule. Therefore an overdue Monday occurrence may roll into Tuesday while the Wednesday occurrence still appears on Wednesday exactly as scheduled.
+
+Each generated occurrence has its own `reminder_time`. The existing reminder owner therefore needs no recurrence-specific delivery state: the same time is copied when the occurrence is created, and reminder due/delivery is evaluated against that occurrence's current `scheduled_date`. A rolled occurrence keeps the time-of-day exactly as today.
 ### 4.3 Persistence representation
 
-SQLite schema is one Task table plus minimal app-local metadata and notification-delivery bookkeeping:
+SQLite schema is one Task table plus one bounded recurrence-rule table, minimal app-local metadata and notification-delivery bookkeeping. The recurrence table is planning data, not notification/runtime state:
 
 ~~~sql
+CREATE TABLE recurrence_series (
+  id TEXT PRIMARY KEY,
+  effective_from TEXT NOT NULL,
+  end_date TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('weekly', 'monthly')),
+  interval_weeks INTEGER,
+  weekdays_mask INTEGER,
+  day_of_month INTEGER,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  CHECK (
+    (kind = 'weekly'
+      AND interval_weeks IS NOT NULL AND interval_weeks > 0
+      AND weekdays_mask IS NOT NULL AND weekdays_mask BETWEEN 1 AND 127
+      AND day_of_month IS NULL)
+    OR
+    (kind = 'monthly'
+      AND interval_weeks IS NULL AND weekdays_mask IS NULL
+      AND day_of_month BETWEEN 1 AND 31)
+  )
+);
+
 CREATE TABLE task (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -268,12 +371,19 @@ CREATE TABLE task (
   reference TEXT,
   note TEXT,
   reminder_time TEXT,
+  recurrence_series_id TEXT REFERENCES recurrence_series(id),
+  recurrence_occurrence_date TEXT,
   completed_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   CHECK (
     (completed_at IS NULL AND position IS NOT NULL AND position >= 0)
     OR (completed_at IS NOT NULL AND position IS NULL)
+  ),
+  CHECK (
+    (recurrence_series_id IS NULL AND recurrence_occurrence_date IS NULL)
+    OR
+    (recurrence_series_id IS NOT NULL AND recurrence_occurrence_date IS NOT NULL)
   )
 );
 CREATE UNIQUE INDEX task_active_position
@@ -282,7 +392,7 @@ CREATE UNIQUE INDEX task_active_position
 CREATE INDEX task_completed_at ON task(completed_at);
 ~~~
 
-Technical input validation must also enforce canonical date/time formats, nonblank titles and valid IDs before SQL insertion; CHECK constraints alone do not validate those strings. SQLite schema v2 uses one app metadata table for schema version, dataset identity, monotonically increasing SQLite state revision, last exported revision, last safely adopted portable snapshot identity and durable pending-sync state. The v1 `data_ref` field is migrated away in place because Git topology is not persistence-domain state. A separate local reminder-delivery key set can suppress duplicate browser notifications; it is non-authoritative presentation bookkeeping and is **not included in Git exports**. SQLite lives under the selected personal repository's `.jig/local/` path and is excluded from version control; deterministic JSON records are the portable snapshot synchronized through the repository adapter.
+Technical input validation must also enforce canonical date/time formats, nonblank titles, valid IDs and recurrence invariants before SQL insertion; CHECK constraints alone do not validate those strings. The recurrence `weekdays_mask` is only SQLite encoding (Monday bit 0 through Sunday bit 6); the canonical core type remains the named `Weekday[]` union. The recurrence feature advances SQLite to schema v3: the v2→v3 migration adds the recurrence table and nullable Task recurrence columns, leaving every existing Task non-recurring. SQLite app metadata for schema version, dataset identity, monotonically increasing SQLite state revision, last exported revision, last safely adopted portable snapshot identity and durable pending-sync state. The v1 `data_ref` field is migrated away in place because Git topology is not persistence-domain state. A separate local reminder-delivery key set can suppress duplicate browser notifications; it is non-authoritative presentation bookkeeping and is **not included in Git exports**. SQLite lives under the selected personal repository's `.jig/local/` path and is excluded from version control; deterministic JSON records are the portable snapshot synchronized through the repository adapter.
 
 Apply reordering in one SQLite transaction. To satisfy the active-position uniqueness constraint while changing multiple indices, first move affected positions to distinct temporary nonconflicting values within that same transaction, then write final 0..N-1 positions. No intermediate ordering can be observed outside the transaction. If the transaction fails, the whole operation rolls back.
 
