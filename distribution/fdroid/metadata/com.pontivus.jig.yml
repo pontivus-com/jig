@@ -7,6 +7,11 @@ Changelog: https://github.com/pontivus-com/jig/blob/HEAD/CHANGELOG.md
 
 AutoName: Jig
 Summary: Local-first just-in-time daily planner
+MaintainerNotes: |-
+  This in-repository file is pre-release candidate metadata. The external
+  fdroiddata submission must resolve the immutable v1.1.0 tag to its exact
+  40-character release commit and use that SHA in Builds.commit.
+
 Description: |-
   Jig is a local-first just-in-time daily planner.
   Planning state is durable on-device and portable Jig records synchronize
