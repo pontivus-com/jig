@@ -268,6 +268,13 @@ async function fixture(): Promise<{
   await runGit(seed, ["commit", "-m", "Seed unrelated content"]);
   await runGit(seed, ["remote", "add", "origin", remote]);
   await runGit(seed, ["push", "origin", "main"]);
+  await runGit(root, [
+    "--git-dir",
+    remote,
+    "symbolic-ref",
+    "HEAD",
+    "refs/heads/main",
+  ]);
 
   await runGit(seed, ["checkout", "--orphan", "jig-data"]);
   await runGit(seed, ["rm", "-rf", "."]);
