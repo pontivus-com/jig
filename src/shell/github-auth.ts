@@ -2,6 +2,11 @@ import type { GitHubCredential } from "./secret-service";
 
 const GITHUB_API_VERSION = "2022-11-28";
 
+export type GitHubFetch = (
+  input: string | URL | Request,
+  init?: RequestInit,
+) => Promise<Response>;
+
 export interface GitHubAppRegistration {
   readonly client_id: string;
   readonly client_secret: string;
@@ -174,7 +179,7 @@ function tokenResponse(payload: Record<string, unknown>): TokenResponse {
 
 async function githubUserId(
   accessToken: string,
-  fetcher: typeof fetch,
+  fetcher: GitHubFetch,
 ): Promise<number> {
   const response = await fetcher("https://api.github.com/user", {
     headers: apiHeaders(accessToken),
@@ -186,7 +191,7 @@ async function githubUserId(
 async function credentialFromToken(
   token: TokenResponse,
   now: Date,
-  fetcher: typeof fetch,
+  fetcher: GitHubFetch,
 ): Promise<GitHubCredential> {
   return {
     user_id: await githubUserId(token.access_token, fetcher),
@@ -235,7 +240,7 @@ export async function exchangeGitHubAuthorizationCode(
   request: GitHubAuthorizationRequest,
   code: string,
   now = new Date(),
-  fetcher: typeof fetch = fetch,
+  fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<GitHubCredential> {
   const response = await fetcher(
     "https://github.com/login/oauth/access_token",
@@ -265,7 +270,7 @@ export async function refreshGitHubCredential(
   registration: GitHubAppRegistration,
   credential: GitHubCredential,
   now = new Date(),
-  fetcher: typeof fetch = fetch,
+  fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<GitHubCredential> {
   if (credential.refresh_token === null) {
     throw new GitHubAuthError(
@@ -297,7 +302,7 @@ export async function refreshGitHubCredential(
 
 export async function listGitHubInstallations(
   accessToken: string,
-  fetcher: typeof fetch = fetch,
+  fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<readonly GitHubInstallation[]> {
   const response = await fetcher(
     "https://api.github.com/user/installations?per_page=100",
@@ -332,7 +337,7 @@ export async function listGitHubInstallations(
 export async function listGitHubRepositories(
   accessToken: string,
   installationId: number,
-  fetcher: typeof fetch = fetch,
+  fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<readonly GitHubRepository[]> {
   const id = positiveInteger(installationId, "installation id");
   const response = await fetcher(
@@ -365,7 +370,7 @@ export async function listGitHubRepositories(
 
 export async function startGitHubDeviceAuthorization(
   registration: GitHubAppRegistration,
-  fetcher: typeof fetch = fetch,
+  fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<GitHubDeviceAuthorization> {
   const response = await fetcher("https://github.com/login/device/code", {
     method: "POST",
@@ -396,7 +401,7 @@ export async function pollGitHubDeviceAuthorization(
   authorization: GitHubDeviceAuthorization,
   retryAfterSeconds: number,
   now = new Date(),
-  fetcher: typeof fetch = fetch,
+  fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<GitHubDevicePollResult> {
   const response = await fetcher(
     "https://github.com/login/oauth/access_token",
