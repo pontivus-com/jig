@@ -4,8 +4,6 @@ import {
   it,
 } from "vitest";
 import {
-  createGitHubAuthorizationRequest,
-  exchangeGitHubAuthorizationCode,
   listGitHubInstallations,
   listGitHubRepositories,
   pollGitHubDeviceAuthorization,
@@ -18,127 +16,150 @@ import {
 const DESKTOP_REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop",
   client_id: "Iv1.desktop-fixture",
-  client_secret: "public-desktop-fixture-secret",
-  redirect_uri: "http://127.0.0.1:47832/setup/github/callback",
 };
 
 const ANDROID_REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-android",
   client_id: "Iv1.android-fixture",
-  client_secret: "public-android-fixture-secret",
-  redirect_uri: "com.pontivus.jig://oauth/github",
 };
 
-describe("GitHub App public-client primitives", () => {
-  it("creates a PKCE S256 authorization request with offline access", async () => {
-    const request = await createGitHubAuthorizationRequest(
-      DESKTOP_REGISTRATION,
-    );
-    const url = new URL(request.authorization_url);
+describe("GitHub App Device Flow primitives", () => {
+  it("starts Device Flow with only client_id and offline_access", async () => {
+    let requestBody = "";
+    const fetcher: GitHubFetch = async (input, init) => {
+      expect(String(input)).toBe("https://github.com/login/device/code");
+      requestBody =
+        init?.body instanceof URLSearchParams
+          ? init.body.toString()
+          : "";
+      return Response.json({
+        device_code: "device-code",
+        user_code: "ABCD-EFGH",
+        verification_uri: "https://github.com/login/device",
+        expires_in: 900,
+        interval: 5,
+      });
+    };
 
-    expect(url.origin + url.pathname).toBe(
-      "https://github.com/login/oauth/authorize",
+    const authorization = await startGitHubDeviceAuthorization(
+      DESKTOP_REGISTRATION,
+      fetcher,
     );
-    expect(url.searchParams.get("client_id")).toBe(
-      DESKTOP_REGISTRATION.client_id,
-    );
-    expect(url.searchParams.get("redirect_uri")).toBe(
-      DESKTOP_REGISTRATION.redirect_uri,
-    );
-    expect(url.searchParams.get("scope")).toBe("offline_access");
-    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-    expect(url.searchParams.get("code_challenge")).toMatch(
-      /^[A-Za-z0-9_-]{43}$/,
-    );
-    expect(request.state).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(request.code_verifier).toMatch(/^[A-Za-z0-9_-]+$/);
+    const params = new URLSearchParams(requestBody);
+
+    expect(params.get("client_id")).toBe(DESKTOP_REGISTRATION.client_id);
+    expect(params.get("scope")).toBe("offline_access");
+    expect(params.has("client_secret")).toBe(false);
+    expect(params.has("redirect_uri")).toBe(false);
+    expect(authorization).toStrictEqual({
+      device_code: "device-code",
+      user_code: "ABCD-EFGH",
+      verification_uri: "https://github.com/login/device",
+      expires_in: 900,
+      interval: 5,
+    });
   });
 
-  it("uses the Redirect URI owned by the selected GitHub App registration", async () => {
-    const desktop = await createGitHubAuthorizationRequest(
-      DESKTOP_REGISTRATION,
-    );
-    const android = await createGitHubAuthorizationRequest(
-      ANDROID_REGISTRATION,
-    );
-
-    expect(new URL(desktop.authorization_url).searchParams.get("redirect_uri"))
-      .toBe(DESKTOP_REGISTRATION.redirect_uri);
-    expect(desktop.redirect_uri).toBe(DESKTOP_REGISTRATION.redirect_uri);
-
-    expect(new URL(android.authorization_url).searchParams.get("redirect_uri"))
-      .toBe(ANDROID_REGISTRATION.redirect_uri);
-    expect(android.redirect_uri).toBe(ANDROID_REGISTRATION.redirect_uri);
-
+  it("keeps Desktop and Android as independent public client registrations", () => {
     expect(DESKTOP_REGISTRATION.client_id).not.toBe(
       ANDROID_REGISTRATION.client_id,
     );
+    expect(DESKTOP_REGISTRATION.app_slug).not.toBe(
+      ANDROID_REGISTRATION.app_slug,
+    );
   });
 
-  it("exchanges an authorization code with PKCE and resolves the GitHub user id", async () => {
-    const request = await createGitHubAuthorizationRequest(
-      DESKTOP_REGISTRATION,
-    );
-    const calls: Array<{ url: string; body: string | null }> = [];
+  it("polls Device Flow without client_secret and resolves the GitHub user id", async () => {
+    let stage = 0;
+    const requestBodies: string[] = [];
     const fetcher: GitHubFetch = async (input, init) => {
       const url = String(input);
-      calls.push({
-        url,
-        body:
+      if (url.endsWith("/login/oauth/access_token")) {
+        requestBodies.push(
           init?.body instanceof URLSearchParams
             ? init.body.toString()
-            : null,
-      });
-      if (url.endsWith("/login/oauth/access_token")) {
+            : "",
+        );
+        stage += 1;
+        if (stage === 1) {
+          return Response.json(
+            { error: "authorization_pending" },
+            { status: 400 },
+          );
+        }
         return Response.json({
-          access_token: "ghu_access",
+          access_token: "device-access",
           expires_in: 28800,
-          refresh_token: "ghr_refresh",
+          refresh_token: "device-refresh",
           refresh_token_expires_in: 15897600,
-          token_type: "bearer",
         });
       }
       if (url === "https://api.github.com/user") {
-        return Response.json({ id: 456 });
+        return Response.json({ id: 99 });
       }
       throw new Error("Unexpected fetch " + url);
     };
 
-    const now = new Date("2030-01-01T00:00:00.000Z");
-    const credential = await exchangeGitHubAuthorizationCode(
+    const authorization = {
+      device_code: "device-code",
+      user_code: "ABCD-EFGH",
+      verification_uri: "https://github.com/login/device",
+      expires_in: 900,
+      interval: 5,
+    };
+
+    await expect(
+      pollGitHubDeviceAuthorization(
+        DESKTOP_REGISTRATION,
+        authorization,
+        5,
+        new Date("2030-01-01T00:00:00.000Z"),
+        fetcher,
+      ),
+    ).resolves.toStrictEqual({
+      status: "pending",
+      retry_after_seconds: 5,
+    });
+
+    const authorized = await pollGitHubDeviceAuthorization(
       DESKTOP_REGISTRATION,
-      request,
-      "code-123",
-      now,
+      authorization,
+      5,
+      new Date("2030-01-01T00:00:00.000Z"),
       fetcher,
     );
+    expect(authorized.status).toBe("authorized");
+    if (authorized.status === "authorized") {
+      expect(authorized.credential).toStrictEqual({
+        user_id: 99,
+        access_token: "device-access",
+        refresh_token: "device-refresh",
+        access_token_expires_at: "2030-01-01T08:00:00.000Z",
+        refresh_token_expires_at: "2030-07-04T00:00:00.000Z",
+      });
+    }
 
-    expect(credential).toStrictEqual({
-      user_id: 456,
-      access_token: "ghu_access",
-      refresh_token: "ghr_refresh",
-      access_token_expires_at: "2030-01-01T08:00:00.000Z",
-      refresh_token_expires_at: "2030-07-04T00:00:00.000Z",
-    });
-    const params = new URLSearchParams(calls[0]?.body ?? "");
-    expect(params.get("client_id")).toBe(DESKTOP_REGISTRATION.client_id);
-    expect(params.get("client_secret")).toBe(
-      DESKTOP_REGISTRATION.client_secret,
-    );
-    expect(params.get("code")).toBe("code-123");
-    expect(params.get("code_verifier")).toBe(request.code_verifier);
+    for (const body of requestBodies) {
+      const params = new URLSearchParams(body);
+      expect(params.get("client_id")).toBe(DESKTOP_REGISTRATION.client_id);
+      expect(params.get("device_code")).toBe("device-code");
+      expect(params.get("grant_type")).toBe(
+        "urn:ietf:params:oauth:grant-type:device_code",
+      );
+      expect(params.has("client_secret")).toBe(false);
+      expect(params.has("redirect_uri")).toBe(false);
+    }
   });
 
-  it("refreshes expiring credentials with the public App registration", async () => {
+  it("refreshes Device Flow credentials without client_secret", async () => {
+    let requestBody = "";
     const fetcher: GitHubFetch = async (input, init) => {
       const url = String(input);
       if (url.endsWith("/login/oauth/access_token")) {
-        const params =
+        requestBody =
           init?.body instanceof URLSearchParams
-            ? init.body
-            : new URLSearchParams();
-        expect(params.get("grant_type")).toBe("refresh_token");
-        expect(params.get("refresh_token")).toBe("old-refresh");
+            ? init.body.toString()
+            : "";
         return Response.json({
           access_token: "new-access",
           expires_in: 28800,
@@ -164,6 +185,12 @@ describe("GitHub App public-client primitives", () => {
       new Date("2030-01-01T00:00:00.000Z"),
       fetcher,
     );
+
+    const params = new URLSearchParams(requestBody);
+    expect(params.get("client_id")).toBe(DESKTOP_REGISTRATION.client_id);
+    expect(params.get("grant_type")).toBe("refresh_token");
+    expect(params.get("refresh_token")).toBe("old-refresh");
+    expect(params.has("client_secret")).toBe(false);
     expect(refreshed.access_token).toBe("new-access");
     expect(refreshed.refresh_token).toBe("new-refresh");
     expect(refreshed.user_id).toBe(456);
@@ -223,68 +250,5 @@ describe("GitHub App public-client primitives", () => {
         clone_url: "https://github.com/example/planning.git",
       },
     ]);
-  });
-
-  it("supports the governed Linux device-flow fallback states", async () => {
-    let stage = 0;
-    const fetcher: GitHubFetch = async (input) => {
-      const url = String(input);
-      if (url.endsWith("/login/device/code")) {
-        return Response.json({
-          device_code: "device-code",
-          user_code: "ABCD-EFGH",
-          verification_uri: "https://github.com/login/device",
-          expires_in: 900,
-          interval: 5,
-        });
-      }
-      if (url.endsWith("/login/oauth/access_token")) {
-        stage += 1;
-        if (stage === 1) {
-          return Response.json(
-            { error: "authorization_pending" },
-            { status: 400 },
-          );
-        }
-        return Response.json({
-          access_token: "device-access",
-          expires_in: 28800,
-          refresh_token: "device-refresh",
-          refresh_token_expires_in: 15897600,
-        });
-      }
-      if (url === "https://api.github.com/user") {
-        return Response.json({ id: 99 });
-      }
-      throw new Error("Unexpected fetch " + url);
-    };
-
-    const authorization = await startGitHubDeviceAuthorization(
-      DESKTOP_REGISTRATION,
-      fetcher,
-    );
-    await expect(
-      pollGitHubDeviceAuthorization(
-        DESKTOP_REGISTRATION,
-        authorization,
-        authorization.interval,
-        new Date("2030-01-01T00:00:00.000Z"),
-        fetcher,
-      ),
-    ).resolves.toStrictEqual({
-      status: "pending",
-      retry_after_seconds: 5,
-    });
-    const authorized = await pollGitHubDeviceAuthorization(
-      DESKTOP_REGISTRATION,
-      authorization,
-      5,
-      new Date("2030-01-01T00:00:00.000Z"),
-      fetcher,
-    );
-    expect(authorized.status).toBe("authorized");
-    if (authorized.status === "authorized") {
-      expect(authorized.credential.user_id).toBe(99);
-    }
   });
 });
