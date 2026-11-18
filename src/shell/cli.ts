@@ -74,6 +74,37 @@ async function jsonResponse(
   return value as Record<string, unknown>;
 }
 
+function objectOrNull(value: unknown): Record<string, unknown> | null {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function repositoryStatusLines(value: unknown): readonly string[] {
+  const status = objectOrNull(value);
+  const remote = objectOrNull(status?.remote);
+  const localGit =
+    typeof status?.local_git === "string" ? status.local_git : "unknown";
+  const remoteGit =
+    typeof remote?.state === "string" ? remote.state : "unknown";
+  const lines = [
+    `local_git: ${localGit}`,
+    `remote_git: ${remoteGit}`,
+  ];
+  if (typeof remote?.remote_name === "string") {
+    lines.push(`remote_name: ${remote.remote_name}`);
+  }
+  if (typeof remote?.remote_location === "string") {
+    lines.push(`remote_repository: ${remote.remote_location}`);
+  }
+  return lines;
+}
+
 async function setupStatusIfReady(
   port: number,
 ): Promise<Record<string, unknown> | null> {
@@ -260,7 +291,8 @@ async function printStatus(): Promise<void> {
       [
         "service: stopped or unavailable",
         `repository: ${config.repository_path}`,
-        "repository_status: unavailable while service is stopped",
+        "local_git: unavailable while service is stopped",
+        "remote_git: unavailable while service is stopped",
         "",
       ].join("\n"),
     );
@@ -271,7 +303,7 @@ async function printStatus(): Promise<void> {
     [
       "service: ready",
       `repository: ${String(status.repository_path ?? config.repository_path)}`,
-      `repository_status: ${String(status.repository_status ?? "unknown")}`,
+      ...repositoryStatusLines(status.repository_status),
       "",
     ].join("\n"),
   );
@@ -282,7 +314,7 @@ async function syncNow(): Promise<void> {
   await startService(config.http_port);
   const result = await postOperation(config, "/api/v1/sync", {});
   process.stdout.write(
-    `repository_status: ${String(result.repository_status ?? "unknown")}\n`,
+    `${repositoryStatusLines(result.repository_status).join("\n")}\n`,
   );
 }
 
