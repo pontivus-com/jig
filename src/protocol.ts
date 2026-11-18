@@ -1,3 +1,4 @@
+import type { RecurrenceSeries } from "./core/recurrence";
 import type { Task } from "./core/task";
 
 /**
@@ -34,6 +35,7 @@ export interface RepositorySynchronizationStatus {
 export interface CanonicalState {
   readonly revision: number;
   readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
 }
 
 export type CommandResult =
