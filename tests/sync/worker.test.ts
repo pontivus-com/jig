@@ -24,7 +24,6 @@ import {
 import { initializeDatabase } from "../../src/shell/sqlite-bun";
 import {
   createSyncController,
-  SyncAuthenticationError,
   type SyncEffects,
 } from "../../src/shell/sync";
 
@@ -58,15 +57,9 @@ function fakeEffects(options: {
   readonly effects: SyncEffects;
   readonly commitCalls: { count: number };
   readonly pushCalls: { count: number };
-  readonly networkEnvironments: Array<
-    Readonly<Record<string, string>> | undefined
-  >;
 } {
   const commitCalls = { count: 0 };
   const pushCalls = { count: 0 };
-  const networkEnvironments: Array<
-    Readonly<Record<string, string>> | undefined
-  > = [];
   const pushResults = [...(options.pushResults ?? ["synchronized"])];
 
   const effects: SyncEffects = {
@@ -89,10 +82,13 @@ function fakeEffects(options: {
       commitCalls.count += 1;
       return revision.toString(16).padStart(40, "0");
     },
-    synchronize: async (_config, networkEnvironment) => {
+    synchronize: async () => {
       pushCalls.count += 1;
-      networkEnvironments.push(networkEnvironment);
-      return pushResults.shift() ?? "synchronized";
+      const status = pushResults.shift() ?? "synchronized";
+      return {
+        status,
+        retryable: status === "sync-issue",
+      };
     },
     mode: async () =>
       (options.remoteName === undefined ? "origin" : options.remoteName) === null
@@ -104,7 +100,6 @@ function fakeEffects(options: {
     effects,
     commitCalls,
     pushCalls,
-    networkEnvironments,
   };
 }
 
@@ -140,50 +135,30 @@ describe("serialized synchronization worker", () => {
     controller.stop();
   });
 
-  it("supplies runtime network authentication without persisting it in Git config", async () => {
-    const { effects, networkEnvironments } = fakeEffects();
+  it("surfaces a non-retryable transport issue without generic backoff", async () => {
+    let calls = 0;
+    const { effects } = fakeEffects();
     const controller = createSyncController(
       db,
+      { repository_path: root },
       {
-        repository_path: root,
-        get_network_environment: async () => ({
-          GIT_ASKPASS: "/tmp/jig-askpass",
-          GIT_TERMINAL_PROMPT: "0",
-          JIG_GITHUB_ACCESS_TOKEN: "device-token",
-        }),
-      },
-      effects,
-    );
-
-    expect(await controller.trigger()).toBe("synchronized");
-    expect(networkEnvironments).toStrictEqual([
-      {
-        GIT_ASKPASS: "/tmp/jig-askpass",
-        GIT_TERMINAL_PROMPT: "0",
-        JIG_GITHUB_ACCESS_TOKEN: "device-token",
-      },
-    ]);
-    controller.stop();
-  });
-
-  it("surfaces managed GitHub credential failure immediately as a sync issue", async () => {
-    const { effects, pushCalls } = fakeEffects();
-    const controller = createSyncController(
-      db,
-      {
-        repository_path: root,
-        get_network_environment: async () => {
-          throw new SyncAuthenticationError(
-            "GitHub credential is unavailable; reconnect GitHub",
-          );
+        ...effects,
+        synchronize: async () => {
+          calls += 1;
+          return {
+            status: "sync-issue",
+            retryable: false,
+          };
         },
       },
-      effects,
     );
 
     expect(await controller.trigger()).toBe("sync-issue");
     expect(controller.status()).toBe("sync-issue");
-    expect(pushCalls.count).toBe(0);
+    expect(calls).toBe(1);
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(calls).toBe(1);
     controller.stop();
   });
 
