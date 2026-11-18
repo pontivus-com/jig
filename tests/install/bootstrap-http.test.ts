@@ -55,13 +55,16 @@ describe("bootstrap HTTP mode", () => {
     await writeFile(join(ui, "index.html"), "<head></head><body>Jig</body>");
 
     let configured: JigConfig | null = null;
+    let configuredState = false;
     const handler = createBootstrapHttpHandler({
       write_token: "a".repeat(64),
       ui_directory: ui,
       config_path: join(root, "config.json"),
       http_port: 47831,
+      is_configured: () => configuredState,
       on_configured: (config) => {
         configured = config;
+        configuredState = true;
       },
     });
 
@@ -71,7 +74,6 @@ describe("bootstrap HTTP mode", () => {
     expect(await status.json()).toMatchObject({
       mode: "bootstrap",
       local_repository_available: true,
-      github_available: false,
     });
 
     const tasks = await handler(
