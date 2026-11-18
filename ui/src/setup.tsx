@@ -7,8 +7,11 @@ import {
 } from "@astryxdesign/core";
 import { useState } from "react";
 import {
+  acquireGitHubRepository,
   configureLocalRepository,
+  refreshGitHubSetup,
   startGitHubSetup,
+  type GitHubSetupSnapshot,
   type SetupStatus,
 } from "./setup-http";
 
@@ -22,6 +25,7 @@ export function SetupView({
   const [repositoryPath, setRepositoryPath] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isOperating, setIsOperating] = useState(false);
+  const [github, setGitHub] = useState<GitHubSetupSnapshot | null>(null);
 
   const completeLocalSetup = async (): Promise<void> => {
     if (!repositoryPath.startsWith("/")) {
@@ -46,11 +50,62 @@ export function SetupView({
     }
   };
 
+  const openExternal = (url: string): void => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleGitHubSnapshot = (
+    snapshot: GitHubSetupSnapshot,
+  ): void => {
+    setGitHub(snapshot);
+    if (snapshot.error !== null) {
+      setError(snapshot.error);
+    }
+    if (snapshot.authorization?.mode === "browser") {
+      openExternal(snapshot.authorization.authorization_url);
+    }
+  };
+
   const connectGitHub = async (): Promise<void> => {
     setError(null);
     setIsOperating(true);
     try {
-      await startGitHubSetup();
+      handleGitHubSnapshot(await startGitHubSetup());
+    } catch (setupError) {
+      setError(
+        setupError instanceof Error
+          ? setupError.message
+          : String(setupError),
+      );
+    } finally {
+      setIsOperating(false);
+    }
+  };
+
+  const refreshGitHub = async (): Promise<void> => {
+    setError(null);
+    setIsOperating(true);
+    try {
+      handleGitHubSnapshot(await refreshGitHubSetup());
+    } catch (setupError) {
+      setError(
+        setupError instanceof Error
+          ? setupError.message
+          : String(setupError),
+      );
+    } finally {
+      setIsOperating(false);
+    }
+  };
+
+  const acquireGitHub = async (repositoryId: number): Promise<void> => {
+    setError(null);
+    setIsOperating(true);
+    try {
+      await acquireGitHubRepository(repositoryId);
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 250);
     } catch (setupError) {
       setError(
         setupError instanceof Error
@@ -135,10 +190,93 @@ export function SetupView({
             />
             {status.github_available ? null : (
               <small>
-                GitHub connection is not yet available in this implementation
-                wave; existing local repositories are fully supported.
+                Connect GitHub becomes available when the governed Jig GitHub
+                App registration is configured. Existing local repositories
+                remain fully supported.
               </small>
             )}
+            {github?.authorization?.mode === "device" ? (
+              <div className="jig-setup-github-state">
+                <p>
+                  Enter code <strong>{github.authorization.user_code}</strong>{" "}
+                  on GitHub to continue.
+                </p>
+                <a
+                  href={github.authorization.verification_uri}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open GitHub device authorization
+                </a>
+                <Button
+                  label="Refresh access"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void refreshGitHub();
+                  }}
+                />
+              </div>
+            ) : null}
+            {github?.phase === "authorizing" &&
+            github.authorization?.mode === "browser" ? (
+              <div className="jig-setup-github-state">
+                <p>Complete GitHub authorization in the browser window.</p>
+                <Button
+                  label="Refresh access"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void refreshGitHub();
+                  }}
+                />
+              </div>
+            ) : null}
+            {github?.grant_access_url === null ||
+            github?.grant_access_url === undefined ? null : (
+              <div className="jig-setup-github-state">
+                <p>Grant the Jig GitHub App access to the repository you want to use.</p>
+                <a
+                  href={github.grant_access_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Grant repository access
+                </a>
+                <Button
+                  label="Refresh access"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void refreshGitHub();
+                  }}
+                />
+              </div>
+            )}
+            {github?.repositories.length ? (
+              <div className="jig-setup-github-repositories">
+                <h3>Choose a repository</h3>
+                {github.repositories.map((repository) => (
+                  <Button
+                    key={repository.id}
+                    label={`${repository.owner}/${repository.name}`}
+                    variant="secondary"
+                    isLoading={isOperating}
+                    onClick={() => {
+                      void acquireGitHub(repository.id);
+                    }}
+                  />
+                ))}
+                <Button
+                  label="Refresh access"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void refreshGitHub();
+                  }}
+                />
+              </div>
+            ) : null}
           </VStack>
         </Section>
       </div>
