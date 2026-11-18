@@ -3,7 +3,6 @@ const THEME_SOURCES = [
   "ui/src/themes/astryx-neutral.source.ts",
   "ui/src/themes/astryx-butter.source.ts",
   "ui/src/themes/astryx-chocolate.source.ts",
-  "ui/src/themes/astryx-gothic.source.ts",
   "ui/src/themes/astryx-matcha.source.ts",
   "ui/src/themes/astryx-stone.source.ts",
   "ui/src/themes/astryx-y2k.source.ts",
