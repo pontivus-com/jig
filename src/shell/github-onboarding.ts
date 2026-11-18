@@ -1,18 +1,15 @@
+import type {
+  GitHubAppRegistration,
+  GitHubInstallation,
+  GitHubOnboardingPhase,
+  GitHubOnboardingSnapshot,
+  GitHubRepositoryChoice,
+} from "../github";
 import {
   listGitHubInstallations,
   listGitHubRepositories,
-  pollGitHubDeviceAuthorization,
-  startGitHubDeviceAuthorization,
-  type GitHubAppRegistration,
-  type GitHubDeviceAuthorization,
-  type GitHubInstallation,
-  type GitHubRepository,
 } from "./github-auth";
-import {
-  assertSecretServiceAvailable,
-  storeGitHubCredential,
-  type GitHubCredential,
-} from "./secret-service";
+import { GitHubDeviceFlowSession } from "./github-device-flow";
 import {
   acquireManagedGitHubRepository,
 } from "./github-managed-checkout";
@@ -21,134 +18,66 @@ import {
 } from "./setup";
 import type { JigConfig } from "./config";
 
-export type GitHubOnboardingPhase =
-  | "idle"
-  | "authorizing"
-  | "repository-access"
-  | "repository-selection"
-  | "acquiring";
-
-export interface GitHubRepositoryChoice extends GitHubRepository {
-  readonly installation_id: number;
-  readonly account_login: string;
-  readonly account_type: string;
-}
-
-export interface GitHubManageAccess {
-  readonly installation_id: number;
-  readonly account_login: string;
-  readonly manage_url: string;
-}
-
-export interface GitHubOnboardingSnapshot {
-  readonly available: boolean;
-  readonly phase: GitHubOnboardingPhase;
-  readonly authorization:
-    | {
-        readonly mode: "device";
-        readonly verification_uri: string;
-        readonly user_code: string;
-        readonly retry_after_seconds: number;
-      }
-    | null;
-  readonly grant_access_url: string | null;
-  readonly manage_access: readonly GitHubManageAccess[];
-  readonly installations: readonly GitHubInstallation[];
-  readonly repositories: readonly GitHubRepositoryChoice[];
-  readonly error: string | null;
-}
-
 export interface GitHubOnboardingDependencies {
   readonly registration: GitHubAppRegistration | null;
+  readonly device_flow: GitHubDeviceFlowSession;
   readonly config_path: string;
   readonly http_port: number;
-  readonly on_configured: (config: JigConfig) => void;
-  readonly store_credential?: typeof storeGitHubCredential;
-  readonly assert_secret_service?: typeof assertSecretServiceAvailable;
   readonly list_installations?: typeof listGitHubInstallations;
   readonly list_repositories?: typeof listGitHubRepositories;
-  readonly start_device_authorization?: typeof startGitHubDeviceAuthorization;
-  readonly poll_device_authorization?: typeof pollGitHubDeviceAuthorization;
   readonly acquire_repository?: typeof acquireManagedGitHubRepository;
   readonly initialize_repository?: typeof initializeRepositoryInstallation;
-  readonly now?: () => Date;
-}
-
-interface DeviceState {
-  readonly authorization: GitHubDeviceAuthorization;
-  readonly retry_after_seconds: number;
-  readonly started_at_ms: number;
-  readonly next_poll_at_ms: number;
 }
 
 export class GitHubOnboardingController {
   private phase: GitHubOnboardingPhase = "idle";
-  private authorization:
-    GitHubOnboardingSnapshot["authorization"] = null;
   private grantAccessUrl: string | null = null;
-  private manageAccess: readonly GitHubManageAccess[] = [];
+  private manageAccess: GitHubOnboardingSnapshot["manage_access"] = [];
   private installations: readonly GitHubInstallation[] = [];
   private repositories: readonly GitHubRepositoryChoice[] = [];
   private error: string | null = null;
-  private credential: GitHubCredential | null = null;
-  private deviceState: DeviceState | null = null;
 
   constructor(private readonly dependencies: GitHubOnboardingDependencies) {}
 
   snapshot(): GitHubOnboardingSnapshot {
+    const authorization = this.dependencies.device_flow.snapshot();
     return {
-      available: this.dependencies.registration !== null,
-      phase: this.phase,
-      authorization: this.authorization,
+      available:
+        this.dependencies.registration !== null &&
+        authorization.available,
+      phase:
+        this.phase === "authorizing"
+          ? authorization.phase
+          : this.phase,
+      authorization: authorization.authorization,
       grant_access_url: this.grantAccessUrl,
       manage_access: this.manageAccess,
       installations: this.installations,
       repositories: this.repositories,
-      error: this.error,
+      error: this.error ?? authorization.error,
     };
   }
 
   async start(): Promise<GitHubOnboardingSnapshot> {
-    const registration = this.requireRegistration();
-    await (this.dependencies.assert_secret_service ??
-      assertSecretServiceAvailable)();
-
-    this.resetTransient();
+    this.requireRegistration();
+    this.resetRepositoryState();
     this.phase = "authorizing";
-
-    const device = await (
-      this.dependencies.start_device_authorization ??
-      startGitHubDeviceAuthorization
-    )(registration);
-    const startedAtMs = this.now().getTime();
-    this.deviceState = {
-      authorization: device,
-      retry_after_seconds: device.interval,
-      started_at_ms: startedAtMs,
-      next_poll_at_ms: startedAtMs + device.interval * 1000,
-    };
-    this.authorization = {
-      mode: "device",
-      verification_uri: device.verification_uri,
-      user_code: device.user_code,
-      retry_after_seconds: device.interval,
-    };
-
+    await this.dependencies.device_flow.start();
     return this.snapshot();
   }
 
   async refreshAccess(): Promise<GitHubOnboardingSnapshot> {
-    if (this.deviceState !== null && this.credential === null) {
-      await this.pollDeviceFlow();
-      if (this.credential === null) {
+    if (this.phase === "authorizing") {
+      const authorization = await this.dependencies.device_flow.poll();
+      if (this.dependencies.device_flow.credential() === null) {
+        if (authorization.phase === "idle") {
+          this.phase = "idle";
+        }
         return this.snapshot();
       }
     }
 
-    if (this.credential === null) {
-      if (this.phase === "authorizing") {
-        return this.snapshot();
-      }
+    if (this.dependencies.device_flow.credential() === null) {
       throw new Error("GitHub authorization has not completed");
     }
 
@@ -156,19 +85,9 @@ export class GitHubOnboardingController {
     return this.snapshot();
   }
 
-  async refreshAuthorization(): Promise<GitHubOnboardingSnapshot> {
-    if (this.deviceState !== null && this.credential === null) {
-      await this.pollDeviceFlow();
-    }
-    if (this.credential !== null && this.deviceState === null) {
-      this.phase = "idle";
-      this.error = null;
-    }
-    return this.snapshot();
-  }
-
   async acquire(repositoryId: number): Promise<JigConfig> {
-    if (this.credential === null) {
+    const credential = this.dependencies.device_flow.credential();
+    if (credential === null) {
       throw new Error("GitHub authorization has not completed");
     }
     const repository = this.repositories.find(
@@ -190,7 +109,7 @@ export class GitHubOnboardingController {
           owner: repository.owner,
           name: repository.name,
         },
-        { access_token: this.credential.access_token },
+        { access_token: credential.access_token },
       );
       const installation = await (
         this.dependencies.initialize_repository ??
@@ -200,7 +119,6 @@ export class GitHubOnboardingController {
         http_port: this.dependencies.http_port,
         config_path: this.dependencies.config_path,
       });
-      this.dependencies.on_configured(installation.config);
       return installation.config;
     } catch (error) {
       this.phase = "repository-selection";
@@ -218,35 +136,18 @@ export class GitHubOnboardingController {
     return this.dependencies.registration;
   }
 
-  private resetTransient(): void {
+  private resetRepositoryState(): void {
     this.phase = "idle";
-    this.authorization = null;
     this.grantAccessUrl = null;
     this.manageAccess = [];
     this.installations = [];
     this.repositories = [];
     this.error = null;
-    this.credential = null;
-    this.deviceState = null;
-  }
-
-  private now(): Date {
-    return (this.dependencies.now ?? (() => new Date()))();
-  }
-
-  private async persistCredential(
-    credential: GitHubCredential,
-  ): Promise<void> {
-    await (this.dependencies.store_credential ?? storeGitHubCredential)(
-      credential,
-    );
-    this.credential = credential;
-    this.authorization = null;
-    this.deviceState = null;
   }
 
   private async loadRepositoryAccess(): Promise<void> {
-    if (this.credential === null) {
+    const credential = this.dependencies.device_flow.credential();
+    if (credential === null) {
       throw new Error("GitHub credential is unavailable");
     }
     const registration = this.requireRegistration();
@@ -254,14 +155,14 @@ export class GitHubOnboardingController {
       const installations = await (
         this.dependencies.list_installations ??
         listGitHubInstallations
-      )(this.credential.access_token);
+      )(credential.access_token);
 
       const choices: GitHubRepositoryChoice[] = [];
       for (const installation of installations) {
         const repositories = await (
           this.dependencies.list_repositories ??
           listGitHubRepositories
-        )(this.credential.access_token, installation.id);
+        )(credential.access_token, installation.id);
         for (const repository of repositories) {
           choices.push({
             ...repository,
@@ -281,7 +182,8 @@ export class GitHubOnboardingController {
       this.manageAccess = installations.map((installation) => ({
         installation_id: installation.id,
         account_login: installation.account.login,
-        manage_url: `https://github.com/settings/installations/${installation.id}`,
+        manage_url:
+          `https://github.com/settings/installations/${installation.id}`,
       }));
       this.phase =
         choices.length === 0
@@ -292,83 +194,6 @@ export class GitHubOnboardingController {
       this.phase = "repository-access";
       this.error = error instanceof Error ? error.message : String(error);
       throw error;
-    }
-  }
-
-  private async pollDeviceFlow(): Promise<void> {
-    const registration = this.requireRegistration();
-    const device = this.deviceState;
-    if (device === null) {
-      return;
-    }
-    const nowMs = this.now().getTime();
-    const elapsedSeconds =
-      (nowMs - device.started_at_ms) / 1000;
-    if (elapsedSeconds >= device.authorization.expires_in) {
-      this.deviceState = null;
-      this.phase = "idle";
-      this.authorization = null;
-      this.error = "GitHub device authorization expired";
-      return;
-    }
-
-    if (nowMs < device.next_poll_at_ms) {
-      const retryAfterSeconds = Math.max(
-        1,
-        Math.ceil((device.next_poll_at_ms - nowMs) / 1000),
-      );
-      this.deviceState = {
-        ...device,
-        retry_after_seconds: retryAfterSeconds,
-      };
-      if (this.authorization !== null) {
-        this.authorization = {
-          ...this.authorization,
-          retry_after_seconds: retryAfterSeconds,
-        };
-      }
-      return;
-    }
-
-    const result = await (
-      this.dependencies.poll_device_authorization ??
-      pollGitHubDeviceAuthorization
-    )(
-      registration,
-      device.authorization,
-      device.retry_after_seconds,
-      this.now(),
-    );
-
-    if (result.status === "authorized") {
-      await this.persistCredential(result.credential);
-      return;
-    }
-    if (result.status === "denied") {
-      this.deviceState = null;
-      this.phase = "idle";
-      this.authorization = null;
-      this.error = "GitHub device authorization was denied";
-      return;
-    }
-    if (result.status === "expired") {
-      this.deviceState = null;
-      this.phase = "idle";
-      this.authorization = null;
-      this.error = "GitHub device authorization expired";
-      return;
-    }
-
-    this.deviceState = {
-      ...device,
-      retry_after_seconds: result.retry_after_seconds,
-      next_poll_at_ms: nowMs + result.retry_after_seconds * 1000,
-    };
-    if (this.authorization !== null) {
-      this.authorization = {
-        ...this.authorization,
-        retry_after_seconds: result.retry_after_seconds,
-      };
     }
   }
 }
