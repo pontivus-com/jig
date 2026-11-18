@@ -557,7 +557,7 @@ Any change to brand anchors, theme palette sources, semantic mapping or mark geo
 4. regenerated compiler-owned theme artifacts through pinned Astryx CLI, with the exhaustive `bun run theme:check` green;
 5. `THIRD_PARTY_NOTICES.md` when copied community palette provenance/license material changes;
 6. affected external assets under `assets/` when their fixed artwork changes;
-7. browser acceptance for all fourteen presets in Light/Dark and System-Light/System-Dark, including live System preference change, semantic state coexistence, Task/canvas separation and in-application wordmark contrast;
+7. browser acceptance for all thirteen presets in Light/Dark and System-Light/System-Dark, including live System preference change, semantic state coexistence, Task/canvas separation and in-application wordmark contrast;
 8. architecture checks proving one root Theme owner and no feature-level raw palette/theme-name branching.
 
 Layout-only UI changes do not redefine this brand contract.
