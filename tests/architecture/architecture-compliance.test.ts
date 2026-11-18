@@ -343,6 +343,16 @@ describe("architecture compliance", () => {
     expect(nativeFilesystem.toLowerCase()).not.toContain("github");
   });
 
+  it("keeps Android GitHub onboarding out of browser module evaluation", () => {
+    const setupHttp = source("ui/src/setup-http.ts");
+
+    expect(setupHttp).toContain("Capacitor.isNativePlatform()");
+    expect(setupHttp).toContain('import("./native/github-setup")');
+    expect(setupHttp).not.toMatch(
+      /from\s+["']\.\/native\/github-setup["']/,
+    );
+  });
+
   it("keeps the configured UI runtime boundary provider-neutral and singular", () => {
     const runtime = source("ui/src/runtime.ts");
     const app = source("ui/src/app.tsx");
