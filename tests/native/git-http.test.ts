@@ -1,0 +1,158 @@
+import { describe, expect, it } from "vitest";
+import type {
+  HttpOptions,
+  HttpResponse,
+} from "@capacitor/core";
+import {
+  createAndroidGitHttpClient,
+  type NativeHttpPort,
+} from "../../ui/src/native/git-http";
+import { collectBytes } from "../../ui/src/native/binary";
+
+function response(
+  overrides: Partial<HttpResponse> = {},
+): HttpResponse {
+  return {
+    data: "",
+    status: 200,
+    headers: {},
+    url: "https://example.invalid/repo.git/git-upload-pack",
+    ...overrides,
+  };
+}
+
+describe("Android isomorphic-git native HTTP adapter", () => {
+  it("sends smart-HTTP request bytes through Capacitor's raw base64 file path", async () => {
+    let captured: HttpOptions | null = null;
+    const nativeHttp: NativeHttpPort = {
+      async request(options) {
+        captured = options;
+        return response({
+          data: "ECAwQA==",
+          headers: {
+            "content-type":
+              "application/x-git-upload-pack-result",
+          },
+        });
+      },
+    };
+    const client = createAndroidGitHttpClient(nativeHttp);
+    const body = (async function* () {
+      yield Uint8Array.from([0, 255]);
+      yield Uint8Array.from([1, 2]);
+    })();
+
+    const result = await client.request({
+      url: "https://example.invalid/repo.git/git-upload-pack",
+      method: "POST",
+      headers: {
+        "content-type":
+          "application/x-git-upload-pack-request",
+        accept: "application/x-git-upload-pack-result",
+      },
+      body,
+    });
+
+    expect(captured).toStrictEqual({
+      url: "https://example.invalid/repo.git/git-upload-pack",
+      method: "POST",
+      headers: {
+        "content-type":
+          "application/x-git-upload-pack-request",
+        accept: "application/x-git-upload-pack-result",
+      },
+      data: "AP8BAg==",
+      dataType: "file",
+      responseType: "arraybuffer",
+    });
+    expect(result).toMatchObject({
+      url: "https://example.invalid/repo.git/git-upload-pack",
+      method: "POST",
+      statusCode: 200,
+      statusMessage: "OK",
+      headers: {
+        "content-type":
+          "application/x-git-upload-pack-result",
+      },
+    });
+    await expect(collectBytes(result.body)).resolves.toStrictEqual(
+      Uint8Array.from([16, 32, 48, 64]),
+    );
+  });
+
+  it("does not add a request body to smart-HTTP discovery GET", async () => {
+    let captured: HttpOptions | null = null;
+    const nativeHttp: NativeHttpPort = {
+      async request(options) {
+        captured = options;
+        return response({
+          url: "https://example.invalid/repo.git/info/refs?service=git-upload-pack",
+          data: "MDAwMA==",
+        });
+      },
+    };
+    const client = createAndroidGitHttpClient(nativeHttp);
+
+    await client.request({
+      url: "https://example.invalid/repo.git/info/refs?service=git-upload-pack",
+      headers: {
+        accept: "*/*",
+      },
+    });
+
+    expect(captured).toStrictEqual({
+      url: "https://example.invalid/repo.git/info/refs?service=git-upload-pack",
+      method: "GET",
+      headers: {
+        accept: "*/*",
+      },
+      responseType: "arraybuffer",
+    });
+  });
+
+  it("preserves native error-stream text instead of treating it as base64", async () => {
+    const nativeHttp: NativeHttpPort = {
+      async request() {
+        return response({
+          status: 401,
+          data: "authentication required",
+          headers: {
+            "www-authenticate": "Basic realm=git",
+          },
+        });
+      },
+    };
+    const client = createAndroidGitHttpClient(nativeHttp);
+    const result = await client.request({
+      url: "https://example.invalid/private.git/info/refs",
+    });
+
+    expect(result.statusCode).toBe(401);
+    expect(result.statusMessage).toBe("Unauthorized");
+    await expect(
+      collectBytes(result.body).then((bytes) =>
+        new TextDecoder().decode(bytes),
+      ),
+    ).resolves.toBe("authentication required");
+  });
+
+  it("does not start native network I/O for an already-aborted request", async () => {
+    let calls = 0;
+    const nativeHttp: NativeHttpPort = {
+      async request() {
+        calls += 1;
+        return response();
+      },
+    };
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      createAndroidGitHttpClient(nativeHttp).request({
+        url: "https://example.invalid/repo.git/info/refs",
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(calls).toBe(0);
+  });
+});
