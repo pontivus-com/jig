@@ -170,7 +170,9 @@ git -C "$BOOTSTRAP_REPO" commit -m "Bootstrap baseline" >/dev/null
   [[ -x "$HOME/.local/bin/jig" ]]
   [[ ! -e "$HOME/.config/jig/config.json" ]]
 
-  "$HOME/.local/bin/jig" status | grep -q '^setup: repository required >"$TMP_ROOT/bootstrap-service.log" 2>&1 &
+  "$HOME/.local/bin/jig" status | grep -q '^setup: repository required$'
+
+  "$HOME/.local/bin/jig" serve >"$TMP_ROOT/bootstrap-service.log" 2>&1 &
   BOOTSTRAP_PID=$!
   cleanup_bootstrap_service() {
     kill -TERM "$BOOTSTRAP_PID" >/dev/null 2>&1 || true
