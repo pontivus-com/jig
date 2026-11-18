@@ -389,15 +389,18 @@ body {
     font-variant-numeric: tabular-nums;
   }
 
-  .jig-date-drop-zone {
-    transition:
-      outline-color var(--duration-fast-min) var(--ease-standard),
-      background-color var(--duration-fast-min) var(--ease-standard);
+  .jig-task-drag-scope {
+    width: 100%;
+    min-width: 0;
   }
 
-  .jig-date-drop-zone-active {
-    outline: calc(2 * var(--border-width)) dashed var(--jig-state-drag-border);
-    outline-offset: calc(-1 * var(--focus-outline-offset));
+  .jig-date-drop-zone {
+    position: relative;
+    transition: background-color var(--duration-fast-min) var(--ease-standard);
+  }
+
+  .jig-date-drop-zone-active,
+  .jig-date-drop-zone-empty-target {
     background: var(--jig-state-drag-bg);
   }
 
@@ -445,12 +448,64 @@ body {
     gap: var(--spacing-1);
   }
 
-  .jig-task-card:not(.jig-task-card-completed) {
-    cursor: grab;
+  .jig-task-card-dragging {
+    opacity: 0.4;
   }
 
-  .jig-task-card:not(.jig-task-card-completed):active {
+  .jig-task-drag-handle {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-element);
+    color: var(--color-text-secondary);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .jig-task-drag-handle:hover {
+    color: var(--color-text-primary);
+    background: var(--jig-state-hover-bg);
+  }
+
+  .jig-task-drag-handle:active {
     cursor: grabbing;
+    background: var(--jig-state-pressed-bg);
+  }
+
+  .jig-task-drop-indicator {
+    position: absolute;
+    z-index: 2;
+    inset-inline: var(--spacing-1-5);
+    height: 2px;
+    background: var(--jig-state-drag-border);
+    pointer-events: none;
+  }
+
+  .jig-task-drop-indicator::before {
+    position: absolute;
+    inset-block-start: -3px;
+    inset-inline-start: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--jig-state-drag-border);
+    content: "";
+  }
+
+  .jig-task-drop-indicator-before {
+    inset-block-start: -1px;
+  }
+
+  .jig-task-drop-indicator-after {
+    inset-block-end: -1px;
+  }
+
+  .jig-task-drop-indicator-empty {
+    inset-block-start: var(--spacing-2);
   }
 
   .jig-task-card-selected {
@@ -581,8 +636,13 @@ body {
     white-space: nowrap;
   }
 
+  .jig-drag-clone-shell {
+    width: min(17.5rem, 80vw);
+    pointer-events: none;
+  }
+
   .jig-drag-card-overlay {
-    width: min(20rem, 100%);
+    width: 100%;
     padding: var(--spacing-2);
     box-shadow: var(--shadow-med);
     cursor: grabbing;
@@ -897,6 +957,11 @@ body {
 
     .jig-task-card {
       min-height: 88px;
+    }
+
+    .jig-task-drag-handle {
+      width: 44px;
+      height: 44px;
     }
 
     .jig-history-groups,
