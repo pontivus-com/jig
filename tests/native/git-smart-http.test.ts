@@ -380,6 +380,12 @@ describe("Android Git smart-HTTP feasibility", () => {
       remote,
       desktop,
     ]);
+    await runGit(desktop, ["config", "user.name", "Fixture"]);
+    await runGit(desktop, [
+      "config",
+      "user.email",
+      "fixture@example.invalid",
+    ]);
     const desktopFiles = new Map<string, string>();
     for (const path of [
       "format.json",
