@@ -117,53 +117,69 @@ async function touchDrag(
     throw new Error("Touch drag source geometry unavailable");
   }
 
-  const start = {
+  const startPoint = {
     x: sourceBox.x + sourceBox.width / 2,
     y: sourceBox.y + sourceBox.height / 2,
   };
-  const client = await page.context().newCDPSession(page);
-  await client.send("Emulation.setTouchEmulationEnabled", {
-    enabled: true,
-    maxTouchPoints: 1,
-  });
-  const point = (x: number, y: number) => ({
-    x,
-    y,
-    radiusX: 1,
-    radiusY: 1,
-    force: 1,
-    id: 1,
-  });
 
-  await client.send("Input.dispatchTouchEvent", {
-    type: "touchStart",
-    touchPoints: [point(start.x, start.y)],
-  });
+  const dispatchTouch = async (
+    type: "touchstart" | "touchmove" | "touchend",
+    point: { readonly x: number; readonly y: number },
+  ): Promise<void> => {
+    await source.evaluate(
+      (element, payload) => {
+        const touch = new Touch({
+          identifier: 1,
+          target: element,
+          clientX: payload.x,
+          clientY: payload.y,
+          screenX: payload.x,
+          screenY: payload.y,
+          pageX: payload.x,
+          pageY: payload.y,
+          radiusX: 1,
+          radiusY: 1,
+          rotationAngle: 0,
+          force: 1,
+        });
+        const ending = payload.type === "touchend";
+        const event = new TouchEvent(payload.type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          touches: ending ? [] : [touch],
+          targetTouches: ending ? [] : [touch],
+          changedTouches: [touch],
+        });
+        if (payload.type === "touchstart") {
+          element.dispatchEvent(event);
+        } else {
+          window.dispatchEvent(event);
+        }
+      },
+      { type, x: point.x, y: point.y },
+    );
+  };
+
+  await dispatchTouch("touchstart", startPoint);
   await page.waitForTimeout(280);
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
   const targetBox = await target.boundingBox();
   if (targetBox === null) {
     throw new Error("Touch drag target geometry unavailable after lift");
   }
-  const end = {
+  const endPoint = {
     x: targetBox.x + targetBox.width / 2,
     y: targetBox.y + targetBox.height * targetYRatio,
   };
 
   for (let step = 1; step <= 12; step += 1) {
     const progress = step / 12;
-    await client.send("Input.dispatchTouchEvent", {
-      type: "touchMove",
-      touchPoints: [
-        point(
-          start.x + (end.x - start.x) * progress,
-          start.y + (end.y - start.y) * progress,
-        ),
-      ],
+    await dispatchTouch("touchmove", {
+      x: startPoint.x + (endPoint.x - startPoint.x) * progress,
+      y: startPoint.y + (endPoint.y - startPoint.y) * progress,
     });
-    // Pangea processes touch movement through animation-frame scheduling.
-    // Yield one frame between synthetic CDP events so this models a physical
-    // touch stream instead of collapsing all moves into one frame.
     await page.waitForTimeout(20);
   }
   await page.waitForTimeout(40);
@@ -171,19 +187,13 @@ async function touchDrag(
   const dragScope = page.locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
   await expect(page.locator(".jig-task-drop-indicator")).toBeVisible();
+
   const intent = await dragScope.evaluate((element) => ({
     date: element.getAttribute("data-jig-drop-date") ?? "",
     index: Number(element.getAttribute("data-jig-drop-index")),
   }));
 
-  await client.send("Input.dispatchTouchEvent", {
-    type: "touchEnd",
-    touchPoints: [],
-  });
-  await client.send("Emulation.setTouchEmulationEnabled", {
-    enabled: false,
-  });
-  await client.detach();
+  await dispatchTouch("touchend", endPoint);
   return intent;
 }
 
