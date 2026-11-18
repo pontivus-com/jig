@@ -89,7 +89,19 @@ function workspaceTaskId(state: TaskWorkspaceState): string | null {
   return state.mode === "task" ? state.taskId : null;
 }
 
-function ConfiguredApp(): React.ReactElement {
+interface ConfiguredAppProps {
+  readonly themePreset: ThemePreset;
+  readonly appearanceMode: AppearanceMode;
+  readonly onThemePresetChange: (value: ThemePreset) => void;
+  readonly onAppearanceModeChange: (value: AppearanceMode) => void;
+}
+
+function ConfiguredApp({
+  themePreset,
+  appearanceMode,
+  onThemePresetChange,
+  onAppearanceModeChange,
+}: ConfiguredAppProps): React.ReactElement {
   const layoutMode = useLayoutMode();
   const reminderNow = useReminderClock();
   const [destination, setDestination] = useState<Destination>("planner");
@@ -102,10 +114,6 @@ function ConfiguredApp(): React.ReactElement {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [isOperating, setIsOperating] = useState(false);
-  const [themePreset, setThemePreset] =
-    useState<ThemePreset>(readThemePreset);
-  const [appearanceMode, setAppearanceMode] =
-    useState<AppearanceMode>(readAppearanceMode);
   const [workspace, setWorkspace] = useState<TaskWorkspaceState>({
     mode: "closed",
   });
@@ -367,16 +375,6 @@ function ConfiguredApp(): React.ReactElement {
     setWorkspace({ mode: "closed" });
   }, []);
 
-  const changeThemePreset = useCallback((value: ThemePreset): void => {
-    setThemePreset(value);
-    writeThemePreset(value);
-  }, []);
-
-  const changeAppearanceMode = useCallback((value: AppearanceMode): void => {
-    setAppearanceMode(value);
-    writeAppearanceMode(value);
-  }, []);
-
   const syncNow = useCallback(async (): Promise<void> => {
     if (isOperating) {
       return;
@@ -559,8 +557,8 @@ function ConfiguredApp(): React.ReactElement {
         diagnostics={diagnostics}
         operationError={operationError}
         isOperating={isOperating}
-        onThemePresetChange={changeThemePreset}
-        onAppearanceModeChange={changeAppearanceMode}
+        onThemePresetChange={onThemePresetChange}
+        onAppearanceModeChange={onAppearanceModeChange}
         onSync={syncNow}
       />
     );
@@ -591,8 +589,7 @@ function ConfiguredApp(): React.ReactElement {
     );
 
   return (
-    <Theme theme={themeFor(themePreset)} mode={appearanceMode}>
-      <LayerProvider>
+    <>
         <AppShell
           className="jig-app-shell"
           topNav={
@@ -674,8 +671,7 @@ function ConfiguredApp(): React.ReactElement {
         />
 
         <ReminderMonitor tasks={tasks} now={reminderNow} />
-      </LayerProvider>
-    </Theme>
+    </>
   );
 }
 
@@ -683,6 +679,10 @@ function ConfiguredApp(): React.ReactElement {
 export function App(): React.ReactElement {
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [themePreset, setThemePreset] =
+    useState<ThemePreset>(readThemePreset);
+  const [appearanceMode, setAppearanceMode] =
+    useState<AppearanceMode>(readAppearanceMode);
 
   const refreshSetup = useCallback(async (): Promise<void> => {
     setSetupError(null);
@@ -697,14 +697,26 @@ export function App(): React.ReactElement {
     void refreshSetup();
   }, [refreshSetup]);
 
-  if (setupStatus?.mode === "configured") {
-    return <ConfiguredApp />;
-  }
+  const changeThemePreset = (value: ThemePreset): void => {
+    setThemePreset(value);
+    writeThemePreset(value);
+  };
+  const changeAppearanceMode = (value: AppearanceMode): void => {
+    setAppearanceMode(value);
+    writeAppearanceMode(value);
+  };
 
   return (
-    <Theme theme={themeFor(readThemePreset())} mode={readAppearanceMode()}>
+    <Theme theme={themeFor(themePreset)} mode={appearanceMode}>
       <LayerProvider>
-        {setupStatus?.mode === "bootstrap" ? (
+        {setupStatus?.mode === "configured" ? (
+          <ConfiguredApp
+            themePreset={themePreset}
+            appearanceMode={appearanceMode}
+            onThemePresetChange={changeThemePreset}
+            onAppearanceModeChange={changeAppearanceMode}
+          />
+        ) : setupStatus?.mode === "bootstrap" ? (
           <SetupView status={setupStatus} />
         ) : (
           <main className="jig-setup">
