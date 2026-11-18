@@ -12,6 +12,7 @@ import {
   refreshGitHubCredential,
   startGitHubDeviceAuthorization,
   type GitHubAppRegistration,
+  type GitHubFetch,
 } from "../../src/shell/github-auth";
 
 const REGISTRATION: GitHubAppRegistration = {
@@ -54,7 +55,7 @@ describe("GitHub App public-client primitives", () => {
       REGISTRATION.linux_callback_url,
     );
     const calls: Array<{ url: string; body: string | null }> = [];
-    const fetcher: typeof fetch = async (input, init) => {
+    const fetcher: GitHubFetch = async (input, init) => {
       const url = String(input);
       calls.push({
         url,
@@ -104,7 +105,7 @@ describe("GitHub App public-client primitives", () => {
   });
 
   it("refreshes expiring credentials with the public App registration", async () => {
-    const fetcher: typeof fetch = async (input, init) => {
+    const fetcher: GitHubFetch = async (input, init) => {
       const url = String(input);
       if (url.endsWith("/login/oauth/access_token")) {
         const params =
@@ -144,7 +145,7 @@ describe("GitHub App public-client primitives", () => {
   });
 
   it("lists only repositories exposed through authorized installations", async () => {
-    const fetcher: typeof fetch = async (input) => {
+    const fetcher: GitHubFetch = async (input) => {
       const url = String(input);
       if (url.includes("/user/installations?")) {
         return Response.json({
@@ -201,7 +202,7 @@ describe("GitHub App public-client primitives", () => {
 
   it("supports the governed Linux device-flow fallback states", async () => {
     let stage = 0;
-    const fetcher: typeof fetch = async (input) => {
+    const fetcher: GitHubFetch = async (input) => {
       const url = String(input);
       if (url.endsWith("/login/device/code")) {
         return Response.json({
