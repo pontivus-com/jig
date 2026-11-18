@@ -5,13 +5,14 @@ import {
   TextInput,
   VStack,
 } from "@astryxdesign/core";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { GitHubDeviceFlowPanel } from "./github-device-flow";
 import {
   acquireGitHubRepository,
   configureLocalRepository,
   refreshGitHubSetup,
   startGitHubSetup,
-  type GitHubSetupSnapshot,
+  type GitHubOnboardingSnapshot,
   type SetupStatus,
 } from "./setup-http";
 
@@ -25,7 +26,7 @@ export function SetupView({
   const [repositoryPath, setRepositoryPath] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isOperating, setIsOperating] = useState(false);
-  const [github, setGitHub] = useState<GitHubSetupSnapshot | null>(null);
+  const [github, setGitHub] = useState<GitHubOnboardingSnapshot | null>(null);
 
   const completeLocalSetup = async (): Promise<void> => {
     if (!repositoryPath.startsWith("/")) {
@@ -55,7 +56,7 @@ export function SetupView({
   };
 
   const handleGitHubSnapshot = (
-    snapshot: GitHubSetupSnapshot,
+    snapshot: GitHubOnboardingSnapshot,
   ): void => {
     setGitHub(snapshot);
     if (snapshot.error !== null) {
@@ -94,20 +95,6 @@ export function SetupView({
       setIsOperating(false);
     }
   };
-
-  useEffect(() => {
-    const authorization = github?.authorization;
-    if (
-      github?.phase !== "authorizing" ||
-      authorization?.mode !== "device"
-    ) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      void refreshGitHub();
-    }, authorization.retry_after_seconds * 1000);
-    return () => window.clearTimeout(timer);
-  }, [github]);
 
   const acquireGitHub = async (repositoryId: number): Promise<void> => {
     setError(null);
@@ -206,31 +193,13 @@ export function SetupView({
                 remain fully supported.
               </small>
             )}
-            {github?.authorization?.mode === "device" ? (
-              <div className="jig-setup-github-state">
-                <p>
-                  Enter code <strong>{github.authorization.user_code}</strong>{" "}
-                  at GitHub's device authorization page to continue.
-                </p>
-                <Button
-                  label="Open GitHub device authorization"
-                  variant="secondary"
-                  onClick={() => {
-                    openExternal(github.authorization?.mode === "device"
-                      ? github.authorization.verification_uri
-                      : "");
-                  }}
-                />
-                <Button
-                  label="Refresh access"
-                  variant="secondary"
-                  isLoading={isOperating}
-                  onClick={() => {
-                    void refreshGitHub();
-                  }}
-                />
-              </div>
-            ) : null}
+            <GitHubDeviceFlowPanel
+              authorization={github?.authorization ?? null}
+              isOperating={isOperating}
+              purpose="continue"
+              refreshLabel="Refresh access"
+              onRefresh={refreshGitHub}
+            />
             {github?.grant_access_url === null ||
             github?.grant_access_url === undefined ? null : (
               <div className="jig-setup-github-state">
