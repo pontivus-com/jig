@@ -2,27 +2,14 @@ import {
   expect,
   test,
 } from "@playwright/test";
-
-declare global {
-  interface Window {
-    __JIG_REMINDER_TEST_NOTIFICATIONS__?: Array<{
-      title: string;
-      body: string | null;
-      tag: string | null;
-    }>;
-  }
-}
 import {
   apiCommand,
-  apiState,
   resetCanonicalTasks,
   taskByTitle,
 } from "./helpers";
 
 function reminderStart(): Date {
-  const start = new Date();
-  start.setHours(9, 0, 0, 0);
-  return start;
+  return new Date(2030, 0, 7, 9, 0, 0, 0);
 }
 
 function civilDate(date: Date): string {
@@ -33,38 +20,37 @@ function civilDate(date: Date): string {
   ].join("-");
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.clock.install({ time: reminderStart() });
-  await page.addInitScript(() => {
-    window.__JIG_REMINDER_TEST_NOTIFICATIONS__ = [];
+async function deliveredKeys(page: import("@playwright/test").Page): Promise<string[]> {
+  return page.evaluate(() =>
+    Object.keys(localStorage).filter((key) =>
+      key.startsWith("jig-reminder-delivered:"),
+    ),
+  );
+}
 
-    class MockNotification {
-      static permission: NotificationPermission = "granted";
-
-      static async requestPermission(): Promise<NotificationPermission> {
-        return "granted";
-      }
-
-      constructor(title: string, options?: NotificationOptions) {
-        window.__JIG_REMINDER_TEST_NOTIFICATIONS__?.push({
-          title,
-          body: options?.body ?? null,
-          tag: options?.tag ?? null,
-        });
-      }
-    }
-
-    Object.defineProperty(window, "Notification", {
-      configurable: true,
-      value: MockNotification,
-    });
+async function installDeliveryProbe(page: import("@playwright/test").Page): Promise<void> {
+  await page.evaluate(() => {
+    Object.defineProperty(
+      ServiceWorkerRegistration.prototype,
+      "showNotification",
+      {
+        configurable: true,
+        value: async (): Promise<void> => undefined,
+      },
+    );
   });
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.context().grantPermissions(["notifications"]);
+  await page.clock.install({ time: reminderStart() });
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
+  await installDeliveryProbe(page);
 });
 
-test("due reminder fires once through browser Notification and edited time creates a new suppression key", async ({
+test("due reminder uses the service-worker delivery path once and edited time gets a new suppression key", async ({
   page,
 }) => {
   await apiCommand(page, {
@@ -78,32 +64,19 @@ test("due reminder fires once through browser Notification and edited time creat
     reminder_time: "09:01",
   });
   await page.reload();
+  await installDeliveryProbe(page);
 
   await page.clock.runFor(60_000);
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => window.__JIG_REMINDER_TEST_NOTIFICATIONS__?.length ?? 0,
-      ),
-    )
-    .toBe(1);
-  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
+  await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
+
+  const registration = await page.evaluate(async () => {
+    const current = await navigator.serviceWorker.getRegistration();
+    return current?.active?.scriptURL ?? null;
+  });
+  expect(registration).toContain("/jig-notifications-sw.js");
 
   await page.clock.runFor(30_000);
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => window.__JIG_REMINDER_TEST_NOTIFICATIONS__?.length ?? 0,
-      ),
-    )
-    .toBe(1);
-
-  let deliveredKeys = await page.evaluate(() =>
-    Object.keys(localStorage).filter((key) =>
-      key.startsWith("jig-reminder-delivered:"),
-    ),
-  );
-  expect(deliveredKeys).toHaveLength(1);
+  await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
 
   const task = await taskByTitle(page, "Timed reminder");
   await apiCommand(page, {
@@ -114,25 +87,13 @@ test("due reminder fires once through browser Notification and edited time creat
     },
   });
   await page.reload();
+  await installDeliveryProbe(page);
   await page.clock.runFor(30_000);
 
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => window.__JIG_REMINDER_TEST_NOTIFICATIONS__?.length ?? 0,
-      ),
-    )
-    .toBe(1);
-
-  deliveredKeys = await page.evaluate(() =>
-    Object.keys(localStorage).filter((key) =>
-      key.startsWith("jig-reminder-delivered:"),
-    ),
-  );
-  expect(deliveredKeys).toHaveLength(2);
+  await expect.poll(async () => (await deliveredKeys(page)).length).toBe(2);
 });
 
-test("past reminders from before the browser session are not replayed and completed tasks are ineligible", async ({
+test("a reminder already due before this browser session remains visible and gets one catch-up delivery attempt", async ({
   page,
 }) => {
   await apiCommand(page, {
@@ -153,25 +114,52 @@ test("past reminders from before the browser session are not replayed and comple
     context: null,
     reference: null,
     note: null,
-    reminder_time: "09:01",
+    reminder_time: "08:59",
   });
   const completed = await taskByTitle(page, "Completed reminder");
   await apiCommand(page, {
     type: "complete",
     task_id: completed.id,
   });
+
   await page.reload();
+  await installDeliveryProbe(page);
 
-  await page.clock.runFor(120_000);
+  const pastCard = page
+    .getByText("Past reminder", { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  await expect(pastCard).toHaveClass(/jig-task-card-reminder-due/);
+  await expect(pastCard.getByText("Reminder due", { exact: true })).toBeVisible();
 
-  expect(
-    await page.evaluate(
-      () => window.__JIG_REMINDER_TEST_NOTIFICATIONS__ ?? [],
-    ),
-  ).toEqual([]);
-  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
+  await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
+  await page.clock.runFor(60_000);
+  await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
+});
 
-  const titles = (await apiState(page)).tasks.map((task) => task.title);
-  expect(titles).toContain("Past reminder");
-  expect(titles).toContain("Completed reminder");
+test("an open Planner enters reminder-due attention when local time crosses the reminder boundary", async ({
+  page,
+}) => {
+  await apiCommand(page, {
+    type: "create",
+    title: "Open app boundary",
+    scheduled_date: civilDate(reminderStart()),
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "09:01",
+  });
+  await page.reload();
+  await installDeliveryProbe(page);
+
+  const card = page
+    .getByText("Open app boundary", { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  await expect(card).not.toHaveClass(/jig-task-card-reminder-due/);
+
+  await page.clock.runFor(60_000);
+
+  await expect(card).toHaveClass(/jig-task-card-reminder-due/);
+  await expect(card.getByText("Reminder due", { exact: true })).toBeVisible();
+  await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
 });
