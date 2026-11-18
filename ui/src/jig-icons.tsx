@@ -7,13 +7,14 @@ import {
 } from "@astryxdesign/core/Icon";
 import { useThemeName } from "@astryxdesign/core/theme";
 
-export type JigIconName = "add" | "history" | "edit" | "delete";
+export type JigIconName = "add" | "history" | "edit" | "delete" | "drag";
 
 export const JIG_ICON_KEYS = {
   add: "jig:add",
   history: "jig:history",
   edit: "jig:edit",
   delete: "jig:delete",
+  drag: "jig:drag",
 } as const satisfies Record<JigIconName, NamespacedIconName>;
 
 type Glyph = (props: SVGProps<SVGSVGElement>) => React.JSX.Element;
@@ -55,6 +56,14 @@ const FALLBACK_GLYPHS: Record<JigIconName, Glyph> = {
     "M6.5 6.5l1 13a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1l1-13",
     "M10.5 10.5v6",
     "M13.5 10.5v6",
+  ]),
+  drag: glyph([
+    "M8 7h.01",
+    "M16 7h.01",
+    "M8 12h.01",
+    "M16 12h.01",
+    "M8 17h.01",
+    "M16 17h.01",
   ]),
 };
 
