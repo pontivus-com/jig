@@ -39,6 +39,7 @@ function handler() {
       ready: true,
       repository_path: root,
       repository_status: "local-only",
+      github_reconnect_available: false,
     }),
     get_diagnostics: () => ({
       service_healthy: true,
@@ -181,6 +182,7 @@ describe("loopback HTTP admission", () => {
         ready: true,
         repository_path: root,
         repository_status: "pending",
+        github_reconnect_available: false,
       }),
       get_diagnostics: () => ({
         service_healthy: true,
@@ -254,6 +256,7 @@ describe("loopback HTTP admission", () => {
         ready: true,
         repository_path: root,
           repository_status: "pending",
+        github_reconnect_available: false,
       }),
       get_diagnostics: () => ({
         service_healthy: true,
