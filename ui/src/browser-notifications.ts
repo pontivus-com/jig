@@ -24,13 +24,30 @@ async function notificationRegistration(): Promise<ServiceWorkerRegistration> {
   if (registrationPromise === null) {
     registrationPromise = navigator.serviceWorker
       .register(SERVICE_WORKER_URL)
-      .then(() => navigator.serviceWorker.ready)
+      .then(async (registration) => {
+        if (registration.active !== null) {
+          return registration;
+        }
+        return navigator.serviceWorker.ready;
+      })
       .catch((error: unknown) => {
         registrationPromise = null;
         throw error;
       });
   }
   return registrationPromise;
+}
+
+export async function prepareBrowserNotificationServiceWorker(): Promise<void> {
+  if (!browserNotificationsSupported()) {
+    return;
+  }
+  try {
+    await notificationRegistration();
+  } catch {
+    // Readiness is retried by the actual delivery path. Registration failure
+    // never changes canonical reminder-due state.
+  }
 }
 
 export function browserNotificationState(): BrowserNotificationState {
