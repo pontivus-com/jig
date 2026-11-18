@@ -18,7 +18,10 @@ import {
   StaleRevisionError,
   type JigSqlConnection,
 } from "../persistence/sqlite";
-import type { GitHubOnboardingController } from "./github-onboarding";
+import {
+  authorizeMutation,
+  jsonResponse,
+} from "./http-admission";
 
 export interface HttpDependencies {
   readonly db: JigSqlConnection;
@@ -30,26 +33,11 @@ export interface HttpDependencies {
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
   readonly trigger_sync: () => Promise<RepositoryStatus>;
-  readonly github_reconnect?: GitHubOnboardingController;
   readonly ensure_current_day_rollover: () => Promise<void>;
   readonly on_task_mutation: () => void;
 }
 
 type JsonObject = Record<string, unknown>;
-
-function json(
-  body: unknown,
-  status = 200,
-  headers: HeadersInit = {},
-): Response {
-  return Response.json(body, {
-    status,
-    headers: {
-      "cache-control": "no-store",
-      ...headers,
-    },
-  });
-}
 
 function asObject(value: unknown, message: string): JsonObject {
   if (
@@ -282,21 +270,6 @@ async function parseJsonRequest(request: Request): Promise<unknown> {
   }
 }
 
-function authorizeMutation(
-  request: Request,
-  writeToken: string,
-): Response | null {
-  const requestUrl = new URL(request.url);
-  const origin = request.headers.get("origin");
-  if (origin !== null && origin !== requestUrl.origin) {
-    return json({ error: "cross-origin mutation rejected" }, 403);
-  }
-  if (request.headers.get("x-jig-write-token") !== writeToken) {
-    return json({ error: "invalid write token" }, 403);
-  }
-  return null;
-}
-
 function contentTypeFor(path: string): string {
   switch (extname(path)) {
     case ".html":
@@ -351,7 +324,7 @@ export async function serveUi(
 
 function errorResponse(error: unknown): Response {
   if (error instanceof StaleRevisionError) {
-    return json(
+    return jsonResponse(
       {
         error: "stale_revision",
         current_revision: error.current_revision,
@@ -360,15 +333,15 @@ function errorResponse(error: unknown): Response {
     );
   }
   if (error instanceof PlanningError) {
-    return json(
+    return jsonResponse(
       { error: error.message },
       error.code === "NOT_FOUND" ? 404 : 400,
     );
   }
   if (error instanceof TaskValidationError) {
-    return json({ error: error.message }, 400);
+    return jsonResponse({ error: error.message }, 400);
   }
-  return json({ error: "internal persistence failure" }, 500);
+  return jsonResponse({ error: "internal persistence failure" }, 500);
 }
 
 export function createHttpHandler(
@@ -382,65 +355,25 @@ export function createHttpHandler(
       request.method === "GET" &&
       pathname === "/api/v1/setup/status"
     ) {
-      return json({ mode: "configured" });
+      return jsonResponse({ mode: "configured" });
     }
 
     if (request.method === "GET" && pathname === "/api/v1/tasks") {
       try {
         await dependencies.ensure_current_day_rollover();
-        return json(await readCanonicalState(dependencies.db));
+        return jsonResponse(await readCanonicalState(dependencies.db));
       } catch (error) {
         return errorResponse(error);
       }
     }
     if (request.method === "GET" && pathname === "/api/v1/status") {
-      return json(dependencies.get_status());
+      return jsonResponse(dependencies.get_status());
     }
     if (
       request.method === "GET" &&
       pathname === "/api/v1/diagnostics"
     ) {
-      return json(dependencies.get_diagnostics());
-    }
-
-    if (
-      request.method === "POST" &&
-      [
-        "/api/v1/github/reconnect/start",
-        "/api/v1/github/reconnect/refresh",
-      ].includes(pathname)
-    ) {
-      const unauthorized = authorizeMutation(
-        request,
-        dependencies.write_token,
-      );
-      if (unauthorized !== null) {
-        return unauthorized;
-      }
-      const reconnect = dependencies.github_reconnect;
-      if (reconnect === undefined) {
-        return json(
-          { error: "GitHub reconnect is unavailable for this repository" },
-          409,
-        );
-      }
-      try {
-        return json(
-          pathname.endsWith("/start")
-            ? await reconnect.start()
-            : await reconnect.refreshAuthorization(),
-        );
-      } catch (error) {
-        return json(
-          {
-            error:
-              error instanceof Error
-                ? error.message
-                : "GitHub reconnect failed",
-          },
-          400,
-        );
-      }
+      return jsonResponse(dependencies.get_diagnostics());
     }
 
     if (
@@ -488,13 +421,13 @@ export function createHttpHandler(
             dependencies.create_id,
           );
           dependencies.on_task_mutation();
-          return json(result);
+          return jsonResponse(result);
         }
 
         if (pathname === "/api/v1/sync") {
           await parseJsonRequest(request);
           const repositoryStatus = await dependencies.trigger_sync();
-          return json(
+          return jsonResponse(
             { repository_status: repositoryStatus },
             202,
           );
