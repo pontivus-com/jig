@@ -39,6 +39,9 @@ jobs:
         run: bun run build
       - name: Install Chromium for real-browser acceptance
         run: bunx playwright install --with-deps chromium
+      - name: Browser bootstrap smoke
+        run: bunx playwright test tests/browser/bootstrap-smoke.spec.ts
+
       - name: Real-browser acceptance
         run: bun run test:browser
       - name: Shell syntax
