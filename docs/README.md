@@ -1,6 +1,6 @@
 # Jig documentation
 
-**Status:** Jig v1.0.5 is published and immutable. v1.0.6 is a presentation/browser correction in progress (2026-11-18) covering continuous History/Settings content measure, the curated 14-theme catalogue, independent System/Light/Dark appearance, complete semantic re-theming, theme-aware application branding, browser Notification-only reminders and Settings-owned appearance controls.
+**Status:** Jig v1.0.5 is published and immutable. v1.0.6 is a presentation/browser correction in progress (2026-11-18) covering continuous History/Settings content measure, the curated 13-theme catalogue, independent System/Light/Dark appearance, complete semantic re-theming, theme-aware application branding, browser Notification-only reminders and Settings-owned appearance controls.
 
 Jig is a small, local-first, just-in-time daily planner. It schedules attention rather than duplicating the underlying project work. All planning data must live under the Jig directory of the user-selected personal Git repository, with a lightweight local desktop service and automatic Git sync.
 
