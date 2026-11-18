@@ -158,8 +158,7 @@ export async function readStatus(): Promise<ServiceStatus> {
   if (
     payload.ready !== true ||
     typeof payload.repository_path !== "string" ||
-    !isRepositoryStatus(payload.repository_status) ||
-    typeof payload.github_reconnect_available !== "boolean"
+    !isRepositoryStatus(payload.repository_status)
   ) {
     throw new JigHttpError(
       500,
@@ -172,7 +171,6 @@ export async function readStatus(): Promise<ServiceStatus> {
     ready: true,
     repository_path: payload.repository_path,
     repository_status: payload.repository_status,
-    github_reconnect_available: payload.github_reconnect_available,
   };
 }
 
