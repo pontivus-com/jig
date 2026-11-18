@@ -33,6 +33,17 @@ jobs:
         run: bun run test
       - name: Build
         run: bun run build
+      - name: Set up Android JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Ensure Android SDK 36
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Compile Android development APK and native bridge
+        run: bun run android:build:debug
       - name: Install Chromium for real-browser acceptance
         run: bunx playwright install --with-deps chromium
       - name: Real-browser acceptance
