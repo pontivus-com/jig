@@ -20,7 +20,6 @@ const THEME_IDS = [
   "astryx-neutral",
   "astryx-butter",
   "astryx-chocolate",
-  "astryx-gothic",
   "astryx-matcha",
   "astryx-stone",
   "astryx-y2k",
