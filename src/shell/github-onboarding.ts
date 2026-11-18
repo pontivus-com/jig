@@ -156,6 +156,17 @@ export class GitHubOnboardingController {
     return this.snapshot();
   }
 
+  async refreshAuthorization(): Promise<GitHubOnboardingSnapshot> {
+    if (this.deviceState !== null && this.credential === null) {
+      await this.pollDeviceFlow();
+    }
+    if (this.credential !== null && this.deviceState === null) {
+      this.phase = "idle";
+      this.error = null;
+    }
+    return this.snapshot();
+  }
+
   async acquire(repositoryId: number): Promise<JigConfig> {
     if (this.credential === null) {
       throw new Error("GitHub authorization has not completed");
@@ -331,7 +342,6 @@ export class GitHubOnboardingController {
 
     if (result.status === "authorized") {
       await this.persistCredential(result.credential);
-      await this.loadRepositoryAccess();
       return;
     }
     if (result.status === "denied") {
