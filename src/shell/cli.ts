@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import {
   loadConfig,
+  loadConfigIfPresent,
   type JigConfig,
 } from "./config";
 import { main as serve } from "./main";
@@ -42,8 +43,14 @@ async function run(
   };
 }
 
+const DEFAULT_HTTP_PORT = 47831;
+
+function baseUrlForPort(port: number): string {
+  return `http://127.0.0.1:${port}`;
+}
+
 function baseUrl(config: JigConfig): string {
-  return `http://127.0.0.1:${config.http_port}`;
+  return baseUrlForPort(config.http_port);
 }
 
 async function jsonResponse(
@@ -67,6 +74,23 @@ async function jsonResponse(
   return value as Record<string, unknown>;
 }
 
+async function setupStatusIfReady(
+  port: number,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const response = await fetch(
+      `${baseUrlForPort(port)}/api/v1/setup/status`,
+      { signal: AbortSignal.timeout(250) },
+    );
+    if (!response.ok) {
+      return null;
+    }
+    return jsonResponse(response);
+  } catch {
+    return null;
+  }
+}
+
 async function statusIfReady(
   config: JigConfig,
 ): Promise<Record<string, unknown> | null> {
@@ -84,19 +108,19 @@ async function statusIfReady(
 }
 
 async function waitReady(
-  config: JigConfig,
+  port: number,
   timeoutMs = 2_000,
 ): Promise<Record<string, unknown>> {
   const started = performance.now();
   while (performance.now() - started < timeoutMs) {
-    const status = await statusIfReady(config);
+    const status = await setupStatusIfReady(port);
     if (status !== null) {
       return status;
     }
     await Bun.sleep(50);
   }
   throw new CliError(
-    `Jig service did not become ready at ${baseUrl(config)} within ${timeoutMs} ms`,
+    `Jig service did not become ready at ${baseUrlForPort(port)} within ${timeoutMs} ms`,
   );
 }
 
@@ -111,8 +135,8 @@ async function systemdAvailable(): Promise<boolean> {
   return result.exit_code === 0;
 }
 
-async function startService(config: JigConfig): Promise<void> {
-  if ((await statusIfReady(config)) !== null) {
+async function startService(port: number): Promise<void> {
+  if ((await setupStatusIfReady(port)) !== null) {
     return;
   }
 
@@ -132,7 +156,7 @@ async function startService(config: JigConfig): Promise<void> {
       result.stderr || "Unable to start the Jig user service",
     );
   }
-  await waitReady(config);
+  await waitReady(port);
 }
 
 async function writeToken(config: JigConfig): Promise<string> {
@@ -207,15 +231,29 @@ async function openBrowser(url: string): Promise<void> {
 }
 
 async function launch(): Promise<void> {
-  const config = await loadConfig();
-  await startService(config);
-  const url = baseUrl(config);
+  const config = await loadConfigIfPresent();
+  const port = config?.http_port ?? DEFAULT_HTTP_PORT;
+  await startService(port);
+  const url = baseUrlForPort(port);
   process.stdout.write(`${url}\n`);
   await openBrowser(url);
 }
 
 async function printStatus(): Promise<void> {
-  const config = await loadConfig();
+  const config = await loadConfigIfPresent();
+  if (config === null) {
+    const setup = await setupStatusIfReady(DEFAULT_HTTP_PORT);
+    process.stdout.write(
+      [
+        setup === null ? "service: stopped or unavailable" : "service: ready",
+        "setup: repository required",
+        "repository: not configured",
+        "",
+      ].join("\n"),
+    );
+    return;
+  }
+
   const status = await statusIfReady(config);
   if (status === null) {
     process.stdout.write(
@@ -241,7 +279,7 @@ async function printStatus(): Promise<void> {
 
 async function syncNow(): Promise<void> {
   const config = await loadConfig();
-  await startService(config);
+  await startService(config.http_port);
   const result = await postOperation(config, "/api/v1/sync", {});
   process.stdout.write(
     `repository_status: ${String(result.repository_status ?? "unknown")}\n`,
@@ -249,7 +287,20 @@ async function syncNow(): Promise<void> {
 }
 
 async function doctor(): Promise<void> {
-  const config = await loadConfig();
+  const config = await loadConfigIfPresent();
+  if (config === null) {
+    const setup = await setupStatusIfReady(DEFAULT_HTTP_PORT);
+    process.stdout.write(
+      [
+        `service_healthy: ${setup === null ? "false" : "true"}`,
+        "repository_path: not configured",
+        "setup_required: true",
+        "",
+      ].join("\n"),
+    );
+    return;
+  }
+
   const status = await statusIfReady(config);
   if (status === null) {
     process.stdout.write(
