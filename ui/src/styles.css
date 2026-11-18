@@ -137,13 +137,38 @@ body {
   }
 
   .jig-app-header-narrow {
+    position: sticky;
+    z-index: 1;
+    inset-block-start: 0;
     display: grid;
-    height: 3.5rem;
+    height: auto;
     min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    padding: env(safe-area-inset-top, 0px) 0 0;
+  }
+
+  .jig-header-mobile-application-row {
+    display: grid;
+    min-height: 44px;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--spacing-0-5);
     padding: 0 var(--spacing-0-5);
+  }
+
+  .jig-header-mobile-title {
+    min-width: 0;
+    justify-self: center;
+    overflow: hidden;
+  }
+
+  .jig-header-mobile-temporal-row {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--spacing-0-5);
+    border-block-start: var(--border-width) solid var(--color-border);
   }
 
   .jig-brand-logo-wrap {
@@ -437,6 +462,25 @@ body {
   .jig-task-card-completed {
     min-height: 62px;
     cursor: default;
+  }
+
+  .jig-task-card-reminder-due {
+    border-block-color: var(--color-border-warning);
+    border-inline-end-color: var(--color-border-warning);
+    background: color-mix(
+      in srgb,
+      var(--jig-task-surface, var(--color-background-surface)) 88%,
+      var(--color-warning-muted) 12%
+    );
+  }
+
+  .jig-reminder-due-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-0-5);
+    color: var(--color-text-warning);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
   }
 
   .jig-task-card-leading {
