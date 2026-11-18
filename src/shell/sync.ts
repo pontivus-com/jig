@@ -1,4 +1,3 @@
-import type { Database } from "bun:sqlite";
 import {
   ensurePortableData,
   EXPORT_DEBOUNCE_MS,
@@ -18,8 +17,9 @@ import {
   markExported,
   readCanonicalState,
   readMetadata,
+  type JigSqlConnection,
   type RepositoryStatus,
-} from "./sqlite";
+} from "../persistence/sqlite";
 
 export interface SyncConfiguration {
   readonly repository_path: string;
@@ -65,7 +65,7 @@ function snapshotsEqual(
 }
 
 export function createSyncController(
-  db: Database,
+  db: JigSqlConnection,
   config: SyncConfiguration,
   effects: SyncEffects = REAL_EFFECTS,
 ): SyncController {
@@ -98,8 +98,8 @@ export function createSyncController(
   };
 
   const reconcileConcreteLocalSnapshot = async (): Promise<void> => {
-    const metadata = readMetadata(db);
-    const state = readCanonicalState(db);
+    const metadata = await readMetadata(db);
+    const state = await readCanonicalState(db);
     const current = await effects.readCurrentSnapshot(
       adapter,
       metadata.dataset_id,
@@ -117,10 +117,10 @@ export function createSyncController(
         metadata.last_exported_head !== head ||
         metadata.last_exported_revision !== state.revision
       ) {
-        markExported(db, state.revision, head);
+        await markExported(db, state.revision, head);
       }
       if (metadata.last_adopted_head !== head) {
-        markAdoptedHead(db, head);
+        await markAdoptedHead(db, head);
       }
       return;
     }
@@ -132,17 +132,17 @@ export function createSyncController(
       return;
     }
 
-    adoptCanonicalSnapshot(db, snapshot.tasks, head);
+    await adoptCanonicalSnapshot(db, snapshot.tasks, head);
   };
 
   const runOnce = async (): Promise<RepositoryStatus> => {
     try {
-      const datasetId = readMetadata(db).dataset_id;
+      const datasetId = (await readMetadata(db)).dataset_id;
       await effects.ensurePortableData(adapter, datasetId);
       await reconcileConcreteLocalSnapshot();
 
-      const state = readCanonicalState(db);
-      const metadata = readMetadata(db);
+      const state = await readCanonicalState(db);
+      const metadata = await readMetadata(db);
       if (state.revision !== metadata.last_exported_revision) {
         currentStatus = "pending";
         const snapshot = serializeSnapshot(
@@ -154,7 +154,7 @@ export function createSyncController(
           snapshot,
           state.revision,
         );
-        markExported(db, state.revision, head);
+        await markExported(db, state.revision, head);
       }
 
       const pushed = await effects.synchronize(adapter);
@@ -191,11 +191,11 @@ export function createSyncController(
   return {
     start: async () => {
       stopped = false;
-      const datasetId = readMetadata(db).dataset_id;
+      const datasetId = (await readMetadata(db)).dataset_id;
       await effects.ensurePortableData(adapter, datasetId);
       await reconcileConcreteLocalSnapshot();
 
-      const metadata = readMetadata(db);
+      const metadata = await readMetadata(db);
       if (metadata.pending_sync) {
         currentStatus = "pending";
         schedule(0);
