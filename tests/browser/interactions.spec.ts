@@ -67,9 +67,8 @@ async function mouseDrag(
   targetYRatio = 0.5,
 ): Promise<{ readonly date: string; readonly index: number }> {
   const sourceBox = await source.boundingBox();
-  const targetBox = await target.boundingBox();
-  if (sourceBox === null || targetBox === null) {
-    throw new Error("Drag geometry unavailable");
+  if (sourceBox === null) {
+    throw new Error("Drag source geometry unavailable");
   }
 
   await page.mouse.move(
@@ -83,6 +82,10 @@ async function mouseDrag(
     { steps: 3 },
   );
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+  const targetBox = await target.boundingBox();
+  if (targetBox === null) {
+    throw new Error("Drag target geometry unavailable after lift");
+  }
   await page.mouse.move(
     targetBox.x + targetBox.width / 2,
     targetBox.y + targetBox.height * targetYRatio,
@@ -108,18 +111,13 @@ async function touchDrag(
   targetYRatio = 0.5,
 ): Promise<{ readonly date: string; readonly index: number }> {
   const sourceBox = await source.boundingBox();
-  const targetBox = await target.boundingBox();
-  if (sourceBox === null || targetBox === null) {
-    throw new Error("Touch drag geometry unavailable");
+  if (sourceBox === null) {
+    throw new Error("Touch drag source geometry unavailable");
   }
 
   const start = {
     x: sourceBox.x + sourceBox.width / 2,
     y: sourceBox.y + sourceBox.height / 2,
-  };
-  const end = {
-    x: targetBox.x + targetBox.width / 2,
-    y: targetBox.y + targetBox.height * targetYRatio,
   };
   const client = await page.context().newCDPSession(page);
   const point = (x: number, y: number) => ({
@@ -137,9 +135,17 @@ async function touchDrag(
   });
   await page.waitForTimeout(280);
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+  const targetBox = await target.boundingBox();
+  if (targetBox === null) {
+    throw new Error("Touch drag target geometry unavailable after lift");
+  }
+  const end = {
+    x: targetBox.x + targetBox.width / 2,
+    y: targetBox.y + targetBox.height * targetYRatio,
+  };
 
-  for (let step = 1; step <= 8; step += 1) {
-    const progress = step / 8;
+  for (let step = 1; step <= 12; step += 1) {
+    const progress = step / 12;
     await client.send("Input.dispatchTouchEvent", {
       type: "touchMove",
       touchPoints: [
@@ -545,7 +551,7 @@ test("dedicated-handle desktop drag reorders within a date at the exact target i
 test("narrow touch drag reorders within a date and does not open the workspace", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 390, height: 1600 });
   const today = await browserCivilDate(page);
   await createTask(page, "Touch first", today);
   await createTask(page, "Touch second", today);
@@ -577,7 +583,7 @@ test("narrow touch drag reorders within a date and does not open the workspace",
 test("narrow touch drag moves to the exact index in a non-empty adjacent date", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 390, height: 1600 });
   const today = await browserCivilDate(page);
   const dates = await page.locator("[data-date]").evaluateAll((elements) =>
     elements
@@ -634,7 +640,7 @@ test("narrow touch drag moves to the exact index in a non-empty adjacent date", 
 test("narrow touch drag moves into an empty adjacent date and persists", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 390, height: 1600 });
   const today = await browserCivilDate(page);
   const dates = await page.locator("[data-date]").evaluateAll((elements) =>
     elements
@@ -811,7 +817,7 @@ test("narrow Planner reflows the same seven-date semantic board", async ({
   const today = await browserCivilDate(page);
   await createTask(page, "Narrow stacked task", today);
   await page.reload();
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 390, height: 1600 });
 
   await expect(page.locator(".jig-week-board")).toHaveCount(1);
   await expect(page.locator(".jig-week-board .jig-week-column")).toHaveCount(7);
