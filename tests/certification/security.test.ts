@@ -150,8 +150,8 @@ describe("V1 security and trust boundaries", () => {
   });
 
   it("keeps GitHub Device Flow registration secretless and redirect-free", async () => {
-    const registration = await source("src/shell/github-registration.ts");
-    const auth = await source("src/shell/github-auth.ts");
+    const registration = await source("src/github-registration.ts");
+    const auth = await source("src/github-auth.ts");
     const secretService = await source("src/shell/secret-service.ts");
 
     expect(registration).toContain("GITHUB_APP_REGISTRATION");
