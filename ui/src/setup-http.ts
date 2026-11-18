@@ -65,19 +65,25 @@ function asObject(value: unknown): Record<string, unknown> {
   return value;
 }
 
+function githubPhase(value: unknown): GitHubSetupPhase {
+  switch (value) {
+    case "idle":
+    case "authorizing":
+    case "repository-access":
+    case "repository-selection":
+    case "acquiring":
+      return value;
+    default:
+      throw new TypeError("Jig setup service returned invalid GitHub phase");
+  }
+}
+
 
 function asGitHubSetupSnapshot(value: unknown): GitHubSetupSnapshot {
   const payload = asObject(value);
-  const phase = payload.phase;
+  const phase = githubPhase(payload.phase);
   if (
     typeof payload.available !== "boolean" ||
-    ![
-      "idle",
-      "authorizing",
-      "repository-access",
-      "repository-selection",
-      "acquiring",
-    ].includes(typeof phase === "string" ? phase : "") ||
     !Array.isArray(payload.repositories) ||
     (payload.grant_access_url !== null &&
       typeof payload.grant_access_url !== "string") ||
@@ -161,7 +167,7 @@ function asGitHubSetupSnapshot(value: unknown): GitHubSetupSnapshot {
 
   return {
     available: payload.available,
-    phase: phase as GitHubSetupPhase,
+    phase,
     authorization,
     grant_access_url:
       typeof payload.grant_access_url === "string"
