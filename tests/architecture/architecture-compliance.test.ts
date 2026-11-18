@@ -367,6 +367,39 @@ describe("architecture compliance", () => {
     expect(gradle).not.toContain("androidx.room");
   });
 
+  it("keeps Android GitHub credentials inside the governed Keystore boundary", () => {
+    const activity = source(
+      "android/app/src/main/java/com/pontivus/jig/MainActivity.java",
+    );
+    const plugin = source(
+      "android/app/src/main/java/com/pontivus/jig/JigSecureCredentialsPlugin.java",
+    );
+    const manifest = source("android/app/src/main/AndroidManifest.xml");
+    const adapter = source("ui/src/native/secure-credentials.ts");
+
+    expect(activity).toContain(
+      "registerPlugin(JigSecureCredentialsPlugin.class)",
+    );
+    expect(manifest).toContain('android:allowBackup="false"');
+    expect(plugin).toContain(
+      '"com.pontivus.jig.github.credentials.v1"',
+    );
+    expect(plugin).toContain('"AndroidKeyStore"');
+    expect(plugin).toContain('"AES/GCM/NoPadding"');
+    expect(plugin).toContain(".setKeySize(256)");
+    expect(plugin).toContain(
+      "KeyProperties.ENCRYPTION_PADDING_NONE",
+    );
+    expect(plugin).toContain("Context.MODE_PRIVATE");
+    expect(plugin).toContain('putString(\n                    CIPHERTEXT');
+    expect(plugin).toContain('putString(\n                    IV');
+    expect(plugin).not.toContain("client_secret");
+    expect(plugin).not.toContain("redirect_uri");
+    expect(adapter).toContain("type GitHubCredential");
+    expect(adapter).not.toContain("JigConfig");
+    expect(adapter).not.toContain("Task");
+  });
+
   it("keeps Android configured runtime provider-neutral", () => {
     const runtime = source("ui/src/runtime.ts");
     const native = source("ui/src/runtime-native.ts");
