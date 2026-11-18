@@ -1607,7 +1607,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 
 ## v1.1 binding architecture
 
-The detailed normative solution contracts are [JIG-110-SD-01..39](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
+The detailed normative solution contracts are [JIG-110-SD-01..41](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
 
 - runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error;
 - Linux setup uses one bootstrap API/UI and canonical local-repository adoption; optimized GitHub acquisition uses the platform-specific **Jig Desktop** GitHub App, platform secure credentials and deterministic managed checkout; Android uses a separate **Jig Android** GitHub App with the same least-privilege repository semantics. The two App registrations never share client IDs/secrets/callbacks, while both converge on the same canonical repository/portable-data contract;
