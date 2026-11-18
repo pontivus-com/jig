@@ -14,7 +14,12 @@ export const solarizedPalette = {
   ],
   popover: ["#eee8d5", "#073642"],
   muted: ["#eee8d5", "#073642"],
-  textPrimary: ["#586e75", "#93a1a1"],
+  // Base01 is 4.392:1 on Solarized base2, just below Jig's AA floor.
+  // Keep the canonical hue and darken it 4% toward base03 for application text.
+  textPrimary: [
+    "color-mix(in srgb, #586e75 96%, #002b36)",
+    "#93a1a1",
+  ],
   textSecondary: ["#657b83", "#839496"],
   textDisabled: ["#93a1a1", "#586e75"],
   accent: ["#cb4b16", "#cb4b16"],
