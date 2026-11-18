@@ -151,8 +151,9 @@ describe("V1 security and trust boundaries", () => {
     const auth = await source("src/shell/github-auth.ts");
     const secretService = await source("src/shell/secret-service.ts");
 
-    expect(registration).toContain("GITHUB_DESKTOP_APP_REGISTRATION");
-    expect(registration).toContain("GITHUB_ANDROID_APP_REGISTRATION");
+    expect(registration).toContain("GITHUB_APP_REGISTRATION");
+    expect(registration).not.toContain("GITHUB_DESKTOP_APP_REGISTRATION");
+    expect(registration).not.toContain("GITHUB_ANDROID_APP_REGISTRATION");
     expect(registration).toContain("client_id:");
     expect(registration).toContain("app_slug:");
     expect(registration).not.toMatch(/client_secret\s*:/);
