@@ -29,25 +29,29 @@ async function deliveredKeys(page: import("@playwright/test").Page): Promise<str
 }
 
 async function installDeliveryProbe(page: import("@playwright/test").Page): Promise<void> {
-  await page.evaluate(() => {
-    Object.defineProperty(
-      ServiceWorkerRegistration.prototype,
-      "showNotification",
-      {
-        configurable: true,
-        value: async (): Promise<void> => undefined,
+  await page.addInitScript(() => {
+    const registration = {
+      showNotification: async (): Promise<void> => undefined,
+    };
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        register: async () => registration,
+        ready: Promise.resolve(registration),
+        getRegistration: async () => ({
+          ...registration,
+          active: { scriptURL: "/jig-notifications-sw.js" },
+        }),
       },
-    );
+    });
   });
 }
-
 test.beforeEach(async ({ page }) => {
   await page.context().grantPermissions(["notifications"]);
   await page.clock.install({ time: reminderStart() });
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
-  await installDeliveryProbe(page);
 });
 
 test("due reminder uses the service-worker delivery path once and edited time gets a new suppression key", async ({
@@ -64,7 +68,6 @@ test("due reminder uses the service-worker delivery path once and edited time ge
     reminder_time: "09:01",
   });
   await page.reload();
-  await installDeliveryProbe(page);
 
   await page.clock.runFor(60_000);
   await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
@@ -87,7 +90,6 @@ test("due reminder uses the service-worker delivery path once and edited time ge
     },
   });
   await page.reload();
-  await installDeliveryProbe(page);
   await page.clock.runFor(30_000);
 
   await expect.poll(async () => (await deliveredKeys(page)).length).toBe(2);
@@ -123,7 +125,6 @@ test("a reminder already due before this browser session remains visible and get
   });
 
   await page.reload();
-  await installDeliveryProbe(page);
 
   const pastCard = page
     .getByText("Past reminder", { exact: true })
@@ -150,7 +151,6 @@ test("an open Planner enters reminder-due attention when local time crosses the 
     reminder_time: "09:01",
   });
   await page.reload();
-  await installDeliveryProbe(page);
 
   const card = page
     .getByText("Open app boundary", { exact: true })
