@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { GitHubCredential } from "../../src/github";
-import { GitHubDeviceFlowSession } from "../../src/shell/github-device-flow";
+import { GitHubDeviceFlowSession } from "../../src/github-device-flow";
 import { createGitHubHttpHandler } from "../../src/shell/github-http";
-import { GitHubOnboardingController } from "../../src/shell/github-onboarding";
-import { GitHubReconnectController } from "../../src/shell/github-reconnect";
+import { GitHubOnboardingController } from "../../src/github-onboarding";
+import { GitHubReconnectController } from "../../src/github-reconnect";
 
 const TOKEN = "a".repeat(64);
 const REGISTRATION = {
@@ -122,8 +122,6 @@ describe("GitHub HTTP boundary", () => {
         () => new Date(nowMs),
         async () => undefined,
       ),
-      config_path: "/tmp/config.json",
-      http_port: 47831,
       list_installations: async () => [
         {
           id: 7,
@@ -142,17 +140,10 @@ describe("GitHub HTTP boundary", () => {
           clone_url: "https://github.com/pontivus-com/planning.git",
         },
       ],
-      acquire_repository: async () =>
-        "/tmp/jig-managed/pontivus-com/planning",
-      initialize_repository: async (options) => ({
-        config: {
-          version: 1,
-          repository_path: options.repository_path,
-          http_port: options.http_port,
-        },
-        dataset_id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001",
-        sqlite_path: options.repository_path + "/.jig/local/jig.sqlite",
-        adopted_existing_snapshot: false,
+      acquire_repository: async () => ({
+        version: 1 as const,
+        repository_path: "/tmp/jig-managed/pontivus-com/planning",
+        http_port: 47831,
       }),
     });
     const handler = createGitHubHttpHandler({
