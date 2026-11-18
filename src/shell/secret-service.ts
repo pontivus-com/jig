@@ -1,5 +1,3 @@
-import { access } from "node:fs/promises";
-
 export interface GitHubCredential {
   readonly user_id: number;
   readonly access_token: string;
@@ -87,15 +85,11 @@ async function runSecretTool(
 }
 
 export async function assertSecretServiceAvailable(): Promise<void> {
-  try {
-    await access("/usr/bin/secret-tool");
-  } catch {
-    const result = await runSecretTool(["--version"]).catch(() => null);
-    if (result === null || result.exit_code !== 0) {
-      throw new SecretServiceError(
-        "Connect GitHub requires secret-tool and an available freedesktop Secret Service",
-      );
-    }
+  const result = await runSecretTool(["--version"]).catch(() => null);
+  if (result === null || result.exit_code !== 0) {
+    throw new SecretServiceError(
+      "Connect GitHub requires secret-tool and an available freedesktop Secret Service",
+    );
   }
 }
 
