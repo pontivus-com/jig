@@ -70,10 +70,11 @@ import {
 import { useLayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
 import {
+  readGitHubCapabilityStatus,
   readSetupStatus,
   refreshGitHubReconnect,
   startGitHubReconnect,
-  type GitHubSetupSnapshot,
+  type GitHubReconnectSnapshot,
   type SetupStatus,
 } from "./setup-http";
 interface PlannerState {
@@ -117,11 +118,13 @@ function ConfiguredApp({
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
+  const [githubReconnectAvailable, setGitHubReconnectAvailable] =
+    useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [isOperating, setIsOperating] = useState(false);
   const [githubReconnect, setGitHubReconnect] =
-    useState<GitHubSetupSnapshot | null>(null);
+    useState<GitHubReconnectSnapshot | null>(null);
   const [workspace, setWorkspace] = useState<TaskWorkspaceState>({
     mode: "closed",
   });
@@ -146,12 +149,20 @@ function ConfiguredApp({
 
   const refreshOperationalState = useCallback(
     async (): Promise<void> => {
-      const [nextStatus, nextDiagnostics] = await Promise.all([
+      const [
+        nextStatus,
+        nextDiagnostics,
+        githubCapabilities,
+      ] = await Promise.all([
         readStatus(),
         readDiagnostics(),
+        readGitHubCapabilityStatus(),
       ]);
       setStatus(nextStatus);
       setDiagnostics(nextDiagnostics);
+      setGitHubReconnectAvailable(
+        githubCapabilities.reconnect_available,
+      );
     },
     [],
   );
@@ -451,20 +462,6 @@ function ConfiguredApp({
       }
     }, [isOperating, refreshOperationalState]);
 
-  useEffect(() => {
-    const authorization = githubReconnect?.authorization;
-    if (
-      githubReconnect?.phase !== "authorizing" ||
-      authorization?.mode !== "device"
-    ) {
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      void refreshGitHubReconnectAuthorization();
-    }, authorization.retry_after_seconds * 1000);
-    return () => window.clearTimeout(timer);
-  }, [githubReconnect, refreshGitHubReconnectAuthorization]);
-
   const previousWeek = useCallback((): void => {
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
@@ -631,6 +628,7 @@ function ConfiguredApp({
         diagnostics={diagnostics}
         operationError={operationError}
         isOperating={isOperating}
+        githubReconnectAvailable={githubReconnectAvailable}
         githubReconnect={githubReconnect}
         onThemePresetChange={onThemePresetChange}
         onAppearanceModeChange={onAppearanceModeChange}
