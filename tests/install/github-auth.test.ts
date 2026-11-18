@@ -50,6 +50,30 @@ describe("GitHub App public-client primitives", () => {
     expect(request.code_verifier).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
+  it("selects the Android callback explicitly from the same GitHub App registration", async () => {
+    const request = await createGitHubAuthorizationRequest(
+      REGISTRATION,
+      REGISTRATION.android_callback_url,
+    );
+    const url = new URL(request.authorization_url);
+
+    expect(url.searchParams.get("redirect_uri")).toBe(
+      REGISTRATION.android_callback_url,
+    );
+    expect(request.redirect_uri).toBe(REGISTRATION.android_callback_url);
+  });
+
+  it("rejects redirect URIs outside the two registered Jig callbacks", async () => {
+    await expect(
+      createGitHubAuthorizationRequest(
+        REGISTRATION,
+        "https://example.invalid/oauth/github",
+      ),
+    ).rejects.toThrow(
+      "GitHub redirect URI is not one of the registered Jig callbacks",
+    );
+  });
+
   it("exchanges an authorization code with PKCE and resolves the GitHub user id", async () => {
     const request = await createGitHubAuthorizationRequest(
       REGISTRATION,
