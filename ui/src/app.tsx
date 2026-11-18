@@ -69,6 +69,7 @@ import {
 } from "./task-workspace";
 import { useLayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
+import { installNativeActiveListener } from "./native/app-lifecycle";
 import {
   readGitHubCapabilityStatus,
   readSetupStatus,
@@ -199,6 +200,34 @@ function ConfiguredApp({
     }, 15_000);
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let cleanup: (() => Promise<void>) | null = null;
+
+    void installNativeActiveListener(() => {
+      void refreshCanonical().catch((error: unknown) => {
+        if (!disposed) {
+          setOperationError(
+            `Jig could not refresh after Android resumed: ${errorMessage(error)}. Reload the application.`,
+          );
+        }
+      });
+    }).then((remove) => {
+      if (disposed) {
+        void remove();
+        return;
+      }
+      cleanup = remove;
+    });
+
+    return () => {
+      disposed = true;
+      if (cleanup !== null) {
+        void cleanup();
+      }
+    };
+  }, [refreshCanonical]);
 
   useEffect(() => {
     let cancelled = false;
