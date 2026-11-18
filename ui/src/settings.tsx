@@ -12,7 +12,11 @@ import type {
   Diagnostics,
   ServiceStatus,
 } from "../../src/protocol";
-import { repositoryStatusPresentation } from "./repository-status";
+import {
+  localGitStatusPresentation,
+  remoteGitStatusPresentation,
+  repositoryStatusPresentation,
+} from "./repository-status";
 import type { GitHubReconnectSnapshot } from "./setup-http";
 import { GitHubDeviceFlowPanel } from "./github-device-flow";
 import {
@@ -89,6 +93,8 @@ export function SettingsView({
   const [notificationState, setNotificationState] =
     useState<BrowserNotificationState>(browserNotificationState);
   const repositoryStatus = repositoryStatusPresentation(status);
+  const localGitStatus = localGitStatusPresentation(status);
+  const remoteGitStatus = remoteGitStatusPresentation(status);
 
   useEffect(() => {
     const refresh = (): void => {
@@ -141,11 +147,7 @@ export function SettingsView({
             dividers={["top", "bottom", "start", "end"]}
           >
             <VStack gap={3} height="100%">
-              <strong>
-                {status?.repository_status === "synchronized"
-                  ? "Synced"
-                  : "Synchronization"}
-              </strong>
+              <strong>{repositoryStatus.label}</strong>
               <p>{repositoryStatus.message}</p>
               <dl className="jig-diagnostics">
                 <div>
@@ -153,9 +155,28 @@ export function SettingsView({
                   <dd>{status?.ready ? "Running" : "Unavailable"}</dd>
                 </div>
                 <div>
-                  <dt>Local save</dt>
-                  <dd>{diagnostics?.sqlite_available ? "Safe" : "Unavailable"}</dd>
+                  <dt>Local Git</dt>
+                  <dd title={localGitStatus.message}>
+                    {localGitStatus.label}
+                  </dd>
                 </div>
+                <div>
+                  <dt>Remote Git</dt>
+                  <dd title={remoteGitStatus.message}>
+                    {remoteGitStatus.label}
+                  </dd>
+                </div>
+                {remoteGitStatus.remoteLocation === null ? null : (
+                  <div>
+                    <dt>Remote repository</dt>
+                    <dd>
+                      <span>{remoteGitStatus.remoteLocation}</span>
+                      <small className="jig-settings-remote-name">
+                        Git remote: {remoteGitStatus.remoteName}
+                      </small>
+                    </dd>
+                  </div>
+                )}
               </dl>
               <div className="jig-settings-sync-action">
                 <Button
@@ -168,7 +189,7 @@ export function SettingsView({
                   }}
                 />
                 {githubReconnectAvailable &&
-                status?.repository_status === "sync-issue" &&
+                status?.repository_status.remote.state === "sync-issue" &&
                 githubReconnect === null ? (
                   <Button
                     label="Reconnect GitHub"
