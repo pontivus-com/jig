@@ -156,7 +156,11 @@ export function createSyncController(
     }
 
     const { head, snapshot } = current;
-    const expected = serializeSnapshot(state.tasks, metadata.dataset_id);
+    const expected = serializeSnapshot(
+      state.tasks,
+      metadata.dataset_id,
+      state.recurrences,
+    );
     const contentMatches = snapshotsEqual(snapshot.files, expected.files);
 
     if (contentMatches) {
@@ -179,7 +183,12 @@ export function createSyncController(
       return;
     }
 
-    await adoptCanonicalSnapshot(db, snapshot.tasks, head);
+    await adoptCanonicalSnapshot(
+      db,
+      snapshot.tasks,
+      snapshot.recurrences,
+      head,
+    );
   };
 
   const currentRevisionCommitted = async (): Promise<boolean> => {
@@ -210,6 +219,7 @@ export function createSyncController(
         const snapshot = serializeSnapshot(
           state.tasks,
           metadata.dataset_id,
+          state.recurrences,
         );
         const head = await effects.writeSnapshot(
           adapter,
