@@ -752,18 +752,28 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       expect(snapshot.taskBackground, `${preset}/${mode} task vs canvas`)
         .not.toBe(snapshot.bodyBackground);
       expect(snapshot.taskBorder).not.toBe("rgba(0, 0, 0, 0)");
-      expect(contrastRatio(snapshot.bodyText, snapshot.bodyBackground))
-        .toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(snapshot.taskText, snapshot.taskBackground))
-        .toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(snapshot.bodyText, snapshot.bodyBackground),
+        `${preset}/${mode} body text contrast`,
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(snapshot.taskText, snapshot.taskBackground),
+        `${preset}/${mode} Task text contrast`,
+      ).toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
-      expect(contrastRatio(snapshot.logoPrimary, snapshot.bodyBackground))
-        .toBeGreaterThanOrEqual(3);
-      expect(contrastRatio(snapshot.logoAccent, snapshot.bodyBackground))
-        .toBeGreaterThanOrEqual(3);
-      for (const pair of snapshot.statusPairs) {
-        expect(contrastRatio(pair.foreground, pair.background))
-          .toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(snapshot.logoPrimary, snapshot.bodyBackground),
+        `${preset}/${mode} logo primary contrast`,
+      ).toBeGreaterThanOrEqual(3);
+      expect(
+        contrastRatio(snapshot.logoAccent, snapshot.bodyBackground),
+        `${preset}/${mode} logo accent contrast`,
+      ).toBeGreaterThanOrEqual(3);
+      for (const [index, pair] of snapshot.statusPairs.entries()) {
+        expect(
+          contrastRatio(pair.foreground, pair.background),
+          `${preset}/${mode} status contrast #${index}`,
+        ).toBeGreaterThanOrEqual(4.5);
       }
     }
 
