@@ -13,6 +13,16 @@ import {
   fetchJson,
   postJson,
 } from "./http";
+import {
+  acquireAndroidGitHubRepository,
+  readAndroidGitHubCapabilityStatus,
+  readAndroidGitHubSetupSnapshot,
+  readAndroidSetupStatus,
+  refreshAndroidGitHubReconnect,
+  refreshAndroidGitHubSetup,
+  startAndroidGitHubReconnect,
+  startAndroidGitHubSetup,
+} from "./native/github-setup";
 
 export type {
   GitHubOnboardingSnapshot,
@@ -46,10 +56,7 @@ function nativeSetupUnavailable(operation: string): never {
 
 export async function readGitHubCapabilityStatus(): Promise<GitHubCapabilityStatus> {
   if (Capacitor.isNativePlatform()) {
-    return {
-      onboarding_available: false,
-      reconnect_available: false,
-    };
+    return readAndroidGitHubCapabilityStatus();
   }
   return parseGitHubCapabilityStatus(
     await fetchJson("/api/v1/github/status"),
@@ -58,11 +65,7 @@ export async function readGitHubCapabilityStatus(): Promise<GitHubCapabilityStat
 
 export async function readSetupStatus(): Promise<SetupStatus> {
   if (Capacitor.isNativePlatform()) {
-    return {
-      mode: "bootstrap",
-      local_repository_available: false,
-      github_available: false,
-    };
+    return readAndroidSetupStatus();
   }
 
   const [rawSetup, github] = await Promise.all([
@@ -112,7 +115,7 @@ export async function configureLocalRepository(
 
 export async function startGitHubSetup(): Promise<GitHubOnboardingSnapshot> {
   if (Capacitor.isNativePlatform()) {
-    return nativeSetupUnavailable("Connect GitHub");
+    return startAndroidGitHubSetup();
   }
   return parseGitHubOnboardingSnapshot(
     await postJson("/api/v1/setup/github/start", {}),
@@ -121,7 +124,7 @@ export async function startGitHubSetup(): Promise<GitHubOnboardingSnapshot> {
 
 export async function refreshGitHubSetup(): Promise<GitHubOnboardingSnapshot> {
   if (Capacitor.isNativePlatform()) {
-    return nativeSetupUnavailable("GitHub setup refresh");
+    return refreshAndroidGitHubSetup();
   }
   return parseGitHubOnboardingSnapshot(
     await postJson("/api/v1/setup/github/refresh-access", {}),
@@ -130,7 +133,7 @@ export async function refreshGitHubSetup(): Promise<GitHubOnboardingSnapshot> {
 
 export async function readGitHubRepositories(): Promise<GitHubOnboardingSnapshot> {
   if (Capacitor.isNativePlatform()) {
-    return nativeSetupUnavailable("GitHub repository access");
+    return readAndroidGitHubSetupSnapshot();
   }
   return parseGitHubOnboardingSnapshot(
     await fetchJson("/api/v1/setup/github/repositories"),
@@ -139,7 +142,7 @@ export async function readGitHubRepositories(): Promise<GitHubOnboardingSnapshot
 
 export async function startGitHubReconnect(): Promise<GitHubReconnectSnapshot> {
   if (Capacitor.isNativePlatform()) {
-    return nativeSetupUnavailable("GitHub reconnect");
+    return startAndroidGitHubReconnect();
   }
   return parseGitHubReconnectSnapshot(
     await postJson("/api/v1/github/reconnect/start", {}),
@@ -148,7 +151,7 @@ export async function startGitHubReconnect(): Promise<GitHubReconnectSnapshot> {
 
 export async function refreshGitHubReconnect(): Promise<GitHubReconnectSnapshot> {
   if (Capacitor.isNativePlatform()) {
-    return nativeSetupUnavailable("GitHub reconnect refresh");
+    return refreshAndroidGitHubReconnect();
   }
   return parseGitHubReconnectSnapshot(
     await postJson("/api/v1/github/reconnect/refresh", {}),
@@ -159,7 +162,7 @@ export async function acquireGitHubRepository(
   repositoryId: number,
 ): Promise<string> {
   if (Capacitor.isNativePlatform()) {
-    return nativeSetupUnavailable("GitHub repository acquisition");
+    return acquireAndroidGitHubRepository(repositoryId);
   }
   const payload = asObject(
     await postJson("/api/v1/setup/github/acquire", {
