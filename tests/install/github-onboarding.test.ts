@@ -1,0 +1,224 @@
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  GitHubOnboardingController,
+} from "../../src/shell/github-onboarding";
+import type {
+  GitHubAppRegistration,
+  GitHubAuthorizationRequest,
+} from "../../src/shell/github-auth";
+import type { GitHubCredential } from "../../src/shell/secret-service";
+
+const REGISTRATION: GitHubAppRegistration = {
+  app_slug: "jig-test",
+  client_id: "client-id",
+  client_secret: "public-client-secret",
+  linux_callback_url: "http://127.0.0.1:47832/setup/github/callback",
+  android_callback_url: "com.pontivus.jig://oauth/github",
+};
+
+const AUTHORIZATION: GitHubAuthorizationRequest = {
+  state: "state-token",
+  code_verifier: "verifier",
+  authorization_url:
+    "https://github.com/login/oauth/authorize?client_id=client-id",
+  redirect_uri: REGISTRATION.linux_callback_url,
+};
+
+const CREDENTIAL: GitHubCredential = {
+  user_id: 42,
+  access_token: "access-token",
+  refresh_token: "refresh-token",
+  access_token_expires_at: "2030-01-01T00:00:00.000Z",
+  refresh_token_expires_at: "2030-07-01T00:00:00.000Z",
+};
+
+describe("GitHub onboarding orchestration", () => {
+  afterEach(async () => {
+    // The callback listener is stopped after each callback response. Yield once
+    // so the queued shutdown completes before another test can bind the port.
+    await Bun.sleep(10);
+  });
+
+  it("stays honestly unavailable without governed registration", async () => {
+    const controller = new GitHubOnboardingController({
+      registration: null,
+      config_path: "/tmp/jig-config.json",
+      http_port: 47831,
+      on_configured: () => undefined,
+      assert_secret_service: async () => undefined,
+    });
+
+    expect(controller.snapshot()).toMatchObject({
+      available: false,
+      phase: "idle",
+      repositories: [],
+    });
+    await expect(controller.start()).rejects.toThrow(
+      /GitHub App registration/,
+    );
+  });
+
+  it("authorizes, lists only app-visible repositories, acquires and canonically configures", async () => {
+    let stored: GitHubCredential | null = null;
+    let configuredPath: string | null = null;
+    let acquiredRepositoryId: number | null = null;
+
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      config_path: "/tmp/jig-config.json",
+      http_port: 47831,
+      on_configured: (config) => {
+        configuredPath = config.repository_path;
+      },
+      assert_secret_service: async () => undefined,
+      create_authorization_request: async () => AUTHORIZATION,
+      exchange_authorization_code: async (
+        _registration,
+        request,
+        code,
+      ) => {
+        expect(request.state).toBe(AUTHORIZATION.state);
+        expect(code).toBe("authorization-code");
+        return CREDENTIAL;
+      },
+      store_credential: async (credential) => {
+        stored = credential;
+      },
+      list_installations: async () => [
+        {
+          id: 7,
+          account: {
+            id: 11,
+            login: "pontivus-com",
+            type: "Organization",
+          },
+        },
+      ],
+      list_repositories: async (_token, installationId) => {
+        expect(installationId).toBe(7);
+        return [
+          {
+            id: 99,
+            owner: "pontivus-com",
+            name: "planning",
+            clone_url: "https://github.com/pontivus-com/planning.git",
+          },
+        ];
+      },
+      acquire_repository: async (selection) => {
+        acquiredRepositoryId = selection.id;
+        return "/tmp/jig-managed/pontivus-com/planning";
+      },
+      initialize_repository: async (options) => ({
+        config: {
+          version: 1,
+          repository_path: options.repository_path,
+          http_port: options.http_port,
+        },
+        dataset_id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001",
+        sqlite_path: options.repository_path + "/.jig/local/jig.sqlite",
+        adopted_existing_snapshot: false,
+      }),
+    });
+
+    const started = await controller.start();
+    expect(started).toMatchObject({
+      available: true,
+      phase: "authorizing",
+      authorization: {
+        mode: "browser",
+        authorization_url: AUTHORIZATION.authorization_url,
+      },
+    });
+
+    const callback = await fetch(
+      "http://127.0.0.1:47832/setup/github/callback" +
+        "?state=state-token&code=authorization-code",
+    );
+    expect(callback.status).toBe(200);
+
+    expect(stored).toStrictEqual(CREDENTIAL);
+    expect(controller.snapshot()).toMatchObject({
+      phase: "repository-selection",
+      repositories: [
+        {
+          id: 99,
+          installation_id: 7,
+          account_login: "pontivus-com",
+          owner: "pontivus-com",
+          name: "planning",
+        },
+      ],
+    });
+
+    const config = await controller.acquire(99);
+    expect(acquiredRepositoryId).toBe(99);
+    expect(config.repository_path).toBe(
+      "/tmp/jig-managed/pontivus-com/planning",
+    );
+    expect(configuredPath).toBe(config.repository_path);
+  });
+
+  it("exposes Grant and Manage access states without broadening repository scope", async () => {
+    const noInstallController = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      config_path: "/tmp/jig-config.json",
+      http_port: 47831,
+      on_configured: () => undefined,
+      assert_secret_service: async () => undefined,
+      start_device_authorization: async () => ({
+        device_code: "device",
+        user_code: "CODE",
+        verification_uri: "https://github.com/login/device",
+        expires_in: 900,
+        interval: 5,
+      }),
+      poll_device_authorization: async () => ({
+        status: "authorized",
+        credential: CREDENTIAL,
+      }),
+      store_credential: async () => undefined,
+      list_installations: async () => [],
+      list_repositories: async () => [],
+    });
+
+    // Force device fallback with a deliberately non-loopback callback URL.
+    const fallbackRegistration: GitHubAppRegistration = {
+      ...REGISTRATION,
+      linux_callback_url: "https://example.invalid/callback",
+    };
+    const deviceController = new GitHubOnboardingController({
+      ...{
+        registration: fallbackRegistration,
+        config_path: "/tmp/jig-config.json",
+        http_port: 47831,
+        on_configured: () => undefined,
+      },
+      assert_secret_service: async () => undefined,
+      create_authorization_request: async () => ({
+        ...AUTHORIZATION,
+        redirect_uri: fallbackRegistration.linux_callback_url,
+      }),
+      start_device_authorization:
+        noInstallController["dependencies"].start_device_authorization,
+      poll_device_authorization:
+        noInstallController["dependencies"].poll_device_authorization,
+      store_credential: async () => undefined,
+      list_installations: async () => [],
+      list_repositories: async () => [],
+    });
+
+    const started = await deviceController.start();
+    expect(started.authorization).toMatchObject({
+      mode: "device",
+      user_code: "CODE",
+    });
+    const access = await deviceController.refreshAccess();
+    expect(access).toMatchObject({
+      phase: "repository-access",
+      grant_access_url:
+        "https://github.com/apps/jig-test/installations/new",
+      repositories: [],
+    });
+  });
+});
