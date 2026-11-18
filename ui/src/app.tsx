@@ -44,7 +44,7 @@ import {
   PlannerHeader,
   type Destination,
 } from "./planner-header";
-import { ReminderMonitor } from "./reminder";
+import { ReminderMonitor, useReminderClock } from "./reminder";
 import { repositoryStatusPresentation } from "./repository-status";
 import { SettingsView } from "./settings";
 import {
@@ -89,6 +89,7 @@ function workspaceTaskId(state: TaskWorkspaceState): string | null {
 
 export function App(): React.ReactElement {
   const layoutMode = useLayoutMode();
+  const reminderNow = useReminderClock();
   const [destination, setDestination] = useState<Destination>("planner");
   const [plannerState, setPlannerState] =
     useState<PlannerState>(initialPlannerState);
@@ -528,6 +529,7 @@ export function App(): React.ReactElement {
     ) : destination === "planner" ? (
       <Planner
         tasks={tasks}
+        now={reminderNow}
         displayedDates={displayedDates}
         selectedTask={selectedTask}
         onSelectTask={selectTask}
@@ -669,7 +671,7 @@ export function App(): React.ReactElement {
           }}
         />
 
-        <ReminderMonitor tasks={tasks} />
+        <ReminderMonitor tasks={tasks} now={reminderNow} />
       </LayerProvider>
     </Theme>
   );
