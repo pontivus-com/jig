@@ -55,6 +55,13 @@ test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: reminderStart() });
   await installDeliveryProbe(page);
   await page.goto("/");
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("jig-reminder-delivered:")) {
+        localStorage.removeItem(key);
+      }
+    }
+  });
   await resetCanonicalTasks(page);
   await page.reload();
 });
