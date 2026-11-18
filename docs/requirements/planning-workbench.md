@@ -41,6 +41,8 @@ Jig supports evening planning of the next day, morning planning, and unrestricte
 
 **Reminder:** optional local date/time notification tied to the scheduled item. It represents an alert time, **not** task start time or estimated duration.
 
+**Repeat / recurrence:** optional bounded schedule that creates further ordinary Task occurrences from one Task. A recurrence has a finite start/end window and an exact calendar pattern. v1.1 supports (a) weekly patterns on one or more selected weekdays with a positive whole-number week interval, covering once-per-week, multiple-days-per-week, every-day and every-N-weeks cases, and (b) monthly patterns on an exact day of month. There is no unbounded/forever repeat. Each generated occurrence is an independent canonical Task with its own identity, scheduled date, order, completion and reminder lifecycle.
+
 **Completion:** explicit transition to done with a completion timestamp. Completion is distinct from scheduled date. Reopening makes the same task outstanding again.
 
 **Rollover:** persisted daily movement of an outstanding task whose scheduled date is earlier than the current local civil date. Rollover changes the task's `scheduled_date` to the current local civil date and places the card into that day's persisted outstanding order. It is not a separate status flag.
@@ -156,6 +158,7 @@ The JIG-106 requirements below govern the user-visible v1.0.6 corrections discus
 | JIG-FR-20 | Low-friction idle operation | The desktop service starts predictably, stays lightweight and idle-efficient, and offers immediate access to the Planner throughout the working day without requiring repeated initialization. |
 | JIG-FR-21 | Delete a task | An outstanding or completed Task can be permanently removed after explicit destructive-action confirmation. On success it disappears from Planner and History. Jig provides no trash, soft delete or in-app restore; prior Git history is the only recovery when an exported version exists. |
 | JIG-FR-22 | Theme family and System/Light/Dark appearance | Jig supports a selectable application theme family and a separate System/Light/Dark appearance preference under Settings → Appearance. System follows the platform/browser color preference for the selected theme family; explicit Light/Dark overrides it. All supported themes fully re-theme every governed surface/state while preserving common Jig semantics and theme-aware branding. Theme changes affect presentation only and never mutate Task data, displayed week, ordering, drafts, completion or synchronization state. JIG-106-FR-02 through JIG-106-FR-05 and JIG-106-FR-07 define the v1.0.6 catalogue, semantic parity, branding and placement requirements. |
+| JIG-FR-23 | Bounded recurring Tasks | A Task may optionally repeat within a finite recurrence window. The current Task remains the seed occurrence; further occurrences are created at the exact governed weekly or monthly dates through an inclusive required end date. Weekly recurrence supports one or more weekdays and an every-N-weeks interval; monthly recurrence supports an exact day of month. Generated occurrences are ordinary Tasks: completing, reopening, moving/rescheduling or deleting one occurrence affects that occurrence only and does not shift the recurrence cadence. A generated occurrence inherits the seed/template reminder time so reminders recur at the same local time on each occurrence date. Turning repeat off or shortening/changing the recurrence affects future occurrences only and never deletes completed history. |
 
 ### Initial placement rule
 
@@ -186,6 +189,20 @@ If Jig was not running for multiple days, one catch-up mutation moves every stil
 Because the scheduled date physically changes, Planner must show the card in the new current-day column and must no longer show it in the old column.
 
 A reminder is part of the scheduled Task. When rollover changes the Task's scheduled date, its existing reminder time remains the same time-of-day and therefore applies to the new rolled-forward date. Do not preserve or display an obsolete originating reminder date unless a separate future product requirement introduces explicit schedule history.
+
+### Bounded recurrence and occurrence semantics
+
+Repeat is a schedule for creating ordinary Task occurrences; it is not a Task status and it does not turn one Task into a moving calendar appointment.
+
+- The recurrence window starts from the seed Task's scheduled date and has a required inclusive end date. There is no "forever" option.
+- Weekly recurrence selects one or more weekdays and a positive whole-number week interval. An interval of 1 means every week; selecting two weekdays means two occurrences in each active week; selecting all seven weekdays gives a daily pattern; an interval of 4 means every four weeks.
+- Monthly recurrence selects an exact day of month. Months that do not contain that day produce no occurrence rather than silently moving it to another day.
+- The seed Task is preserved as the first occurrence even if a subsequently selected weekly/monthly pattern would not itself choose that seed date; the pattern controls further occurrences after the seed.
+- Each further occurrence is a normal canonical Task with its own stable identity and persisted position. Planner and History never render virtual recurrence copies.
+- Completing, reopening, moving, explicitly rescheduling or deleting one occurrence affects only that Task occurrence. Its recurrence slot/cadence is not shifted by rollover or manual rescheduling.
+- An unfinished recurring occurrence still follows ordinary daily rollover. Later recurrence occurrences continue on their original calendar pattern, so a rolled-forward earlier occurrence can coexist with a later scheduled occurrence.
+- Newly generated occurrences copy the recurrence seed/template's title, priority, context, reference, note and reminder time. In particular, a reminder recurs at the same local time on each generated occurrence date.
+- Editing Repeat is a series action for this-and-future occurrences. Earlier/completed occurrences remain historical Tasks. Shortening the end date or turning Repeat off removes only future outstanding occurrences beyond the retained endpoint; completed occurrences are never deleted by recurrence editing.
 
 Completed Tasks are never rolled forward. Explicit date changes use either desktop drag/drop or the scheduled-date field in Edit.
 
@@ -218,7 +235,7 @@ Desktop Planner is one wide weekly planning surface plus one global application 
 
 **Task workspace:** clicking a Planner Task selects it and opens the canonical editable Task form directly in the non-blocking right-side workspace. There is no read-only detail step and no second Edit click. The workspace overlays from the right and **must not resize, reflow or narrow the seven Planner columns**. Selection itself performs no move. Clicking Planner/History content outside a Task card and outside the workspace closes it without saving; clicking another Task retargets it.
 
-**Task editing/creation:** existing and new Tasks use the same field surface: Title, Date, Context, Priority, Reminder, Reference and Notes. Add task populates an originating/default date but does not hide optional fields. Global Add derives the default date from the displayed week and current local weekday. A per-date `+` uses its explicit date directly. No date selection is created by either path, and no full-width Add control remains at the bottom of a lane. Save persists through the canonical create/edit command; Cancel or outside dismissal closes without persistence.
+**Task editing/creation:** existing and new Tasks use the same field surface: Title, Date, Context, Priority, Reminder, Repeat, Reference and Notes. Add task populates an originating/default date but does not hide optional fields. Global Add derives the default date from the displayed week and current local weekday. A per-date `+` uses its explicit date directly. No date selection is created by either path, and no full-width Add control remains at the bottom of a lane. Save persists through the canonical create/edit command; Cancel or outside dismissal closes without persistence.
 
 **History:** selecting a completed Task opens the same right-side Task workspace while History remains the active destination.
 
@@ -276,6 +293,10 @@ The earlier Day/Week mockups remain historical design inputs only. Their separat
 12. **Inspect without moving:** click/tap a Task. Its details open in the right-side desktop workspace or bottom mobile sheet while its scheduled date/order and current destination remain unchanged.
 13. **Unified Add:** invoke Add task from a date context. The workspace opens the same Title, Date, Context, Priority, Reminder, Reference and Notes fields used for an existing Task, pre-populated with the originating date and canonical defaults. Title and Date are required; optional fields may be left empty. Saving creates the Task without a later Edit step.
 14. **Movement semantics:** drag a desktop Task within/between date columns and observe exact-position movement. Click/tap alone never moves it. Change scheduled date through Edit and observe non-drag rescheduling without a separate Move-to-date surface.
+15. **Weekly recurrence:** create a Wednesday Task with a reminder and enable weekly Repeat through an end date, selecting Wednesday and Friday. The seed remains Wednesday; Friday and each later active-week Wednesday/Friday occurrence appears as an ordinary Task with its own identity and the same reminder time. Completing Wednesday does not complete Friday.
+16. **Every-four-weeks recurrence:** create a Task with a four-week weekly interval and one weekday. Occurrences remain anchored to that four-week cadence even if an earlier incomplete occurrence rolls forward or is manually rescheduled.
+17. **Monthly recurrence:** create a billing Task repeating on day 28 through an end date. One occurrence appears on each eligible 28th through the inclusive end date; its reminder uses the same local time. A configured day 31 is skipped in months without day 31 rather than moved to month-end.
+18. **Stopping recurrence:** turn Repeat off from a recurring occurrence or shorten its end date. Earlier/completed occurrences remain in History; the selected/retained occurrence remains; only later outstanding series occurrences outside the new bound are removed.
 15. **History details:** select a completed History row. History remains active and the Task details open in the same contextual desktop-right/mobile-bottom workspace.
 16. **Complete theme-family and appearance parity:** in Settings → Appearance, exercise Jig, the supported Astryx presets selected for Jig, Gruvbox, Dracula, Solarized, Nord, Catppuccin and Tokyo Night in Light and Dark and then System with both platform preferences. For each combination, verify the page/canvas, header, Task cards, History, Settings, Task workspace, dialogs/menus, text/icons, borders, hover/pressed/focus, active navigation, current day, selected Task, drag/drop, priority, completion and operational status families all resolve to theme-appropriate colors while retaining their original semantic meanings and distinguishability. Verify representative combined states such as selected + focused, selected + priority and drag + priority. The Jig mark/wordmark keeps identical geometry while its foreground and accent treatments resolve coherently against the active themed header surface. Changing theme or appearance makes no Task mutation.
 17. **Appearance stays out of daily planning:** confirm Theme and System/Light/Dark controls exist only under Settings → Appearance. Planner, global header, Task cards/workspace and History expose no theme toggle, theme menu or duplicate appearance control. Changing the setting applies application-wide without changing the current planning workflow or Task state.
@@ -347,5 +368,6 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-26 | Android saves locally first and retries synchronization opportunistically without making connectivity a correctness dependency. |
 | JIG-110-FR-27 | Android is locally certifiable by directly installed development APK; F-Droid is the first public Android distribution target; iOS/Play are outside v1.1. |
 | JIG-110-FR-28 | Task drag/drop uses a dedicated grip and a stable exact insertion indicator for same-date, cross-date, empty-list and inter-card-gap placement; persisted move equals displayed intent. |
+| JIG-110-FR-29 | Tasks support finite weekly/monthly recurrence with an inclusive end date; generated occurrences are ordinary independent Tasks, reminders repeat at the occurrence's scheduled date/time, and rollover/rescheduling of one occurrence never shifts the series cadence. |
 
 Older JIG-103/104/105/106 rows remain release-history provenance only when JIG-110 explicitly supersedes their affected behavior.
