@@ -14,6 +14,17 @@ import {
 import { createBootstrapHttpHandler } from "./bootstrap-http";
 import { GitHubOnboardingController } from "./github-onboarding";
 import { GITHUB_APP_REGISTRATION } from "./github-registration";
+import { refreshGitHubCredential } from "./github-auth";
+import {
+  createGitHubAskpassHelper,
+  githubGitEnvironment,
+  isManagedGitHubRepositoryPath,
+} from "./github-managed-checkout";
+import {
+  loadCurrentGitHubCredential,
+  storeGitHubCredential,
+  type GitHubCredential,
+} from "./secret-service";
 import { createSyncController } from "./sync";
 import {
   defaultConfigPath,
@@ -65,7 +76,56 @@ async function runConfigured(config: JigConfig): Promise<void> {
   const db = await openDatabase(
     resolve(config.repository_path, ".jig", "local", "jig.sqlite"),
   );
-  const sync = createSyncController(db, config);
+
+  const githubAskpass = isManagedGitHubRepositoryPath(
+    config.repository_path,
+  )
+    ? await createGitHubAskpassHelper()
+    : null;
+  let currentGitHubCredential: GitHubCredential | null = null;
+
+  const getGitHubNetworkEnvironment =
+    githubAskpass === null
+      ? undefined
+      : async (): Promise<Readonly<Record<string, string>>> => {
+          let credential =
+            currentGitHubCredential ??
+            await loadCurrentGitHubCredential();
+          if (credential === null) {
+            throw new Error(
+              "GitHub credential is unavailable; reconnect GitHub",
+            );
+          }
+
+          if (credential.access_token_expires_at !== null) {
+            const expiryMs = Date.parse(
+              credential.access_token_expires_at,
+            );
+            if (!Number.isFinite(expiryMs)) {
+              throw new Error(
+                "Stored GitHub access-token expiry is invalid; reconnect GitHub",
+              );
+            }
+            if (expiryMs - Date.now() <= 5 * 60 * 1000) {
+              credential = await refreshGitHubCredential(
+                GITHUB_APP_REGISTRATION,
+                credential,
+              );
+              await storeGitHubCredential(credential);
+            }
+          }
+
+          currentGitHubCredential = credential;
+          return githubGitEnvironment(
+            githubAskpass.path,
+            credential.access_token,
+          );
+        };
+
+  const sync = createSyncController(db, {
+    repository_path: config.repository_path,
+    get_network_environment: getGitHubNetworkEnvironment,
+  });
 
   const startupNow = new Date();
   await rollForwardOutstandingInDatabase(
@@ -105,6 +165,9 @@ async function runConfigured(config: JigConfig): Promise<void> {
       rolloverTimer = null;
     }
     sync.stop();
+    if (githubAskpass !== null) {
+      await githubAskpass.dispose();
+    }
     await db.close();
     await lease.release();
   };
