@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.6 UX/UI realization v0.19, 2026-11-18. v1.0.5 remains the responsive/interaction baseline; v1.0.6 governs continuous History/Settings content measure, the curated multi-theme application catalogue, independent System/Light/Dark appearance, complete semantic re-theming, theme-aware in-application branding, browser-level reminder delivery and Settings-only appearance configuration.
+**Status:** Canonical UI solution through v1.1, amended 2026-11-18. v1.0.x sections below remain release history; the v1.1 composition section supersedes affected narrow-header, reminder and drag/drop interactions.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
@@ -165,7 +165,7 @@ The hamburger opens a compact menu/popover containing the same Planner, History 
 
 Task create/edit uses a BottomSheet rising from the bottom. Existing Tasks open directly into the full editable field surface. Add uses the same full field surface with its derived or explicit originating date and canonical defaults. Delete confirmation remains the sole blocking Task dialog.
 
-Narrow/mobile supports the same direct card-body drag semantics as desktop using touch/pen/mouse input. Move up/Move down remains the non-drag accessibility alternative within the date, and Edit date remains the explicit non-drag cross-date rescheduling path.
+Narrow/mobile supports the same direct dedicated-handle drag semantics as desktop using touch/pen/mouse input. Move up/Move down remains the non-drag accessibility alternative within the date, and Edit date remains the explicit non-drag cross-date rescheduling path.
 
 
 ### 4.3.1 v1.0.5 narrow/mobile parity correction
@@ -274,8 +274,8 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
 | Secondary screen measure | History and Settings follow `min(available width, 50rem)` continuously at 1440/1168/1167/1024/900/800/600/390px; no discontinuity at 73rem; Planner remains full-width; Settings column reflow is independent |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
-| Same/cross-day drag | desktop and narrow/mobile card-body drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
-| Narrow drag/order | touch card-body drag supports same-date/cross-date/empty-date movement through the same sortable/drop owners as desktop; Move up/down remains a non-drag alternative without a second order representation |
+| Same/cross-day drag | desktop and narrow/mobile dedicated-handle drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
+| Narrow drag/order | touch dedicated-handle drag supports same-date/cross-date/empty-date movement through the same sortable/drop owners as desktop; Move up/down remains a non-drag alternative without a second order representation |
 | Completion/History | completing removes from Planner; History remains inspectable/reopenable |
 | Daily rollover | same canonical Task appears in current-date Planner bucket on desktop and narrow |
 | Delete | cancel is no-op; confirm permanently removes Task; Git round trip preserves absence |
@@ -294,3 +294,11 @@ The v1.0.3 Planner references are immutable historical baselines. The v1.0.4 fun
 Production color/logo/theme behavior remains governed by [Brand and theme system](brand-and-theme.md). The accepted priority color cue is a restrained scanning aid, not a second status system and never the sole semantic carrier.
 
 Implementation plans must link to this document, [Planning workbench functional design](../requirements/planning-workbench.md), and [Technical solution](../architecture/technical-solution.md). No implementation may cite historical Day/Week reference assets to reintroduce removed destinations, SideNav, a mobile drawer or a mobile right-side Drawer.
+
+
+## v1.1 UI composition
+
+- **Narrow header:** one sticky header region. Planner renders application row (theme-aware Jig wordmark, Planner-only Add, compact sync, Astryx compact Planner/History/Settings menu) plus temporal row (Previous, compact week range, Next, Today). History/Settings render only the application row and active-destination identity. Each primary row owns >=44 CSS px interaction height; the old <=56px total header budget is removed.
+- **Reminder attention:** an incomplete current-day Task whose reminder time has passed receives a persistent, accessible reminder-due treatment independent of OS/browser notification success. The treatment uses governed warning semantics plus non-color meaning and composes with selection/focus/priority/drag state rather than replacing them.
+- **Task movement:** every incomplete Task exposes a dedicated visible grip. Dragging leaves Task state uncommitted until drop and displays one exact 2px insertion rule with governed drag color at the destination index. Cross-date targets additionally use the subtle governed drag background. Empty dates expose one index-0 target. Inter-card whitespace must not clear/oscillate intent. Move up/down and date edit remain non-drag alternatives.
+- **Android:** the same Planner/History/Settings React composition runs inside the native shell. Safe-area padding is owned by the sticky header; Task-body touch scroll remains independent from grip dragging.
