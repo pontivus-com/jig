@@ -48,7 +48,7 @@ public final class JigGitHttpPlugin extends Plugin {
             );
             String encodedBody = call.getString("data");
 
-            if (urlText == null || urlText.isBlank()) {
+            if (urlText == null || urlText.trim().isEmpty()) {
                 call.reject(
                     "Native Git HTTP URL is required",
                     "GIT_HTTP_INVALID_REQUEST"
