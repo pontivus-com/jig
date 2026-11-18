@@ -36,7 +36,7 @@ describe("GitHub onboarding orchestration", () => {
   afterEach(async () => {
     // The callback listener is stopped after each callback response. Yield once
     // so the queued shutdown completes before another test can bind the port.
-    await Bun.sleep(10);
+    await Bun.sleep(40);
   });
 
   it("stays honestly unavailable without governed registration", async () => {
