@@ -9,11 +9,17 @@ export interface SetupStatus {
   readonly github_available: boolean;
 }
 
+function isObjectRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function asObject(value: unknown): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+  if (!isObjectRecord(value)) {
     throw new TypeError("Jig setup service returned an invalid response");
   }
-  return value as Record<string, unknown>;
+  return value;
 }
 
 export async function readSetupStatus(): Promise<SetupStatus> {
