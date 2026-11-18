@@ -39,6 +39,9 @@
     "test:browser": "playwright test",
     "verify": "bun run typecheck && bun run test && bun run build && bun run test:browser",
     "theme:check": "bun scripts/build-themes.ts --check",
-    "theme:build": "bun scripts/build-themes.ts"
+    "theme:build": "bun scripts/build-themes.ts",
+    "android:sync": "bun run build && node node_modules/@capacitor/cli/bin/capacitor sync android",
+    "android:version:check": "bun run android:sync && cd android && ./gradlew :app:verifyJigVersion",
+    "android:build:debug": "bun run android:sync && cd android && ./gradlew :app:assembleDebug"
   }
 }
