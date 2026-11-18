@@ -16,6 +16,7 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 @CapacitorPlugin(name = "JigSecureCredentials")
@@ -79,7 +80,7 @@ public final class JigSecureCredentialsPlugin extends Plugin {
     private static long requiredPositiveLong(
         JSObject object,
         String key
-    ) {
+    ) throws JSONException {
         Long value = object.getLong(key);
         if (value == null || value.longValue() <= 0L) {
             throw new IllegalArgumentException(
@@ -91,7 +92,7 @@ public final class JigSecureCredentialsPlugin extends Plugin {
 
     private static JSONObject credentialPayload(
         PluginCall call
-    ) {
+    ) throws JSONException {
         JSObject credential = call.getObject("credential");
         if (credential == null) {
             throw new IllegalArgumentException(
