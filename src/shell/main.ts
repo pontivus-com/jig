@@ -11,9 +11,11 @@ import {
   type Diagnostics,
   type ServiceStatus,
 } from "./http";
+import { createBootstrapHttpHandler } from "./bootstrap-http";
 import { createSyncController } from "./sync";
 import {
-  loadConfig,
+  defaultConfigPath,
+  loadConfigIfPresent,
   type JigConfig,
 } from "./config";
 import { acquireWriterLease } from "./writer";
@@ -21,6 +23,8 @@ import {
   localCivilDate,
   millisecondsUntilNextLocalDay,
 } from "./local-date";
+
+const DEFAULT_HTTP_PORT = 47831;
 
 function writeToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -54,8 +58,7 @@ function createDiagnostics(
   };
 }
 
-export async function main(): Promise<void> {
-  const config = await loadConfig();
+async function runConfigured(config: JigConfig): Promise<void> {
   const lease = await acquireWriterLease(config.repository_path);
   const db = openDatabase(
     resolve(config.repository_path, ".jig", "local", "jig.sqlite"),
@@ -135,6 +138,43 @@ export async function main(): Promise<void> {
     port: config.http_port,
     fetch: handler,
   });
+}
+
+async function runBootstrap(): Promise<void> {
+  let resolveConfigured: ((config: JigConfig) => void) | null = null;
+  const configured = new Promise<JigConfig>((resolvePromise) => {
+    resolveConfigured = resolvePromise;
+  });
+  const token = writeToken();
+
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: DEFAULT_HTTP_PORT,
+    fetch: createBootstrapHttpHandler({
+      write_token: token,
+      ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
+      config_path: defaultConfigPath(),
+      http_port: DEFAULT_HTTP_PORT,
+      on_configured: (config) => {
+        resolveConfigured?.(config);
+        resolveConfigured = null;
+      },
+    }),
+  });
+
+  const nextConfig = await configured;
+  await Bun.sleep(100);
+  await server.stop(true);
+  await runConfigured(nextConfig);
+}
+
+export async function main(): Promise<void> {
+  const config = await loadConfigIfPresent();
+  if (config === null) {
+    await runBootstrap();
+    return;
+  }
+  await runConfigured(config);
 }
 
 if (import.meta.main) {
