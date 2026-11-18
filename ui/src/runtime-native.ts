@@ -18,6 +18,7 @@ import type {
 import { todayCivilDate } from "./dates";
 import { configuredNativeSynchronization } from "./native/configured-sync";
 import { openNativeDatabase } from "./native/jig-sqlite";
+import { reconcileAndroidReminders } from "./native/reminder-reconciliation";
 import {
   ANDROID_DATABASE_PATH,
   ANDROID_REPOSITORY_ROOT,
@@ -50,12 +51,21 @@ async function runRollover(
 export async function readCanonicalTasks(): Promise<CanonicalState> {
   const connection = await database();
   const changed = await runRollover(connection);
+  const state = await readCanonicalState(connection);
+  try {
+    await reconcileAndroidReminders(
+      state.tasks,
+      new Date(),
+    );
+  } catch {
+    // Reminder side-effect drift is repaired on the next reconciliation.
+  }
   const synchronization =
     await configuredNativeSynchronization(connection);
   if (changed) {
     synchronization.notifyMutation();
   }
-  return readCanonicalState(connection);
+  return state;
 }
 
 export async function readStatus(): Promise<ServiceStatus> {
@@ -98,6 +108,15 @@ export async function submitTaskCommand(
     new Date().toISOString(),
     crypto.randomUUID,
   );
+  try {
+    const state = await readCanonicalState(connection);
+    await reconcileAndroidReminders(
+      state.tasks,
+      new Date(),
+    );
+  } catch {
+    // Canonical mutation stays committed; reconciliation retries on resume/start.
+  }
   (
     await configuredNativeSynchronization(connection)
   ).notifyMutation();
