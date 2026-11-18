@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve } from "node:path";
-import type { Database } from "bun:sqlite";
 import {
   isPriority,
   TaskValidationError,
@@ -17,10 +16,11 @@ import {
   applyTaskCommand,
   readCanonicalState,
   StaleRevisionError,
-} from "./sqlite";
+  type JigSqlConnection,
+} from "../persistence/sqlite";
 
 export interface HttpDependencies {
-  readonly db: Database;
+  readonly db: JigSqlConnection;
   readonly write_token: string;
   readonly repository_path: string;
   readonly ui_directory: string;
@@ -29,7 +29,7 @@ export interface HttpDependencies {
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
   readonly trigger_sync: () => Promise<RepositoryStatus>;
-  readonly ensure_current_day_rollover: () => void;
+  readonly ensure_current_day_rollover: () => Promise<void>;
   readonly on_task_mutation: () => void;
 }
 
@@ -385,8 +385,8 @@ export function createHttpHandler(
 
     if (request.method === "GET" && pathname === "/api/v1/tasks") {
       try {
-        dependencies.ensure_current_day_rollover();
-        return json(readCanonicalState(dependencies.db));
+        await dependencies.ensure_current_day_rollover();
+        return json(await readCanonicalState(dependencies.db));
       } catch (error) {
         return errorResponse(error);
       }
@@ -437,8 +437,8 @@ export function createHttpHandler(
             );
           }
 
-          dependencies.ensure_current_day_rollover();
-          const result = applyTaskCommand(
+          await dependencies.ensure_current_day_rollover();
+          const result = await applyTaskCommand(
             dependencies.db,
             parseCommand(body.command),
             body.expected_revision,
