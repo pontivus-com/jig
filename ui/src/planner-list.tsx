@@ -5,6 +5,7 @@ import { SortableTaskRow } from "./task-row";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
+  readonly now: Date;
   readonly date: string;
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
@@ -30,6 +31,7 @@ interface PlannerSequenceRowProps
 
 function PlannerSequenceRow({
   task,
+  now,
   index,
   date,
   sequenceLength,
@@ -72,6 +74,7 @@ function PlannerSequenceRow({
   return (
     <SortableTaskRow
       {...rowProps}
+      now={now}
       index={index}
       group={date}
     />
@@ -80,6 +83,7 @@ function PlannerSequenceRow({
 
 export function PlannerTaskList({
   tasks,
+  now,
   date,
   selectedTask,
   onSelectTask,
@@ -100,6 +104,7 @@ export function PlannerTaskList({
         <PlannerSequenceRow
           key={task.id}
           task={task}
+          now={now}
           index={index}
           date={date}
           sequenceLength={outstanding.length}
