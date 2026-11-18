@@ -128,3 +128,57 @@ test("bootstrap keeps invalid repository errors on the setup surface", async ({
     "/does/not/exist",
   );
 });
+
+
+test("Connect GitHub presents the direct Device Flow code and verification action", async ({
+  page,
+}) => {
+  await page.route("**/api/v1/setup/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        mode: "bootstrap",
+        local_repository_available: true,
+        github_available: true,
+      }),
+    });
+  });
+
+  await page.route("**/api/v1/setup/github/start", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        available: true,
+        phase: "authorizing",
+        authorization: {
+          mode: "device",
+          verification_uri: "https://github.com/login/device",
+          user_code: "ABCD-EFGH",
+          retry_after_seconds: 5,
+        },
+        grant_access_url: null,
+        manage_access: [],
+        installations: [],
+        repositories: [],
+        error: null,
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Connect GitHub" }).click();
+
+  await expect(page.getByText("ABCD-EFGH", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("at GitHub's device authorization page to continue."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open GitHub device authorization" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Refresh access" }),
+  ).toBeVisible();
+  await expect(page.getByText(/client_secret|Redirect URI/i)).toHaveCount(0);
+});
