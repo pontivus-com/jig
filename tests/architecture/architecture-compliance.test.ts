@@ -483,7 +483,7 @@ describe("architecture compliance", () => {
     expect(runtime).toContain("Capacitor.isNativePlatform()");
     expect(runtime).toContain('import("./runtime-native")');
     expect(runtime).not.toMatch(
-      /from\\s+["']\\.\\/runtime-native["']/,
+      /from\s+["']\.\/runtime-native["']/,
     );
     expect(native.toLowerCase()).not.toContain("github");
     expect(native).not.toContain("client_id");
