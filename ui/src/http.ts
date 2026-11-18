@@ -1,4 +1,11 @@
 import {
+  isWeekday,
+  validateRecurrenceSeries,
+  type RecurrencePattern,
+  type RecurrenceSeries,
+  type Weekday,
+} from "../../src/core/recurrence";
+import {
   validateTask,
   type Task,
   type TaskCommand,
@@ -126,20 +133,108 @@ function parseRevision(value: unknown): number {
   return value;
 }
 
+function responseString(
+  object: Record<string, unknown>,
+  key: string,
+  source: unknown,
+): string {
+  const value = object[key];
+  if (typeof value !== "string") {
+    throw new JigHttpError(
+      500,
+      source,
+      `Jig service returned invalid recurrence ${key}`,
+    );
+  }
+  return value;
+}
+
+function parseRecurrencePattern(
+  value: unknown,
+): RecurrencePattern {
+  const object = objectValue(value);
+  if (object.kind === "weekly") {
+    if (
+      typeof object.interval_weeks !== "number" ||
+      !Number.isInteger(object.interval_weeks) ||
+      !Array.isArray(object.weekdays)
+    ) {
+      throw new JigHttpError(
+        500,
+        value,
+        "Jig service returned invalid weekly recurrence",
+      );
+    }
+    const weekdays: Weekday[] = [];
+    for (const weekday of object.weekdays) {
+      if (!isWeekday(weekday)) {
+        throw new JigHttpError(
+          500,
+          value,
+          "Jig service returned invalid recurrence weekday",
+        );
+      }
+      weekdays.push(weekday);
+    }
+    return {
+      kind: "weekly",
+      interval_weeks: object.interval_weeks,
+      weekdays,
+    };
+  }
+  if (
+    object.kind === "monthly" &&
+    typeof object.day_of_month === "number" &&
+    Number.isInteger(object.day_of_month)
+  ) {
+    return {
+      kind: "monthly",
+      day_of_month: object.day_of_month,
+    };
+  }
+  throw new JigHttpError(
+    500,
+    value,
+    "Jig service returned invalid recurrence pattern",
+  );
+}
+
+function parseRecurrenceSeries(value: unknown): RecurrenceSeries {
+  const object = objectValue(value);
+  return validateRecurrenceSeries({
+    id: responseString(object, "id", value),
+    effective_from: responseString(
+      object,
+      "effective_from",
+      value,
+    ),
+    end_date: responseString(object, "end_date", value),
+    pattern: parseRecurrencePattern(object.pattern),
+    created_at: responseString(object, "created_at", value),
+    updated_at: responseString(object, "updated_at", value),
+  });
+}
+
 export async function readCanonicalTasks(): Promise<CanonicalState> {
   const payload = objectValue(await fetchJson("/api/v1/tasks"));
-  if (!Array.isArray(payload.tasks)) {
+  if (
+    !Array.isArray(payload.tasks) ||
+    !Array.isArray(payload.recurrences)
+  ) {
     throw new JigHttpError(
       500,
       payload,
-      "Jig service returned an invalid Task set",
+      "Jig service returned an invalid canonical state",
     );
   }
 
   const tasks: Task[] = payload.tasks.map((value) => validateTask(value));
+  const recurrences: RecurrenceSeries[] =
+    payload.recurrences.map((value) => parseRecurrenceSeries(value));
   return {
     revision: parseRevision(payload.revision),
     tasks,
+    recurrences,
   };
 }
 
