@@ -122,6 +122,7 @@ function insertionIndexForPriority(
 export function assertTaskSet(tasks: readonly Task[]): void {
   const ids = new Set<string>();
   const positionsByDate = new Map<string, number[]>();
+  const recurrenceSlots = new Set<string>();
 
   for (const task of tasks) {
     validateTask(task);
@@ -132,6 +133,21 @@ export function assertTaskSet(tasks: readonly Task[]): void {
       );
     }
     ids.add(task.id);
+
+    if (
+      task.recurrence_series_id !== null &&
+      task.recurrence_occurrence_date !== null
+    ) {
+      const key =
+        `${task.recurrence_series_id}:${task.recurrence_occurrence_date}`;
+      if (recurrenceSlots.has(key)) {
+        throw new PlanningError(
+          "INVALID_OPERATION",
+          `Duplicate recurrence slot ${key}`,
+        );
+      }
+      recurrenceSlots.add(key);
+    }
 
     if (task.completed_at === null) {
       if (task.position === null) {
