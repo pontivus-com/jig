@@ -114,6 +114,11 @@ export interface GitHubOnboardingSnapshot {
 
 export type GitHubReconnectSnapshot = GitHubAuthorizationSnapshot;
 
+export interface GitHubCapabilityStatus {
+  readonly onboarding_available: boolean;
+  readonly reconnect_available: boolean;
+}
+
 export function startGitHubDeviceSession(
   authorization: GitHubDeviceAuthorization,
   nowMs: number,
@@ -188,4 +193,212 @@ export function githubAuthorizationPresentation(
         user_code: state.authorization.user_code,
         retry_after_seconds: state.retry_after_seconds,
       };
+}
+
+function objectRecord(
+  value: unknown,
+  message: string,
+): Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new TypeError(message);
+  }
+  return Object.fromEntries(Object.entries(value));
+}
+
+function requiredString(
+  object: Record<string, unknown>,
+  key: string,
+): string {
+  const value = object[key];
+  if (typeof value !== "string") {
+    throw new TypeError(`GitHub integration field ${key} must be a string`);
+  }
+  return value;
+}
+
+function requiredPositiveInteger(
+  object: Record<string, unknown>,
+  key: string,
+): number {
+  const value = object[key];
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value <= 0
+  ) {
+    throw new TypeError(
+      `GitHub integration field ${key} must be a positive integer`,
+    );
+  }
+  return value;
+}
+
+function parseAuthorizationPresentation(
+  value: unknown,
+): GitHubAuthorizationPresentation | null {
+  if (value === null) {
+    return null;
+  }
+  const object = objectRecord(
+    value,
+    "GitHub authorization state must be an object or null",
+  );
+  if (
+    object.mode !== "device" ||
+    typeof object.retry_after_seconds !== "number" ||
+    !Number.isInteger(object.retry_after_seconds) ||
+    object.retry_after_seconds <= 0
+  ) {
+    throw new TypeError("GitHub authorization state is invalid");
+  }
+  return {
+    mode: "device",
+    verification_uri: requiredString(object, "verification_uri"),
+    user_code: requiredString(object, "user_code"),
+    retry_after_seconds: object.retry_after_seconds,
+  };
+}
+
+function parseAuthorizationBase(
+  value: unknown,
+): GitHubAuthorizationSnapshot {
+  const object = objectRecord(
+    value,
+    "GitHub authorization snapshot must be an object",
+  );
+  if (
+    typeof object.available !== "boolean" ||
+    (object.phase !== "idle" && object.phase !== "authorizing") ||
+    (object.error !== null && typeof object.error !== "string")
+  ) {
+    throw new TypeError("GitHub authorization snapshot is invalid");
+  }
+  return {
+    available: object.available,
+    phase: object.phase,
+    authorization: parseAuthorizationPresentation(object.authorization),
+    error: typeof object.error === "string" ? object.error : null,
+  };
+}
+
+export function parseGitHubReconnectSnapshot(
+  value: unknown,
+): GitHubReconnectSnapshot {
+  return parseAuthorizationBase(value);
+}
+
+export function parseGitHubOnboardingSnapshot(
+  value: unknown,
+): GitHubOnboardingSnapshot {
+  const object = objectRecord(
+    value,
+    "GitHub onboarding snapshot must be an object",
+  );
+  const phase = object.phase;
+  if (
+    phase !== "idle" &&
+    phase !== "authorizing" &&
+    phase !== "repository-access" &&
+    phase !== "repository-selection" &&
+    phase !== "acquiring"
+  ) {
+    throw new TypeError("GitHub onboarding phase is invalid");
+  }
+  if (
+    typeof object.available !== "boolean" ||
+    !Array.isArray(object.manage_access) ||
+    !Array.isArray(object.installations) ||
+    !Array.isArray(object.repositories) ||
+    (object.grant_access_url !== null &&
+      typeof object.grant_access_url !== "string") ||
+    (object.error !== null && typeof object.error !== "string")
+  ) {
+    throw new TypeError("GitHub onboarding snapshot is invalid");
+  }
+
+  const manageAccess = object.manage_access.map((entry) => {
+    const access = objectRecord(
+      entry,
+      "GitHub manage-access entry is invalid",
+    );
+    return {
+      installation_id: requiredPositiveInteger(
+        access,
+        "installation_id",
+      ),
+      account_login: requiredString(access, "account_login"),
+      manage_url: requiredString(access, "manage_url"),
+    };
+  });
+
+  const installations = object.installations.map((entry) => {
+    const installation = objectRecord(
+      entry,
+      "GitHub installation entry is invalid",
+    );
+    const account = objectRecord(
+      installation.account,
+      "GitHub installation account is invalid",
+    );
+    return {
+      id: requiredPositiveInteger(installation, "id"),
+      account: {
+        id: requiredPositiveInteger(account, "id"),
+        login: requiredString(account, "login"),
+        type: requiredString(account, "type"),
+      },
+    };
+  });
+
+  const repositories = object.repositories.map((entry) => {
+    const repository = objectRecord(
+      entry,
+      "GitHub repository choice is invalid",
+    );
+    return {
+      id: requiredPositiveInteger(repository, "id"),
+      owner: requiredString(repository, "owner"),
+      name: requiredString(repository, "name"),
+      clone_url: requiredString(repository, "clone_url"),
+      installation_id: requiredPositiveInteger(
+        repository,
+        "installation_id",
+      ),
+      account_login: requiredString(repository, "account_login"),
+      account_type: requiredString(repository, "account_type"),
+    };
+  });
+
+  return {
+    available: object.available,
+    phase,
+    authorization: parseAuthorizationPresentation(object.authorization),
+    grant_access_url:
+      typeof object.grant_access_url === "string"
+        ? object.grant_access_url
+        : null,
+    manage_access: manageAccess,
+    installations,
+    repositories,
+    error: typeof object.error === "string" ? object.error : null,
+  };
+}
+
+export function parseGitHubCapabilityStatus(
+  value: unknown,
+): GitHubCapabilityStatus {
+  const object = objectRecord(
+    value,
+    "GitHub capability status must be an object",
+  );
+  if (
+    typeof object.onboarding_available !== "boolean" ||
+    typeof object.reconnect_available !== "boolean"
+  ) {
+    throw new TypeError("GitHub capability status is invalid");
+  }
+  return {
+    onboarding_available: object.onboarding_available,
+    reconnect_available: object.reconnect_available,
+  };
 }
