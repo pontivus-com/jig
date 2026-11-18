@@ -52,6 +52,7 @@ describe("GitHub onboarding orchestration", () => {
     let stored: GitHubCredential | null = null;
     let configuredPath: string | null = null;
     let acquiredRepositoryId: number | null = null;
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
 
     const controller = new GitHubOnboardingController({
       registration: REGISTRATION,
@@ -61,6 +62,7 @@ describe("GitHub onboarding orchestration", () => {
         configuredPath = config.repository_path;
       },
       assert_secret_service: async () => undefined,
+      now: () => new Date(nowMs),
       start_device_authorization: async () => DEVICE_AUTHORIZATION,
       poll_device_authorization: async () => ({
         status: "authorized" as const,
@@ -118,6 +120,7 @@ describe("GitHub onboarding orchestration", () => {
       },
     });
 
+    nowMs += DEVICE_AUTHORIZATION.interval * 1000;
     await controller.refreshAccess();
 
     expect(stored).toStrictEqual(CREDENTIAL);
@@ -142,7 +145,48 @@ describe("GitHub onboarding orchestration", () => {
     expect(configuredPath).toBe(config.repository_path);
   });
 
+  it("does not poll GitHub before the returned Device Flow interval", async () => {
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    let pollCount = 0;
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      config_path: "/tmp/jig-config.json",
+      http_port: 47831,
+      on_configured: () => undefined,
+      assert_secret_service: async () => undefined,
+      now: () => new Date(nowMs),
+      start_device_authorization: async () => DEVICE_AUTHORIZATION,
+      poll_device_authorization: async () => {
+        pollCount += 1;
+        return {
+          status: "pending" as const,
+          retry_after_seconds: DEVICE_AUTHORIZATION.interval,
+        };
+      },
+      store_credential: async () => undefined,
+    });
+
+    await controller.start();
+    await controller.refreshAccess();
+    expect(pollCount).toBe(0);
+    expect(controller.snapshot().authorization).toMatchObject({
+      retry_after_seconds: 5,
+    });
+
+    nowMs += 4_000;
+    await controller.refreshAccess();
+    expect(pollCount).toBe(0);
+    expect(controller.snapshot().authorization).toMatchObject({
+      retry_after_seconds: 1,
+    });
+
+    nowMs += 1_000;
+    await controller.refreshAccess();
+    expect(pollCount).toBe(1);
+  });
+
   it("exposes Grant and Manage access states without broadening repository scope", async () => {
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
     const startDevice = async () => DEVICE_AUTHORIZATION;
     const pollDevice = async () => ({
       status: "authorized" as const,
@@ -155,6 +199,7 @@ describe("GitHub onboarding orchestration", () => {
       http_port: 47831,
       on_configured: () => undefined,
       assert_secret_service: async () => undefined,
+      now: () => new Date(nowMs),
       start_device_authorization: startDevice,
       poll_device_authorization: pollDevice,
       store_credential: async () => undefined,
@@ -167,6 +212,7 @@ describe("GitHub onboarding orchestration", () => {
       mode: "device",
       user_code: "ABCD-EFGH",
     });
+    nowMs += DEVICE_AUTHORIZATION.interval * 1000;
     const grant = await grantController.refreshAccess();
     expect(grant).toMatchObject({
       phase: "repository-access",
@@ -181,6 +227,7 @@ describe("GitHub onboarding orchestration", () => {
       http_port: 47831,
       on_configured: () => undefined,
       assert_secret_service: async () => undefined,
+      now: () => new Date(nowMs),
       start_device_authorization: startDevice,
       poll_device_authorization: pollDevice,
       store_credential: async () => undefined,
@@ -197,7 +244,9 @@ describe("GitHub onboarding orchestration", () => {
       list_repositories: async () => [],
     });
 
+    nowMs += 60_000;
     await manageController.start();
+    nowMs += DEVICE_AUTHORIZATION.interval * 1000;
     const manage = await manageController.refreshAccess();
     expect(manage).toMatchObject({
       phase: "repository-access",
