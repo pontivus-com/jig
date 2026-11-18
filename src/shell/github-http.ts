@@ -12,7 +12,7 @@ export interface GitHubHttpDependencies {
   readonly onboarding?: GitHubOnboardingController;
   readonly reconnect?: GitHubReconnectController;
   readonly is_configured: () => boolean;
-  readonly on_configured: (config: JigConfig) => void;
+  readonly on_configured?: (config: JigConfig) => void;
 }
 
 interface GitHubAcquireRequest {
@@ -116,6 +116,12 @@ export function createGitHubHttpHandler(
 
         const body = await parseGitHubAcquireRequest(request);
         const config = await onboarding.acquire(body.repository_id);
+        if (dependencies.on_configured === undefined) {
+          return jsonResponse(
+            { error: "GitHub setup completion is unavailable" },
+            409,
+          );
+        }
         dependencies.on_configured(config);
         return jsonResponse({
           configured: true,
