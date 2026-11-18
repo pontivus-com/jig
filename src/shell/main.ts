@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
 import {
-  openDatabase,
   PORTABLE_FORMAT_VERSION,
   rollForwardOutstandingInDatabase,
   SQLITE_SCHEMA_VERSION,
   type RepositoryStatus,
-} from "./sqlite";
+} from "../persistence/sqlite";
+import { openDatabase } from "./sqlite-bun";
 import {
   createHttpHandler,
   type Diagnostics,
@@ -60,13 +60,13 @@ function createDiagnostics(
 
 async function runConfigured(config: JigConfig): Promise<void> {
   const lease = await acquireWriterLease(config.repository_path);
-  const db = openDatabase(
+  const db = await openDatabase(
     resolve(config.repository_path, ".jig", "local", "jig.sqlite"),
   );
   const sync = createSyncController(db, config);
 
   const startupNow = new Date();
-  rollForwardOutstandingInDatabase(
+  await rollForwardOutstandingInDatabase(
     db,
     localCivilDate(startupNow),
     startupNow.toISOString(),
@@ -74,9 +74,9 @@ async function runConfigured(config: JigConfig): Promise<void> {
 
   let rolloverTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const ensureCurrentDayRollover = (): void => {
+  const ensureCurrentDayRollover = async (): Promise<void> => {
     const now = new Date();
-    const result = rollForwardOutstandingInDatabase(
+    const result = await rollForwardOutstandingInDatabase(
       db,
       localCivilDate(now),
       now.toISOString(),
@@ -91,11 +91,9 @@ async function runConfigured(config: JigConfig): Promise<void> {
       clearTimeout(rolloverTimer);
     }
     rolloverTimer = setTimeout(() => {
-      try {
-        ensureCurrentDayRollover();
-      } finally {
+      void ensureCurrentDayRollover().finally(() => {
         scheduleNextDayBoundary();
-      }
+      });
     }, millisecondsUntilNextLocalDay());
   };
 
@@ -105,7 +103,7 @@ async function runConfigured(config: JigConfig): Promise<void> {
       rolloverTimer = null;
     }
     sync.stop();
-    db.close();
+    await db.close();
     await lease.release();
   };
 
