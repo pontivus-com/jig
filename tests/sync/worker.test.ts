@@ -1,7 +1,6 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Database } from "bun:sqlite";
 import {
   afterEach,
   beforeEach,
@@ -18,10 +17,11 @@ import type {
 import { serializeSnapshot } from "../../src/shell/git";
 import {
   applyTaskCommand,
-  initializeDatabase,
   readCanonicalState,
   readMetadata,
-} from "../../src/shell/sqlite";
+  type JigSqlConnection,
+} from "../../src/persistence/sqlite";
+import { initializeDatabase } from "../../src/shell/sqlite-bun";
 import {
   createSyncController,
   type SyncEffects,
@@ -29,7 +29,7 @@ import {
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 let root = "";
-let db: Database;
+let db: JigSqlConnection;
 
 function task(): Task {
   return {
@@ -99,12 +99,12 @@ beforeEach(async () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-11-16T00:00:00.000Z"));
   root = await mkdtemp(join(tmpdir(), "jig-worker-"));
-  db = initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
+  db = await initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
 });
 
 afterEach(async () => {
   vi.useRealTimers();
-  db.close();
+  await db.close();
   await rm(root, { recursive: true, force: true });
 });
 
@@ -136,7 +136,7 @@ describe("serialized synchronization worker", () => {
     );
     await controller.start();
 
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -149,7 +149,7 @@ describe("serialized synchronization worker", () => {
     );
     controller.notifyMutation();
 
-    expect(readCanonicalState(db).revision).toBe(1);
+    expect((await readCanonicalState(db)).revision).toBe(1);
     expect(commitCalls.count).toBe(0);
 
     await vi.advanceTimersByTimeAsync(2_999);
@@ -170,8 +170,8 @@ describe("serialized synchronization worker", () => {
     await controller.start();
 
     for (let index = 0; index < 7; index += 1) {
-      const revision = readCanonicalState(db).revision;
-      applyTaskCommand(
+      const revision = (await readCanonicalState(db)).revision;
+      await applyTaskCommand(
         db,
         {
           type: "create",
@@ -232,7 +232,7 @@ describe("serialized synchronization worker", () => {
   });
 
   it("recovers commit-succeeded metadata lag from the concrete local snapshot", async () => {
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -244,7 +244,7 @@ describe("serialized synchronization worker", () => {
       () => "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0201",
     );
     const snapshot = serializeSnapshot(
-      readCanonicalState(db).tasks,
+      (await readCanonicalState(db)).tasks,
       DATASET_ID,
     );
     const { effects, commitCalls } = fakeEffects({
@@ -260,7 +260,7 @@ describe("serialized synchronization worker", () => {
 
     await controller.start();
 
-    expect(readMetadata(db)).toMatchObject({
+    expect(await readMetadata(db)).toMatchObject({
       revision: 1,
       last_exported_revision: 1,
       last_exported_head: "a".repeat(40),
@@ -285,8 +285,8 @@ describe("serialized synchronization worker", () => {
 
     await controller.start();
 
-    expect(readCanonicalState(db).tasks).toStrictEqual([remoteTask]);
-    expect(readMetadata(db)).toMatchObject({
+    expect((await readCanonicalState(db)).tasks).toStrictEqual([remoteTask]);
+    expect(await readMetadata(db)).toMatchObject({
       revision: 1,
       last_exported_revision: 1,
       last_exported_head: "b".repeat(40),
