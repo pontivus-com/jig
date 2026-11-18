@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.6 technical solution, v0.24 (2026-11-18). The eleven JIG-105 designs remain the published v1.0.5 baseline. JIG-106-SD-01 through JIG-106-SD-07 now define the complete v1.0.6 realization for continuous secondary-screen measure, multi-theme Astryx composition, independent System/Light/Dark appearance, complete semantic re-theming, theme-aware in-application branding, browser-level reminder delivery and Settings-only appearance configuration. Canonical Task, shell, SQLite, HTTP and Git synchronization contracts are unchanged.
+**Status:** Canonical technical solution through v1.1, amended 2026-11-18. v1.0.6 remains historical release provenance; JIG-110-SD-01..37 below govern v1.1 implementation.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16, JIG-105-FR-01 through JIG-105-FR-11, JIG-106-FR-01 through JIG-106-FR-07 and JIG-FR-01 through JIG-FR-22.
 **Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
@@ -1438,3 +1438,21 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **Drawer on desktop, BottomSheet on narrow:** one TaskWorkspaceState is rendered through the public Astryx surface appropriate to the layout; presentation changes without draft/state duplication.
 
 **Implementation planning can now be derived from this document and [the UI solution](../design/ui-solution.md).** The plan must preserve the boundaries above, prove the specified acceptance gates, and must not interpret non-goals as implied features.
+
+
+## v1.1 binding architecture
+
+The detailed normative solution contracts are [JIG-110-SD-01..37](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
+
+- runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error;
+- Linux setup uses one bootstrap API/UI and canonical local-repository adoption; optimized GitHub acquisition uses selected-repository GitHub App authorization, platform secure credentials and deterministic managed checkout;
+- Android is a committed Capacitor 8 shell using the same React UI/core/protocol contracts, package ID `com.pontivus.jig`, private app-owned repository storage and F-Droid-compatible FLOSS dependencies;
+- root `package.json.version` is the sole release-version authority; Android `versionName` equals it and `versionCode = major*1_000_000 + minor*1_000 + patch`;
+- canonical SQLite semantics move to one asynchronous TypeScript persistence owner with a Bun driver on Linux and a narrow AndroidX bundled-SQLite native driver on Android;
+- Android Git uses the selected isomorphic-git/native-filesystem/native-HTTP adapter only after the mandatory feasibility gate; failure returns to design review rather than silently adding another transport;
+- reminders use one pure due predicate, one UI clock, browser service-worker delivery and Android local scheduling with exact typed outcomes; notification side-effect state is non-canonical;
+- narrow header is one sticky application region with the governed two-row Planner composition and Astryx compact menu; the old <=56px total narrow height is removed;
+- Task drag/drop removes dnd-kit and uses the single Pangea list/touch owner with a dedicated handle, explicit destination index, exact insertion indicator and physical-Android proof gate;
+- development APKs are local certification artifacts; F-Droid is the first public Android distribution target; no Google Play/iOS release work is part of v1.1.
+
+The complete FR→SD traceability remains owned by the versioned v1.1 functional/technical documents and the complete v1.1 implementation plan.
