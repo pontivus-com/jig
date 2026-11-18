@@ -57,6 +57,7 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
         ready: true,
         repository_path: "/tmp/planning",
         repository_status: "local-only",
+        github_reconnect_available: false,
       }),
     });
   });
