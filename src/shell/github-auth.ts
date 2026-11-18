@@ -10,15 +10,6 @@ export type GitHubFetch = (
 export interface GitHubAppRegistration {
   readonly app_slug: string;
   readonly client_id: string;
-  readonly client_secret: string;
-  readonly redirect_uri: string;
-}
-
-export interface GitHubAuthorizationRequest {
-  readonly state: string;
-  readonly code_verifier: string;
-  readonly authorization_url: string;
-  readonly redirect_uri: string;
 }
 
 export interface GitHubInstallation {
@@ -57,26 +48,6 @@ export class GitHubAuthError extends Error {
     super(message);
     this.name = "GitHubAuthError";
   }
-}
-
-function base64Url(bytes: Uint8Array): string {
-  return Buffer.from(bytes)
-    .toString("base64")
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
-}
-
-function randomBase64Url(bytes = 32): string {
-  return base64Url(crypto.getRandomValues(new Uint8Array(bytes)));
-}
-
-async function pkceChallenge(verifier: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(verifier),
-  );
-  return base64Url(new Uint8Array(digest));
 }
 
 function objectRecord(value: unknown, message: string): Record<string, unknown> {
@@ -205,67 +176,16 @@ async function credentialFromToken(
   };
 }
 
-export async function createGitHubAuthorizationRequest(
+function assertRegistration(
   registration: GitHubAppRegistration,
-): Promise<GitHubAuthorizationRequest> {
+): void {
   if (
     registration.app_slug.length === 0 ||
     !/^[a-z0-9-]+$/.test(registration.app_slug) ||
-    registration.client_id.length === 0 ||
-    registration.client_secret.length === 0 ||
-    registration.redirect_uri.length === 0
+    registration.client_id.length === 0
   ) {
     throw new GitHubAuthError("GitHub App registration is incomplete");
   }
-  const redirectUri = registration.redirect_uri;
-  const state = randomBase64Url();
-  const codeVerifier = randomBase64Url();
-  const challenge = await pkceChallenge(codeVerifier);
-  const url = new URL("https://github.com/login/oauth/authorize");
-  url.searchParams.set("client_id", registration.client_id);
-  url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("state", state);
-  url.searchParams.set("scope", "offline_access");
-  url.searchParams.set("code_challenge", challenge);
-  url.searchParams.set("code_challenge_method", "S256");
-
-  return {
-    state,
-    code_verifier: codeVerifier,
-    authorization_url: url.toString(),
-    redirect_uri: redirectUri,
-  };
-}
-
-export async function exchangeGitHubAuthorizationCode(
-  registration: GitHubAppRegistration,
-  request: GitHubAuthorizationRequest,
-  code: string,
-  now = new Date(),
-  fetcher: GitHubFetch = (input, init) => fetch(input, init),
-): Promise<GitHubCredential> {
-  const response = await fetcher(
-    "https://github.com/login/oauth/access_token",
-    {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        client_id: registration.client_id,
-        client_secret: registration.client_secret,
-        code,
-        redirect_uri: request.redirect_uri,
-        code_verifier: request.code_verifier,
-      }),
-    },
-  );
-  return credentialFromToken(
-    tokenResponse(await jsonResponse(response, "token exchange")),
-    now,
-    fetcher,
-  );
 }
 
 export async function refreshGitHubCredential(
@@ -274,11 +194,15 @@ export async function refreshGitHubCredential(
   now = new Date(),
   fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<GitHubCredential> {
+  assertRegistration(registration);
   if (credential.refresh_token === null) {
     throw new GitHubAuthError(
       "GitHub authorization has no refresh token; reconnect GitHub",
     );
   }
+
+  // GitHub does not require client_secret when the user access token was
+  // generated through Device Flow.
   const response = await fetcher(
     "https://github.com/login/oauth/access_token",
     {
@@ -289,7 +213,6 @@ export async function refreshGitHubCredential(
       },
       body: new URLSearchParams({
         client_id: registration.client_id,
-        client_secret: registration.client_secret,
         grant_type: "refresh_token",
         refresh_token: credential.refresh_token,
       }),
@@ -374,6 +297,7 @@ export async function startGitHubDeviceAuthorization(
   registration: GitHubAppRegistration,
   fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<GitHubDeviceAuthorization> {
+  assertRegistration(registration);
   const response = await fetcher("https://github.com/login/device/code", {
     method: "POST",
     headers: {
@@ -405,6 +329,7 @@ export async function pollGitHubDeviceAuthorization(
   now = new Date(),
   fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<GitHubDevicePollResult> {
+  assertRegistration(registration);
   const response = await fetcher(
     "https://github.com/login/oauth/access_token",
     {
@@ -448,7 +373,10 @@ export async function pollGitHubDeviceAuthorization(
   if (payload.error === "access_denied") {
     return { status: "denied" };
   }
-  if (payload.error === "expired_token") {
+  if (
+    payload.error === "expired_token" ||
+    payload.error === "token_expired"
+  ) {
     return { status: "expired" };
   }
   const message =
