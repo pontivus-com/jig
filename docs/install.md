@@ -122,3 +122,18 @@ scripts/install.sh
 ```
 
 The public release channel is preferred for normal use.
+
+
+## Android distribution
+
+Jig v1.1 adds the independently installable Android application `com.pontivus.jig`. The first public Android distribution target is **F-Droid**.
+
+Development/debug APKs produced by `bun run android:build:debug` are certification artifacts only. They are not supported GitHub Release assets and are not the public Android installation channel.
+
+The in-repository F-Droid candidate recipe is maintained at:
+
+```text
+distribution/fdroid/metadata/com.pontivus.jig.yml
+```
+
+The external F-Droid submission must reference the immutable public `v1.1.0` source tag. Until F-Droid actually publishes `com.pontivus.jig`, the project must describe Android as implementation/certification complete or submission pending as appropriate, not publicly available.
