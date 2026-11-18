@@ -16,6 +16,7 @@ import {
 } from "vitest";
 import {
   clearGitHubCredential,
+  loadCurrentGitHubCredential,
   loadGitHubCredential,
   storeGitHubCredential,
 } from "../../src/shell/secret-service";
@@ -90,6 +91,9 @@ describe("Linux GitHub Secret Service adapter", () => {
       "user_id",
     ]);
     await expect(loadGitHubCredential(123)).resolves.toStrictEqual(
+      credential,
+    );
+    await expect(loadCurrentGitHubCredential()).resolves.toStrictEqual(
       credential,
     );
 
