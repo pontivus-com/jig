@@ -136,6 +136,14 @@ function ConfiguredApp({
     selectedTaskId === null
       ? null
       : tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const selectedRecurrenceSeries =
+    selectedTask?.recurrence_series_id === null ||
+    selectedTask?.recurrence_series_id === undefined
+      ? null
+      : canonical?.recurrences.find(
+          (series) =>
+            series.id === selectedTask.recurrence_series_id,
+        ) ?? null;
   const deleteTask =
     deleteTaskId === null
       ? null
@@ -648,6 +656,7 @@ function ConfiguredApp({
         workspace={workspacePresentation}
         externalError={operationError}
         isSaving={isOperating}
+        recurrenceSeries={selectedRecurrenceSeries}
         onDraftChange={changeWorkspaceDraft}
         onSave={saveWorkspace}
         onDelete={(task) => setDeleteTaskId(task.id)}
@@ -659,6 +668,7 @@ function ConfiguredApp({
         workspace={workspacePresentation}
         externalError={operationError}
         isSaving={isOperating}
+        recurrenceSeries={selectedRecurrenceSeries}
         onDraftChange={changeWorkspaceDraft}
         onSave={saveWorkspace}
         onDelete={(task) => setDeleteTaskId(task.id)}
