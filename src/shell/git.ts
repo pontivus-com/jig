@@ -51,6 +51,11 @@ export interface GitCommandResult {
   readonly stderr: string;
 }
 
+export interface RepositorySynchronizationResult {
+  readonly status: RepositoryStatus;
+  readonly retryable: boolean;
+}
+
 export class SnapshotValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -839,8 +844,12 @@ export async function writePortableSnapshot(
 export async function synchronizePortableData(
   config: GitAdapterConfig,
   networkEnvironment: Readonly<Record<string, string>> = {},
-): Promise<RepositoryStatus> {
-  return pushJigDataRef(config, networkEnvironment);
+): Promise<RepositorySynchronizationResult> {
+  const status = await pushJigDataRef(config, networkEnvironment);
+  return {
+    status,
+    retryable: status === "sync-issue",
+  };
 }
 
 export function retryDelayMs(failureCount: number): number {
