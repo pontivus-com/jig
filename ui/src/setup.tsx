@@ -201,13 +201,15 @@ export function SetupView({
                   Enter code <strong>{github.authorization.user_code}</strong>{" "}
                   on GitHub to continue.
                 </p>
-                <a
-                  href={github.authorization.verification_uri}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open GitHub device authorization
-                </a>
+                <Button
+                  label="Open GitHub device authorization"
+                  variant="secondary"
+                  onClick={() => {
+                    openExternal(github.authorization?.mode === "device"
+                      ? github.authorization.verification_uri
+                      : "");
+                  }}
+                />
                 <Button
                   label="Refresh access"
                   variant="secondary"
@@ -236,13 +238,15 @@ export function SetupView({
             github?.grant_access_url === undefined ? null : (
               <div className="jig-setup-github-state">
                 <p>Grant the Jig GitHub App access to the repository you want to use.</p>
-                <a
-                  href={github.grant_access_url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Grant repository access
-                </a>
+                <Button
+                  label="Grant repository access"
+                  variant="secondary"
+                  onClick={() => {
+                    if (github.grant_access_url !== null) {
+                      openExternal(github.grant_access_url);
+                    }
+                  }}
+                />
                 <Button
                   label="Refresh access"
                   variant="secondary"
@@ -261,14 +265,14 @@ export function SetupView({
                   is available yet. Manage access, then refresh.
                 </p>
                 {github.manage_access.map((access) => (
-                  <a
+                  <Button
                     key={access.installation_id}
-                    href={access.manage_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Manage GitHub access for {access.account_login}
-                  </a>
+                    label={`Manage GitHub access for ${access.account_login}`}
+                    variant="secondary"
+                    onClick={() => {
+                      openExternal(access.manage_url);
+                    }}
+                  />
                 ))}
                 <Button
                   label="Refresh access"
