@@ -618,6 +618,18 @@ body {
     min-width: 0;
   }
 
+  .jig-repeat-indicator {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-4);
+    padding-inline: var(--spacing-2);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: var(--color-background-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+  }
+
   .jig-priority-label {
     display: inline-flex;
     align-items: center;
@@ -894,6 +906,35 @@ body {
     justify-content: flex-end;
     gap: var(--spacing-3);
     padding-block-start: var(--spacing-2);
+  }
+
+  .jig-repeat-editor {
+    display: grid;
+    gap: var(--spacing-3);
+    padding-block: var(--spacing-4);
+    border-block: var(--border-width) solid var(--color-border);
+  }
+
+  .jig-repeat-heading {
+    display: grid;
+    gap: var(--spacing-0-5);
+  }
+
+  .jig-repeat-heading > span {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .jig-repeat-weekdays {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--spacing-2);
+  }
+
+  .jig-repeat-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
   }
 
   .jig-form-error {
