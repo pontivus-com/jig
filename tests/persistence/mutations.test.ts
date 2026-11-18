@@ -298,4 +298,220 @@ describe("transactional canonical persistence", () => {
 
     expect(await readCanonicalState(db)).toStrictEqual(before);
   });
+
+
+describe("transactional recurrence persistence", () => {
+  it("materializes a recurrence in one revision and survives restart", async () => {
+    const ids = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1001",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1002",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1003",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1004",
+    ];
+    let index = 0;
+    const result = await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Recurring persistence",
+        scheduled_date: "2026-11-16",
+        reminder_time: "09:00",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON"],
+          },
+          end_date: "2026-11-30",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = ids[index];
+        if (id === undefined) {
+          throw new Error("recurrence id fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+
+    expect(result.revision).toBe(1);
+    const before = await readCanonicalState(db);
+    expect(before.revision).toBe(1);
+    expect(before.recurrences).toHaveLength(1);
+    expect(before.tasks).toHaveLength(3);
+    expect(
+      before.tasks.map((task) => task.recurrence_occurrence_date),
+    ).toEqual(["2026-11-16", "2026-11-23", "2026-11-30"]);
+    expect((await readMetadata(db)).pending_sync).toBe(true);
+
+    await db.close();
+    db = await openDatabase(join(root, "jig.sqlite"));
+    expect(await readCanonicalState(db)).toStrictEqual(before);
+  });
+
+  it("edits one occurrence without changing sibling content or series config", async () => {
+    const ids = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1101",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1102",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1103",
+    ];
+    let index = 0;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Independent occurrence",
+        scheduled_date: "2026-11-16",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON"],
+          },
+          end_date: "2026-11-23",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = ids[index];
+        if (id === undefined) {
+          throw new Error("recurrence id fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+    const before = await readCanonicalState(db);
+    const later = before.tasks.find(
+      (task) =>
+        task.recurrence_occurrence_date === "2026-11-23",
+    );
+    if (later === undefined) {
+      throw new Error("later recurrence fixture missing");
+    }
+
+    await applyTaskCommand(
+      db,
+      {
+        type: "edit",
+        task_id: later.id,
+        changes: {
+          title: "Only this occurrence",
+          note: "independent",
+        },
+      },
+      1,
+      "2026-11-16T02:00:00.000Z",
+    );
+
+    const after = await readCanonicalState(db);
+    expect(after.revision).toBe(2);
+    expect(after.recurrences).toStrictEqual(before.recurrences);
+    expect(
+      after.tasks.find(
+        (task) =>
+          task.recurrence_occurrence_date === "2026-11-16",
+      )?.title,
+    ).toBe("Independent occurrence");
+    expect(
+      after.tasks.find((task) => task.id === later.id),
+    ).toMatchObject({
+      title: "Only this occurrence",
+      note: "independent",
+    });
+  });
+
+  it("stops recurrence in one revision while preserving completed History", async () => {
+    const ids = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1201",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1202",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1203",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1204",
+    ];
+    let index = 0;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Stop series",
+        scheduled_date: "2026-11-16",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON"],
+          },
+          end_date: "2026-11-30",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = ids[index];
+        if (id === undefined) {
+          throw new Error("recurrence id fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+    let state = await readCanonicalState(db);
+    const completed = state.tasks.find(
+      (task) =>
+        task.recurrence_occurrence_date === "2026-11-16",
+    );
+    const invoking = state.tasks.find(
+      (task) =>
+        task.recurrence_occurrence_date === "2026-11-23",
+    );
+    if (completed === undefined || invoking === undefined) {
+      throw new Error("stop recurrence fixtures missing");
+    }
+
+    await applyTaskCommand(
+      db,
+      { type: "complete", task_id: completed.id },
+      1,
+      "2026-11-16T18:00:00.000Z",
+    );
+    const stopped = await applyTaskCommand(
+      db,
+      {
+        type: "set_recurrence",
+        task_id: invoking.id,
+        recurrence: null,
+      },
+      2,
+      "2026-11-17T01:00:00.000Z",
+    );
+    expect(stopped.revision).toBe(3);
+
+    state = await readCanonicalState(db);
+    expect(state.revision).toBe(3);
+    expect(
+      state.tasks.find((task) => task.id === invoking.id),
+    ).toMatchObject({
+      recurrence_series_id: null,
+      recurrence_occurrence_date: null,
+      completed_at: null,
+    });
+    expect(
+      state.tasks.find((task) => task.id === completed.id),
+    ).toMatchObject({
+      completed_at: "2026-11-16T18:00:00.000Z",
+    });
+    expect(
+      state.tasks.filter(
+        (task) =>
+          task.id !== invoking.id &&
+          task.completed_at === null,
+      ),
+    ).toEqual([]);
+    expect(state.recurrences).toHaveLength(1);
+  });
+});
 });
