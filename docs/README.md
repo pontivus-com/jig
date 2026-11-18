@@ -33,6 +33,10 @@ Functional requirements define *what* users can observe. Technical solution owns
 
 The versioned SVGs under `design/reference/` retain structural provenance. The v1.0.3 Planner SVGs are historical baselines; v1.0.4 supersedes their selected-day, navigation and heavier-chrome details through the binding functional design, UI solution and brand/theme contract. Earlier Day/Week/sidebar SVGs are historical inputs only. Mandatory System/Light/Dark behavior is governed by the UI/theme and technical designs rather than duplicate dark-mode mockups.
 
+## Android development
+
+- [Android v1.1 development and physical-device certification](development/android-v1.1.md) — repeatable debug-APK, adb installation/toolchain capture and J110-IMP-08/09 physical-device gate procedure.
+
 ## Verification and implementation boundary
 
 The v1.0.0–v1.0.5 implementation plans/evidence are historical for their published releases. v1.0.6 is governed by the [complete v1.0.6 implementation plan](implementation/v1.0.6-complete-presentation-plan.md), and its implemented candidate is certified by [v1.0.6 evidence](evidence/v1.0.6/README.md). The v1.0.5 functional/technical/UI/theme contract remains certified by the [v1.0.5 evidence](evidence/v1.0.5/README.md). The [v1.0.4 evidence](evidence/v1.0.4/README.md) is explicitly qualified by its post-release correction notice. External-system ownership remains governed by the existing product/technical boundaries and the historical v1.0.1 correction.
