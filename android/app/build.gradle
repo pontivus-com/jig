@@ -65,6 +65,7 @@ dependencies {
         "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     )
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.sqlite:sqlite-bundled:$androidxSqliteVersion"
     implementation project(':capacitor-android')
     implementation project(':capacitor-cordova-android-plugins')
 
