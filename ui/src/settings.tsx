@@ -13,6 +13,7 @@ import type {
   ServiceStatus,
 } from "../../src/protocol";
 import { repositoryStatusPresentation } from "./repository-status";
+import type { GitHubSetupSnapshot } from "./setup-http";
 import {
   browserNotificationState,
   requestBrowserNotificationPermission,
@@ -45,9 +46,12 @@ export interface SettingsViewProps {
   readonly diagnostics: Diagnostics | null;
   readonly operationError: string | null;
   readonly isOperating: boolean;
+  readonly githubReconnect: GitHubSetupSnapshot | null;
   readonly onThemePresetChange: (value: ThemePreset) => void;
   readonly onAppearanceModeChange: (value: AppearanceMode) => void;
   readonly onSync: () => Promise<void>;
+  readonly onReconnectGitHub: () => Promise<void>;
+  readonly onRefreshGitHubReconnect: () => Promise<void>;
 }
 
 function notificationStatusMessage(
@@ -72,9 +76,12 @@ export function SettingsView({
   diagnostics,
   operationError,
   isOperating,
+  githubReconnect,
   onThemePresetChange,
   onAppearanceModeChange,
   onSync,
+  onReconnectGitHub,
+  onRefreshGitHubReconnect,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
     useState<BrowserNotificationState>(browserNotificationState);
@@ -164,7 +171,47 @@ export function SettingsView({
                     void onSync();
                   }}
                 />
+                {status?.github_reconnect_available === true &&
+                status.repository_status === "sync-issue" &&
+                githubReconnect === null ? (
+                  <Button
+                    label="Reconnect GitHub"
+                    variant="secondary"
+                    width={190}
+                    isLoading={isOperating}
+                    onClick={() => {
+                      void onReconnectGitHub();
+                    }}
+                  />
+                ) : null}
               </div>
+              {githubReconnect?.authorization?.mode === "device" ? (
+                <div className="jig-setup-github-state">
+                  <p>
+                    Enter code <strong>{githubReconnect.authorization.user_code}</strong>{" "}
+                    at GitHub's device authorization page to reconnect.
+                  </p>
+                  <Button
+                    label="Open GitHub device authorization"
+                    variant="secondary"
+                    onClick={() => {
+                      window.open(
+                        githubReconnect.authorization?.verification_uri ?? "",
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
+                  />
+                  <Button
+                    label="Refresh GitHub authorization"
+                    variant="secondary"
+                    isLoading={isOperating}
+                    onClick={() => {
+                      void onRefreshGitHubReconnect();
+                    }}
+                  />
+                </div>
+              ) : null}
             </VStack>
           </Section>
         </section>
