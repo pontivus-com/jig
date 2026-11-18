@@ -5,7 +5,7 @@ import {
   TextInput,
   VStack,
 } from "@astryxdesign/core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   acquireGitHubRepository,
   configureLocalRepository,
@@ -94,6 +94,20 @@ export function SetupView({
       setIsOperating(false);
     }
   };
+
+  useEffect(() => {
+    const authorization = github?.authorization;
+    if (
+      github?.phase !== "authorizing" ||
+      authorization?.mode !== "device"
+    ) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void refreshGitHub();
+    }, authorization.retry_after_seconds * 1000);
+    return () => window.clearTimeout(timer);
+  }, [github]);
 
   const acquireGitHub = async (repositoryId: number): Promise<void> => {
     setError(null);
