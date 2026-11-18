@@ -158,8 +158,9 @@ function nonRetryableIssue(): RepositorySynchronizationResult {
 export async function createManagedGitHubTransport(
   repositoryPath: string,
   dependencies: ManagedGitHubTransportDependencies,
+  home = homedir(),
 ): Promise<ManagedGitHubTransport | null> {
-  if (!isManagedGitHubRepositoryPath(repositoryPath)) {
+  if (!isManagedGitHubRepositoryPath(repositoryPath, home)) {
     return null;
   }
 
@@ -173,6 +174,7 @@ export async function createManagedGitHubTransport(
       try {
         await assertManagedGitHubSynchronizationRemote(
           config.repository_path,
+          home,
         );
 
         let credential = await (
