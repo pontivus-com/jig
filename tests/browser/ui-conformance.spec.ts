@@ -527,7 +527,7 @@ test("History and Settings headings exist once in the application header", async
     },
   ] as const;
 
-  for (const width of [1440, 390] as const) {
+  for (const width of [1440, 320, 360, 390, 414] as const) {
     await page.setViewportSize({ width, height: 900 });
     await waitForResponsiveHeader(page, width);
 
