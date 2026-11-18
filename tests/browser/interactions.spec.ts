@@ -149,7 +149,12 @@ async function touchDrag(
         ),
       ],
     });
+    // Pangea processes touch movement through animation-frame scheduling.
+    // Yield one frame between synthetic CDP events so this models a physical
+    // touch stream instead of collapsing all moves into one frame.
+    await page.waitForTimeout(20);
   }
+  await page.waitForTimeout(40);
 
   const dragScope = page.locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
