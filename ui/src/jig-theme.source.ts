@@ -1,5 +1,6 @@
 import { defineTheme } from "@astryxdesign/core/theme";
 import { neutralTheme } from "@astryxdesign/theme-neutral/built";
+import { jigProductLocalTokens } from "./themes/product-tokens";
 
 /**
  * Jig's Astryx semantic theme source.
@@ -124,44 +125,10 @@ export const jigTheme = defineTheme({
       "inset 0 0 0 2px light-dark(color-mix(in srgb, var(--jig-amber-700) 55%, transparent), color-mix(in srgb, var(--jig-amber-500) 55%, transparent))",
   },
   localTokens: {
-    "--jig-state-today-border": "var(--color-border-teal)",
-    "--jig-state-today-text": "var(--color-text-teal)",
-    "--jig-state-task-selected-bg": "var(--color-info-muted)",
-    "--jig-state-task-selected-border": "var(--color-border-info)",
-    "--jig-state-nav-active-bg": [
-      "var(--jig-ink-100)",
-      "var(--jig-ink-800)",
-    ],
-    "--jig-state-nav-active-text": [
-      "var(--jig-ink-900)",
-      "var(--jig-ink-50)",
-    ],
-    "--jig-state-drag-border": [
-      "var(--jig-amber-700)",
-      "var(--jig-amber-500)",
-    ],
-    "--jig-state-drag-bg": [
-      "var(--jig-amber-50)",
-      "color-mix(in oklab, var(--jig-amber-500) 18%, var(--jig-ink-900))",
-    ],
-    "--jig-priority-high": "var(--color-text-error)",
-    "--jig-priority-normal": [
-      "var(--jig-ink-500)",
-      "var(--jig-ink-400)",
-    ],
-    "--jig-priority-low": "var(--color-text-success)",
-    "--jig-status-healthy-bg": "var(--color-success-muted)",
-    "--jig-status-healthy-border": "var(--color-border-success)",
-    "--jig-status-healthy-text": "var(--color-text-success)",
-    "--jig-state-hover-bg": "var(--color-overlay-hover)",
-    "--jig-state-pressed-bg": "var(--color-overlay-pressed)",
+    ...jigProductLocalTokens,
     "--jig-task-surface": [
       "var(--jig-white)",
       "var(--jig-ink-800)",
-    ],
-    "--jig-task-border": [
-      "var(--jig-ink-200)",
-      "var(--jig-ink-700)",
     ],
   },
 });

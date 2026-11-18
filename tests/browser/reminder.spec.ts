@@ -2,6 +2,16 @@ import {
   expect,
   test,
 } from "@playwright/test";
+
+declare global {
+  interface Window {
+    __JIG_REMINDER_TEST_NOTIFICATIONS__?: Array<{
+      title: string;
+      body: string | null;
+      tag: string | null;
+    }>;
+  }
+}
 import {
   apiCommand,
   apiState,
@@ -25,12 +35,36 @@ function civilDate(date: Date): string {
 
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: reminderStart() });
+  await page.addInitScript(() => {
+    window.__JIG_REMINDER_TEST_NOTIFICATIONS__ = [];
+
+    class MockNotification {
+      static permission: NotificationPermission = "granted";
+
+      static async requestPermission(): Promise<NotificationPermission> {
+        return "granted";
+      }
+
+      constructor(title: string, options?: NotificationOptions) {
+        window.__JIG_REMINDER_TEST_NOTIFICATIONS__?.push({
+          title,
+          body: options?.body ?? null,
+          tag: options?.tag ?? null,
+        });
+      }
+    }
+
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: MockNotification,
+    });
+  });
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
 });
 
-test("due reminder fires once while open, dismisses, and edited time creates a new suppression key", async ({
+test("due reminder fires once through browser Notification and edited time creates a new suppression key", async ({
   page,
 }) => {
   await apiCommand(page, {
@@ -46,18 +80,30 @@ test("due reminder fires once while open, dismisses, and edited time creates a n
   await page.reload();
 
   await page.clock.runFor(60_000);
-  const dismiss = page.getByRole("button", {
-    name: "Dismiss",
-    exact: true,
-  });
-  await expect(dismiss).toBeVisible();
-  await dismiss.click();
-  await expect(dismiss).toBeHidden();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.__JIG_REMINDER_TEST_NOTIFICATIONS__?.length ?? 0,
+      ),
+    )
+    .toBe(1);
+  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
 
   await page.clock.runFor(30_000);
-  await expect(
-    page.getByRole("button", { name: "Dismiss", exact: true }),
-  ).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.__JIG_REMINDER_TEST_NOTIFICATIONS__?.length ?? 0,
+      ),
+    )
+    .toBe(1);
+
+  let deliveredKeys = await page.evaluate(() =>
+    Object.keys(localStorage).filter((key) =>
+      key.startsWith("jig-reminder-delivered:"),
+    ),
+  );
+  expect(deliveredKeys).toHaveLength(1);
 
   const task = await taskByTitle(page, "Timed reminder");
   await apiCommand(page, {
@@ -70,11 +116,15 @@ test("due reminder fires once while open, dismisses, and edited time creates a n
   await page.reload();
   await page.clock.runFor(30_000);
 
-  await expect(
-    page.getByRole("button", { name: "Dismiss", exact: true }),
-  ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.__JIG_REMINDER_TEST_NOTIFICATIONS__?.length ?? 0,
+      ),
+    )
+    .toBe(1);
 
-  const deliveredKeys = await page.evaluate(() =>
+  deliveredKeys = await page.evaluate(() =>
     Object.keys(localStorage).filter((key) =>
       key.startsWith("jig-reminder-delivered:"),
     ),
@@ -114,12 +164,12 @@ test("past reminders from before the browser session are not replayed and comple
 
   await page.clock.runFor(120_000);
 
-  await expect(
-    page.getByRole("status").filter({ hasText: "Past reminder" }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("status").filter({ hasText: "Completed reminder" }),
-  ).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => window.__JIG_REMINDER_TEST_NOTIFICATIONS__ ?? [],
+    ),
+  ).toEqual([]);
+  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
 
   const titles = (await apiState(page)).tasks.map((task) => task.title);
   expect(titles).toContain("Past reminder");

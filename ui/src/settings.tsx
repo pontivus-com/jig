@@ -2,6 +2,7 @@ import {
   Banner,
   Button,
   Section,
+  Selector,
   SegmentedControl,
   SegmentedControlItem,
   VStack,
@@ -17,20 +18,35 @@ import {
   requestBrowserNotificationPermission,
   type BrowserNotificationState,
 } from "./browser-notifications";
+import {
+  THEME_DEFINITIONS,
+  THEME_GROUPS,
+  isAppearanceMode,
+  isThemePreset,
+  type AppearanceMode,
+  type ThemePreset,
+} from "./appearance";
 
-export type ThemePreference = "system" | "light" | "dark";
-
-export function isThemePreference(value: unknown): value is ThemePreference {
-  return value === "system" || value === "light" || value === "dark";
-}
+const THEME_OPTIONS = THEME_GROUPS.map((group) => ({
+  type: "section" as const,
+  title: group,
+  options: THEME_DEFINITIONS
+    .filter((definition) => definition.group === group)
+    .map((definition) => ({
+      value: definition.id,
+      label: definition.label,
+    })),
+}));
 
 export interface SettingsViewProps {
-  readonly themePreference: ThemePreference;
+  readonly themePreset: ThemePreset;
+  readonly appearanceMode: AppearanceMode;
   readonly status: ServiceStatus | null;
   readonly diagnostics: Diagnostics | null;
   readonly operationError: string | null;
   readonly isOperating: boolean;
-  readonly onThemePreferenceChange: (value: ThemePreference) => void;
+  readonly onThemePresetChange: (value: ThemePreset) => void;
+  readonly onAppearanceModeChange: (value: AppearanceMode) => void;
   readonly onSync: () => Promise<void>;
 }
 
@@ -50,12 +66,14 @@ function notificationStatusMessage(
 }
 
 export function SettingsView({
-  themePreference,
+  themePreset,
+  appearanceMode,
   status,
   diagnostics,
   operationError,
   isOperating,
-  onThemePreferenceChange,
+  onThemePresetChange,
+  onAppearanceModeChange,
   onSync,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
@@ -163,13 +181,22 @@ export function SettingsView({
             dividers={["top", "bottom", "start", "end"]}
           >
             <VStack gap={3}>
-              <strong>Theme</strong>
+              <Selector
+                label="Theme"
+                value={themePreset}
+                options={THEME_OPTIONS}
+                onChange={(value) => {
+                  if (isThemePreset(value)) {
+                    onThemePresetChange(value);
+                  }
+                }}
+              />
               <SegmentedControl
                 label="Appearance"
-                value={themePreference}
+                value={appearanceMode}
                 onChange={(value) => {
-                  if (isThemePreference(value)) {
-                    onThemePreferenceChange(value);
+                  if (isAppearanceMode(value)) {
+                    onAppearanceModeChange(value);
                   }
                 }}
                 layout="fill"

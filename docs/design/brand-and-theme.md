@@ -1,20 +1,22 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1.0.5 brand and application-theme contract, amended 2026-11-17 for Task-surface contrast, shared responsive icon semantics and canonical compact-header wordmark usage.
+**Status:** Canonical v1.0.6 brand and application-theme contract v0.19, 2026-11-18. v1.0.5 remains the default Jig palette/identity baseline; v1.0.6 adds the curated multi-theme application catalogue, independent System/Light/Dark appearance, palette-independent Jig product-state semantics and theme-aware in-application wordmark paint.
 **Selected identity:** Option A — precise J guide + alignment pin.  
-**Scope:** Logo geometry, brand palette, Light/Dark semantic theming, application integration, asset dimensions and change control.  
+**Scope:** Logo geometry, default Jig brand palette, multi-theme Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
 **Governing UI:** [UI solution](ui-solution.md).
 
-This document is the single human-readable authority for Jig branding and theming. The executable authorities are:
+This document is the single human-readable authority for Jig branding and theming. The executable v1.0.6 authorities are:
 
-- `ui/src/theme.css` — canonical raw Jig palette primitives;
-- `ui/src/jig-theme.source.ts` — the only authored mapping from those primitives into Astryx semantic roles;
-- `ui/src/jig.js`, `ui/src/jig.css` and their declarations — compiler-owned artifacts produced by pinned `@astryxdesign/cli@0.7.13` from that source;
-- `ui/src/styles.css` — layout/composition only; it imports the generated Jig theme CSS, consumes semantic Astryx tokens and must not introduce a second color system;
-- `ui/src/app.tsx` — the single application `<Theme theme={jigTheme}>` owner, consuming the generated `jigTheme` module.
+- `ui/src/theme.css` — canonical raw **default Jig** Ink/Amber/Paper primitives only;
+- the typed appearance/theme registry — the single list of the thirteen supported application themes and the independent `System | Light | Dark` appearance mode;
+- Jig-authored Astryx theme sources — default Jig, six dual-mode Astryx wrappers and six community semantic palette themes, all compiled by pinned `@astryxdesign/cli@0.7.13`;
+- one shared Jig product-local token mapping for current day, Task selection/elevation, navigation, drag, priority, repository status and in-application brand paint;
+- compiler-owned generated theme modules/styles/declarations — never hand-edited;
+- `ui/src/styles.css` — layout/composition only; it consumes active semantic Astryx/Jig tokens and must not introduce a second color system or theme-name branch;
+- `ui/src/app.tsx` — the single root Astryx `Theme` owner, consuming exactly one registry theme plus one independent appearance mode.
 
-No feature component owns a private palette.
+No feature component owns a private palette. No runtime code fetches or compiles a theme.
 
 ## 1. Identity
 
@@ -48,7 +50,7 @@ The J geometry and the outlined **ig** suffix must not be redrawn per surface. A
 
 ## 2. Canonical brand foundations
 
-The identity uses three related tonal scales:
+The **default Jig theme and fixed external brand assets** use three related tonal scales. These values define Jig identity and remain authoritative for the Jig preset, favicon/app icon and theme-independent release/README assets; they are not forced onto another selected application theme:
 
 1. **Ink** — structure, typography, dark surfaces and the cool complement to Amber.
 2. **Amber** — identity, primary action, keyboard/pointer focus and transient direct-manipulation emphasis. Amber is **not** the generic persistent-selection color.
@@ -356,9 +358,9 @@ This table is binding. “Astryx-owned” means use the stated public component 
 | **Empty-state copy** | secondary Ink text on ordinary surface | n/a | n/a | n/a | n/a | status/accent color |
 | **Links / references** | Astryx link/inherit semantics | Astryx | visited behavior per browser/Astryx | Amber focus ring | n/a | priority/status colors |
 
-## 6.4 Light/Dark resolved product-state palette
+## 6.4 Default Jig Light/Dark resolved product-state palette
 
-The following resolved values are the intended visual result for Jig-owned persistent/transient states. Status-family values remain inherited from Astryx and therefore are not duplicated as brand hex literals.
+The following resolved values are the intended visual result **when the Jig theme preset is selected**. They do not constrain Gruvbox/Dracula/Solarized/Nord/Catppuccin/Tokyo Night or the other Astryx presets to Jig hues. Every preset instead implements the same semantic owners and state precedence defined by JIG-106-SD-04. Status-family values remain inherited from the selected theme and therefore are not duplicated here as universal brand hex literals.
 
 | Product role | Light | Dark |
 |---|---|---|
@@ -376,11 +378,11 @@ The following resolved values are the intended visual result for Jig-owned persi
 These values deliberately use the wider functional palette: temporal orientation is teal, selected Task is info blue, active destination is neutral Ink, direct manipulation/focus is Amber, High is red/error, Normal is neutral, and Low/healthy status is green/success. No persistent product state may use `--color-accent-muted` simply because it is selected.
 
 
-## 6.5 v1.0.5 Task-surface contrast and responsive parity
+## 6.5 Task-surface contrast and responsive parity
 
 The Planner canvas and Task card are separate semantic surfaces. v1.0.5 makes that separation explicit because the published v1.0.4 Dark/narrow presentation allowed Task cards to visually merge into their background.
 
-Add two Jig-local semantic aliases in `jig-theme.source.ts`:
+The feature-level contract remains two Jig-local semantic aliases. The default Jig preset resolves them as follows; other theme wrappers select their governed elevated surface/border roles as specified by JIG-106-SD-04:
 
 | Alias | Light | Dark | Purpose |
 |---|---|---|---|
@@ -415,70 +417,78 @@ Astryx 0.7.13 has no true semantic names for Add, History, Edit or Delete. Jig t
 
 ## 7. Theme implementation contract
 
-### Palette ownership
+### 7.1 Theme catalogue and ownership
 
-`ui/src/theme.css` owns every raw `--jig-ink-*`, `--jig-amber-*`, `--jig-paper-*` and `--jig-white` value.
+v1.0.6 supports exactly thirteen application themes:
 
-No other application stylesheet may hard-code Jig brand colors.
+- **Jig:** Jig;
+- **Astryx:** Neutral, Butter, Chocolate, Matcha, Stone, Y2K;
+- **Community:** Gruvbox, Dracula, Solarized, Nord, Catppuccin, Tokyo Night.
 
-### Semantic mapping
+The exact pairings/provenance and complete semantic color requirements are binding in JIG-106-SD-02 and JIG-106-SD-04. Astryx Gothic 0.7.13 is dark-only upstream and is therefore not part of the selectable Jig catalogue; no synthetic light variant is authored. Community palette literals live only in governed theme-authoring palette sources; feature styles never copy them. The default Jig primitives remain in `ui/src/theme.css`.
 
-`ui/src/jig-theme.source.ts` defines the authored Jig theme by extending `@astryxdesign/theme-neutral/built`. It owns both the public Astryx role overrides and the Jig product-state semantic aliases defined in §6.2. The Jig aliases may reference only canonical Jig primitives or inherited public Astryx status roles; they must never introduce raw feature-local colors. Public Astryx role overrides include:
+Theme family and appearance mode are independent browser-local presentation values. The root application mounts exactly one Astryx owner:
 
-- `--color-background-*`;
-- `--color-text-*`;
-- `--color-icon-*`;
-- `--color-accent`;
-- `--color-accent-muted`;
-- `--color-on-accent`;
-- `--color-border*`;
-- `--focus-outline-color`.
+```tsx
+<Theme theme={themeRegistry[themePreset].theme} mode={appearanceMode}>
+```
 
-Astryx continues to own spacing, sizing, typography mechanics, component structure, status families and interaction semantics.
+`AppearanceMode` is exactly `system | light | dark`. Astryx owns System resolution through its published `Theme` behavior and CSS `light-dark()` semantics. Jig does not maintain a second resolved-mode state or `matchMedia` color engine.
 
-### CSS composition and theme build
+### 7.2 Semantic mapping
 
-The custom theme follows Astryx's documented production path:
+Every supported theme supplies the complete Astryx color-semantic inventory needed by Jig/Astryx plus the shared Jig product-local aliases defined by JIG-106-SD-04.
 
-1. author semantic mapping only in `ui/src/jig-theme.source.ts`;
-2. compile it with pinned `@astryxdesign/cli@0.7.13` using `astryx theme build`;
-3. commit the generated `ui/src/jig.js`, `ui/src/jig.css` and declaration files;
-4. import `jigTheme` only from the generated module at runtime;
-5. run `bun run theme:check` in CI, which delegates to `astryx theme build --check` and fails on stale generated artifacts.
+The shared Jig aliases encode **meaning**, not the default Jig hue:
 
-Jig must not hand-write Astryx's internal `__built` marker, call internal/private theme machinery, or substitute an application-owned theme compiler. The generated files may contain Astryx internal implementation data because Astryx owns those files; Jig-authored source may not depend on that data.
+- exact current day;
+- selected Task;
+- active navigation;
+- drag/drop;
+- High/Normal/Low priority;
+- healthy repository state;
+- hover/pressed;
+- Task surface/border;
+- in-application brand primary/accent.
 
-`ui/src/styles.css` preserves the published stylesheet order:
+Published Astryx themes retain their complete component/typography/icon behavior and add the Jig product aliases. Community themes keep Astryx Neutral mechanics while supplying a complete community color-semantic mapping. No feature component branches on theme ID.
+
+### 7.3 CSS composition and theme build
+
+Every Jig-authored theme follows Astryx's documented production path:
+
+1. author through public `defineTheme`/published theme inheritance;
+2. compile with pinned `@astryxdesign/cli@0.7.13` using `astryx theme build`;
+3. commit generated modules/styles/declarations;
+4. import only built theme objects at runtime;
+5. run one exhaustive theme-check command that checks all authored v1.0.6 sources and fails on stale generated artifacts.
+
+Jig must not hand-write Astryx's internal `__built` marker, call private theme machinery, dynamically inject unbuilt themes, or substitute an application-owned compiler.
+
+`ui/src/styles.css` preserves this foundation order:
 
 1. Astryx reset;
 2. Astryx core;
-3. Jig palette primitives;
-4. compiler-generated Jig theme CSS;
+3. default Jig palette primitives needed by the Jig preset;
+4. generated CSS for all supported Jig-owned/wrapper themes;
 5. Jig-owned composition rules.
 
-That ordering establishes the library/theme foundation; it is **not** permission for Jig to create a competing override layer.
+Inactive generated themes are scoped by Astryx's theme attribute and do not paint the application.
 
-Jig CSS follows these rules:
+Feature/composition CSS:
 
-- style only Jig-owned composition and root classes supplied intentionally by Jig;
-- consume public Astryx semantic, spacing, radius and typography tokens;
-- never target undocumented Astryx descendants, generated StyleX structure or private custom properties;
-- never add a Jig high-priority cascade layer, `!important`, or selector escalation to reshape an Astryx component;
-- use explicit pixel values only for governed product-level structural budgets; use Astryx tokens/public props for ordinary interior spacing, radii, typography and control sizing;
-- keep each layout property under one rule owner and delete superseded declarations rather than cancelling them with later overrides;
-- use CSS media queries for pure reflow/density only; when the semantic hierarchy differs between desktop and narrow layouts, React/AppShell composition changes at the one application breakpoint.
+- styles only Jig-owned composition/root classes;
+- consumes public Astryx tokens and shared Jig product aliases;
+- contains no theme palette literals or theme-name selectors/branches;
+- never targets private Astryx descendants/custom properties;
+- uses no `!important`, high-priority cascade layer or specificity escalation;
+- keeps each layout/style meaning under one semantic owner.
 
-There is no per-screen color palette, no Light/Dark duplication in feature CSS and no second styling architecture beside Astryx. Product-state Light/Dark values are resolved once in `jig-theme.source.ts`; feature CSS consumes the named aliases only.
+### 7.4 Appearance placement and persistence
 
-### Theme owner
+Theme and System/Light/Dark controls exist only in **Settings → Appearance**. The Theme selector is derived from the one registry; the appearance segmented control owns exactly System, Light and Dark.
 
-`ui/src/app.tsx` mounts exactly one root:
-
-```tsx
-<Theme theme={jigTheme} mode={themePreference}>
-```
-
-System, Light and Dark remain presentation-only Settings choices.
+Both preferences are presentation state only. They do not mutate Task, displayed week, workspace draft, completion, SQLite, HTTP, repository records or synchronization state. A live System platform-preference change repaints the currently selected family without changing the family choice.
 
 ## 8. Logo and icon asset contract
 
@@ -513,13 +523,13 @@ The README plate is 192×96, adding exactly 40 units horizontal and 14 units ver
 
 ### Application integration
 
-- Header/app shell: use the complete horizontal wordmark, switching between `jig-logo.svg` and `jig-logo-on-dark.svg` with the active theme. Do not compose the standalone J icon beside live “Jig” text.
-- Browser/app icon contexts: use the standalone J-only `jig-app-icon.svg` / `jig-favicon.svg`.
-- README / unknown viewer theme: use `jig-logo-plate-dark.svg`.
-- Light branded surfaces: use `jig-logo.svg` or `jig-logo-light.svg`.
-- Dark branded surfaces: use `jig-logo-on-dark.svg` or `jig-logo-dark.svg`.
+- **Application header/app shell:** render one canonical inline SVG/React wordmark geometry copied from the approved lockup. Its guide/wordmark foreground consumes `--jig-brand-primary`; its alignment pin consumes `--jig-brand-accent`. Desktop and narrow use this same semantic component. Do not switch fixed Light/Dark image files in application chrome and do not compose the standalone J icon beside live “Jig” text.
+- **Browser/app icon contexts:** use the standalone J-only `jig-app-icon.svg` / `jig-favicon.svg`; these fixed Ink-tile assets are intentionally theme-independent.
+- **README / unknown viewer theme:** use `jig-logo-plate-dark.svg`.
+- **External/light branded surfaces:** `jig-logo.svg` or `jig-logo-light.svg` remain valid fixed Jig-palette assets.
+- **External/dark branded surfaces:** `jig-logo-on-dark.svg` or `jig-logo-dark.svg` remain valid fixed Jig-palette assets.
 
-Do not use the large horizontal lockup inside compact application chrome.
+Application wordmark geometry remains compact within the governed header dimensions; external lockup assets are not runtime application-theme color authorities.
 
 ## 9. Usage constraints
 
@@ -532,21 +542,22 @@ Do not:
 - use Brand Amber for warning merely because warning is also yellow/orange;
 - use Brand Amber as the persistent fill/border for selected Task cards or desktop current-day columns;
 - use the same visual treatment for current day, Task selection, priority and drag target;
-- add a second theme owner or CSS override layer that bypasses `jigTheme`;
+- add a second root theme owner, resolved-mode engine or CSS override layer that bypasses the active registry theme;
 - depend on private/undocumented Astryx selectors, internal DOM structure, generated StyleX details or private CSS custom properties;
 - use `!important` or specificity escalation to force library components into a different anatomy;
 - copy raw palette values into feature styles.
 
 ## 10. Verification and change control
 
-Any change to the brand anchors, palette stops, semantic mapping or mark geometry requires the same change set to update:
+Any change to brand anchors, theme palette sources, semantic mapping or mark geometry requires the corresponding authority and generated evidence to move together:
 
-1. this document;
-2. `ui/src/theme.css` when palette primitives change;
-3. `ui/src/jig-theme.source.ts` when semantic role mapping changes;
-4. regenerated `ui/src/jig.js`, `ui/src/jig.css` and declarations via the pinned Astryx CLI, with `bun run theme:check` green;
-5. affected assets under `assets/`;
-6. representative Light and Dark browser evidence;
-7. browser acceptance proving the root theme remains `jig` and that Light/Dark accents resolve to the intended functional stops.
+1. this document and the JIG-106 technical contract when semantic ownership changes;
+2. `ui/src/theme.css` when default Jig primitives change;
+3. the affected Jig/Astryx-wrapper/community theme source and shared product-token mapping;
+4. regenerated compiler-owned theme artifacts through pinned Astryx CLI, with the exhaustive `bun run theme:check` green;
+5. `THIRD_PARTY_NOTICES.md` when copied community palette provenance/license material changes;
+6. affected external assets under `assets/` when their fixed artwork changes;
+7. browser acceptance for all thirteen presets in Light/Dark and System-Light/System-Dark, including live System preference change, semantic state coexistence, Task/canvas separation and in-application wordmark contrast;
+8. architecture checks proving one root Theme owner and no feature-level raw palette/theme-name branching.
 
 Layout-only UI changes do not redefine this brand contract.
