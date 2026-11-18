@@ -11,7 +11,7 @@ export interface GitHubAppRegistration {
   readonly app_slug: string;
   readonly client_id: string;
   readonly client_secret: string;
-  readonly callback_url: string;
+  readonly redirect_uri: string;
 }
 
 export interface GitHubAuthorizationRequest {
@@ -213,11 +213,11 @@ export async function createGitHubAuthorizationRequest(
     !/^[a-z0-9-]+$/.test(registration.app_slug) ||
     registration.client_id.length === 0 ||
     registration.client_secret.length === 0 ||
-    registration.callback_url.length === 0
+    registration.redirect_uri.length === 0
   ) {
     throw new GitHubAuthError("GitHub App registration is incomplete");
   }
-  const redirectUri = registration.callback_url;
+  const redirectUri = registration.redirect_uri;
   const state = randomBase64Url();
   const codeVerifier = randomBase64Url();
   const challenge = await pkceChallenge(codeVerifier);
