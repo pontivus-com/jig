@@ -14,7 +14,10 @@ import {
 import { createBootstrapHttpHandler } from "./bootstrap-http";
 import { GitHubOnboardingController } from "./github-onboarding";
 import { GITHUB_APP_REGISTRATION } from "./github-registration";
-import { refreshGitHubCredential } from "./github-auth";
+import {
+  GitHubAuthError,
+  refreshGitHubCredential,
+} from "./github-auth";
 import {
   createGitHubAskpassHelper,
   githubGitEnvironment,
@@ -24,7 +27,10 @@ import {
   loadCurrentGitHubCredential,
   storeGitHubCredential,
 } from "./secret-service";
-import { createSyncController } from "./sync";
+import {
+  createSyncController,
+  SyncAuthenticationError,
+} from "./sync";
 import {
   defaultConfigPath,
   loadConfigIfPresent,
@@ -89,7 +95,7 @@ async function runConfigured(config: JigConfig): Promise<void> {
       : async (): Promise<Readonly<Record<string, string>>> => {
           let credential = await loadCurrentGitHubCredential();
           if (credential === null) {
-            throw new Error(
+            throw new SyncAuthenticationError(
               "GitHub credential is unavailable; reconnect GitHub",
             );
           }
@@ -99,16 +105,25 @@ async function runConfigured(config: JigConfig): Promise<void> {
               credential.access_token_expires_at,
             );
             if (!Number.isFinite(expiryMs)) {
-              throw new Error(
+              throw new SyncAuthenticationError(
                 "Stored GitHub access-token expiry is invalid; reconnect GitHub",
               );
             }
             if (expiryMs - Date.now() <= 5 * 60 * 1000) {
-              credential = await refreshGitHubCredential(
-                GITHUB_APP_REGISTRATION,
-                credential,
-              );
-              await storeGitHubCredential(credential);
+              try {
+                credential = await refreshGitHubCredential(
+                  GITHUB_APP_REGISTRATION,
+                  credential,
+                );
+                await storeGitHubCredential(credential);
+              } catch (error) {
+                if (error instanceof GitHubAuthError) {
+                  throw new SyncAuthenticationError(
+                    "GitHub authorization expired; reconnect GitHub",
+                  );
+                }
+                throw error;
+              }
             }
           }
 
