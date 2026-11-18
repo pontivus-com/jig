@@ -10,6 +10,7 @@ import {
   type JigSqlConnection,
 } from "../../src/persistence/sqlite";
 import { initializeDatabase } from "../../src/shell/sqlite-bun";
+import { GitHubOnboardingController } from "../../src/shell/github-onboarding";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 const TOKEN = "a".repeat(64);
@@ -241,6 +242,111 @@ describe("loopback HTTP admission", () => {
       }),
     );
     expect(response.status).toBe(400);
+  });
+
+  it("protects configured GitHub reconnect and replaces only the device credential", async () => {
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    let storedUserId: number | null = null;
+    const reconnect = new GitHubOnboardingController({
+      registration: {
+        app_slug: "jig-desktop-mobile-test",
+        client_id: "shared-client-id",
+      },
+      config_path: join(root, "config.json"),
+      http_port: 47831,
+      on_configured: () => undefined,
+      assert_secret_service: async () => undefined,
+      now: () => new Date(nowMs),
+      start_device_authorization: async () => ({
+        device_code: "device-code",
+        user_code: "ABCD-EFGH",
+        verification_uri: "https://github.com/login/device",
+        expires_in: 900,
+        interval: 5,
+      }),
+      poll_device_authorization: async () => ({
+        status: "authorized" as const,
+        credential: {
+          user_id: 42,
+          access_token: "access-token",
+          refresh_token: "refresh-token",
+          access_token_expires_at: "2030-01-01T08:00:00.000Z",
+          refresh_token_expires_at: "2030-07-04T00:00:00.000Z",
+        },
+      }),
+      store_credential: async (credential) => {
+        storedUserId = credential.user_id;
+      },
+    });
+
+    const handle = createHttpHandler({
+      db,
+      write_token: TOKEN,
+      repository_path: root,
+      ui_directory: root,
+      now: () => "2026-11-16T01:00:00.000Z",
+      create_id: crypto.randomUUID,
+      get_status: () => ({
+        ready: true,
+        repository_path: root,
+        repository_status: "sync-issue",
+        github_reconnect_available: true,
+      }),
+      get_diagnostics: () => ({
+        service_healthy: true,
+        sqlite_available: true,
+        sqlite_schema_version: 1,
+        repository_path: root,
+        portable_format_version: 1,
+        repository_adapter_healthy: false,
+      }),
+      trigger_sync: async () => "sync-issue",
+      github_reconnect: reconnect,
+      ensure_current_day_rollover: async () => undefined,
+      on_task_mutation: () => undefined,
+    });
+
+    const unauthorized = await handle(
+      postRequest("/api/v1/github/reconnect/start", {}, null),
+    );
+    expect(unauthorized.status).toBe(403);
+    expect(storedUserId).toBeNull();
+
+    const started = await handle(
+      postRequest("/api/v1/github/reconnect/start", {}),
+    );
+    expect(started.status).toBe(200);
+    expect(await started.json()).toMatchObject({
+      phase: "authorizing",
+      authorization: {
+        mode: "device",
+        user_code: "ABCD-EFGH",
+      },
+      repositories: [],
+    });
+
+    nowMs += 5_000;
+    const refreshed = await handle(
+      postRequest("/api/v1/github/reconnect/refresh", {}),
+    );
+    expect(refreshed.status).toBe(200);
+    expect(await refreshed.json()).toMatchObject({
+      phase: "idle",
+      authorization: null,
+      repositories: [],
+      error: null,
+    });
+    expect(storedUserId).toBe(42);
+  });
+
+  it("does not expose GitHub reconnect for provider-neutral repositories", async () => {
+    const response = await handler()(
+      postRequest("/api/v1/github/reconnect/start", {}),
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toStrictEqual({
+      error: "GitHub reconnect is unavailable for this repository",
+    });
   });
 
   it("routes sync through the injected serialized worker trigger", async () => {
