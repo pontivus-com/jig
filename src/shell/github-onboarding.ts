@@ -123,7 +123,7 @@ export class GitHubOnboardingController {
     await (this.dependencies.assert_secret_service ??
       assertSecretServiceAvailable)();
 
-    this.resetTransient();
+    await this.resetTransient();
     this.phase = "authorizing";
 
     const request = await (
@@ -255,7 +255,7 @@ export class GitHubOnboardingController {
     return this.dependencies.registration;
   }
 
-  private resetTransient(): void {
+  private async resetTransient(): Promise<void> {
     this.phase = "idle";
     this.authorization = null;
     this.grantAccessUrl = null;
@@ -266,7 +266,7 @@ export class GitHubOnboardingController {
     this.credential = null;
     this.pendingAuthorization = null;
     this.deviceState = null;
-    void this.stopLoopbackListener();
+    await this.stopLoopbackListener();
   }
 
   private now(): Date {
