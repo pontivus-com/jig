@@ -38,6 +38,12 @@ export const THEME_DEFINITIONS = [
     theme: astryxChocolateTheme,
   },
   {
+    id: "astryx-gothic",
+    label: "Gothic",
+    group: "Astryx",
+    theme: astryxGothicTheme,
+  },
+  {
     id: "astryx-matcha",
     label: "Matcha",
     group: "Astryx",
