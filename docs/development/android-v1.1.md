@@ -1,6 +1,6 @@
 # Android v1.1 development and physical-device certification
 
-**Status:** v1.1 implementation support document. This document defines the repeatable local Android development loop and the evidence that must exist before the physical-device gates J110-IMP-08 and J110-IMP-09 can close. It does not itself constitute physical-device evidence.
+**Status:** v1.1 implementation support document. This document defines the repeatable local Android development loop and the evidence required for the physical-device gates J110-IMP-09 and the physical-device portions of J110-IMP-15. J110-IMP-08 is a non-device Android-shell/debug-APK gate and does not require a physical phone. This document does not itself constitute physical-device evidence.
 
 **Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-24, SD-34 and SD-35; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08 and J110-IMP-09.
 
@@ -82,7 +82,7 @@ bun run android:build:debug
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Do not claim J110-IMP-08 closed until a real physical phone has launched the current Planner/History/Settings React application from that APK.
+J110-IMP-08 closes on the governed deterministic Android shell/debug-APK build and its non-device verification. A real physical-phone launch of the candidate APK is deferred to J110-IMP-15 and must not be used as an IMP-08 prerequisite.
 
 ## 5. J110-IMP-09 physical drag/drop gate
 
@@ -108,8 +108,8 @@ If touch initiation or destination updates are materially unreliable, stop. Do n
 
 Only explicit physical-device evidence can close the gate:
 
-- **PASS:** J110-IMP-08 physical APK loop works and every J110-IMP-09 interaction above passes on the recorded phone.
-- **FAIL:** record the concrete device/WebView behavior and return to design review before later gated Android work.
-- **NOT RUN:** browser/emulator/build evidence may remain useful, but neither physical gate is closed.
+- **PASS:** the J110-IMP-09 drag/drop matrix passes on the recorded phone and the J110-IMP-15 physical-device certification records the governed candidate APK launch/runtime evidence.
+- **FAIL:** record the concrete device/WebView behavior and return to the governing design/task gate before release-candidate closure.
+- **NOT RUN:** browser/emulator/build evidence may remain useful, but J110-IMP-09 and the physical-device portions of J110-IMP-15 remain open.
 
 J110-IMP-10/11/12/13 and final v1.1 certification must not use this document as a substitute for the required physical result.
