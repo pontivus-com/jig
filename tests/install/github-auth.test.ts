@@ -19,14 +19,14 @@ const DESKTOP_REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop",
   client_id: "Iv1.desktop-fixture",
   client_secret: "public-desktop-fixture-secret",
-  callback_url: "http://127.0.0.1:47832/setup/github/callback",
+  redirect_uri: "http://127.0.0.1:47832/setup/github/callback",
 };
 
 const ANDROID_REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-android",
   client_id: "Iv1.android-fixture",
   client_secret: "public-android-fixture-secret",
-  callback_url: "com.pontivus.jig://oauth/github",
+  redirect_uri: "com.pontivus.jig://oauth/github",
 };
 
 describe("GitHub App public-client primitives", () => {
@@ -43,7 +43,7 @@ describe("GitHub App public-client primitives", () => {
       DESKTOP_REGISTRATION.client_id,
     );
     expect(url.searchParams.get("redirect_uri")).toBe(
-      DESKTOP_REGISTRATION.callback_url,
+      DESKTOP_REGISTRATION.redirect_uri,
     );
     expect(url.searchParams.get("scope")).toBe("offline_access");
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
@@ -54,7 +54,7 @@ describe("GitHub App public-client primitives", () => {
     expect(request.code_verifier).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
-  it("uses the callback owned by the selected GitHub App registration", async () => {
+  it("uses the Redirect URI owned by the selected GitHub App registration", async () => {
     const desktop = await createGitHubAuthorizationRequest(
       DESKTOP_REGISTRATION,
     );
@@ -63,12 +63,12 @@ describe("GitHub App public-client primitives", () => {
     );
 
     expect(new URL(desktop.authorization_url).searchParams.get("redirect_uri"))
-      .toBe(DESKTOP_REGISTRATION.callback_url);
-    expect(desktop.redirect_uri).toBe(DESKTOP_REGISTRATION.callback_url);
+      .toBe(DESKTOP_REGISTRATION.redirect_uri);
+    expect(desktop.redirect_uri).toBe(DESKTOP_REGISTRATION.redirect_uri);
 
     expect(new URL(android.authorization_url).searchParams.get("redirect_uri"))
-      .toBe(ANDROID_REGISTRATION.callback_url);
-    expect(android.redirect_uri).toBe(ANDROID_REGISTRATION.callback_url);
+      .toBe(ANDROID_REGISTRATION.redirect_uri);
+    expect(android.redirect_uri).toBe(ANDROID_REGISTRATION.redirect_uri);
 
     expect(DESKTOP_REGISTRATION.client_id).not.toBe(
       ANDROID_REGISTRATION.client_id,
