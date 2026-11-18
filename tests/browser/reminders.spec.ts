@@ -81,7 +81,7 @@ async function prepareReminderPage(
   await page.reload();
 }
 
-test("visible due reminder uses the in-app toast and not browser Notification", async ({
+test("visible due reminder uses browser Notification and no in-app Toast", async ({
   page,
 }) => {
   await prepareReminderPage(page, "granted");
@@ -99,14 +99,15 @@ test("visible due reminder uses the in-app toast and not browser Notification", 
 
   await page.clock.fastForward(60_000);
 
-  await expect(
-    page
-      .getByRole("region", { name: "Notifications" })
-      .getByText("Reminder: Visible reminder", { exact: true }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
-  ).toEqual([]);
+  const calls = await page.evaluate(
+    () => window.__JIG_NOTIFICATION_CALLS__ ?? [],
+  );
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toMatchObject({
+    title: "Jig reminder",
+    body: "Visible reminder",
+  });
+  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
 });
 
 test("hidden open page with granted permission uses one browser Notification", async ({
@@ -168,13 +169,13 @@ test("notification permission is requested only from the Settings Enable action"
 });
 
 
-test("hidden reminder without permission remains eligible for visible catch-up toast", async ({
+test("due reminder without permission stays undelivered until explicit grant", async ({
   page,
 }) => {
   await prepareReminderPage(page, "default");
   await apiCommand(page, {
     type: "create",
-    title: "Catch-up reminder",
+    title: "Permission-gated reminder",
     scheduled_date: civilDate(reminderStart()),
     priority: "NORMAL",
     context: null,
@@ -202,12 +203,23 @@ test("hidden reminder without permission remains eligible for visible catch-up t
     });
     document.dispatchEvent(new Event("visibilitychange"));
   });
+  expect(
+    await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
+  ).toEqual([]);
+  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
 
-  await expect(
-    page
-      .getByRole("region", { name: "Notifications" })
-      .getByText("Reminder: Catch-up reminder", { exact: true }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Enable", exact: true }).click();
+  await page.clock.fastForward(30_000);
+
+  const calls = await page.evaluate(
+    () => window.__JIG_NOTIFICATION_CALLS__ ?? [],
+  );
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toMatchObject({
+    title: "Jig reminder",
+    body: "Permission-gated reminder",
+  });
 });
 
 test("rolled-forward reminder uses today's canonical date and preserved time", async ({
