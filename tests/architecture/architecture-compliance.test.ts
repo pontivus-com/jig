@@ -472,3 +472,20 @@ describe("architecture compliance", () => {
     expect(assertions).toHaveLength(4);
   });
 });
+
+
+describe("v1.1 Android managed GitHub transport ownership", () => {
+  it("keeps credential lookup behind the managed remote-validation shell", () => {
+    const configured = source("ui/src/native/configured-sync.ts");
+    const managed = source("ui/src/native/github-managed-transport.ts");
+    expect(configured).toContain(
+      "createAndroidManagedGitHubCredentialProvider",
+    );
+    expect(configured).not.toContain("currentAndroidGitHubToken");
+    expect(managed).toContain("androidSynchronizationRemote");
+    expect(managed).toContain("currentAndroidGitHubToken");
+    expect(managed.indexOf("androidSynchronizationRemote")).toBeLessThan(
+      managed.lastIndexOf("currentAndroidGitHubToken"),
+    );
+  });
+});
