@@ -137,6 +137,33 @@ describe("GitHub App Device Flow primitives", () => {
     }
   });
 
+  it("uses GitHub's returned slow_down interval when present", async () => {
+    const fetcher: GitHubFetch = async () =>
+      Response.json(
+        { error: "slow_down", interval: 12 },
+        { status: 400 },
+      );
+
+    await expect(
+      pollGitHubDeviceAuthorization(
+        REGISTRATION,
+        {
+          device_code: "device-code",
+          user_code: "ABCD-EFGH",
+          verification_uri: "https://github.com/login/device",
+          expires_in: 900,
+          interval: 5,
+        },
+        5,
+        new Date("2030-01-01T00:00:00.000Z"),
+        fetcher,
+      ),
+    ).resolves.toStrictEqual({
+      status: "slow-down",
+      retry_after_seconds: 12,
+    });
+  });
+
   it("refreshes Device Flow credentials without client_secret", async () => {
     let requestBody = "";
     const fetcher: GitHubFetch = async (input, init) => {
