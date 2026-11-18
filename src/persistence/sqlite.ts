@@ -89,8 +89,8 @@ export class PersistenceConfigurationError extends Error {
   }
 }
 
-const CREATE_SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS recurrence_series (
+const CREATE_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS recurrence_series (
   id TEXT PRIMARY KEY,
   effective_from TEXT NOT NULL,
   end_date TEXT NOT NULL,
@@ -112,9 +112,8 @@ CREATE TABLE IF NOT EXISTS recurrence_series (
       AND weekdays_mask IS NULL
       AND day_of_month BETWEEN 1 AND 31)
   )
-);
-
-CREATE TABLE IF NOT EXISTS task (
+)`,
+  `CREATE TABLE IF NOT EXISTS task (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   scheduled_date TEXT NOT NULL,
@@ -139,16 +138,13 @@ CREATE TABLE IF NOT EXISTS task (
     OR
     (recurrence_series_id IS NOT NULL AND recurrence_occurrence_date IS NOT NULL)
   )
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS task_active_position
+)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS task_active_position
   ON task(scheduled_date, position)
-  WHERE completed_at IS NULL;
-
-CREATE INDEX IF NOT EXISTS task_completed_at
-  ON task(completed_at);
-
-CREATE TABLE IF NOT EXISTS app_metadata (
+  WHERE completed_at IS NULL`,
+  `CREATE INDEX IF NOT EXISTS task_completed_at
+  ON task(completed_at)`,
+  `CREATE TABLE IF NOT EXISTS app_metadata (
   singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
   schema_version INTEGER NOT NULL,
   dataset_id TEXT NOT NULL,
@@ -157,13 +153,12 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   last_exported_head TEXT,
   last_adopted_head TEXT,
   pending_sync INTEGER NOT NULL CHECK (pending_sync IN (0, 1))
-);
-
-CREATE TABLE IF NOT EXISTS reminder_delivery (
+)`,
+  `CREATE TABLE IF NOT EXISTS reminder_delivery (
   delivery_key TEXT PRIMARY KEY,
   delivered_at TEXT NOT NULL
-);
-`;
+)`,
+] as const;
 
 const TASK_COLUMNS = `
 id,
@@ -463,7 +458,9 @@ export async function initializePersistence(
   assertUuid(datasetId, "dataset_id");
   await connection.execute("PRAGMA journal_mode = WAL;");
   await connection.execute("PRAGMA foreign_keys = ON;");
-  await connection.execute(CREATE_SCHEMA_SQL);
+  for (const statement of CREATE_SCHEMA_STATEMENTS) {
+    await connection.execute(statement);
+  }
   await migrateMetadataSchema(connection);
 
   await connection.execute(
