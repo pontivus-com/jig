@@ -472,7 +472,7 @@ test("desktop header stays compact while narrow header uses sticky destination-s
   expect(narrowSettingsHeight).toBeGreaterThanOrEqual(44);
   await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
   await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Add task" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(0);
 
   const topBefore = await page.locator(".jig-app-header-narrow").evaluate(
     (element) => element.getBoundingClientRect().top,
@@ -492,7 +492,7 @@ test("desktop header stays compact while narrow header uses sticky destination-s
 
   await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
   await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Add task" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add task", exact: true })).toBeVisible();
   const narrowPlannerHeight = await headerHeight(page);
   expect(narrowPlannerHeight).toBeGreaterThan(narrowSettingsHeight);
 });
