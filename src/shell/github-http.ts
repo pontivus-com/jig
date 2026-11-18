@@ -1,6 +1,6 @@
 import type { JigConfig } from "./config";
-import type { GitHubOnboardingController } from "./github-onboarding";
-import type { GitHubReconnectController } from "./github-reconnect";
+import type { GitHubOnboardingController } from "../github-onboarding";
+import type { GitHubReconnectController } from "../github-reconnect";
 import { InstallationError } from "./setup";
 import {
   authorizeMutation,
@@ -9,7 +9,7 @@ import {
 
 export interface GitHubHttpDependencies {
   readonly write_token: string;
-  readonly onboarding?: GitHubOnboardingController;
+  readonly onboarding?: GitHubOnboardingController<JigConfig>;
   readonly reconnect?: GitHubReconnectController;
   readonly is_configured: () => boolean;
   readonly on_configured?: (config: JigConfig) => void;
