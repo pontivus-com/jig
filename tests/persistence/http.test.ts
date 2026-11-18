@@ -107,6 +107,7 @@ describe("loopback HTTP admission", () => {
     expect(await response.json()).toStrictEqual({
       revision: 0,
       tasks: [],
+      recurrences: [],
     });
   });
 
@@ -130,6 +131,7 @@ describe("loopback HTTP admission", () => {
     expect(await readCanonicalState(db)).toStrictEqual({
       revision: 0,
       tasks: [],
+      recurrences: [],
     });
   });
 
