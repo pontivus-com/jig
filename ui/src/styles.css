@@ -868,6 +868,12 @@ body {
     overflow-wrap: anywhere;
   }
 
+  .jig-settings-remote-name {
+    display: block;
+    margin-block-start: var(--spacing-0-5);
+    color: var(--color-text-secondary);
+  }
+
   .jig-editor-form {
     display: grid;
     gap: var(--spacing-3);
