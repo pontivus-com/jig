@@ -1,12 +1,9 @@
 import {
-  createGitHubAuthorizationRequest,
-  exchangeGitHubAuthorizationCode,
   listGitHubInstallations,
   listGitHubRepositories,
   pollGitHubDeviceAuthorization,
   startGitHubDeviceAuthorization,
   type GitHubAppRegistration,
-  type GitHubAuthorizationRequest,
   type GitHubDeviceAuthorization,
   type GitHubInstallation,
   type GitHubRepository,
@@ -48,10 +45,6 @@ export interface GitHubOnboardingSnapshot {
   readonly phase: GitHubOnboardingPhase;
   readonly authorization:
     | {
-        readonly mode: "browser";
-        readonly authorization_url: string;
-      }
-    | {
         readonly mode: "device";
         readonly verification_uri: string;
         readonly user_code: string;
@@ -72,8 +65,6 @@ export interface GitHubOnboardingDependencies {
   readonly on_configured: (config: JigConfig) => void;
   readonly store_credential?: typeof storeGitHubCredential;
   readonly assert_secret_service?: typeof assertSecretServiceAvailable;
-  readonly create_authorization_request?: typeof createGitHubAuthorizationRequest;
-  readonly exchange_authorization_code?: typeof exchangeGitHubAuthorizationCode;
   readonly list_installations?: typeof listGitHubInstallations;
   readonly list_repositories?: typeof listGitHubRepositories;
   readonly start_device_authorization?: typeof startGitHubDeviceAuthorization;
@@ -99,9 +90,7 @@ export class GitHubOnboardingController {
   private repositories: readonly GitHubRepositoryChoice[] = [];
   private error: string | null = null;
   private credential: GitHubCredential | null = null;
-  private pendingAuthorization: GitHubAuthorizationRequest | null = null;
   private deviceState: DeviceState | null = null;
-  private callbackServer: ReturnType<typeof Bun.serve> | null = null;
 
   constructor(private readonly dependencies: GitHubOnboardingDependencies) {}
 
@@ -123,39 +112,24 @@ export class GitHubOnboardingController {
     await (this.dependencies.assert_secret_service ??
       assertSecretServiceAvailable)();
 
-    await this.resetTransient();
+    this.resetTransient();
     this.phase = "authorizing";
 
-    const request = await (
-      this.dependencies.create_authorization_request ??
-      createGitHubAuthorizationRequest
+    const device = await (
+      this.dependencies.start_device_authorization ??
+      startGitHubDeviceAuthorization
     )(registration);
-
-    try {
-      this.startLoopbackListener(request);
-      this.pendingAuthorization = request;
-      this.authorization = {
-        mode: "browser",
-        authorization_url: request.authorization_url,
-      };
-    } catch {
-      this.pendingAuthorization = null;
-      const device = await (
-        this.dependencies.start_device_authorization ??
-        startGitHubDeviceAuthorization
-      )(registration);
-      this.deviceState = {
-        authorization: device,
-        retry_after_seconds: device.interval,
-        started_at_ms: this.now().getTime(),
-      };
-      this.authorization = {
-        mode: "device",
-        verification_uri: device.verification_uri,
-        user_code: device.user_code,
-        retry_after_seconds: device.interval,
-      };
-    }
+    this.deviceState = {
+      authorization: device,
+      retry_after_seconds: device.interval,
+      started_at_ms: this.now().getTime(),
+    };
+    this.authorization = {
+      mode: "device",
+      verification_uri: device.verification_uri,
+      user_code: device.user_code,
+      retry_after_seconds: device.interval,
+    };
 
     return this.snapshot();
   }
@@ -221,31 +195,6 @@ export class GitHubOnboardingController {
     }
   }
 
-  async completeAuthorization(
-    state: string,
-    code: string,
-  ): Promise<void> {
-    const registration = this.requireRegistration();
-    const pending = this.pendingAuthorization;
-    if (
-      pending === null ||
-      state.length === 0 ||
-      code.length === 0 ||
-      state !== pending.state
-    ) {
-      throw new Error("GitHub authorization callback state is invalid");
-    }
-
-    const credential = await (
-      this.dependencies.exchange_authorization_code ??
-      exchangeGitHubAuthorizationCode
-    )(registration, pending, code, this.now());
-
-    await this.persistCredential(credential);
-    this.pendingAuthorization = null;
-    await this.loadRepositoryAccess();
-  }
-
   private requireRegistration(): GitHubAppRegistration {
     if (this.dependencies.registration === null) {
       throw new Error(
@@ -255,7 +204,7 @@ export class GitHubOnboardingController {
     return this.dependencies.registration;
   }
 
-  private async resetTransient(): Promise<void> {
+  private resetTransient(): void {
     this.phase = "idle";
     this.authorization = null;
     this.grantAccessUrl = null;
@@ -264,9 +213,7 @@ export class GitHubOnboardingController {
     this.repositories = [];
     this.error = null;
     this.credential = null;
-    this.pendingAuthorization = null;
     this.deviceState = null;
-    await this.stopLoopbackListener();
   }
 
   private now(): Date {
@@ -334,67 +281,6 @@ export class GitHubOnboardingController {
     }
   }
 
-  private startLoopbackListener(
-    request: GitHubAuthorizationRequest,
-  ): void {
-    const callback = new URL(request.redirect_uri);
-    const port = Number(callback.port);
-    if (
-      callback.protocol !== "http:" ||
-      callback.hostname !== "127.0.0.1" ||
-      !Number.isInteger(port) ||
-      port <= 0
-    ) {
-      throw new Error("GitHub Linux Redirect URI is not a loopback HTTP URL");
-    }
-
-    this.callbackServer = Bun.serve({
-      hostname: "127.0.0.1",
-      port,
-      fetch: async (incoming): Promise<Response> => {
-        const url = new URL(incoming.url);
-        if (url.pathname !== callback.pathname) {
-          return new Response("Not found", { status: 404 });
-        }
-        const state = url.searchParams.get("state") ?? "";
-        const code = url.searchParams.get("code") ?? "";
-        try {
-          await this.completeAuthorization(state, code);
-          setTimeout(() => {
-            void this.stopLoopbackListener();
-          }, 25);
-          return new Response(
-            "<!doctype html><title>Jig GitHub authorization complete</title><p>GitHub authorization completed. You can return to Jig.</p>",
-            {
-              status: 200,
-              headers: { "content-type": "text/html; charset=utf-8" },
-            },
-          );
-        } catch (error) {
-          this.error = error instanceof Error ? error.message : String(error);
-          setTimeout(() => {
-            void this.stopLoopbackListener();
-          }, 25);
-          return new Response(
-            "<!doctype html><title>Jig GitHub authorization failed</title><p>GitHub authorization could not be completed. Return to Jig and retry.</p>",
-            {
-              status: 400,
-              headers: { "content-type": "text/html; charset=utf-8" },
-            },
-          );
-        }
-      },
-    });
-  }
-
-  private async stopLoopbackListener(): Promise<void> {
-    const server = this.callbackServer;
-    this.callbackServer = null;
-    if (server !== null) {
-      await server.stop(true);
-    }
-  }
-
   private async pollDeviceFlow(): Promise<void> {
     const registration = this.requireRegistration();
     const device = this.deviceState;
@@ -445,7 +331,7 @@ export class GitHubOnboardingController {
       ...device,
       retry_after_seconds: result.retry_after_seconds,
     };
-    if (this.authorization?.mode === "device") {
+    if (this.authorization !== null) {
       this.authorization = {
         ...this.authorization,
         retry_after_seconds: result.retry_after_seconds,
