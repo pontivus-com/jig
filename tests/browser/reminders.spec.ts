@@ -38,34 +38,37 @@ async function installNotificationHarness(
       }
     }
 
+    const registration = {
+      showNotification: async (
+        title: string,
+        options?: NotificationOptions,
+      ): Promise<void> => {
+        if (window.__JIG_NOTIFICATION_SHOULD_FAIL__ === true) {
+          throw new Error("synthetic service-worker notification failure");
+        }
+        window.__JIG_NOTIFICATION_CALLS__?.push({
+          title,
+          body: options?.body ?? null,
+          tag: options?.tag ?? null,
+        });
+      },
+      active: { scriptURL: "/jig-notifications-sw.js" },
+    };
+
     Object.defineProperty(window, "Notification", {
       configurable: true,
       value: MockNotification,
     });
-
-    Object.defineProperty(
-      ServiceWorkerRegistration.prototype,
-      "showNotification",
-      {
-        configurable: true,
-        value: async function (
-          title: string,
-          options?: NotificationOptions,
-        ): Promise<void> {
-          if (window.__JIG_NOTIFICATION_SHOULD_FAIL__ === true) {
-            throw new Error("synthetic service-worker notification failure");
-          }
-          window.__JIG_NOTIFICATION_CALLS__?.push({
-            title,
-            body: options?.body ?? null,
-            tag: options?.tag ?? null,
-          });
-        },
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        register: async () => registration,
+        ready: Promise.resolve(registration),
+        getRegistration: async () => registration,
       },
-    );
+    });
   }, permission);
 }
-
 function reminderStart(): Date {
   const start = new Date();
   start.setHours(9, 59, 30, 0);
