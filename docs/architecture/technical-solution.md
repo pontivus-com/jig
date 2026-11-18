@@ -1299,7 +1299,9 @@ Existing valid Jig portable data in the selected repository is continuity author
 
 ### 7.2 Portable snapshot format
 
-`format.json` includes a version discriminator and a UUID **dataset_id**, created once at first initialization and stable on every replica. Every task is `tasks/<uuid>.json` using exactly the canonical Task fields in §4, sorted key order, UTF-8, normalized newlines and strict date/instant formats. No SQLite binary, Git credentials, device-local reminder-delivery receipts, secrets, private system paths, temporary files or browser state enter commits. Completed and unfinished tasks are both included.
+`format.json` includes a version discriminator and a UUID **dataset_id**, created once at first initialization and stable on every replica. Recurrence is a product-driven portable-contract extension, so v1.1 recurrence advances the portable format to **version 2**. Every task remains `tasks/<uuid>.json` using exactly the canonical Task fields in §4, including nullable recurrence membership/occurrence date. Each recurrence rule is `recurrences/<uuid>.json` using the canonical `RecurrenceSeries` fields/pattern. Both trees use sorted key order, UTF-8, normalized newlines and strict date/instant formats. No SQLite binary, Git credentials, device-local reminder-delivery receipts, secrets, private system paths, temporary files or browser state enter commits. Completed and unfinished tasks are both included.
+
+Portable-format v1 remains an accepted upgrade input: it contains Tasks only and is interpreted as every Task having null recurrence fields with no recurrence-series records. After canonical adoption/migration, the next export emits format v2. A v2 snapshot is valid only when every non-null Task recurrence reference resolves to exactly one recurrence record and no duplicate `(recurrence_series_id, recurrence_occurrence_date)` pair exists.
 
 The portable tree is a **complete snapshot**; every file path ID matches its embedded ID; duplicate task IDs or missing/duplicate active positions invalidate the entire import. Once the repository integration boundary presents a complete candidate snapshot, Jig validates it before adoption. Its Task membership is then exact: a Task present in the previously adopted dataset but absent from the newly adopted snapshot is deleted locally in the same transactional import. A missing file in an arbitrary, incomplete or unvalidated worktree is **not** a deletion signal. User deletion is therefore represented naturally by absence of `tasks/<uuid>.json` in a later complete snapshot; no tombstone file or deleted-state record is introduced. Jig never interprets partial Git merge state or repository topology as planning data.
 
@@ -1507,10 +1509,11 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-20 low-friction idle | one Bun service, bounded timers/backoff | Measured low idle CPU/RSS and responsive reopen |
 | JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
 | JIG-FR-22 appearance | JIG-106-SD-02 through SD-05 + SD-07 | One 13-preset registry + independent System/Light/Dark mode fully re-theme all governed surfaces/states and in-app branding from Settings only, without Task/Git mutation |
+| JIG-FR-23 bounded recurrence | §4.2.1 recurrence core + schema v3 + portable format v2 | Weekly/multi-week/monthly exact dates materialize as independent Tasks through required end date; reminder time copies per occurrence; rollover/reschedule of one occurrence does not shift cadence; repeat edits preserve completed history |
 
 ### 10.1 Test boundaries
 
-**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, completed-task rescheduling, reopening, outstanding/completed deletion and edge dates including month/year boundaries.
+**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, completed-task rescheduling, reopening, outstanding/completed deletion, recurrence enumeration/reconciliation and edge dates including month/year boundaries. Recurrence coverage includes multiple weekdays, all-seven daily pattern, every-four-weeks cadence, inclusive end date, monthly 28/29/30/31 behavior, rollover without cadence shift, occurrence-only completion/move/delete and repeat-off/history preservation.
 
 **SQLite integration:** One failed transaction rolls back every affected position/date; uniqueness and completeness checks; restart with WAL; task query by scheduled and completion dates; migration from a fresh empty database; corrupted input rejected before persistence.
 
@@ -1530,7 +1533,7 @@ If the Astryx ListItem/dnd-kit integration fails in the browser, fix the smalles
 
 ## 11. Explicitly deferred capabilities
 
-Independent phone installation, native mobile Git/process/filesystem integration, application-level trash/soft-delete/undo/restore, background/push notifications, Order WorkItem creation, automatic project-task synchronization, metrics/dashboard, team collaboration, repeated scheduling, subtasks, duration estimation and general workflow constraints are excluded. Git history, branch, merge and conflict reconciliation are explicitly **outside Jig's domain**, not deferred Jig features. The canonical Task format and repository record identity intentionally leave room for later extension, but none of these capabilities is represented as implemented by this design.
+Independent phone installation, native mobile Git/process/filesystem integration, application-level trash/soft-delete/undo/restore, background/push notifications, Order WorkItem creation, automatic project-task synchronization, metrics/dashboard, team collaboration, subtasks, duration estimation and general workflow constraints are excluded. Git history, branch, merge and conflict reconciliation are explicitly **outside Jig's domain**, not deferred Jig features. The canonical Task format and repository record identity intentionally leave room for later extension, but none of these capabilities is represented as implemented by this design.
 
 ## 12. Decision history and minimality rationale
 
@@ -1552,7 +1555,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 
 ## v1.1 binding architecture
 
-The detailed normative solution contracts are [JIG-110-SD-01..37](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
+The detailed normative solution contracts are [JIG-110-SD-01..39](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
 
 - runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error;
 - Linux setup uses one bootstrap API/UI and canonical local-repository adoption; optimized GitHub acquisition uses the platform-specific **Jig Desktop** GitHub App, platform secure credentials and deterministic managed checkout; Android uses a separate **Jig Android** GitHub App with the same least-privilege repository semantics. The two App registrations never share client IDs/secrets/callbacks, while both converge on the same canonical repository/portable-data contract;
@@ -1563,6 +1566,7 @@ The detailed normative solution contracts are [JIG-110-SD-01..37](v1.1-mobile-te
 - reminders use one pure due predicate, one UI clock, browser service-worker delivery and Android local scheduling with exact typed outcomes; notification side-effect state is non-canonical;
 - narrow header is one sticky application region with the governed two-row Planner composition and Astryx compact menu; the old <=56px total narrow height is removed;
 - Task drag/drop removes dnd-kit and uses the single Pangea list/touch owner with a dedicated handle, explicit destination index, exact insertion indicator and physical-Android proof gate;
+- bounded recurrence is owned by one pure recurrence-date enumerator plus canonical series/occurrence persistence; finite weekly/monthly series materialize ordinary Tasks, reminders copy per occurrence, rollover never shifts the recurrence slot, SQLite advances to schema v3 and portable snapshots advance to format v2 with v1 upgrade acceptance;
 - development APKs are local certification artifacts; F-Droid is the first public Android distribution target; no Google Play/iOS release work is part of v1.1.
 
 The complete FR→SD traceability remains owned by the versioned v1.1 functional/technical documents and the complete v1.1 implementation plan.
