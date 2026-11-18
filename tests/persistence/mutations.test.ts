@@ -1,17 +1,19 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   applyTaskCommand,
-  initializeDatabase,
-  openDatabase,
   readCanonicalState,
   readMetadata,
   rollForwardOutstandingInDatabase,
   StaleRevisionError,
-} from "../../src/shell/sqlite";
+  type JigSqlConnection,
+} from "../../src/persistence/sqlite";
+import {
+  initializeDatabase,
+  openDatabase,
+} from "../../src/shell/sqlite-bun";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 const IDS = [
@@ -27,21 +29,21 @@ const TIMES = [
 ] as const;
 
 let root = "";
-let db: Database;
+let db: JigSqlConnection;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "jig-mutations-"));
-  db = initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
+  db = await initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
 });
 
 afterEach(async () => {
-  db.close();
+  await db.close();
   await rm(root, { recursive: true, force: true });
 });
 
 describe("daily rollover persistence", () => {
-  it("persists all rolled-forward dates in one revision and marks sync pending", () => {
-    applyTaskCommand(
+  it("persists all rolled-forward dates in one revision and marks sync pending", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -53,7 +55,7 @@ describe("daily rollover persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -64,7 +66,7 @@ describe("daily rollover persistence", () => {
       TIMES[1],
       () => IDS[1],
     );
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -76,7 +78,7 @@ describe("daily rollover persistence", () => {
       () => IDS[2],
     );
 
-    const result = rollForwardOutstandingInDatabase(
+    const result = await rollForwardOutstandingInDatabase(
       db,
       "2026-11-16",
       TIMES[3],
@@ -84,7 +86,7 @@ describe("daily rollover persistence", () => {
 
     expect(result.revision).toBe(4);
     expect(result.moved_task_ids).toEqual([IDS[0], IDS[1]]);
-    const state = readCanonicalState(db);
+    const state = await readCanonicalState(db);
     expect(state.revision).toBe(4);
     expect(
       state.tasks
@@ -103,11 +105,11 @@ describe("daily rollover persistence", () => {
       ["Yesterday two", null],
       ["Today existing", null],
     ]);
-    expect(readMetadata(db).pending_sync).toBe(true);
+    expect((await readMetadata(db)).pending_sync).toBe(true);
   });
 
-  it("does not increment revision when no rollover is required", () => {
-    applyTaskCommand(
+  it("does not increment revision when no rollover is required", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -119,7 +121,7 @@ describe("daily rollover persistence", () => {
       () => IDS[0],
     );
 
-    const result = rollForwardOutstandingInDatabase(
+    const result = await rollForwardOutstandingInDatabase(
       db,
       "2026-11-16",
       TIMES[1],
@@ -129,11 +131,11 @@ describe("daily rollover persistence", () => {
       revision: 1,
       moved_task_ids: [],
     });
-    expect(readCanonicalState(db).revision).toBe(1);
+    expect((await readCanonicalState(db)).revision).toBe(1);
   });
 
-  it("rolls back the entire rollover transaction on SQL failure", () => {
-    applyTaskCommand(
+  it("rolls back the entire rollover transaction on SQL failure", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -144,8 +146,8 @@ describe("daily rollover persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    const before = readCanonicalState(db);
-    db.exec(`
+    const before = await readCanonicalState(db);
+    await db.execute(`
       CREATE TRIGGER inject_rollover_failure
       BEFORE UPDATE OF scheduled_date ON task
       WHEN NEW.scheduled_date = '2026-11-16'
@@ -154,21 +156,21 @@ describe("daily rollover persistence", () => {
       END;
     `);
 
-    expect(() =>
+    await expect(
       rollForwardOutstandingInDatabase(
         db,
         "2026-11-16",
         TIMES[1],
       ),
-    ).toThrow(/injected rollover failure/);
+    ).rejects.toThrow(/injected rollover failure/);
 
-    expect(readCanonicalState(db)).toStrictEqual(before);
+    expect(await readCanonicalState(db)).toStrictEqual(before);
   });
 });
 
 describe("transactional canonical persistence", () => {
-  it("increments the revision exactly once per successful mutation", () => {
-    const created = applyTaskCommand(
+  it("increments the revision exactly once per successful mutation", async () => {
+    const created = await applyTaskCommand(
       db,
       {
         type: "create",
@@ -181,9 +183,9 @@ describe("transactional canonical persistence", () => {
     );
 
     expect(created.revision).toBe(1);
-    expect(readCanonicalState(db).revision).toBe(1);
+    expect((await readCanonicalState(db)).revision).toBe(1);
 
-    const completed = applyTaskCommand(
+    const completed = await applyTaskCommand(
       db,
       { type: "complete", task_id: IDS[0] },
       1,
@@ -193,8 +195,8 @@ describe("transactional canonical persistence", () => {
     expect(readCanonicalState(db).revision).toBe(2);
   });
 
-  it("rejects a stale revision without mutation", () => {
-    applyTaskCommand(
+  it("rejects a stale revision without mutation", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -205,10 +207,10 @@ describe("transactional canonical persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    const before = readCanonicalState(db);
+    const before = await readCanonicalState(db);
 
     expect(() =>
-      applyTaskCommand(
+      await applyTaskCommand(
         db,
         {
           type: "create",
@@ -219,13 +221,13 @@ describe("transactional canonical persistence", () => {
         TIMES[1],
         () => IDS[1],
       ),
-    ).toThrow(StaleRevisionError);
+    ).rejects.toThrow(StaleRevisionError);
 
-    expect(readCanonicalState(db)).toStrictEqual(before);
+    expect(await readCanonicalState(db)).toStrictEqual(before);
   });
 
-  it("rolls back cross-date writes and revision on injected SQL failure", () => {
-    applyTaskCommand(
+  it("rolls back cross-date writes and revision on injected SQL failure", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -236,7 +238,7 @@ describe("transactional canonical persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -248,8 +250,8 @@ describe("transactional canonical persistence", () => {
       () => IDS[1],
     );
 
-    const before = readCanonicalState(db);
-    db.exec(`
+    const before = await readCanonicalState(db);
+    await db.execute(`
       CREATE TRIGGER inject_move_failure
       BEFORE UPDATE OF scheduled_date ON task
       WHEN NEW.scheduled_date = '2026-11-17'
@@ -259,7 +261,7 @@ describe("transactional canonical persistence", () => {
     `);
 
     expect(() =>
-      applyTaskCommand(
+      await applyTaskCommand(
         db,
         {
           type: "move",
@@ -272,11 +274,11 @@ describe("transactional canonical persistence", () => {
       ),
     ).toThrow(/injected move failure/);
 
-    expect(readCanonicalState(db)).toStrictEqual(before);
+    expect(await readCanonicalState(db)).toStrictEqual(before);
   });
 
-  it("restarts from the exact committed canonical state", () => {
-    applyTaskCommand(
+  it("restarts from the exact committed canonical state", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -289,11 +291,11 @@ describe("transactional canonical persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    const before = readCanonicalState(db);
+    const before = await readCanonicalState(db);
     db.close();
 
-    db = openDatabase(join(root, "jig.sqlite"));
+    db = await openDatabase(join(root, "jig.sqlite"));
 
-    expect(readCanonicalState(db)).toStrictEqual(before);
+    expect(await readCanonicalState(db)).toStrictEqual(before);
   });
 });
