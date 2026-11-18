@@ -345,8 +345,16 @@ export async function pollGitHubDeviceAuthorization(
       }),
     },
   );
+  let rawPayload: unknown;
+  try {
+    rawPayload = await response.json();
+  } catch {
+    throw new GitHubAuthError(
+      "GitHub device token response is not valid JSON",
+    );
+  }
   const payload = objectRecord(
-    await response.json(),
+    rawPayload,
     "GitHub device token response is invalid",
   );
 
@@ -365,9 +373,16 @@ export async function pollGitHubDeviceAuthorization(
     return { status: "pending", retry_after_seconds: retryAfterSeconds };
   }
   if (payload.error === "slow_down") {
+    const returnedInterval =
+      typeof payload.interval === "number" &&
+      Number.isInteger(payload.interval) &&
+      payload.interval > 0
+        ? payload.interval
+        : null;
     return {
       status: "slow-down",
-      retry_after_seconds: retryAfterSeconds + 5,
+      retry_after_seconds:
+        returnedInterval ?? retryAfterSeconds + 5,
     };
   }
   if (payload.error === "access_denied") {
