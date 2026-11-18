@@ -121,7 +121,7 @@ jobs:
           python3 -m venv "${RUNNER_TEMP}/fdroid-venv"
           "${RUNNER_TEMP}/fdroid-venv/bin/pip" install "fdroidserver==2.4.5"
           mkdir -p "${RUNNER_TEMP}/fdroid-data/config" "${RUNNER_TEMP}/fdroid-data/metadata"
-          curl -fsSLo "${RUNNER_TEMP}/fdroid-data/config/categories.yml" "https://raw.githubusercontent.com/f-droid/fdroiddata/0a69fdfb526ecdfa7b2209f4b9783875456e93d6/config/categories.yml"
+          curl -fsSLo "${RUNNER_TEMP}/fdroid-data/config/categories.yml" "https://raw.githubusercontent.com/f-droid/fdroiddata/6e52e1ad56721f12c49f48d936e9da05ef740d91/config/categories.yml"
           grep -Fq "Task:" "${RUNNER_TEMP}/fdroid-data/config/categories.yml"
           cp distribution/fdroid/metadata/com.pontivus.jig.yml "${RUNNER_TEMP}/fdroid-data/metadata/"
           (
