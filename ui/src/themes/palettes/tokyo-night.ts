@@ -12,7 +12,12 @@ export const tokyoNightPalette = {
   card: ["#c4c8da", "#292e42"],
   popover: ["#d0d5e3", "#16161e"],
   muted: ["#c4c8da", "#292e42"],
-  textPrimary: ["#3760bf", "#c0caf5"],
+  // Official Day fg is 3.988:1 on bg_dark. Preserve its hue while
+  // darkening 12% toward the Night/body anchor to satisfy Jig's AA floor.
+  textPrimary: [
+    "color-mix(in srgb, #3760bf 88%, #1a1b26)",
+    "#c0caf5",
+  ],
   textSecondary: ["#6172b0", "#a9b1d6"],
   textDisabled: ["#848cb5", "#565f89"],
   accent: ["#9854f1", "#bb9af7"],
