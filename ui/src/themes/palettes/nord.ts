@@ -19,7 +19,9 @@ export const nordPalette = {
   // so strong success fill + light on-success content clears the 4.5:1 floor.
   success: ["#698c5b", "#a3be8c"],
   warning: ["#9a741d", "#ebcb8b"],
-  error: ["#a54851", "#bf616a"],
+  // Dark error is lifted minimally from nord11 so strong error fill + dark
+  // on-error content clears the 4.5:1 floor without changing the red family.
+  error: ["#a54851", "#c0646d"],
   red: ["#a54851", "#bf616a"],
   orange: ["#a86447", "#d08770"],
   yellow: ["#9a741d", "#ebcb8b"],
