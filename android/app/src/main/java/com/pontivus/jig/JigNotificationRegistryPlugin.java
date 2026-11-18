@@ -31,7 +31,7 @@ public final class JigNotificationRegistryPlugin extends Plugin {
         String key
     ) {
         String value = call.getString(key);
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException(key + " is required");
         }
         return value;
