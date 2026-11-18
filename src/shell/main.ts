@@ -19,6 +19,7 @@ import {
   refreshGitHubCredential,
 } from "./github-auth";
 import {
+  assertManagedGitHubSynchronizationRemote,
   createGitHubAskpassHelper,
   githubGitEnvironment,
   isManagedGitHubRepositoryPath,
@@ -93,6 +94,9 @@ async function runConfigured(config: JigConfig): Promise<void> {
     githubAskpass === null
       ? undefined
       : async (): Promise<Readonly<Record<string, string>>> => {
+          await assertManagedGitHubSynchronizationRemote(
+            config.repository_path,
+          );
           let credential = await loadCurrentGitHubCredential();
           if (credential === null) {
             throw new SyncAuthenticationError(
