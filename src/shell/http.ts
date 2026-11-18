@@ -312,15 +312,16 @@ function contentTypeFor(path: string): string {
   }
 }
 
-async function serveUi(
+export async function serveUi(
   pathname: string,
-  dependencies: HttpDependencies,
+  uiDirectory: string,
+  writeToken: string,
 ): Promise<Response> {
   const requested = pathname === "/" ? "index.html" : pathname.slice(1);
-  const absolute = resolve(dependencies.ui_directory, requested);
-  const relation = relative(dependencies.ui_directory, absolute);
+  const absolute = resolve(uiDirectory, requested);
+  const relation = relative(uiDirectory, absolute);
   if (
-    !isAbsolute(dependencies.ui_directory) ||
+    !isAbsolute(uiDirectory) ||
     relation.startsWith("..") ||
     isAbsolute(relation)
   ) {
@@ -331,7 +332,7 @@ async function serveUi(
     let content = await readFile(absolute, "utf8");
     if (requested === "index.html") {
       const bootstrap = `<script>window.__JIG_WRITE_TOKEN__=${JSON.stringify(
-        dependencies.write_token,
+        writeToken,
       )};</script>`;
       content = content.replace("</head>", `${bootstrap}</head>`);
     }
@@ -374,6 +375,13 @@ export function createHttpHandler(
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const { pathname } = url;
+
+    if (
+      request.method === "GET" &&
+      pathname === "/api/v1/setup/status"
+    ) {
+      return json({ mode: "configured" });
+    }
 
     if (request.method === "GET" && pathname === "/api/v1/tasks") {
       try {
@@ -457,7 +465,11 @@ export function createHttpHandler(
     }
 
     if (request.method === "GET") {
-      return serveUi(pathname, dependencies);
+      return serveUi(
+        pathname,
+        dependencies.ui_directory,
+        dependencies.write_token,
+      );
     }
 
     return new Response("Not found", { status: 404 });
