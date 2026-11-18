@@ -8,12 +8,10 @@ import {
 import type {
   CanonicalState,
   CommandResult,
-  RepositoryStatus,
 } from "../protocol";
 export type {
   CanonicalState,
   CommandResult,
-  RepositoryStatus,
 } from "../protocol";
 import {
   assertTaskSet,
