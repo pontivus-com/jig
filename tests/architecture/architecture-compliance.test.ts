@@ -220,6 +220,51 @@ describe("architecture compliance", () => {
     ]);
   });
 
+  it("keeps portable records platform-neutral and Android Git provider-neutral", () => {
+    const portable = source("src/portable.ts");
+    const desktopGit = source("src/shell/git.ts");
+    const nativeGit = source("ui/src/native/git.ts");
+    const nativeHttp = source("ui/src/native/git-http.ts");
+    const nativeFilesystem = source(
+      "ui/src/native/git-filesystem.ts",
+    );
+
+    expect(portable).not.toMatch(
+      /node:|bun:sqlite|Bun\.|@capacitor|isomorphic-git|github/i,
+    );
+    expect(portable).toContain(
+      "export const PORTABLE_FORMAT_VERSION = 2",
+    );
+    expect(desktopGit).toContain('from "../portable"');
+    expect(desktopGit).not.toContain(
+      "export const PORTABLE_FORMAT_VERSION",
+    );
+
+    expect(nativeGit.toLowerCase()).not.toContain("github");
+    expect(nativeGit).not.toContain("client_id");
+    expect(nativeGit).not.toContain("device flow");
+    expect(nativeGit).toContain("onAuth: authCallback(credential)");
+    expect(nativeGit).not.toMatch(
+      /https?:\/\/[^"']*(?:token|password|secret)@/i,
+    );
+    expect(nativeGit).toContain(
+      'export const ANDROID_DATA_BRANCH = "jig-data"',
+    );
+
+    expect(nativeHttp).toContain('dataType = "file"');
+    expect(nativeHttp).toContain(
+      'responseType: "arraybuffer"',
+    );
+    expect(nativeHttp).not.toContain("fetch(");
+    expect(nativeHttp).not.toContain("corsProxy");
+
+    expect(nativeFilesystem).toContain("Directory.Data");
+    expect(nativeFilesystem).toContain("readlink");
+    expect(nativeFilesystem).toContain("symlink");
+    expect(nativeFilesystem).not.toContain("Task");
+    expect(nativeFilesystem.toLowerCase()).not.toContain("github");
+  });
+
   it("keeps the configured UI runtime boundary provider-neutral and singular", () => {
     const runtime = source("ui/src/runtime.ts");
     const app = source("ui/src/app.tsx");
