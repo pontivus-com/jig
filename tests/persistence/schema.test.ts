@@ -3,11 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  initializeDatabase,
-  openDatabase,
   readMetadata,
   SQLITE_SCHEMA_VERSION,
-} from "../../src/shell/sqlite";
+} from "../../src/persistence/sqlite";
+import {
+  initializeDatabase,
+  openDatabase,
+} from "../../src/shell/sqlite-bun";
 
 const roots: string[] = [];
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
@@ -30,26 +32,26 @@ describe("SQLite schema and metadata", () => {
   it("initializes idempotently with WAL and stable dataset identity", async () => {
     const path = await databasePath();
 
-    const first = initializeDatabase(path, DATASET_ID);
-    expect(
-      first.query("PRAGMA journal_mode").get() as { journal_mode: string },
-    ).toEqual({ journal_mode: "wal" });
-    expect(readMetadata(first)).toMatchObject({
+    const first = await initializeDatabase(path, DATASET_ID);
+    expect((await first.query("PRAGMA journal_mode"))[0]).toEqual({
+      journal_mode: "wal",
+    });
+    expect(await readMetadata(first)).toMatchObject({
       schema_version: SQLITE_SCHEMA_VERSION,
       dataset_id: DATASET_ID,
       revision: 0,
       last_exported_revision: 0,
       pending_sync: false,
     });
-    first.close();
+    await first.close();
 
-    const second = initializeDatabase(path, DATASET_ID);
-    expect(readMetadata(second).dataset_id).toBe(DATASET_ID);
-    second.close();
+    const second = await initializeDatabase(path, DATASET_ID);
+    expect((await readMetadata(second)).dataset_id).toBe(DATASET_ID);
+    await second.close();
 
-    const reopened = openDatabase(path);
-    expect(readMetadata(reopened).dataset_id).toBe(DATASET_ID);
-    reopened.close();
+    const reopened = await openDatabase(path);
+    expect((await readMetadata(reopened)).dataset_id).toBe(DATASET_ID);
+    await reopened.close();
   });
 
   it("migrates v1 metadata without carrying Git topology into persistence", async () => {
@@ -114,8 +116,8 @@ describe("SQLite schema and metadata", () => {
     `);
     legacy.close();
 
-    const migrated = openDatabase(path);
-    expect(readMetadata(migrated)).toMatchObject({
+    const migrated = await openDatabase(path);
+    expect(await readMetadata(migrated)).toMatchObject({
       schema_version: SQLITE_SCHEMA_VERSION,
       dataset_id: DATASET_ID,
       revision: 3,
@@ -124,38 +126,36 @@ describe("SQLite schema and metadata", () => {
       last_adopted_head: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       pending_sync: true,
     });
-    const columns = migrated
-      .query("PRAGMA table_info(app_metadata)")
-      .all() as Array<{ name: string }>;
+    const columns = await migrated.query("PRAGMA table_info(app_metadata)");
     expect(columns.map((column) => column.name)).not.toContain("data_ref");
-    expect(migrated.query("SELECT title FROM task").get()).toEqual({
+    expect((await migrated.query("SELECT title FROM task"))[0]).toEqual({
       title: "Preserved task",
     });
-    migrated.close();
+    await migrated.close();
   });
 
   it("rejects an incompatible schema version rather than guessing", async () => {
     const path = await databasePath();
-    const db = initializeDatabase(path, DATASET_ID);
-    db.query(
+    const db = await initializeDatabase(path, DATASET_ID);
+    await db.execute(
       "UPDATE app_metadata SET schema_version = 999 WHERE singleton = 1",
-    ).run();
-    db.close();
+    );
+    await db.close();
 
-    expect(() => openDatabase(path)).toThrow(
+    await expect(openDatabase(path)).rejects.toThrow(
       /Unsupported SQLite schema version 999/,
     );
   });
 
   it("rejects a different configured dataset identity", async () => {
     const path = await databasePath();
-    initializeDatabase(path, DATASET_ID).close();
+    await (await initializeDatabase(path, DATASET_ID)).close();
 
-    expect(() =>
+    await expect(
       initializeDatabase(
         path,
         "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0002",
       ),
-    ).toThrow(/dataset identity/);
+    ).rejects.toThrow(/dataset identity/);
   });
 });
