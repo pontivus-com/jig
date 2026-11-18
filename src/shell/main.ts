@@ -23,7 +23,6 @@ import {
 import {
   loadCurrentGitHubCredential,
   storeGitHubCredential,
-  type GitHubCredential,
 } from "./secret-service";
 import { createSyncController } from "./sync";
 import {
@@ -49,11 +48,13 @@ function writeToken(): string {
 function createStatus(
   config: JigConfig,
   repositoryStatus: RepositoryStatus,
+  githubReconnectAvailable: boolean,
 ): ServiceStatus {
   return {
     ready: true,
     repository_path: config.repository_path,
     repository_status: repositoryStatus,
+    github_reconnect_available: githubReconnectAvailable,
   };
 }
 
@@ -82,15 +83,11 @@ async function runConfigured(config: JigConfig): Promise<void> {
   )
     ? await createGitHubAskpassHelper()
     : null;
-  let currentGitHubCredential: GitHubCredential | null = null;
-
   const getGitHubNetworkEnvironment =
     githubAskpass === null
       ? undefined
       : async (): Promise<Readonly<Record<string, string>>> => {
-          let credential =
-            currentGitHubCredential ??
-            await loadCurrentGitHubCredential();
+          let credential = await loadCurrentGitHubCredential();
           if (credential === null) {
             throw new Error(
               "GitHub credential is unavailable; reconnect GitHub",
@@ -115,12 +112,21 @@ async function runConfigured(config: JigConfig): Promise<void> {
             }
           }
 
-          currentGitHubCredential = credential;
           return githubGitEnvironment(
             githubAskpass.path,
             credential.access_token,
           );
         };
+
+  const githubReconnect =
+    githubAskpass === null
+      ? undefined
+      : new GitHubOnboardingController({
+          registration: GITHUB_APP_REGISTRATION,
+          config_path: defaultConfigPath(),
+          http_port: config.http_port,
+          on_configured: () => undefined,
+        });
 
   const sync = createSyncController(db, {
     repository_path: config.repository_path,
@@ -191,9 +197,17 @@ async function runConfigured(config: JigConfig): Promise<void> {
     ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
     now: () => new Date().toISOString(),
     create_id: () => crypto.randomUUID(),
-    get_status: () => createStatus(config, sync.status()),
+    get_status: () =>
+      createStatus(
+        config,
+        sync.status(),
+        githubReconnect !== undefined,
+      ),
     get_diagnostics: () => createDiagnostics(config, sync.status()),
     trigger_sync: sync.trigger,
+    ...(githubReconnect === undefined
+      ? {}
+      : { github_reconnect: githubReconnect }),
     ensure_current_day_rollover: ensureCurrentDayRollover,
     on_task_mutation: sync.notifyMutation,
   });
