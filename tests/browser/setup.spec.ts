@@ -38,7 +38,7 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
     });
   });
   await routeGitHubStatus(page, {
-    onboarding_available: false,
+    onboarding_available: true,
     reconnect_available: false,
   });
 
@@ -75,7 +75,14 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
       body: JSON.stringify({
         ready: true,
         repository_path: "/tmp/planning",
-        repository_status: "local-only",
+        repository_status: {
+          local_git: "committed",
+          remote: {
+            state: "not-configured",
+            remote_name: null,
+            remote_location: null,
+          },
+        },
       }),
     });
   });
@@ -310,8 +317,21 @@ test("Device Flow continues polling when GitHub returns the same interval", asyn
 test("configured managed repository reconnects GitHub through Device Flow without repository setup", async ({
   page,
 }) => {
-  let repositoryStatus = "sync-issue";
+  let remoteStatus:
+    | "pending"
+    | "retrying"
+    | "synchronized"
+    | "sync-issue" = "sync-issue";
   let syncCalls = 0;
+
+  const repositoryStatus = () => ({
+    local_git: "committed" as const,
+    remote: {
+      state: remoteStatus,
+      remote_name: "origin",
+      remote_location: "https://github.com/pontivus-com/planning.git",
+    },
+  });
 
   await page.route("**/api/v1/setup/status", async (route) => {
     await route.fulfill({
@@ -339,7 +359,7 @@ test("configured managed repository reconnects GitHub through Device Flow withou
         ready: true,
         repository_path:
           "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
-        repository_status: repositoryStatus,
+        repository_status: repositoryStatus(),
       }),
     });
   });
@@ -355,7 +375,7 @@ test("configured managed repository reconnects GitHub through Device Flow withou
           "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
         portable_format_version: 1,
         repository_adapter_healthy:
-          repositoryStatus !== "sync-issue",
+          remoteStatus !== "sync-issue",
       }),
     });
   });
@@ -393,12 +413,12 @@ test("configured managed repository reconnects GitHub through Device Flow withou
   );
   await page.route("**/api/v1/sync", async (route) => {
     syncCalls += 1;
-    repositoryStatus = "synchronized";
+    remoteStatus = "synchronized";
     await route.fulfill({
       status: 202,
       contentType: "application/json",
       body: JSON.stringify({
-        repository_status: "synchronized",
+        repository_status: repositoryStatus(),
       }),
     });
   });
@@ -425,7 +445,7 @@ test("configured managed repository reconnects GitHub through Device Flow withou
   await expect.poll(() => syncCalls).toBe(1);
   await expect(
     page.getByText(
-      "Local planning data and the configured repository are synchronized.",
+      "The current Jig snapshot is committed locally and synchronized remotely.",
     ),
   ).toBeVisible();
   await expect(
