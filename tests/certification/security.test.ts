@@ -101,6 +101,7 @@ describe("V1 security and trust boundaries", () => {
       dataset_id:
         "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001",
       tasks: [],
+      recurrences: [],
       files: new Map([
         [
           "format.json",
@@ -129,6 +130,8 @@ describe("V1 security and trust boundaries", () => {
       reference: "https://example.com/matter",
       note: "Private note",
       reminder_time: null,
+      recurrence_series_id: null,
+      recurrence_occurrence_date: null,
       completed_at: null,
       created_at: "2026-11-16T01:00:00.000Z",
       updated_at: "2026-11-16T01:00:00.000Z",
