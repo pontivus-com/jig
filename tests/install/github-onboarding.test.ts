@@ -1,27 +1,24 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   GitHubOnboardingController,
 } from "../../src/shell/github-onboarding";
 import type {
   GitHubAppRegistration,
-  GitHubAuthorizationRequest,
 } from "../../src/shell/github-auth";
 import type { GitHubCredential } from "../../src/shell/secret-service";
 
 const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-test",
   client_id: "desktop-client-id",
-  client_secret: "public-desktop-client-secret",
-  redirect_uri: "http://127.0.0.1:47832/setup/github/callback",
 };
 
-const AUTHORIZATION: GitHubAuthorizationRequest = {
-  state: "state-token",
-  code_verifier: "verifier",
-  authorization_url:
-    "https://github.com/login/oauth/authorize?client_id=client-id",
-  redirect_uri: REGISTRATION.redirect_uri,
-};
+const DEVICE_AUTHORIZATION = {
+  device_code: "device-code",
+  user_code: "ABCD-EFGH",
+  verification_uri: "https://github.com/login/device",
+  expires_in: 900,
+  interval: 5,
+} as const;
 
 const CREDENTIAL: GitHubCredential = {
   user_id: 42,
@@ -32,12 +29,6 @@ const CREDENTIAL: GitHubCredential = {
 };
 
 describe("GitHub onboarding orchestration", () => {
-  afterEach(async () => {
-    // The callback listener is stopped after each callback response. Yield once
-    // so the queued shutdown completes before another test can bind the port.
-    await Bun.sleep(40);
-  });
-
   it("stays honestly unavailable without governed registration", async () => {
     const controller = new GitHubOnboardingController({
       registration: null,
@@ -57,7 +48,7 @@ describe("GitHub onboarding orchestration", () => {
     );
   });
 
-  it("authorizes, lists only app-visible repositories, acquires and canonically configures", async () => {
+  it("authorizes through Device Flow, lists app-visible repositories, acquires and canonically configures", async () => {
     let stored: GitHubCredential | null = null;
     let configuredPath: string | null = null;
     let acquiredRepositoryId: number | null = null;
@@ -70,16 +61,11 @@ describe("GitHub onboarding orchestration", () => {
         configuredPath = config.repository_path;
       },
       assert_secret_service: async () => undefined,
-      create_authorization_request: async () => AUTHORIZATION,
-      exchange_authorization_code: async (
-        _registration,
-        request,
-        code,
-      ) => {
-        expect(request.state).toBe(AUTHORIZATION.state);
-        expect(code).toBe("authorization-code");
-        return CREDENTIAL;
-      },
+      start_device_authorization: async () => DEVICE_AUTHORIZATION,
+      poll_device_authorization: async () => ({
+        status: "authorized" as const,
+        credential: CREDENTIAL,
+      }),
       store_credential: async (credential) => {
         stored = credential;
       },
@@ -125,16 +111,14 @@ describe("GitHub onboarding orchestration", () => {
       available: true,
       phase: "authorizing",
       authorization: {
-        mode: "browser",
-        authorization_url: AUTHORIZATION.authorization_url,
+        mode: "device",
+        verification_uri: "https://github.com/login/device",
+        user_code: "ABCD-EFGH",
+        retry_after_seconds: 5,
       },
     });
 
-    const callback = await fetch(
-      "http://127.0.0.1:47832/setup/github/callback" +
-        "?state=state-token&code=authorization-code",
-    );
-    expect(callback.status).toBe(200);
+    await controller.refreshAccess();
 
     expect(stored).toStrictEqual(CREDENTIAL);
     expect(controller.snapshot()).toMatchObject({
@@ -159,32 +143,18 @@ describe("GitHub onboarding orchestration", () => {
   });
 
   it("exposes Grant and Manage access states without broadening repository scope", async () => {
-    const fallbackRegistration: GitHubAppRegistration = {
-      ...REGISTRATION,
-      redirect_uri: "https://example.invalid/callback",
-    };
-    const startDevice = async () => ({
-      device_code: "device",
-      user_code: "CODE",
-      verification_uri: "https://github.com/login/device",
-      expires_in: 900,
-      interval: 5,
-    });
+    const startDevice = async () => DEVICE_AUTHORIZATION;
     const pollDevice = async () => ({
       status: "authorized" as const,
       credential: CREDENTIAL,
     });
 
     const grantController = new GitHubOnboardingController({
-      registration: fallbackRegistration,
+      registration: REGISTRATION,
       config_path: "/tmp/jig-config.json",
       http_port: 47831,
       on_configured: () => undefined,
       assert_secret_service: async () => undefined,
-      create_authorization_request: async () => ({
-        ...AUTHORIZATION,
-        redirect_uri: fallbackRegistration.redirect_uri,
-      }),
       start_device_authorization: startDevice,
       poll_device_authorization: pollDevice,
       store_credential: async () => undefined,
@@ -195,7 +165,7 @@ describe("GitHub onboarding orchestration", () => {
     const started = await grantController.start();
     expect(started.authorization).toMatchObject({
       mode: "device",
-      user_code: "CODE",
+      user_code: "ABCD-EFGH",
     });
     const grant = await grantController.refreshAccess();
     expect(grant).toMatchObject({
@@ -206,15 +176,11 @@ describe("GitHub onboarding orchestration", () => {
     });
 
     const manageController = new GitHubOnboardingController({
-      registration: fallbackRegistration,
+      registration: REGISTRATION,
       config_path: "/tmp/jig-config.json",
       http_port: 47831,
       on_configured: () => undefined,
       assert_secret_service: async () => undefined,
-      create_authorization_request: async () => ({
-        ...AUTHORIZATION,
-        redirect_uri: fallbackRegistration.redirect_uri,
-      }),
       start_device_authorization: startDevice,
       poll_device_authorization: pollDevice,
       store_credential: async () => undefined,
