@@ -153,7 +153,7 @@ async function readUtf8(
   );
   if (typeof value !== "string") {
     throw new AndroidGitAdapterError(
-      `Portable path ${relativePath} was not readable as UTF-8`,
+      `Portable path ${relativePath} was not readable using UTF-8`,
     );
   }
   return value;
