@@ -123,12 +123,43 @@ body {
     gap: var(--spacing-0-5);
   }
 
-  .jig-header-week-range,
-  .jig-header-destination-title {
+  .jig-header-week-range {
     min-width: 0;
     white-space: nowrap;
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-semibold);
+  }
+
+  .jig-header-destination-heading {
+    display: grid;
+    min-width: 0;
+    max-width: min(42vw, 34rem);
+    justify-items: center;
+    gap: 0;
+    text-align: center;
+  }
+
+  .jig-header-destination-title {
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-sm);
+    line-height: 1.1;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .jig-header-destination-subtitle {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .jig-header-nav-active {
@@ -160,6 +191,14 @@ body {
     min-width: 0;
     justify-self: center;
     overflow: hidden;
+  }
+
+  .jig-header-mobile-title .jig-header-destination-heading {
+    max-width: 100%;
+  }
+
+  .jig-header-mobile-title .jig-header-destination-subtitle {
+    white-space: normal;
   }
 
   .jig-header-mobile-temporal-row {
@@ -248,38 +287,6 @@ body {
   .jig-status-unknown {
     color: var(--color-text-secondary);
     background: var(--color-background-muted);
-  }
-
-  .jig-reference-heading {
-    display: flex;
-    min-height: 58px;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--spacing-6);
-  }
-
-  .jig-reference-heading h1,
-  .jig-reference-heading p {
-    margin: 0;
-  }
-
-  .jig-reference-heading h1 {
-    font-size: var(--font-size-2xl);
-    line-height: var(--text-heading-1-leading);
-    font-weight: var(--font-weight-bold);
-  }
-
-  .jig-reference-heading p {
-    margin-block-start: var(--spacing-1);
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    line-height: var(--text-body-leading);
-  }
-
-  .jig-reference-heading .jig-status-control {
-    min-width: 180px;
-    min-height: calc(var(--size-element-lg) + var(--spacing-1));
-    border-radius: var(--radius-full);
   }
 
   .jig-view-heading {
@@ -711,7 +718,7 @@ body {
   .jig-history-groups {
     display: grid;
     gap: calc(var(--spacing-6) + var(--spacing-0-5));
-    margin-block-start: calc(var(--spacing-9) + var(--spacing-0-5));
+    margin-block-start: var(--spacing-5);
   }
 
   .jig-history-group-heading {
@@ -737,7 +744,7 @@ body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--spacing-7) 30px;
-    margin-block-start: var(--spacing-10);
+    margin-block-start: var(--spacing-5);
   }
 
   .jig-settings-panel {
