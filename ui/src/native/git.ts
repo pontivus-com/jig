@@ -134,7 +134,7 @@ async function pathExists(
   }
 }
 
-async function removeCreatedWorktree(
+export async function removeAndroidManagedCheckout(
   effects: AndroidGitEffects,
 ): Promise<void> {
   try {
@@ -241,7 +241,7 @@ export async function acquireAndroidPortableRepository(
         credential,
       );
     } catch (error) {
-      await removeCreatedWorktree(effects);
+      await removeAndroidManagedCheckout(effects);
       throw error;
     }
   }
@@ -293,7 +293,7 @@ export async function acquireAndroidPortableRepository(
     );
     return snapshot;
   } catch (error) {
-    await removeCreatedWorktree(effects);
+    await removeAndroidManagedCheckout(effects);
     throw error;
   }
 }
