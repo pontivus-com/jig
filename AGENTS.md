@@ -120,6 +120,7 @@ v1.1 adds one independently installable **Android** application while preserving
 - TypeScript strictness is architectural. Do not add `any`, double casts, non-null assertions, or unchecked type assertions to silence the compiler. Untyped external data must be narrowed/validated at the smallest boundary; justified third-party interop assertions stay local to that adapter.
 - Apply DRY at the semantic-owner level: one state/algorithm/mapping for one meaning. Consolidate duplicate Planner sequence rendering, status mapping, date-header behavior and command construction rather than maintaining responsive or destination-specific copies.
 - Do not introduce DTO/mapping hierarchies, service/repository class stacks, workflow frameworks, or parallel semantic owners without a demonstrated requirement.
+- At an external-system integration boundary, preserve the authoritative system's protocol/configuration terminology for fields and concepts. Jig may classify how that material is handled, but must not rename the external concern into a parallel Jig vocabulary. For GitHub App OAuth this means retaining `client_id`, `client_secret` and `redirect_uri` exactly; the fact that a public/native client's `client_secret` is non-confidential registration material does not change its GitHub name.
 
 ## Release governance
 
