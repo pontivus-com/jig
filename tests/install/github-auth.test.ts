@@ -11,7 +11,7 @@ import {
   refreshGitHubCredential,
   startGitHubDeviceAuthorization,
   type GitHubFetch,
-} from "../../src/shell/github-auth";
+} from "../../src/github-auth";
 
 const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-mobile",
