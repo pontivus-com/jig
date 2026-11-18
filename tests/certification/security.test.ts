@@ -153,6 +153,8 @@ describe("V1 security and trust boundaries", () => {
 
     // GitHub's protocol terminology is authoritative at the integration boundary.
     expect(auth).toContain("readonly client_secret: string");
+    expect(auth).not.toContain("public_client_secret");
+    expect(registration).not.toContain("public_client_secret");
     expect(registration).toContain("client_secret:");
     expect(registration).toContain("client_id:");
     expect(registration).toContain("redirect_uri:");
