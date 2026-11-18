@@ -71,7 +71,7 @@ public final class JigSecureCredentialsPlugin extends Plugin {
         String key
     ) {
         String value = object.getString(key);
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException(key + " is required");
         }
         return value;
