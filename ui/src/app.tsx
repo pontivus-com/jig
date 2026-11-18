@@ -522,8 +522,12 @@ function ConfiguredApp({
   ) : repositoryStatus.key === "sync-issue" ? (
     <Banner
       status="warning"
-      title="Repository synchronization issue"
-      description="Local planning data remains safe. Repository synchronization currently has an operational issue."
+      title={
+        repositoryStatus.label === "Git issue"
+          ? "Local Git issue"
+          : "Repository synchronization issue"
+      }
+      description={repositoryStatus.message}
       container="section"
       collapsible={false}
       endContent={
