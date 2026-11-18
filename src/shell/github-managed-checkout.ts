@@ -8,7 +8,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { runGit } from "./git";
 import {
   normalizedGitHubRepository,
@@ -104,7 +104,7 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-async function createAskpassHelper(root: string): Promise<string> {
+async function writeAskpassHelper(root: string): Promise<string> {
   const helper = join(root, "jig-github-askpass.sh");
   await writeFile(
     helper,
@@ -122,6 +122,67 @@ async function createAskpassHelper(root: string): Promise<string> {
   );
   await chmod(helper, 0o700);
   return helper;
+}
+
+export interface GitHubAskpassHelper {
+  readonly path: string;
+  readonly dispose: () => Promise<void>;
+}
+
+export async function createGitHubAskpassHelper(): Promise<GitHubAskpassHelper> {
+  const root = await mkdtemp(join(tmpdir(), "jig-github-askpass-"));
+  const path = await writeAskpassHelper(root);
+  return {
+    path,
+    dispose: () => rm(root, { recursive: true, force: true }),
+  };
+}
+
+export function githubGitEnvironment(
+  helperPath: string,
+  accessToken: string,
+): Readonly<Record<string, string>> {
+  if (helperPath.length === 0 || accessToken.length === 0) {
+    throw new InstallationError("Invalid GitHub Git authentication input");
+  }
+  return {
+    GIT_ASKPASS: helperPath,
+    GIT_TERMINAL_PROMPT: "0",
+    JIG_GITHUB_ACCESS_TOKEN: accessToken,
+  };
+}
+
+export function isManagedGitHubRepositoryPath(
+  repositoryPath: string,
+  home = homedir(),
+): boolean {
+  const root = resolve(
+    home,
+    ".local",
+    "share",
+    "jig-data",
+    "repositories",
+    "github",
+  );
+  const relation = relative(root, resolve(repositoryPath));
+  if (
+    relation.length === 0 ||
+    relation.startsWith("..") ||
+    resolve(root, relation) !== resolve(repositoryPath)
+  ) {
+    return false;
+  }
+  const segments = relation.split(sep);
+  if (segments.length !== 2) {
+    return false;
+  }
+  try {
+    validateGitHubSegment(segments[0] ?? "", "owner");
+    validateGitHubSegment(segments[1] ?? "", "repository name");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function acquireManagedGitHubRepository(
@@ -155,12 +216,9 @@ export async function acquireManagedGitHubRepository(
   const tempPath = await mkdtemp(
     join(ownerDirectory, `.${selection.name}.clone-`),
   );
-  const helperRoot = await mkdtemp(
-    join(tmpdir(), "jig-github-askpass-"),
-  );
+  const askpass = await createGitHubAskpassHelper();
 
   try {
-    const askpass = await createAskpassHelper(helperRoot);
     const cloneUrl =
       `https://github.com/${selection.owner}/${selection.name}.git`;
     const cloned = await runGit(
@@ -168,9 +226,7 @@ export async function acquireManagedGitHubRepository(
       ["clone", "--", cloneUrl, tempPath],
       undefined,
       {
-        GIT_ASKPASS: askpass,
-        GIT_TERMINAL_PROMPT: "0",
-        JIG_GITHUB_ACCESS_TOKEN: credential.access_token,
+        ...githubGitEnvironment(askpass.path, credential.access_token),
       },
     );
     if (cloned.exit_code !== 0) {
@@ -195,6 +251,6 @@ export async function acquireManagedGitHubRepository(
     return await validateSelectedRepository(finalPath);
   } finally {
     await rm(tempPath, { recursive: true, force: true });
-    await rm(helperRoot, { recursive: true, force: true });
+    await askpass.dispose();
   }
 }
