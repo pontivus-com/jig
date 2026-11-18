@@ -28,10 +28,7 @@ export function GitHubDeviceFlowPanel({
       void refreshRef.current();
     }, authorization.retry_after_seconds * 1000);
     return () => window.clearTimeout(timer);
-  }, [
-    authorization?.retry_after_seconds,
-    authorization?.user_code,
-  ]);
+  }, [authorization]);
 
   if (authorization === null) {
     return null;
