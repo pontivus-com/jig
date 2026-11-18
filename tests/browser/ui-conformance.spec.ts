@@ -497,6 +497,66 @@ test("desktop header stays compact while narrow header uses sticky destination-s
   expect(narrowPlannerHeight).toBeGreaterThan(narrowSettingsHeight);
 });
 
+test("History and Settings headings exist once in the application header", async ({
+  page,
+}) => {
+  const cases = [
+    {
+      destination: "History",
+      subtitle: "Completed work grouped by actual completion date",
+      body: ".jig-history-view",
+    },
+    {
+      destination: "Settings",
+      subtitle: "Repository, synchronization, appearance and diagnostics",
+      body: ".jig-settings-view",
+    },
+  ] as const;
+
+  for (const width of [1440, 390] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    await waitForResponsiveHeader(page, width);
+
+    for (const item of cases) {
+      if (width >= 1168) {
+        await page
+          .getByRole("button", { name: item.destination, exact: true })
+          .click();
+      } else {
+        await page
+          .getByRole("button", { name: "Open navigation menu" })
+          .click();
+        await page
+          .getByRole("menuitem", { name: new RegExp(`^${item.destination}`) })
+          .click();
+      }
+
+      const header = page.locator(".jig-app-header");
+      await expect(
+        header.getByRole("heading", {
+          level: 1,
+          name: item.destination,
+          exact: true,
+        }),
+      ).toHaveCount(1);
+      await expect(
+        header.getByText(item.subtitle, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", {
+          level: 1,
+          name: item.destination,
+          exact: true,
+        }),
+      ).toHaveCount(1);
+      await expect(page.locator(item.body).getByRole("heading", { level: 1 }))
+        .toHaveCount(0);
+      await expect(page.locator(item.body).getByText(item.subtitle, { exact: true }))
+        .toHaveCount(0);
+    }
+  }
+});
+
 test("selected Task today priority and status use distinct governed semantics", async ({
   page,
 }) => {
