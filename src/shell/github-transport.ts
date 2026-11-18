@@ -7,7 +7,7 @@ import type {
 import {
   GitHubAuthError,
   refreshGitHubCredential,
-} from "./github-auth";
+} from "../github-auth";
 import {
   createGitHubAskpassHelper,
   githubGitEnvironment,
