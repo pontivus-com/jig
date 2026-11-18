@@ -342,6 +342,104 @@ test("whole-card desktop drag moves exactly once without runtime errors or selec
   expect(runtimeErrors).toEqual([]);
 });
 
+test("selection focus and drag preserve the High-priority semantic cue", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Combined semantic source", today, { priority: "HIGH" });
+  await createTask(page, "Combined semantic target", today);
+  await page.reload();
+
+  const source = await taskCard(page, "Combined semantic source");
+  await source.click();
+  await expect(source).toHaveClass(/jig-task-card-selected/);
+
+  const selectedColors = await source.evaluate((element) => {
+    const resolveColor = (token: string): string => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(${token})`;
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+    const style = getComputedStyle(element);
+    return {
+      leading: style.borderInlineStartColor,
+      top: style.borderTopColor,
+      priority: resolveColor("--jig-priority-high"),
+      selected: resolveColor("--jig-state-task-selected-border"),
+    };
+  });
+  expect(selectedColors.leading).toBe(selectedColors.priority);
+  expect(selectedColors.top).toBe(selectedColors.selected);
+
+  const actions = source.getByRole("button", {
+    name: "Actions for Combined semantic source",
+  });
+  await actions.focus();
+  const focusTreatment = await source.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      outlineWidth: style.outlineWidth,
+      outlineStyle: style.outlineStyle,
+      boxShadow: style.boxShadow,
+      containsFocus: element.contains(document.activeElement),
+    };
+  });
+  expect(focusTreatment.containsFocus).toBe(true);
+  expect(
+    focusTreatment.outlineWidth !== "0px" ||
+      focusTreatment.outlineStyle !== "none" ||
+      focusTreatment.boxShadow !== "none",
+  ).toBe(true);
+
+  await page.keyboard.press("Escape");
+  await page.locator(".jig-content").click({ position: { x: 2, y: 2 } });
+  await expect(page.getByRole("dialog", { name: "Combined semantic source" })).toBeHidden();
+
+  const target = await taskCard(page, "Combined semantic target");
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (sourceBox === null || targetBox === null) {
+    throw new Error("Combined-state drag geometry unavailable");
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 8,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 3 },
+  );
+
+  const overlay = page.locator(".jig-drag-card-overlay");
+  await expect(overlay).toBeVisible();
+  const dragColors = await overlay.evaluate((element) => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--jig-priority-high)";
+    document.body.append(probe);
+    const priority = getComputedStyle(probe).color;
+    probe.remove();
+    return {
+      leading: getComputedStyle(element).borderInlineStartColor,
+      priority,
+    };
+  });
+  expect(dragColors.leading).toBe(dragColors.priority);
+
+  await page.mouse.move(
+    targetBox.x + targetBox.width / 2,
+    targetBox.y + targetBox.height / 2,
+    { steps: 8 },
+  );
+  await page.mouse.up();
+});
+
 test("whole-card desktop drag reorders within a date at the exact target index", async ({
   page,
 }) => {
