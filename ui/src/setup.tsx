@@ -133,37 +133,39 @@ export function SetupView({
           />
         )}
 
-        <Section
-          className="jig-setup-card"
-          padding={5}
-          dividers={["top", "bottom", "start", "end"]}
-        >
-          <VStack gap={4}>
-            <div>
-              <h2>Use a repository already on this computer</h2>
-              <p>
-                Enter the absolute path to the root of an existing writable
-                Git worktree. A remote is optional.
-              </p>
-            </div>
-            <TextInput
-              label="Repository path"
-              value={repositoryPath}
-              onChange={setRepositoryPath}
-              width="100%"
-              placeholder="/home/you/planning"
-              isRequired
-            />
-            <Button
-              label="Use this repository"
-              variant="primary"
-              isLoading={isOperating}
-              onClick={() => {
-                void completeLocalSetup();
-              }}
-            />
-          </VStack>
-        </Section>
+        {status.local_repository_available ? (
+          <Section
+            className="jig-setup-card"
+            padding={5}
+            dividers={["top", "bottom", "start", "end"]}
+          >
+            <VStack gap={4}>
+              <div>
+                <h2>Use a repository already on this computer</h2>
+                <p>
+                  Enter the absolute path to the root of an existing writable
+                  Git worktree. A remote is optional.
+                </p>
+              </div>
+              <TextInput
+                label="Repository path"
+                value={repositoryPath}
+                onChange={setRepositoryPath}
+                width="100%"
+                placeholder="/home/you/planning"
+                isRequired
+              />
+              <Button
+                label="Use this repository"
+                variant="primary"
+                isLoading={isOperating}
+                onClick={() => {
+                  void completeLocalSetup();
+                }}
+              />
+            </VStack>
+          </Section>
+        ) : null}
 
         <Section
           className="jig-setup-card"
