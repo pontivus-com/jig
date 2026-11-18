@@ -145,10 +145,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS task_active_position
   ON task(scheduled_date, position)
   WHERE completed_at IS NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS task_recurrence_slot
-  ON task(recurrence_series_id, recurrence_occurrence_date)
-  WHERE recurrence_series_id IS NOT NULL;
-
 CREATE INDEX IF NOT EXISTS task_completed_at
   ON task(completed_at);
 
@@ -450,6 +446,16 @@ async function migrateRecurrenceSchema(
   });
 }
 
+async function ensureRecurrenceIndexes(
+  connection: JigSqlConnection,
+): Promise<void> {
+  await connection.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS task_recurrence_slot
+      ON task(recurrence_series_id, recurrence_occurrence_date)
+      WHERE recurrence_series_id IS NOT NULL
+  `);
+}
+
 export async function initializePersistence(
   connection: JigSqlConnection,
   datasetId: string,
@@ -474,6 +480,7 @@ export async function initializePersistence(
     [SQLITE_SCHEMA_VERSION, datasetId],
   );
   await migrateRecurrenceSchema(connection);
+  await ensureRecurrenceIndexes(connection);
 
   const metadata = await readMetadata(connection);
   if (metadata.schema_version !== SQLITE_SCHEMA_VERSION) {
@@ -496,6 +503,7 @@ export async function validateOpenedPersistence(
   await connection.execute("PRAGMA foreign_keys = ON;");
   await migrateMetadataSchema(connection);
   await migrateRecurrenceSchema(connection);
+  await ensureRecurrenceIndexes(connection);
   const metadata = await readMetadata(connection);
 
   if (metadata.schema_version !== SQLITE_SCHEMA_VERSION) {
