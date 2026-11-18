@@ -68,6 +68,8 @@ import {
   type TaskWorkspaceState,
 } from "./task-workspace";
 import { useLayoutMode } from "./use-layout-mode";
+import { SetupView } from "./setup";
+import { readSetupStatus, type SetupStatus } from "./setup-http";
 interface PlannerState {
   readonly displayedWeekStart: string;
 }
@@ -87,7 +89,7 @@ function workspaceTaskId(state: TaskWorkspaceState): string | null {
   return state.mode === "task" ? state.taskId : null;
 }
 
-export function App(): React.ReactElement {
+function ConfiguredApp(): React.ReactElement {
   const layoutMode = useLayoutMode();
   const reminderNow = useReminderClock();
   const [destination, setDestination] = useState<Destination>("planner");
@@ -672,6 +674,64 @@ export function App(): React.ReactElement {
         />
 
         <ReminderMonitor tasks={tasks} now={reminderNow} />
+      </LayerProvider>
+    </Theme>
+  );
+}
+
+
+export function App(): React.ReactElement {
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
+
+  const refreshSetup = useCallback(async (): Promise<void> => {
+    setSetupError(null);
+    try {
+      setSetupStatus(await readSetupStatus());
+    } catch (error) {
+      setSetupError(errorMessage(error));
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshSetup();
+  }, [refreshSetup]);
+
+  if (setupStatus?.mode === "configured") {
+    return <ConfiguredApp />;
+  }
+
+  return (
+    <Theme theme={themeFor(readThemePreset())} mode={readAppearanceMode()}>
+      <LayerProvider>
+        {setupStatus?.mode === "bootstrap" ? (
+          <SetupView status={setupStatus} />
+        ) : (
+          <main className="jig-setup">
+            <div className="jig-setup-content">
+              <h1>Jig</h1>
+              {setupError === null ? (
+                <p>Checking repository setup…</p>
+              ) : (
+                <>
+                  <Banner
+                    status="error"
+                    title="Jig could not read setup state"
+                    description={setupError}
+                    collapsible={false}
+                  />
+                  <Button
+                    label="Retry"
+                    variant="primary"
+                    onClick={() => {
+                      void refreshSetup();
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          </main>
+        )}
       </LayerProvider>
     </Theme>
   );
