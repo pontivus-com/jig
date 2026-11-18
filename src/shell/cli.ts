@@ -74,15 +74,18 @@ async function jsonResponse(
   return value as Record<string, unknown>;
 }
 
+function isObjectRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
+
 function objectOrNull(value: unknown): Record<string, unknown> | null {
-  if (
-    value === null ||
-    typeof value !== "object" ||
-    Array.isArray(value)
-  ) {
-    return null;
-  }
-  return value as Record<string, unknown>;
+  return isObjectRecord(value) ? value : null;
 }
 
 function repositoryStatusLines(value: unknown): readonly string[] {
