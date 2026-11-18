@@ -146,6 +146,25 @@ describe("V1 security and trust boundaries", () => {
     expect(portable).not.toContain(process.cwd());
   });
 
+  it("keeps GitHub public registration material distinct from user credentials", async () => {
+    const registration = await source("src/shell/github-registration.ts");
+    const auth = await source("src/shell/github-auth.ts");
+    const secretService = await source("src/shell/secret-service.ts");
+
+    // GitHub's protocol terminology is authoritative at the integration boundary.
+    expect(auth).toContain("readonly client_secret: string");
+    expect(registration).toContain("client_secret:");
+    expect(registration).toContain("client_id:");
+    expect(registration).toContain("redirect_uri:");
+
+    // The GitHub-named client_secret is public registration material for this
+    // open-source public/native client, not part of the device-local user token payload.
+    expect(secretService).not.toContain("client_secret");
+    expect(registration).not.toContain("access_token");
+    expect(registration).not.toContain("refresh_token");
+    expect(registration).not.toContain("private_key");
+  });
+
   it("does not execute Task references or import source content in the row owner", async () => {
     const row = await source("ui/src/task-row.tsx");
 
