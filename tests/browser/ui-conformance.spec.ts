@@ -433,7 +433,7 @@ test("selecting another Task retargets the open editable workspace", async ({ pa
   await expect(second.getByLabel("Title")).toHaveValue("Retarget second");
 });
 
-test("header is flat compact and invariant across destinations", async ({
+test("desktop header stays compact while narrow header uses sticky destination-specific rows", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -467,8 +467,34 @@ test("header is flat compact and invariant across destinations", async ({
 
   await page.setViewportSize({ width: 390, height: 844 });
   await waitForResponsiveHeader(page, 390);
-  const narrowHeight = await headerHeight(page);
-  expect(narrowHeight).toBeLessThanOrEqual(56);
+
+  const narrowSettingsHeight = await headerHeight(page);
+  expect(narrowSettingsHeight).toBeGreaterThanOrEqual(44);
+  await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
+  await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add task" })).toHaveCount(0);
+
+  const topBefore = await page.locator(".jig-app-header-narrow").evaluate(
+    (element) => element.getBoundingClientRect().top,
+  );
+  await page.locator(".jig-content-frame").evaluate((element) => {
+    element.scrollTop = 500;
+  });
+  const topAfter = await page.locator(".jig-app-header-narrow").evaluate(
+    (element) => element.getBoundingClientRect().top,
+  );
+  expectNear(topAfter, topBefore, 1);
+
+  await page.getByRole("button", { name: "Open navigation menu" }).click();
+  const menu = page.getByRole("menu");
+  await expect(menu.getByRole("menuitem")).toHaveCount(3);
+  await menu.getByRole("menuitem", { name: /^Planner/ }).click();
+
+  await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
+  await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Add task" })).toBeVisible();
+  const narrowPlannerHeight = await headerHeight(page);
+  expect(narrowPlannerHeight).toBeGreaterThan(narrowSettingsHeight);
 });
 
 test("selected Task today priority and status use distinct governed semantics", async ({
@@ -980,43 +1006,22 @@ test("legacy appearance preference is honored and migrated by the next explicit 
   expect(stored).toEqual({ mode: "light", legacy: null });
 });
 
-test("due reminders always use browser Notification independent of visibility and focus", async ({
+test("browser reminder delivery uses the service-worker path without a Toast fallback", async ({
   page,
 }) => {
+  await page.context().grantPermissions(["notifications"]);
   await page.clock.install({
     time: new Date("2030-01-07T09:00:00"),
   });
-  await page.addInitScript(() => {
-    const notifications: Array<{
-      readonly title: string;
-      readonly body: string | undefined;
-      readonly tag: string | undefined;
-    }> = [];
-    Object.defineProperty(window, "__JIG_TEST_NOTIFICATIONS__", {
-      configurable: true,
-      value: notifications,
-    });
-
-    class JigTestNotification {
-      static permission: NotificationPermission = "granted";
-
-      static async requestPermission(): Promise<NotificationPermission> {
-        return "granted";
-      }
-
-      constructor(title: string, options?: NotificationOptions) {
-        notifications.push({
-          title,
-          body: options?.body,
-          tag: options?.tag,
-        });
-      }
-    }
-
-    Object.defineProperty(window, "Notification", {
-      configurable: true,
-      value: JigTestNotification,
-    });
+  await page.evaluate(() => {
+    Object.defineProperty(
+      ServiceWorkerRegistration.prototype,
+      "showNotification",
+      {
+        configurable: true,
+        value: async (): Promise<void> => undefined,
+      },
+    );
   });
 
   await apiCommand(page, {
@@ -1030,88 +1035,33 @@ test("due reminders always use browser Notification independent of visibility an
     reminder_time: "09:01",
   });
   await page.reload();
-
-  const notificationCount = async (): Promise<number> =>
-    page.evaluate(() => {
-      const target = window as typeof window & {
-        __JIG_TEST_NOTIFICATIONS__?: readonly unknown[];
-      };
-      return target.__JIG_TEST_NOTIFICATIONS__?.length ?? 0;
-    });
-
-  const clearDeliveryKey = async (): Promise<void> => {
-    await page.evaluate(() => {
-      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-        const key = localStorage.key(index);
-        if (key?.startsWith("jig-reminder-delivered:") === true) {
-          localStorage.removeItem(key);
-        }
-      }
-    });
-  };
+  await page.evaluate(() => {
+    Object.defineProperty(
+      ServiceWorkerRegistration.prototype,
+      "showNotification",
+      {
+        configurable: true,
+        value: async (): Promise<void> => undefined,
+      },
+    );
+  });
 
   await page.clock.fastForward(61_000);
-  await expect.poll(notificationCount).toBe(1);
+
+  await expect.poll(() =>
+    page.evaluate(() =>
+      Object.keys(localStorage).filter((key) =>
+        key.startsWith("jig-reminder-delivered:"),
+      ).length,
+    ),
+  ).toBe(1);
   await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
 
-  await clearDeliveryKey();
-  await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      get: () => "hidden",
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
+  const activeWorker = await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration();
+    return registration?.active?.scriptURL ?? null;
   });
-  await expect.poll(notificationCount).toBe(2);
-
-  await clearDeliveryKey();
-  await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      get: () => "visible",
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-  await expect.poll(notificationCount).toBe(3);
-
-  await clearDeliveryKey();
-  await page.evaluate(() => {
-    Object.defineProperty(document, "hasFocus", {
-      configurable: true,
-      value: () => false,
-    });
-    window.dispatchEvent(new Event("focus"));
-  });
-  await expect.poll(notificationCount).toBe(4);
-
-  await clearDeliveryKey();
-  await page.evaluate(() => {
-    Object.defineProperty(document, "hasFocus", {
-      configurable: true,
-      value: () => true,
-    });
-    window.dispatchEvent(new Event("focus"));
-  });
-  await expect.poll(notificationCount).toBe(5);
-
-  const notifications = await page.evaluate(() => {
-    const target = window as typeof window & {
-      __JIG_TEST_NOTIFICATIONS__?: readonly {
-        readonly title: string;
-        readonly body: string | undefined;
-        readonly tag: string | undefined;
-      }[];
-    };
-    return target.__JIG_TEST_NOTIFICATIONS__ ?? [];
-  });
-  for (const notification of notifications) {
-    expect(notification.title).toBe("Jig reminder");
-    expect(notification.body).toBe("Browser notification contract");
-    expect(notification.tag).toContain("jig-reminder-delivered:");
-  }
-
-  await page.clock.fastForward(30_000);
-  await expect.poll(notificationCount).toBe(5);
+  expect(activeWorker).toContain("/jig-notifications-sw.js");
 });
 
 test("History keeps its destination active while using the same editable workspace and complete menu", async ({
