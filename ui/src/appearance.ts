@@ -3,7 +3,6 @@ import { jigTheme } from "./jig.js";
 import { astryxNeutralTheme } from "./themes/astryx-neutral.js";
 import { astryxButterTheme } from "./themes/astryx-butter.js";
 import { astryxChocolateTheme } from "./themes/astryx-chocolate.js";
-import { astryxGothicTheme } from "./themes/astryx-gothic.js";
 import { astryxMatchaTheme } from "./themes/astryx-matcha.js";
 import { astryxStoneTheme } from "./themes/astryx-stone.js";
 import { astryxY2kTheme } from "./themes/astryx-y2k.js";
@@ -15,7 +14,8 @@ import { catppuccinTheme } from "./themes/catppuccin.js";
 import { tokyoNightTheme } from "./themes/tokyo-night.js";
 
 export type AppearanceMode = "system" | "light" | "dark";
-export type ThemeGroup = "Jig" | "Astryx" | "Community";
+export const THEME_GROUPS = ["Jig", "Astryx", "Community"] as const;
+export type ThemeGroup = (typeof THEME_GROUPS)[number];
 
 export const THEME_DEFINITIONS = [
   { id: "jig", label: "Jig", group: "Jig", theme: jigTheme },
@@ -36,12 +36,6 @@ export const THEME_DEFINITIONS = [
     label: "Chocolate",
     group: "Astryx",
     theme: astryxChocolateTheme,
-  },
-  {
-    id: "astryx-gothic",
-    label: "Gothic",
-    group: "Astryx",
-    theme: astryxGothicTheme,
   },
   {
     id: "astryx-matcha",
@@ -106,8 +100,6 @@ export const THEME_DEFINITIONS = [
 
 export type ThemePreset = (typeof THEME_DEFINITIONS)[number]["id"];
 
-export const THEME_GROUPS = ["Jig", "Astryx", "Community"] as const satisfies
-  readonly ThemeGroup[];
 
 const THEME_FAMILY_STORAGE_KEY = "jig-theme-family";
 const APPEARANCE_MODE_STORAGE_KEY = "jig-appearance-mode";
