@@ -258,7 +258,7 @@ Task references are treated as data: safe http(s) links may open with normal bro
 
 ### 4.2.1 Bounded recurrence series
 
-Recurrence is a pure planning-core capability, not a background scheduler and not a second Task model.
+Recurrence is a pure planning-core capability, not a background scheduler and not a second Task model. The recurrence configuration itself has **one canonical series owner**. Tasks carry only the series link + immutable occurrence slot; weekly/monthly pattern/end-date values are never copied into each Task row.
 
 Canonical types are intentionally small:
 
@@ -317,22 +317,36 @@ create { ..., recurrence? }
 set_recurrence { task_id, recurrence: RecurrencePattern + end_date | null }
 ~~~
 
-`create.recurrence` creates the seed and bounded series atomically. `set_recurrence` is the Repeat control for an existing occurrence. Ordinary `edit`, `move`, `complete`, `reopen` and `delete` remain occurrence-only commands.
+`create.recurrence` creates the seed and bounded series atomically. `set_recurrence` is the Repeat control for an existing occurrence. Ordinary `edit`, `move`, `complete`, `reopen` and `delete` remain occurrence-only commands. Every occurrence resolves its visible Repeat configuration by `recurrence_series_id` from the same canonical `RecurrenceSeries`; there is no per-Task recurrence configuration copy to synchronize.
 
-Changing Repeat is explicitly **this-and-future** scheduling:
+Changing Repeat is explicitly **this-and-future** scheduling, but the configuration may be opened from any occurrence because every occurrence links to the same series owner:
 
 - preserve the selected occurrence, all earlier occurrences and every completed occurrence;
 - keep an existing later outstanding occurrence when its immutable `recurrence_occurrence_date` is still in the new future date set, preserving that Task ID and any occurrence-specific edits;
 - delete only later outstanding occurrences whose recurrence slot is no longer present;
 - create newly introduced later slots from the selected occurrence's current repeatable fields using the normal insertion law;
-- update the series rule/effective date/end date in the same transaction;
-- turning Repeat off ends the series at the selected occurrence and removes only later outstanding occurrences; completed history is never deleted.
+- update the one shared series rule/effective date/end date in the same transaction;
+- **Stop repeating / remove recurrence** retains the invoking Task, preserves completed History and removes all later outstanding generated occurrences in the same transaction. The invoking Task becomes a one-off Task from that point; the user never deletes the later cards individually;
+- individual Task Delete remains occurrence-only and must not invoke series removal.
 
 A normal title/context/priority/reference/note/reminder edit changes only the selected occurrence. Changing Repeat is the explicit action that may reconcile later occurrences. This prevents an ordinary Task edit from silently rewriting many future Tasks.
 
 Daily rollover changes only `scheduled_date`/position. It **never** changes `recurrence_occurrence_date` or the series rule. Therefore an overdue Monday occurrence may roll into Tuesday while the Wednesday occurrence still appears on Wednesday exactly as scheduled.
 
 Each generated occurrence has its own `reminder_time`. The existing reminder owner therefore needs no recurrence-specific delivery state: the same time is copied when the occurrence is created, and reminder due/delivery is evaluated against that occurrence's current `scheduled_date`. A rolled occurrence keeps the time-of-day exactly as today.
+
+Canonical state returned to presentation contains both canonical Tasks and recurrence-series records, so the Task workspace can resolve a Task's shared Repeat configuration without a second lookup model:
+
+~~~ts
+interface CanonicalState {
+  readonly revision: number;
+  readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
+}
+~~~
+
+This extends the one canonical state contract; it does not create a recurrence DTO/ViewModel. A recurrence series with no remaining linked Tasks is deleted transactionally.
+
 ### 4.3 Persistence representation
 
 SQLite schema is one Task table plus one bounded recurrence-rule table, minimal app-local metadata and notification-delivery bookkeeping. The recurrence table is planning data, not notification/runtime state:
