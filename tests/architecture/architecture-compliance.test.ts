@@ -176,6 +176,31 @@ describe("architecture compliance", () => {
     ]);
   });
 
+  it("keeps the configured UI runtime boundary provider-neutral and singular", () => {
+    const runtime = source("ui/src/runtime.ts");
+    const app = source("ui/src/app.tsx");
+
+    for (const operation of [
+      "readCanonicalTasks",
+      "readStatus",
+      "readDiagnostics",
+      "submitTaskCommand",
+      "triggerSync",
+    ]) {
+      expect(runtime, operation).toContain(operation);
+      expect(app, operation).toMatch(
+        new RegExp(`\\b${operation}\\b`),
+      );
+    }
+
+    expect(runtime).not.toMatch(/github|client_id|device[_ -]?flow/i);
+    expect(runtime).not.toContain("../src/shell/");
+    expect(app).toContain('from "./runtime"');
+    expect(app).not.toMatch(
+      /import\s*\{[^}]*readCanonicalTasks[^}]*\}\s*from\s*["']\.\/http["']/s,
+    );
+  });
+
   it("isolates justified third-party assertions to boundary adapters", () => {
     const ui = production.filter(([path]) => path.startsWith("ui/src/"));
     const assertions = ui.flatMap(([path, content]) =>
