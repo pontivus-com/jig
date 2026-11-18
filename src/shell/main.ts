@@ -124,7 +124,9 @@ async function runConfigured(config: JigConfig): Promise<void> {
 
   const sync = createSyncController(db, {
     repository_path: config.repository_path,
-    get_network_environment: getGitHubNetworkEnvironment,
+    ...(getGitHubNetworkEnvironment === undefined
+      ? {}
+      : { get_network_environment: getGitHubNetworkEnvironment }),
   });
 
   const startupNow = new Date();
