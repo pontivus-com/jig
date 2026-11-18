@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding functional design through v1.1, amended 2026-11-18. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract below supersedes affected header, reminder, onboarding, Android and drag/drop behavior.
+**Status:** Binding functional design through v1.1, amended 2026-11-18. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract below supersedes affected header, secondary-screen heading, synchronization transparency, reminder, onboarding, Android and drag/drop behavior.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -243,6 +243,8 @@ Desktop Planner is one wide weekly planning surface plus one global application 
 
 **History:** selecting a completed Task opens the same right-side Task workspace while History remains the active destination.
 
+**Secondary destination heading ownership (v1.1):** History and Settings use the application header as the single owner of the destination heading. The header contains both the destination title and its concise subtitle. The History/Settings content surface must not repeat either title or subtitle above the page content; content begins directly with the first meaningful History group or Settings section. This removes redundant chrome without changing destination identity or accessibility.
+
 **Actions:** pointer drag-and-drop is the primary direct same-date ordering/cross-date movement mechanism. Same-day Move up/Move down remains a keyboard-accessible ordering alternative. Explicit non-drag cross-date rescheduling occurs through the Edit date field. There is no separate Move-to-date workspace. Delete always requires explicit destructive confirmation.
 
 **Copy discipline:** remove explanatory/meta labels that restate the interaction model. The production UI must not contain copy such as “selected date view”, “Today is a shortcut”, “Your ordered plan”, “full available canvas”, or similar implementation/design commentary. Controls, dates and Task content provide the orientation.
@@ -276,6 +278,8 @@ The earlier Day/Week mockups remain historical design inputs only. Their separat
 
 - A successful mutation visibly updates the list and its date/count, in the same interaction.
 - Failed local saving is visible and actionable. Repository synchronization failure is reported separately as a durable generic sync issue while the successful local Task state remains available; Jig does not translate Git conflict/topology details into planning state.
+- Settings distinguishes **local Git snapshot state** from **remote synchronization state**. It shows whether the current canonical revision has been committed to Jig's local Git data ref, identifies the actual configured synchronization remote when one exists, and separately reports whether that local Git state is pending/retrying/synchronized with the remote or has a synchronization issue. A repository with no synchronization remote explicitly shows that no remote is configured rather than implying remote synchronization.
+- The remote repository identity shown in Settings is informational and credential-free. It is derived from Git's currently selected synchronization remote and is not copied into Jig application configuration or promoted into Task/planning state.
 - A due Task reminder uses the browser/OS Notification capability only when permission has been explicitly granted. Visibility and focus do not change that delivery mechanism.
 - Reminder delivery does not use an in-app toast and has no toast fallback. Unsupported, default/not-yet-granted or denied notification permission means Jig makes no reminder-delivery claim.
 - Notification permission is requested only from explicit user action, and Settings exposes the resulting browser permission state honestly.
@@ -373,5 +377,7 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-27 | Android is locally certifiable by directly installed development APK; F-Droid is the first public Android distribution target; iOS/Play are outside v1.1. |
 | JIG-110-FR-28 | Task drag/drop uses a dedicated grip and a stable exact insertion indicator for same-date, cross-date, empty-list and inter-card-gap placement; persisted move equals displayed intent. |
 | JIG-110-FR-29 | Tasks support finite weekly/monthly recurrence with an inclusive end date; generated occurrences are ordinary independent Tasks, reminders repeat at the occurrence's scheduled date/time, and rollover/rescheduling of one occurrence never shifts the series cadence. |
+| JIG-110-FR-30 | History and Settings have one destination-heading owner: their application header presents both title and concise subtitle, and the content surface does not duplicate either heading before the actual page content. |
+| JIG-110-FR-31 | Settings presents local Git commit state and remote synchronization as distinct facts: it shows whether the current Jig snapshot is locally Git-committed, identifies the configured synchronization remote when present, and separately reports remote synchronization state without persisting or exposing credentials/remote topology as Jig application state. |
 
 Older JIG-103/104/105/106 rows remain release-history provenance only when JIG-110 explicitly supersedes their affected behavior.
