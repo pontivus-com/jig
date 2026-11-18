@@ -1,10 +1,5 @@
-export interface GitHubCredential {
-  readonly user_id: number;
-  readonly access_token: string;
-  readonly refresh_token: string | null;
-  readonly access_token_expires_at: string | null;
-  readonly refresh_token_expires_at: string | null;
-}
+import type { GitHubCredential } from "../github";
+export type { GitHubCredential } from "../github";
 
 export class SecretServiceError extends Error {
   constructor(message: string) {
