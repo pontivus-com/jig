@@ -13,7 +13,7 @@ import {
 } from "../core/task";
 import { assertTaskSet } from "../core/planning";
 import type { RepositoryStatus } from "../protocol";
-import { PORTABLE_FORMAT_VERSION } from "./sqlite";
+import { PORTABLE_FORMAT_VERSION } from "../persistence/sqlite";
 
 const DATA_REF = "refs/heads/jig-data";
 
