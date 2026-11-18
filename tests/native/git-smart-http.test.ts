@@ -343,7 +343,7 @@ describe("Android Git smart-HTTP feasibility", () => {
     let credentialReads = 0;
     const credential = async (): Promise<string> => {
       credentialReads += 1;
-      return USER;
+      return PASSWORD;
     };
 
     const cloned = await cloneAndroidPortableRepository(
@@ -515,7 +515,7 @@ describe("Android Git smart-HTTP feasibility", () => {
       http: createAndroidGitHttpClient(nativeHttpFor(port)),
       dir: ANDROID_GIT_WORKTREE,
     };
-    const credential = async (): Promise<string> => USER;
+    const credential = async (): Promise<string> => PASSWORD;
     await cloneAndroidPortableRepository(
       effects,
       remoteUrl,
@@ -668,7 +668,7 @@ describe("Android Git smart-HTTP feasibility", () => {
       http: createAndroidGitHttpClient(nativeHttpFor(port)),
       dir: ANDROID_GIT_WORKTREE,
     };
-    const credential = async (): Promise<string> => USER;
+    const credential = async (): Promise<string> => PASSWORD;
     await cloneAndroidPortableRepository(
       effects,
       remoteUrl,
