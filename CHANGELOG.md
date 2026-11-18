@@ -7,7 +7,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 ### Changed
 
 - Constrained History and Settings to one continuous centered 50rem / approximately 800px maximum content measure whenever space permits, independent of the 73rem Planner breakpoint, while preserving the full-width Planner/full-bleed application frame and independent Settings column reflow.
-- Defined the v1.0.6 curated application-theme catalogue: Jig; dual-mode Astryx Neutral, Butter, Chocolate, Matcha, Stone and Y2K; plus Gruvbox, Dracula, Solarized, Nord, Catppuccin and Tokyo Night. Astryx Gothic is dark-only in the pinned release and is therefore not exposed rather than receiving a fabricated light mode.
+- Defined the v1.0.6 curated application-theme catalogue: Jig; Astryx Neutral, Butter, Chocolate, Gothic, Matcha, Stone and Y2K; plus Gruvbox, Dracula, Solarized, Nord, Catppuccin and Tokyo Night. Pinned Gothic is dark-only upstream, so Jig preserves its released Dark semantics/mechanics and supplies a governed Light application-color layer through the same Astryx theme system.
 - Split theme family from System/Light/Dark appearance so each theme supports independent local appearance selection and System follows the platform preference.
 - Expanded theme governance to every application surface/state, including Task elevation, current day, selection, drag, priority, completion, operational status and combined-state precedence, without feature-local palettes.
 - Made the in-application Jig wordmark use canonical geometry with active-theme semantic foreground/accent paint while retaining fixed theme-independent favicon/app/release assets.
@@ -18,7 +18,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 - Completed JIG-106-FR-01…07 → JIG-106-SD-01…07 technical traceability and added the binding J106-IMP-01…08 implementation/certification plan.
 - Reconciled repository governance, UI and brand/theme authorities with the complete v1.0.6 scope; the former width-only implementation plan is superseded.
-- Added v1.0.6 implementation evidence for product/test candidate `2f3de2f6ad43d2f2b84a9bb41db08d71f0e34cd9`, which passed permanent Verify run `44210396948` with 18/107 core/integration/architecture tests and 53 real-browser acceptance tests.
+- Certified the final v1.0.6 product/test candidate `9d02fad799348b17a3e65297b36b1be23a40df06` in permanent Verify run `44213103554`: 18/18 test files, 107/107 core/integration/architecture tests and 55/55 real-browser acceptance tests passed, including the 14-theme matrix and Gothic dual-mode application adaptation.
 
 
 ## [1.0.5] - 2026-11-17
