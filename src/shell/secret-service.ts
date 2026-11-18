@@ -93,12 +93,16 @@ export async function assertSecretServiceAvailable(): Promise<void> {
   }
 }
 
+const BASE_ATTRIBUTES = [
+  "application",
+  "jig",
+  "provider",
+  "github",
+] as const;
+
 function attributes(userId: number): readonly string[] {
   return [
-    "application",
-    "jig",
-    "provider",
-    "github",
+    ...BASE_ATTRIBUTES,
     "user_id",
     String(userId),
   ];
@@ -109,6 +113,10 @@ export async function storeGitHubCredential(
 ): Promise<void> {
   const validated = validateCredential(credential);
   await assertSecretServiceAvailable();
+  // Jig owns one active planning repository, so Linux owns one current
+  // GitHub user credential. Clear any previous provider item before storing
+  // the newly authorized or rotated credential.
+  await runSecretTool(["clear", ...BASE_ATTRIBUTES]).catch(() => null);
   const result = await runSecretTool(
     [
       "store",
@@ -123,6 +131,21 @@ export async function storeGitHubCredential(
         "Secure GitHub credential storage is unavailable or locked",
     );
   }
+}
+
+export async function loadCurrentGitHubCredential(): Promise<GitHubCredential | null> {
+  await assertSecretServiceAvailable();
+  const result = await runSecretTool(["lookup", ...BASE_ATTRIBUTES]);
+  if (result.exit_code !== 0 || result.stdout.length === 0) {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch {
+    throw new SecretServiceError("Stored GitHub credential is not valid JSON");
+  }
+  return validateCredential(parsed);
 }
 
 export async function loadGitHubCredential(
