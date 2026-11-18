@@ -1,4 +1,11 @@
-import type { GitHubCredential } from "./secret-service";
+import type {
+  GitHubAppRegistration,
+  GitHubCredential,
+  GitHubDeviceAuthorization,
+  GitHubDevicePollResult,
+  GitHubInstallation,
+  GitHubRepository,
+} from "../github";
 
 const GITHUB_API_VERSION = "2022-11-28";
 
@@ -6,42 +13,6 @@ export type GitHubFetch = (
   input: string | URL | Request,
   init?: RequestInit,
 ) => Promise<Response>;
-
-export interface GitHubAppRegistration {
-  readonly app_slug: string;
-  readonly client_id: string;
-}
-
-export interface GitHubInstallation {
-  readonly id: number;
-  readonly account: {
-    readonly id: number;
-    readonly login: string;
-    readonly type: string;
-  };
-}
-
-export interface GitHubRepository {
-  readonly id: number;
-  readonly owner: string;
-  readonly name: string;
-  readonly clone_url: string;
-}
-
-export interface GitHubDeviceAuthorization {
-  readonly device_code: string;
-  readonly user_code: string;
-  readonly verification_uri: string;
-  readonly expires_in: number;
-  readonly interval: number;
-}
-
-export type GitHubDevicePollResult =
-  | { readonly status: "pending"; readonly retry_after_seconds: number }
-  | { readonly status: "slow-down"; readonly retry_after_seconds: number }
-  | { readonly status: "authorized"; readonly credential: GitHubCredential }
-  | { readonly status: "denied" }
-  | { readonly status: "expired" };
 
 export class GitHubAuthError extends Error {
   constructor(message: string) {
