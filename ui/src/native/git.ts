@@ -1,10 +1,13 @@
 import {
   add,
+  addRemote,
   clone,
   commit,
   currentBranch,
   fetch,
+  init,
   listFiles,
+  listServerRefs,
   push,
   remove,
   resolveRef,
@@ -110,6 +113,42 @@ async function ensureWorktreeParents(
   await ensureDirectory(effects.fs, "repository/.jig");
 }
 
+async function pathExists(
+  effects: AndroidGitEffects,
+  path: string,
+): Promise<boolean> {
+  try {
+    await effects.fs.promises.stat(path);
+    return true;
+  } catch (error) {
+    if (
+      error instanceof AndroidFsError &&
+      error.code === "ENOENT"
+    ) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function removeCreatedWorktree(
+  effects: AndroidGitEffects,
+): Promise<void> {
+  try {
+    await effects.fs.promises.rmdir(
+      effects.dir,
+      { recursive: true },
+    );
+  } catch (error) {
+    if (
+      !(error instanceof AndroidFsError) ||
+      error.code !== "ENOENT"
+    ) {
+      throw error;
+    }
+  }
+}
+
 async function assertDataBranch(
   effects: AndroidGitEffects,
 ): Promise<void> {
@@ -167,6 +206,95 @@ export function createAndroidGitEffects(): AndroidGitEffects {
   };
 }
 
+export async function acquireAndroidPortableRepository(
+  effects: AndroidGitEffects,
+  remoteUrl: string,
+  credential: GitCredentialProvider,
+  createDatasetId: () => string = crypto.randomUUID,
+): Promise<PortableSnapshot> {
+  assertCredentialFreeHttpsRemote(remoteUrl);
+  if (await pathExists(effects, effects.dir)) {
+    throw new AndroidGitAdapterError(
+      "Android managed repository checkout already exists",
+    );
+  }
+
+  const refs = await listServerRefs({
+    http: effects.http,
+    url: remoteUrl,
+    forPush: false,
+    onAuth: authCallback(credential),
+  });
+  const hasDataBranch = refs.some(
+    (candidate) =>
+      candidate.ref === `refs/heads/${ANDROID_DATA_BRANCH}`,
+  );
+
+  if (hasDataBranch) {
+    try {
+      return await cloneAndroidPortableRepository(
+        effects,
+        remoteUrl,
+        credential,
+      );
+    } catch (error) {
+      await removeCreatedWorktree(effects);
+      throw error;
+    }
+  }
+
+  try {
+    await ensureWorktreeParents(effects);
+    await init({
+      fs: effects.fs,
+      dir: effects.dir,
+      defaultBranch: ANDROID_DATA_BRANCH,
+    });
+    await addRemote({
+      fs: effects.fs,
+      dir: effects.dir,
+      remote: ANDROID_REMOTE,
+      url: remoteUrl,
+      force: false,
+    });
+
+    const snapshot = serializeSnapshot(
+      [],
+      createDatasetId(),
+      [],
+    );
+    await writeAndroidPortableFiles(effects, snapshot);
+    const paths = [...snapshot.files.keys()].sort(
+      (left, right) => left.localeCompare(right),
+    );
+    await add({
+      fs: effects.fs,
+      dir: effects.dir,
+      filepath: paths,
+    });
+    const identity = {
+      name: "Jig",
+      email: "jig@local.invalid",
+    };
+    await commit({
+      fs: effects.fs,
+      dir: effects.dir,
+      message: "Initialize Jig portable data",
+      author: identity,
+      committer: identity,
+      disallowEmpty: true,
+    });
+    await pushAndroidPortableRepository(
+      effects,
+      credential,
+    );
+    return snapshot;
+  } catch (error) {
+    await removeCreatedWorktree(effects);
+    throw error;
+  }
+}
+
 export async function cloneAndroidPortableRepository(
   effects: AndroidGitEffects,
   remoteUrl: string,
@@ -189,6 +317,17 @@ export async function cloneAndroidPortableRepository(
 
   await assertDataBranch(effects);
   return readAndroidPortableSnapshot(effects);
+}
+
+export async function androidPortableHead(
+  effects: AndroidGitEffects,
+): Promise<string> {
+  await assertDataBranch(effects);
+  return resolveRef({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: "HEAD",
+  });
 }
 
 export async function reopenAndroidPortableRepository(
@@ -237,6 +376,13 @@ export async function readAndroidPortableSnapshot(
   }
 
   return validateSnapshot(files, expectedDatasetId);
+}
+
+async function writeAndroidPortableFiles(
+  effects: AndroidGitEffects,
+  snapshot: PortableSnapshot,
+): Promise<void> {
+  await writeAndroidPortableFiles(effects, snapshot);
 }
 
 export async function commitAndroidPortableSnapshot(
