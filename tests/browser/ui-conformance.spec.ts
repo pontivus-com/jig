@@ -843,6 +843,123 @@ test("Theme and Appearance controls exist only in Settings and apply independent
   expect(stored).toEqual({ theme: "dracula", mode: "dark", legacy: null });
 });
 
+test("invalid appearance storage falls back safely and persistence failure does not block in-memory changes", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    localStorage.setItem("jig-theme-family", "not-a-jig-theme");
+    localStorage.setItem("jig-appearance-mode", "sepia");
+    localStorage.setItem("jig-theme", "also-invalid");
+  });
+  await page.reload();
+
+  await expect(page.locator("html")).toHaveAttribute("data-astryx-theme", "jig");
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme");
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.evaluate(() => {
+    Object.defineProperty(Storage.prototype, "setItem", {
+      configurable: true,
+      value: () => {
+        throw new DOMException("synthetic localStorage write failure", "QuotaExceededError");
+      },
+    });
+    Object.defineProperty(Storage.prototype, "removeItem", {
+      configurable: true,
+      value: () => {
+        throw new DOMException("synthetic localStorage remove failure", "QuotaExceededError");
+      },
+    });
+  });
+
+  const themeSelector = page.getByRole("combobox", { name: "Theme" });
+  await themeSelector.click();
+  await page.getByRole("option", { name: "Gruvbox", exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-astryx-theme", "gruvbox");
+
+  await page.getByText("Dark", { exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+});
+
+test("Settings workspace menu and destructive dialog inherit the active semantic theme", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Theme scope task", today);
+  await page.reload();
+  await setAppearance(page, "dracula", "dark");
+
+  const rootTokens = await page.locator("html").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      surface: style.getPropertyValue("--color-background-surface").trim(),
+      popover: style.getPropertyValue("--color-background-popover").trim(),
+      primary: style.getPropertyValue("--color-text-primary").trim(),
+    };
+  });
+  expect(rootTokens.surface).not.toBe("");
+  expect(rootTokens.popover).not.toBe("");
+  expect(rootTokens.primary).not.toBe("");
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const settingsCard = page.locator(".jig-settings-card").first();
+  await expect(settingsCard).toBeVisible();
+  const settingsTokens = await settingsCard.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      surface: style.getPropertyValue("--color-background-surface").trim(),
+      primary: style.getPropertyValue("--color-text-primary").trim(),
+    };
+  });
+  expect(settingsTokens).toEqual({
+    surface: rootTokens.surface,
+    primary: rootTokens.primary,
+  });
+
+  await page.getByRole("button", { name: "Planner", exact: true }).click();
+  const task = page
+    .getByText("Theme scope task", { exact: true })
+    .locator("xpath=ancestor::li[1]");
+
+  await task.getByRole("button", { name: "Actions for Theme scope task" }).click();
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  const menuPopover = await menu.evaluate((element) =>
+    getComputedStyle(element)
+      .getPropertyValue("--color-background-popover")
+      .trim(),
+  );
+  expect(menuPopover).toBe(rootTokens.popover);
+  await page.keyboard.press("Escape");
+
+  await task.click();
+  const workspace = page.getByRole("dialog", { name: "Theme scope task" });
+  await expect(workspace).toBeVisible();
+  const workspaceTokens = await workspace.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      surface: style.getPropertyValue("--color-background-surface").trim(),
+      primary: style.getPropertyValue("--color-text-primary").trim(),
+    };
+  });
+  expect(workspaceTokens).toEqual({
+    surface: rootTokens.surface,
+    primary: rootTokens.primary,
+  });
+
+  await workspace
+    .getByRole("button", { name: "Delete…", exact: true })
+    .click();
+  const confirmation = page.getByRole("alertdialog");
+  await expect(confirmation).toBeVisible();
+  const dialogPopover = await confirmation.evaluate((element) =>
+    getComputedStyle(element)
+      .getPropertyValue("--color-background-popover")
+      .trim(),
+  );
+  expect(dialogPopover).toBe(rootTokens.popover);
+});
+
 test("legacy appearance preference is honored and migrated by the next explicit setting", async ({
   page,
 }) => {
