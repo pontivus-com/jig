@@ -98,8 +98,11 @@ function fakeFilesystem(): {
   const port: AndroidFilesystemPort = {
     async readFile(options) {
       const entry = entries.get(options.path);
-      if (entry?.kind !== "file") {
-        missing(options.path);
+      if (entry === undefined || entry.kind !== "file") {
+        throw new FakePluginError(
+          "OS-PLUG-FILE-0008",
+          `${options.path} does not exist`,
+        );
       }
       const data =
         options.encoding === Encoding.UTF8
@@ -190,7 +193,10 @@ function fakeFilesystem(): {
     async stat(options) {
       const entry = entries.get(options.path);
       if (entry === undefined) {
-        missing(options.path);
+        throw new FakePluginError(
+          "OS-PLUG-FILE-0008",
+          `${options.path} does not exist`,
+        );
       }
       return info(options.path, entry);
     },
