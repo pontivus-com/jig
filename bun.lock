@@ -8,7 +8,6 @@
         "@astryxdesign/core": "0.7.13",
         "@astryxdesign/theme-butter": "0.7.13",
         "@astryxdesign/theme-chocolate": "0.7.13",
-        "@astryxdesign/theme-gothic": "0.7.13",
         "@astryxdesign/theme-matcha": "0.7.13",
         "@astryxdesign/theme-neutral": "0.7.13",
         "@astryxdesign/theme-stone": "0.7.13",
@@ -39,8 +38,6 @@
     "@astryxdesign/theme-butter": ["@astryxdesign/theme-butter@0.7.13", "", { "dependencies": { "lucide-react": "^1.66.0" }, "peerDependencies": { "@astryxdesign/core": "0.7.13", "react": ">=19" } }, "sha512-D+LP2sM6iRjpyIOvqCz8zwGIVyWIL6jgdufGHD0rktxwURERxM6+RfJdJgpBrma84ejLhKy1CmKxJvXXH0bsKg=="],
 
     "@astryxdesign/theme-chocolate": ["@astryxdesign/theme-chocolate@0.7.13", "", { "dependencies": { "lucide-react": "^1.66.0" }, "peerDependencies": { "@astryxdesign/core": "0.7.13", "react": ">=19" } }, "sha512-mOlBmAyB4/Mnwr0z6evvSurn5ma8hwv3JsVulaswOO2wFtMxSmN68QJ+Ixozj/QRnX21nHCReho/JANnHbP/Yg=="],
-
-    "@astryxdesign/theme-gothic": ["@astryxdesign/theme-gothic@0.7.13", "", { "dependencies": { "lucide-react": "^1.66.0" }, "peerDependencies": { "@astryxdesign/core": "0.7.13", "react": ">=19" } }, "sha512-QAImBUMVqN2FBRa5Z5VXrJh/ypi8IawRnGYxf23loXhk2YdwA/uK1/aooJrxvbTlB9tonRsnkoWI3Ysmf5jlww=="],
 
     "@astryxdesign/theme-matcha": ["@astryxdesign/theme-matcha@0.7.13", "", { "dependencies": { "lucide-react": "^1.66.0" }, "peerDependencies": { "@astryxdesign/core": "0.7.13", "react": ">=19" } }, "sha512-xUozGxtJN5OAHasleNlGAbH+weYEA16xUQ5LJVFjuZSVGAyuOJh0MoJxXJ+t5bmgGOl7g7FsURkG7JAHqFXv9g=="],
 
