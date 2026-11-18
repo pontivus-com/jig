@@ -7,7 +7,7 @@ import type {
   CanonicalState,
   CommandResult,
   Diagnostics,
-  RepositoryStatus,
+  RepositorySynchronizationStatus,
   ServiceStatus,
 } from "../../src/protocol";
 
@@ -143,22 +143,81 @@ export async function readCanonicalTasks(): Promise<CanonicalState> {
   };
 }
 
-function isRepositoryStatus(value: unknown): value is RepositoryStatus {
-  return (
-    value === "local-only" ||
-    value === "pending" ||
-    value === "retrying" ||
-    value === "synchronized" ||
-    value === "sync-issue"
-  );
+function parseRepositorySynchronizationStatus(
+  value: unknown,
+): RepositorySynchronizationStatus {
+  const status = objectValue(value);
+  const localGit = status.local_git;
+  if (
+    localGit !== "pending" &&
+    localGit !== "committed" &&
+    localGit !== "issue"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid local Git status",
+    );
+  }
+
+  const remote = objectValue(status.remote);
+  const state = remote.state;
+  if (state === "not-configured") {
+    if (remote.remote_name !== null || remote.remote_location !== null) {
+      throw new JigHttpError(
+        500,
+        value,
+        "Jig service returned invalid unconfigured remote status",
+      );
+    }
+    return {
+      local_git: localGit,
+      remote: {
+        state,
+        remote_name: null,
+        remote_location: null,
+      },
+    };
+  }
+
+  if (
+    state !== "pending" &&
+    state !== "retrying" &&
+    state !== "synchronized" &&
+    state !== "sync-issue"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid remote synchronization status",
+    );
+  }
+  if (
+    typeof remote.remote_name !== "string" ||
+    typeof remote.remote_location !== "string"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization remote identity",
+    );
+  }
+
+  return {
+    local_git: localGit,
+    remote: {
+      state,
+      remote_name: remote.remote_name,
+      remote_location: remote.remote_location,
+    },
+  };
 }
 
 export async function readStatus(): Promise<ServiceStatus> {
   const payload = objectValue(await fetchJson("/api/v1/status"));
   if (
     payload.ready !== true ||
-    typeof payload.repository_path !== "string" ||
-    !isRepositoryStatus(payload.repository_status)
+    typeof payload.repository_path !== "string"
   ) {
     throw new JigHttpError(
       500,
@@ -170,7 +229,8 @@ export async function readStatus(): Promise<ServiceStatus> {
   return {
     ready: true,
     repository_path: payload.repository_path,
-    repository_status: payload.repository_status,
+    repository_status:
+      parseRepositorySynchronizationStatus(payload.repository_status),
   };
 }
 
@@ -250,16 +310,9 @@ export async function submitTaskCommand(
   };
 }
 
-export async function triggerSync(): Promise<RepositoryStatus> {
+export async function triggerSync(): Promise<RepositorySynchronizationStatus> {
   const payload = objectValue(await postJson("/api/v1/sync", {}));
-  if (!isRepositoryStatus(payload.repository_status)) {
-    throw new JigHttpError(
-      500,
-      payload,
-      "Jig service returned invalid synchronization status",
-    );
-  }
-  return payload.repository_status;
+  return parseRepositorySynchronizationStatus(payload.repository_status);
 }
 
 export function isStaleRevision(error: unknown): boolean {
