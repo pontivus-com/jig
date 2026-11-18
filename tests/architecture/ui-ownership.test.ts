@@ -174,6 +174,13 @@ describe("UI ownership architecture", () => {
     expect(app).not.toContain("matchMedia(");
     expect(appearance).toContain("export const THEME_DEFINITIONS = [");
     expect(appearance).toContain('export type AppearanceMode = "system" | "light" | "dark"');
+    expect(
+      [...appearance.matchAll(/\\bid: "([^"]+)"/g)].map((match) => match[1]),
+    ).toEqual([...THEME_IDS]);
+    expect(appearance).not.toContain("astryx-gothic");
+    expect(manifest).not.toContain("astryx-gothic");
+    expect(styles).not.toContain("astryx-gothic");
+    expect(source("package.json")).not.toContain("@astryxdesign/theme-gothic");
 
     for (const id of THEME_IDS) {
       expect(appearance).toContain(`id: "${id}"`);
