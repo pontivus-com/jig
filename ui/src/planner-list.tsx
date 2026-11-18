@@ -1,7 +1,8 @@
 import { List } from "@astryxdesign/core";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
-import { SortableTaskRow } from "./task-row";
+import { DraggableTaskRow } from "./task-row";
+import { useTaskDragState } from "./drag";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
@@ -27,6 +28,7 @@ interface PlannerSequenceRowProps
   readonly date: string;
   readonly sequenceLength: number;
   readonly isSelected: boolean;
+  readonly dropIndicator?: "before" | "after" | undefined;
 }
 
 function PlannerSequenceRow({
@@ -36,6 +38,7 @@ function PlannerSequenceRow({
   date,
   sequenceLength,
   isSelected,
+  dropIndicator,
   onSelectTask,
   onEdit,
   onToggleComplete,
@@ -72,11 +75,11 @@ function PlannerSequenceRow({
   };
 
   return (
-    <SortableTaskRow
+    <DraggableTaskRow
       {...rowProps}
       now={now}
       index={index}
-      group={date}
+      {...(dropIndicator === undefined ? {} : { dropIndicator })}
     />
   );
 }
@@ -94,6 +97,25 @@ export function PlannerTaskList({
   onMove,
 }: PlannerTaskListProps): React.ReactElement | null {
   const outstanding = outstandingForDate(tasks, date);
+  const dragState = useTaskDragState();
+  const intent =
+    dragState.intent?.destination_date === date
+      ? dragState.intent
+      : null;
+  const filtered = outstanding.filter(
+    (task) => task.id !== dragState.activeTaskId,
+  );
+  const beforeTarget =
+    intent !== null && intent.destination_index < filtered.length
+      ? filtered[intent.destination_index]?.id ?? null
+      : null;
+  const afterTarget =
+    intent !== null &&
+    filtered.length > 0 &&
+    intent.destination_index === filtered.length
+      ? filtered[filtered.length - 1]?.id ?? null
+      : null;
+
   if (outstanding.length === 0) {
     return null;
   }
@@ -109,6 +131,11 @@ export function PlannerTaskList({
           date={date}
           sequenceLength={outstanding.length}
           isSelected={selectedTask?.id === task.id}
+          {...(task.id === beforeTarget
+            ? { dropIndicator: "before" as const }
+            : task.id === afterTarget
+              ? { dropIndicator: "after" as const }
+              : {})}
           onSelectTask={onSelectTask}
           onEdit={onEdit}
           onToggleComplete={onToggleComplete}
