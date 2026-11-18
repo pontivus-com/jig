@@ -2,16 +2,20 @@ export type BrowserNotificationState =
   | "unsupported"
   | NotificationPermission;
 
+function browserNotificationsSupported(): boolean {
+  return typeof window.Notification !== "undefined";
+}
+
 export function browserNotificationState(): BrowserNotificationState {
-  if (!("Notification" in window)) {
+  if (!browserNotificationsSupported()) {
     return "unsupported";
   }
-  return Notification.permission;
+  return window.Notification.permission;
 }
 
 export async function requestBrowserNotificationPermission(): Promise<BrowserNotificationState> {
-  if (!("Notification" in window)) {
+  if (!browserNotificationsSupported()) {
     return "unsupported";
   }
-  return Notification.requestPermission();
+  return window.Notification.requestPermission();
 }
