@@ -110,6 +110,72 @@ describe("architecture compliance", () => {
     expect(editor).not.toContain("function optionalText");
   });
 
+  it("enforces the SD-38 GitHub integration dependency direction", () => {
+    const sync = source("src/shell/sync.ts");
+    const protocol = source("src/protocol.ts");
+    const http = source("src/shell/http.ts");
+    const main = source("src/shell/main.ts");
+    const onboarding = source("src/shell/github-onboarding.ts");
+    const reconnect = source("src/shell/github-reconnect.ts");
+    const deviceFlow = source("src/shell/github-device-flow.ts");
+    const setup = source("ui/src/setup.tsx");
+    const app = source("ui/src/app.tsx");
+    const deviceFlowUi = source("ui/src/github-device-flow.tsx");
+
+    for (const [path, content] of production.filter(([path]) =>
+      path.startsWith("src/core/") || path.startsWith("src/persistence/"),
+    )) {
+      expect(content, path).not.toMatch(
+        /from\s+["'][^"']*(?:\/github|github-)[^"']*["']/,
+      );
+    }
+
+    expect(sync.toLowerCase()).not.toContain("github");
+    expect(sync).not.toContain("client_id");
+    expect(sync).not.toContain("secret-tool");
+    expect(sync).not.toContain("GIT_ASKPASS");
+    expect(sync).not.toContain("JIG_GITHUB_ACCESS_TOKEN");
+    expect(sync).not.toContain("get_network_environment");
+    expect(sync).not.toContain("SyncAuthenticationError");
+
+    expect(protocol.toLowerCase()).not.toContain("github");
+    expect(http.toLowerCase()).not.toContain("github");
+    expect(http).not.toContain("/api/v1/github/");
+
+    expect(main).not.toContain("loadCurrentGitHubCredential");
+    expect(main).not.toContain("refreshGitHubCredential");
+    expect(main).not.toContain("githubGitEnvironment");
+    expect(main).not.toContain("GIT_ASKPASS");
+    expect(main).not.toContain(
+      "assertManagedGitHubSynchronizationRemote",
+    );
+
+    expect(onboarding).toContain("GitHubDeviceFlowSession");
+    expect(onboarding).not.toContain("startGitHubDeviceAuthorization");
+    expect(onboarding).not.toContain("pollGitHubDeviceAuthorization");
+
+    expect(reconnect).toContain("GitHubDeviceFlowSession");
+    expect(reconnect).not.toContain("config_path");
+    expect(reconnect).not.toContain("http_port");
+    expect(reconnect).not.toContain("acquire");
+    expect(reconnect).not.toContain("repository");
+
+    expect(deviceFlow).toContain("startGitHubDeviceAuthorization");
+    expect(deviceFlow).toContain("pollGitHubDeviceAuthorization");
+    expect(deviceFlow).not.toContain("repository");
+
+    expect(setup).not.toContain("retry_after_seconds");
+    expect(app).not.toContain("retry_after_seconds");
+    expect(deviceFlowUi).toContain("retry_after_seconds");
+
+    const githubContractOwners = production.filter(([, content]) =>
+      /export interface GitHubAuthorizationSnapshot\b/.test(content),
+    );
+    expect(githubContractOwners.map(([path]) => path)).toEqual([
+      "src/github.ts",
+    ]);
+  });
+
   it("isolates justified third-party assertions to boundary adapters", () => {
     const ui = production.filter(([path]) => path.startsWith("ui/src/"));
     const assertions = ui.flatMap(([path, content]) =>
