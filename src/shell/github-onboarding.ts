@@ -243,7 +243,6 @@ export class GitHubOnboardingController {
 
     await this.persistCredential(credential);
     this.pendingAuthorization = null;
-    await this.stopLoopbackListener();
     await this.loadRepositoryAccess();
   }
 
@@ -361,6 +360,9 @@ export class GitHubOnboardingController {
         const code = url.searchParams.get("code") ?? "";
         try {
           await this.completeAuthorization(state, code);
+          queueMicrotask(() => {
+            void this.stopLoopbackListener();
+          });
           return new Response(
             "<!doctype html><title>Jig GitHub authorization complete</title><p>GitHub authorization completed. You can return to Jig.</p>",
             {
@@ -370,6 +372,9 @@ export class GitHubOnboardingController {
           );
         } catch (error) {
           this.error = error instanceof Error ? error.message : String(error);
+          queueMicrotask(() => {
+            void this.stopLoopbackListener();
+          });
           return new Response(
             "<!doctype html><title>Jig GitHub authorization failed</title><p>GitHub authorization could not be completed. Return to Jig and retry.</p>",
             {
