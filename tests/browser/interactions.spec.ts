@@ -378,25 +378,35 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
   const actions = source.getByRole("button", {
     name: "Actions for Combined semantic source",
   });
+  // Enter keyboard modality first. A subsequent script focus inherits the
+  // browser's focus-visible state, allowing us to certify Astryx's public
+  // :focus-visible / :has(:focus-visible) contract without depending on its
+  // private DOM/class structure.
+  await page.keyboard.press("Tab");
   await actions.focus();
   const focusTreatment = await source.evaluate((element) => {
     const focused = document.activeElement;
     if (!(focused instanceof HTMLElement)) {
       throw new Error("Focused Task control is unavailable");
     }
-    const style = getComputedStyle(focused);
+    const rowStyle = getComputedStyle(element);
+    const controlStyle = getComputedStyle(focused);
     return {
-      outlineWidth: style.outlineWidth,
-      outlineStyle: style.outlineStyle,
-      boxShadow: style.boxShadow,
       containsFocus: element.contains(focused),
+      focusVisible: focused.matches(":focus-visible"),
+      rowOutlineWidth: rowStyle.outlineWidth,
+      rowOutlineStyle: rowStyle.outlineStyle,
+      controlOutlineWidth: controlStyle.outlineWidth,
+      controlOutlineStyle: controlStyle.outlineStyle,
     };
   });
   expect(focusTreatment.containsFocus).toBe(true);
+  expect(focusTreatment.focusVisible).toBe(true);
   expect(
-    focusTreatment.outlineWidth !== "0px" ||
-      focusTreatment.outlineStyle !== "none" ||
-      focusTreatment.boxShadow !== "none",
+    (focusTreatment.rowOutlineWidth !== "0px" &&
+      focusTreatment.rowOutlineStyle !== "none") ||
+      (focusTreatment.controlOutlineWidth !== "0px" &&
+        focusTreatment.controlOutlineStyle !== "none"),
   ).toBe(true);
 
   await page.keyboard.press("Escape");
