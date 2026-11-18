@@ -30,6 +30,10 @@ async function deliveredKeys(page: import("@playwright/test").Page): Promise<str
 
 async function installDeliveryProbe(page: import("@playwright/test").Page): Promise<void> {
   await page.addInitScript(() => {
+    Object.defineProperty(Notification, "permission", {
+      configurable: true,
+      get: () => "granted",
+    });
     const registration = {
       showNotification: async (): Promise<void> => undefined,
     };
