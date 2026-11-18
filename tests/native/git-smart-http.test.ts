@@ -51,8 +51,8 @@ import { fakeFilesystem } from "./fake-filesystem";
 
 const DATASET_ID =
   "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4001";
-const USER = "fixture-token";
-const PASSWORD = "";
+const USER = "x-access-token";
+const PASSWORD = "fixture-token";
 const AUTHORIZATION =
   `Basic ${btoa(`${USER}:${PASSWORD}`)}`;
 
@@ -477,7 +477,7 @@ describe("Android Git smart-HTTP feasibility", () => {
     const acquired = await acquireAndroidPortableRepository(
       effects,
       remoteUrl,
-      async () => USER,
+      async () => PASSWORD,
       () => DATASET_ID,
     );
     expect(acquired).toMatchObject({
@@ -603,7 +603,7 @@ describe("Android Git smart-HTTP feasibility", () => {
     await cloneAndroidPortableRepository(
       effects,
       remoteUrl,
-      async () => USER,
+      async () => PASSWORD,
     );
 
     const database = await initializeDatabase(
