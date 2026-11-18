@@ -290,7 +290,7 @@ async function requireGit(
   return result.stdout;
 }
 
-async function discoverSynchronizationRemote(
+export async function discoverSynchronizationRemote(
   repositoryPath: string,
 ): Promise<string | null> {
   const result = await runGit(repositoryPath, ["remote"]);
