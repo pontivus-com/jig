@@ -380,12 +380,16 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
   });
   await actions.focus();
   const focusTreatment = await source.evaluate((element) => {
-    const style = getComputedStyle(element);
+    const focused = document.activeElement;
+    if (!(focused instanceof HTMLElement)) {
+      throw new Error("Focused Task control is unavailable");
+    }
+    const style = getComputedStyle(focused);
     return {
       outlineWidth: style.outlineWidth,
       outlineStyle: style.outlineStyle,
       boxShadow: style.boxShadow,
-      containsFocus: element.contains(document.activeElement),
+      containsFocus: element.contains(focused),
     };
   });
   expect(focusTreatment.containsFocus).toBe(true);
