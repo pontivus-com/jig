@@ -12,6 +12,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -21,7 +22,7 @@ public final class JigSqlitePlugin extends Plugin {
     private SQLiteConnection connection = null;
 
     private File privateDatabaseFile(String relativePath) throws IOException {
-        if (relativePath == null || relativePath.isBlank()) {
+        if (relativePath == null || relativePath.trim().isEmpty()) {
             throw new IOException("SQLite path is required");
         }
         File root = getContext().getFilesDir().getCanonicalFile();
@@ -114,7 +115,7 @@ public final class JigSqlitePlugin extends Plugin {
     }
 
     private static boolean isInsertStatement(String sql) {
-        String normalized = sql.stripLeading().toUpperCase();
+        String normalized = sql.trim().toUpperCase(Locale.ROOT);
         return normalized.startsWith("INSERT ") ||
             normalized.startsWith("REPLACE ");
     }
@@ -161,7 +162,7 @@ public final class JigSqlitePlugin extends Plugin {
         if (bindings == null) {
             bindings = new JSArray();
         }
-        if (sql == null || sql.isBlank()) {
+        if (sql == null || sql.trim().isEmpty()) {
             call.reject("SQL is required");
             return;
         }
@@ -186,7 +187,7 @@ public final class JigSqlitePlugin extends Plugin {
         if (bindings == null) {
             bindings = new JSArray();
         }
-        if (sql == null || sql.isBlank()) {
+        if (sql == null || sql.trim().isEmpty()) {
             call.reject("SQL is required");
             return;
         }
