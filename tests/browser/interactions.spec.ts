@@ -126,39 +126,78 @@ async function touchDrag(
     type: "touchstart" | "touchmove" | "touchend",
     point: { readonly x: number; readonly y: number },
   ): Promise<void> => {
-    await source.evaluate(
-      (element, payload) => {
+    const payload = { type, x: point.x, y: point.y };
+    if (type === "touchstart") {
+      await source.evaluate((element, start) => {
+        const dragWindow = window as Window & {
+          __jigTouchDragTarget?: EventTarget;
+        };
+        dragWindow.__jigTouchDragTarget = element;
         const touch = new Touch({
           identifier: 1,
           target: element,
-          clientX: payload.x,
-          clientY: payload.y,
-          screenX: payload.x,
-          screenY: payload.y,
-          pageX: payload.x,
-          pageY: payload.y,
+          clientX: start.x,
+          clientY: start.y,
+          screenX: start.x,
+          screenY: start.y,
+          pageX: start.x,
+          pageY: start.y,
           radiusX: 1,
           radiusY: 1,
           rotationAngle: 0,
           force: 1,
         });
-        const ending = payload.type === "touchend";
-        const event = new TouchEvent(payload.type, {
+        element.dispatchEvent(
+          new TouchEvent("touchstart", {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            touches: [touch],
+            targetTouches: [touch],
+            changedTouches: [touch],
+          }),
+        );
+      }, payload);
+      return;
+    }
+
+    await page.evaluate((next) => {
+      const dragWindow = window as Window & {
+        __jigTouchDragTarget?: EventTarget;
+      };
+      const target = dragWindow.__jigTouchDragTarget;
+      if (!(target instanceof Element)) {
+        throw new Error("Synthetic touch drag target is unavailable");
+      }
+      const touch = new Touch({
+        identifier: 1,
+        target,
+        clientX: next.x,
+        clientY: next.y,
+        screenX: next.x,
+        screenY: next.y,
+        pageX: next.x,
+        pageY: next.y,
+        radiusX: 1,
+        radiusY: 1,
+        rotationAngle: 0,
+        force: 1,
+      });
+      const ending = next.type === "touchend";
+      window.dispatchEvent(
+        new TouchEvent(next.type, {
           bubbles: true,
           cancelable: true,
           composed: true,
           touches: ending ? [] : [touch],
           targetTouches: ending ? [] : [touch],
           changedTouches: [touch],
-        });
-        if (payload.type === "touchstart") {
-          element.dispatchEvent(event);
-        } else {
-          window.dispatchEvent(event);
-        }
-      },
-      { type, x: point.x, y: point.y },
-    );
+        }),
+      );
+      if (ending) {
+        delete dragWindow.__jigTouchDragTarget;
+      }
+    }, payload);
   };
 
   await dispatchTouch("touchstart", startPoint);
