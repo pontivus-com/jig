@@ -201,7 +201,7 @@ describe("GitHub onboarding orchestration", () => {
     expect(grant).toMatchObject({
       phase: "repository-access",
       grant_access_url:
-        "https://github.com/apps/jig-test/installations/new",
+        "https://github.com/apps/jig-desktop-test/installations/new",
       repositories: [],
     });
 
