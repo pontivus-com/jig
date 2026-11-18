@@ -12,12 +12,14 @@ import {
   type ServiceStatus,
 } from "./http";
 import { createBootstrapHttpHandler } from "./bootstrap-http";
-import { GitHubDeviceFlowSession } from "./github-device-flow";
-import { GitHubOnboardingController } from "./github-onboarding";
-import { GitHubReconnectController } from "./github-reconnect";
-import { GITHUB_APP_REGISTRATION } from "./github-registration";
+import { GitHubDeviceFlowSession } from "../github-device-flow";
+import { GitHubOnboardingController } from "../github-onboarding";
+import { GitHubReconnectController } from "../github-reconnect";
+import { GITHUB_APP_REGISTRATION } from "../github-registration";
 import { createGitHubHttpHandler } from "./github-http";
+import { acquireManagedGitHubRepository } from "./github-managed-checkout";
 import { createManagedGitHubTransport } from "./github-transport";
+import { initializeRepositoryInstallation } from "./setup";
 import {
   assertSecretServiceAvailable,
   storeGitHubCredential,
@@ -203,11 +205,26 @@ async function runBootstrap(): Promise<void> {
     assert_credential_store: assertSecretServiceAvailable,
     store_credential: storeGitHubCredential,
   });
-  const githubOnboarding = new GitHubOnboardingController({
+  const githubOnboarding = new GitHubOnboardingController<JigConfig>({
     registration: GITHUB_APP_REGISTRATION,
     device_flow: deviceFlow,
-    config_path: defaultConfigPath(),
-    http_port: DEFAULT_HTTP_PORT,
+    acquire_repository: async (repository, credential) => {
+      const checkout = await acquireManagedGitHubRepository(
+        {
+          id: repository.id,
+          owner: repository.owner,
+          name: repository.name,
+        },
+        { access_token: credential.access_token },
+      );
+      return (
+        await initializeRepositoryInstallation({
+          repository_path: checkout,
+          http_port: DEFAULT_HTTP_PORT,
+          config_path: defaultConfigPath(),
+        })
+      ).config;
+    },
   });
 
   const bootstrapHandler = createBootstrapHttpHandler({
