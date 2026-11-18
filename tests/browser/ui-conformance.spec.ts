@@ -465,36 +465,50 @@ test("desktop header stays compact while narrow header uses sticky destination-s
   expectNear(historyHeight, plannerHeight, 1);
   expectNear(settingsHeight, plannerHeight, 1);
 
-  await page.setViewportSize({ width: 390, height: 844 });
-  await waitForResponsiveHeader(page, 390);
+  for (const width of [320, 360, 390, 414] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    await waitForResponsiveHeader(page, width);
 
-  const narrowSettingsHeight = await headerHeight(page);
-  expect(narrowSettingsHeight).toBeGreaterThanOrEqual(44);
-  await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
-  await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Open navigation menu" }).click();
+    let menu = page.getByRole("menu");
+    await expect(menu.getByRole("menuitem")).toHaveCount(3);
+    await menu.getByRole("menuitem", { name: /^Settings/ }).click();
 
-  const topBefore = await page.locator(".jig-app-header-narrow").evaluate(
-    (element) => element.getBoundingClientRect().top,
-  );
-  await page.locator(".jig-content-frame").evaluate((element) => {
-    element.scrollTop = 500;
-  });
-  const topAfter = await page.locator(".jig-app-header-narrow").evaluate(
-    (element) => element.getBoundingClientRect().top,
-  );
-  expectNear(topAfter, topBefore, 1);
+    const narrowSettingsHeight = await headerHeight(page);
+    expect(narrowSettingsHeight).toBeGreaterThanOrEqual(44);
+    await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
+    await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Open navigation menu" }).click();
-  const menu = page.getByRole("menu");
-  await expect(menu.getByRole("menuitem")).toHaveCount(3);
-  await menu.getByRole("menuitem", { name: /^Planner/ }).click();
+    const topBefore = await page.locator(".jig-app-header-narrow").evaluate(
+      (element) => element.getBoundingClientRect().top,
+    );
+    await page.locator(".jig-content-frame").evaluate((element) => {
+      element.scrollTop = 500;
+    });
+    const topAfter = await page.locator(".jig-app-header-narrow").evaluate(
+      (element) => element.getBoundingClientRect().top,
+    );
+    expectNear(topAfter, topBefore, 1);
 
-  await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
-  await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Add task", exact: true })).toBeVisible();
-  const narrowPlannerHeight = await headerHeight(page);
-  expect(narrowPlannerHeight).toBeGreaterThan(narrowSettingsHeight);
+    const frameWidth = await page.locator(".jig-content-frame").evaluate(
+      (element) => ({
+        client: element.clientWidth,
+        scroll: element.scrollWidth,
+      }),
+    );
+    expect(frameWidth.scroll).toBeLessThanOrEqual(frameWidth.client + 1);
+
+    await page.getByRole("button", { name: "Open navigation menu" }).click();
+    menu = page.getByRole("menu");
+    await menu.getByRole("menuitem", { name: /^Planner/ }).click();
+
+    await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
+    await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Add task", exact: true })).toBeVisible();
+    const narrowPlannerHeight = await headerHeight(page);
+    expect(narrowPlannerHeight).toBeGreaterThan(narrowSettingsHeight);
+  }
 });
 
 test("History and Settings headings exist once in the application header", async ({
