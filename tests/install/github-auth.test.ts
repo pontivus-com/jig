@@ -3,13 +3,13 @@ import {
   expect,
   it,
 } from "vitest";
+import type { GitHubAppRegistration } from "../../src/github";
 import {
   listGitHubInstallations,
   listGitHubRepositories,
   pollGitHubDeviceAuthorization,
   refreshGitHubCredential,
   startGitHubDeviceAuthorization,
-  type GitHubAppRegistration,
   type GitHubFetch,
 } from "../../src/shell/github-auth";
 
