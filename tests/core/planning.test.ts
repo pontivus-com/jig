@@ -36,6 +36,8 @@ function task(
     reference: null,
     note: null,
     reminder_time: null,
+    recurrence_series_id: null,
+    recurrence_occurrence_date: null,
     completed_at: null,
     created_at: NOW,
     updated_at: NOW,
