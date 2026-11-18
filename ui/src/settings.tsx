@@ -100,13 +100,6 @@ export function SettingsView({
 
   return (
     <div className="jig-settings-view">
-      <div className="jig-reference-heading">
-        <div>
-          <h1>Settings</h1>
-          <p>Repository, synchronization, appearance and diagnostics</p>
-        </div>
-      </div>
-
       {operationError === null ? null : (
         <Banner
           status="error"
