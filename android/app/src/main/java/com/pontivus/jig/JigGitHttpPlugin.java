@@ -1,6 +1,5 @@
 package com.pontivus.jig;
 
-import android.util.Base64;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -91,10 +90,7 @@ public final class JigGitHttpPlugin extends Plugin {
             byte[] body =
                 encodedBody == null
                     ? null
-                    : Base64.decode(
-                        encodedBody,
-                        Base64.DEFAULT
-                    );
+                    : JigGitHttpCodec.decode(encodedBody);
 
             connection =
                 (HttpsURLConnection) url.openConnection();
@@ -123,10 +119,7 @@ public final class JigGitHttpPlugin extends Plugin {
             response.put("headers", responseHeaders);
             response.put(
                 "data",
-                Base64.encodeToString(
-                    result.data,
-                    Base64.NO_WRAP
-                )
+                JigGitHttpCodec.encode(result.data)
             );
             call.resolve(response);
         } catch (Exception ignored) {
