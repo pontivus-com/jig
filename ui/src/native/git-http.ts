@@ -32,7 +32,7 @@ export interface NativeHttpPort {
   ): Promise<NativeGitHttpResponse>;
 }
 
-const nativeGitHttp =
+export const androidNativeHttp =
   registerPlugin<NativeHttpPort>("JigGitHttp");
 
 export class AndroidGitHttpError extends Error {
@@ -106,7 +106,7 @@ function assertNotAborted(signal: AbortSignal | undefined): void {
 }
 
 export function createAndroidGitHttpClient(
-  nativeHttp: NativeHttpPort = nativeGitHttp,
+  nativeHttp: NativeHttpPort = androidNativeHttp,
 ): IsomorphicGitHttpClient {
   return {
     async request(request): Promise<GitHttpResponse> {
