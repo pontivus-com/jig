@@ -31,14 +31,14 @@ import {
   type TaskDraft,
 } from "./task-editor";
 import { HistoryView } from "./history";
+import { isStaleRevision } from "./http";
 import {
-  isStaleRevision,
   readCanonicalTasks,
   readDiagnostics,
   readStatus,
   submitTaskCommand,
   triggerSync,
-} from "./http";
+} from "./runtime";
 import { Planner } from "./planner";
 import {
   PlannerHeader,
