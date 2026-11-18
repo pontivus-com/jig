@@ -1445,7 +1445,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 The detailed normative solution contracts are [JIG-110-SD-01..37](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
 
 - runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error;
-- Linux setup uses one bootstrap API/UI and canonical local-repository adoption; optimized GitHub acquisition uses selected-repository GitHub App authorization, platform secure credentials and deterministic managed checkout;
+- Linux setup uses one bootstrap API/UI and canonical local-repository adoption; optimized GitHub acquisition uses the platform-specific **Jig Desktop** GitHub App, platform secure credentials and deterministic managed checkout; Android uses a separate **Jig Android** GitHub App with the same least-privilege repository semantics. The two App registrations never share client IDs/secrets/callbacks, while both converge on the same canonical repository/portable-data contract;
 - Android is a committed Capacitor 8 shell using the same React UI/core/protocol contracts, package ID `com.pontivus.jig`, private app-owned repository storage and F-Droid-compatible FLOSS dependencies;
 - root `package.json.version` is the sole release-version authority; Android `versionName` equals it and `versionCode = major*1_000_000 + minor*1_000 + patch`;
 - canonical SQLite semantics move to one asynchronous TypeScript persistence owner with a Bun driver on Linux and a narrow AndroidX bundled-SQLite native driver on Android;
