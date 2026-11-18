@@ -227,6 +227,18 @@ export async function readGitHubRepositories(): Promise<GitHubSetupSnapshot> {
   );
 }
 
+export async function startGitHubReconnect(): Promise<GitHubSetupSnapshot> {
+  return asGitHubSetupSnapshot(
+    await postJson("/api/v1/github/reconnect/start", {}),
+  );
+}
+
+export async function refreshGitHubReconnect(): Promise<GitHubSetupSnapshot> {
+  return asGitHubSetupSnapshot(
+    await postJson("/api/v1/github/reconnect/refresh", {}),
+  );
+}
+
 export async function acquireGitHubRepository(
   repositoryId: number,
 ): Promise<string> {
