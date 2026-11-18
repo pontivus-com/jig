@@ -3,6 +3,10 @@ import {
   type HttpOptions,
   type HttpResponse,
 } from "@capacitor/core";
+import type {
+  GitHttpResponse,
+  HttpClient,
+} from "isomorphic-git";
 import {
   base64ToBytes,
   bytesToBase64,
@@ -10,26 +14,7 @@ import {
   singleChunk,
 } from "./binary";
 
-export interface GitHttpRequest {
-  readonly url: string;
-  readonly method?: string;
-  readonly headers?: Readonly<Record<string, string>>;
-  readonly body?: AsyncIterableIterator<Uint8Array>;
-  readonly signal?: AbortSignal;
-}
-
-export interface GitHttpResponse {
-  readonly url: string;
-  readonly method?: string;
-  readonly headers: Readonly<Record<string, string>>;
-  readonly body: AsyncIterableIterator<Uint8Array>;
-  readonly statusCode: number;
-  readonly statusMessage: string;
-}
-
-export interface IsomorphicGitHttpClient {
-  request(request: GitHttpRequest): Promise<GitHttpResponse>;
-}
+export type IsomorphicGitHttpClient = HttpClient;
 
 export interface NativeHttpPort {
   request(options: HttpOptions): Promise<HttpResponse>;
@@ -119,7 +104,7 @@ export function createAndroidGitHttpClient(
   nativeHttp: NativeHttpPort = CapacitorHttp,
 ): IsomorphicGitHttpClient {
   return {
-    async request(request) {
+    async request(request): Promise<GitHttpResponse> {
       assertNotAborted(request.signal);
 
       const method = request.method ?? "GET";
