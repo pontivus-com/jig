@@ -24,6 +24,7 @@ import {
 import { initializeDatabase } from "../../src/shell/sqlite-bun";
 import {
   createSyncController,
+  SyncAuthenticationError,
   type SyncEffects,
 } from "../../src/shell/sync";
 
@@ -162,6 +163,27 @@ describe("serialized synchronization worker", () => {
         JIG_GITHUB_ACCESS_TOKEN: "device-token",
       },
     ]);
+    controller.stop();
+  });
+
+  it("surfaces managed GitHub credential failure immediately as a sync issue", async () => {
+    const { effects, pushCalls } = fakeEffects();
+    const controller = createSyncController(
+      db,
+      {
+        repository_path: root,
+        get_network_environment: async () => {
+          throw new SyncAuthenticationError(
+            "GitHub credential is unavailable; reconnect GitHub",
+          );
+        },
+      },
+      effects,
+    );
+
+    expect(await controller.trigger()).toBe("sync-issue");
+    expect(controller.status()).toBe("sync-issue");
+    expect(pushCalls.count).toBe(0);
     controller.stop();
   });
 
