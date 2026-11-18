@@ -12,7 +12,6 @@ import {
   validateTask,
 } from "../core/task";
 import { assertTaskSet } from "../core/planning";
-import type { RepositoryStatus } from "../protocol";
 import { PORTABLE_FORMAT_VERSION } from "../persistence/sqlite";
 
 const DATA_REF = "refs/heads/jig-data";
@@ -51,9 +50,19 @@ export interface GitCommandResult {
   readonly stderr: string;
 }
 
+export type RepositoryPushStatus =
+  | "not-configured"
+  | "synchronized"
+  | "sync-issue";
+
 export interface RepositorySynchronizationResult {
-  readonly status: RepositoryStatus;
+  readonly status: RepositoryPushStatus;
   readonly retryable: boolean;
+}
+
+export interface SynchronizationRemote {
+  readonly name: string;
+  readonly location: string;
 }
 
 export class SnapshotValidationError extends Error {
@@ -459,6 +468,64 @@ export async function inspectPortableCandidate(
   return remote;
 }
 
+export function sanitizeSynchronizationRemoteLocation(
+  value: string,
+): string {
+  const trimmed = value.trim();
+  try {
+    const parsed = new URL(trimmed);
+    parsed.username = "";
+    parsed.password = "";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    const scpLike = /^(?:[^@\s]+@)?([^:\s]+):(.+)$/.exec(trimmed);
+    const host = scpLike?.[1];
+    const path = scpLike?.[2];
+    if (host !== undefined && path !== undefined) {
+      const cleanPath = path.split(/[?#]/, 1)[0] ?? "";
+      return `${host}:${cleanPath}`;
+    }
+    return trimmed.split(/[?#]/, 1)[0] ?? trimmed;
+  }
+}
+
+export async function inspectSynchronizationRemote(
+  config: GitAdapterConfig,
+): Promise<SynchronizationRemote | null> {
+  const remoteName = await discoverSynchronizationRemote(
+    config.repository_path,
+  );
+  if (remoteName === null) {
+    return null;
+  }
+
+  const urls = await runGit(config.repository_path, [
+    "remote",
+    "get-url",
+    "--push",
+    "--all",
+    remoteName,
+  ]);
+  if (urls.exit_code !== 0) {
+    throw new GitAdapterError(
+      `Unable to inspect synchronization remote ${remoteName}: ${urls.stderr || urls.stdout}`,
+    );
+  }
+  const pushUrl = urls.stdout.split("\n").find((value) => value.length > 0);
+  if (pushUrl === undefined) {
+    throw new GitAdapterError(
+      `Synchronization remote ${remoteName} has no push target`,
+    );
+  }
+
+  return {
+    name: remoteName,
+    location: sanitizeSynchronizationRemoteLocation(pushUrl),
+  };
+}
+
 export async function repositorySynchronizationMode(
   config: GitAdapterConfig,
 ): Promise<"local-only" | "remote"> {
@@ -802,13 +869,13 @@ export async function readSnapshotAtRef(
 async function pushJigDataRef(
   config: GitAdapterConfig,
   networkEnvironment: Readonly<Record<string, string>> = {},
-): Promise<RepositoryStatus> {
+): Promise<RepositoryPushStatus> {
   assertAdapterPaths(config);
   const remoteName = await discoverSynchronizationRemote(
     config.repository_path,
   );
   if (remoteName === null) {
-    return "local-only";
+    return "not-configured";
   }
 
   const result = await runGit(
