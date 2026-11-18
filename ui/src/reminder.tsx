@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import {
   useEffect,
   useRef,
@@ -98,10 +99,16 @@ export function ReminderMonitor({
   const attemptingKeys = useRef(new Set<string>());
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      return;
+    }
     void prepareBrowserNotificationServiceWorker();
   }, []);
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      return;
+    }
     pruneOldReminderKeys(todayCivilDate(now));
 
     for (const task of tasks) {
