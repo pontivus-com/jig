@@ -180,19 +180,20 @@ export function SetupView({
                 local checkout location.
               </p>
             </div>
-            <Button
-              label="Connect GitHub"
-              variant="secondary"
-              isLoading={isOperating}
-              onClick={() => {
-                void connectGitHub();
-              }}
-            />
-            {status.github_available ? null : (
+            {status.github_available ? (
+              <Button
+                label="Connect GitHub"
+                variant="secondary"
+                isLoading={isOperating}
+                onClick={() => {
+                  void connectGitHub();
+                }}
+              />
+            ) : (
               <small>
-                Connect GitHub becomes available when the governed Jig GitHub
-                App registration is configured. Existing local repositories
-                remain fully supported.
+                {status.local_repository_available
+                  ? "Connect GitHub is unavailable in this runtime. Existing local repositories remain fully supported."
+                  : "Connect GitHub is not available in this Android build yet."}
               </small>
             )}
             <GitHubDeviceFlowPanel
