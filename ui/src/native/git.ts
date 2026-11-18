@@ -82,14 +82,14 @@ function assertCredentialFreeHttpsRemote(remoteUrl: string): void {
 }
 
 function authCallback(provider: GitCredentialProvider) {
-  return async (): Promise<Readonly<{ username: string }>> => {
+  return async (): Promise<Readonly<{ username: string; password: string }>> => {
     const token = (await provider()).trim();
     if (token.length === 0) {
       throw new AndroidGitAdapterError(
         "Android Git credential provider returned an empty token",
       );
     }
-    return { username: token };
+    return { username: "x-access-token", password: token };
   };
 }
 
