@@ -17,6 +17,10 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    dependencyLocking {
+        lockAllConfigurations()
+    }
 }
 
 tasks.register("clean", Delete) {
