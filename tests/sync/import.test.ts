@@ -30,6 +30,8 @@ function snapshotTask(idSuffix: string, title: string, position: number): Task {
     reference: null,
     note: null,
     reminder_time: null,
+    recurrence_series_id: null,
+    recurrence_occurrence_date: null,
     completed_at: null,
     created_at: "2026-11-16T01:00:00.000Z",
     updated_at: "2026-11-16T01:00:00.000Z",
@@ -68,6 +70,7 @@ describe("complete-snapshot adoption", () => {
     const adopted = await adoptCanonicalSnapshot(
       db,
       snapshot.tasks,
+      snapshot.recurrences,
       "0123456789012345678901234567890123456789",
     );
 
@@ -114,13 +117,23 @@ describe("complete-snapshot adoption", () => {
     `);
 
     await expect(
-      adoptCanonicalSnapshot(db, snapshot.tasks, "head-a"),
+      adoptCanonicalSnapshot(
+        db,
+        snapshot.tasks,
+        snapshot.recurrences,
+        "head-a",
+      ),
     ).rejects.toThrow(/injected import failure/);
     expect(await readCanonicalState(db)).toStrictEqual(before);
 
     await db.execute("DROP TRIGGER inject_import_failure");
     expect(
-      (await adoptCanonicalSnapshot(db, snapshot.tasks, "head-a")).tasks,
+      (await adoptCanonicalSnapshot(
+        db,
+        snapshot.tasks,
+        snapshot.recurrences,
+        "head-a",
+      )).tasks,
     ).toStrictEqual([remote]);
   });
 });
