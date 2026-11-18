@@ -295,7 +295,9 @@ Feature CSS must consume these aliases for the product states below and must not
 | `--jig-state-nav-active-bg` | Ink 100 `#EFF2F7` | Ink 800 `#253046` | active History/Settings destination |
 | `--jig-state-nav-active-text` | Ink 900 `#162034` | Ink 50 `#F9FAFD` | active History/Settings label/icon |
 | `--jig-state-drag-border` | Amber 700 `#B86C00` | Amber 500 `#F59E0B` | transient drag source/drop target outline |
-| `--jig-state-drag-bg` | Amber 50 `#FEF3E7` | Amber 500 mixed 18% into Ink 900 | transient drag target tint only |
+| `--jig-state-drag-bg` | Amber 50 `#FEF3E7` | Amber 500 mixed 18% into Ink 900 | transient drag destination-area tint only |
+| `--jig-state-reminder-due-border` | Astryx warning border | Astryx warning border | reminder-due Task attention boundary; never delivery state |
+| `--jig-state-reminder-due-bg` | Astryx warning-muted | Astryx warning-muted | subtle reminder-due Task attention surface |
 | `--jig-priority-high` | Astryx error text role | Astryx error text role | High priority leading cue |
 | `--jig-priority-normal` | Ink 500 `#788499` | Ink 400 `#9BA5B8` | Normal priority leading cue |
 | `--jig-priority-low` | Astryx success text role | Astryx success text role | Low priority leading cue |
@@ -340,7 +342,7 @@ This table is binding. “Astryx-owned” means use the stated public component 
 | **Task card — ordinary** | card surface + ordinary border | `--jig-state-hover-bg` | n/a | Amber focus ring on interactive body | disabled controls only | accent-muted card fill |
 | **Task card — selected/open workspace target** | ordinary card | neutral hover remains subordinate | `--jig-state-task-selected-bg` + `--jig-state-task-selected-border` using the info-blue family | Amber focus ring additionally | n/a | Amber; today teal; priority/status color as card fill |
 | **Task drag source** | selected/ordinary card semantics underneath | n/a | `--jig-state-drag-border`; drag overlay shadow; reduced-opacity source is permitted | n/a during pointer drag | n/a | selected-task neutral as sole drag indicator |
-| **Date drop target** | ordinary/today structural state underneath | n/a | dashed/solid `--jig-state-drag-border` + `--jig-state-drag-bg` | n/a | n/a | today neutral; success/warning/error |
+| **Task insertion target** | ordinary/today structural state underneath | n/a | exact 2px `--jig-state-drag-border` insertion rule; cross-date/empty destination may add `--jig-state-drag-bg` | n/a | n/a | whole-column dashed outline as the sole placement signal; success/warning/error |
 | **High priority** | no card fill change | n/a | narrow `--jig-priority-high` leading cue + restrained error-family High label if shown | n/a | n/a | Amber/warning |
 | **Normal priority** | no card fill change | n/a | narrow `--jig-priority-normal` leading cue; no badge by default | n/a | n/a | Amber |
 | **Low priority** | no card fill change | n/a | narrow `--jig-priority-low` leading cue + restrained success-family Low label if shown | n/a | n/a | info/Amber |
@@ -561,3 +563,10 @@ Any change to brand anchors, theme palette sources, semantic mapping or mark geo
 8. architecture checks proving one root Theme owner and no feature-level raw palette/theme-name branching.
 
 Layout-only UI changes do not redefine this brand contract.
+
+
+## v1.1 reminder attention and drag precision
+
+Reminder due is a user-attention state, not notification-delivery state. It uses the governed warning family through `--jig-state-reminder-due-border` / `--jig-state-reminder-due-bg` plus accessible non-color text/icon meaning. It must remain distinguishable from High priority, save/sync error, selection, focus and drag.
+
+v1.1 direct manipulation uses `--jig-state-drag-border` for the exact insertion rule and `--jig-state-drag-bg` only as supplementary cross-date/empty-target tint. A whole date-column outline is no longer sufficient placement feedback.
