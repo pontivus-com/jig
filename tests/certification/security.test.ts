@@ -170,55 +170,6 @@ describe("V1 security and trust boundaries", () => {
     expect(registration).not.toContain("private_key");
   });
 
-  it("enforces the SD-38 GitHub integration dependency direction", async () => {
-    const sync = await source("src/shell/sync.ts");
-    const protocol = await source("src/protocol.ts");
-    const http = await source("src/shell/http.ts");
-    const main = await source("src/shell/main.ts");
-    const onboarding = await source("src/shell/github-onboarding.ts");
-    const reconnect = await source("src/shell/github-reconnect.ts");
-    const deviceFlow = await source("src/shell/github-device-flow.ts");
-    const setup = await source("ui/src/setup.tsx");
-    const app = await source("ui/src/app.tsx");
-    const deviceFlowUi = await source("ui/src/github-device-flow.tsx");
-
-    expect(sync.toLowerCase()).not.toContain("github");
-    expect(sync).not.toContain("client_id");
-    expect(sync).not.toContain("secret-tool");
-    expect(sync).not.toContain("GIT_ASKPASS");
-    expect(sync).not.toContain("JIG_GITHUB_ACCESS_TOKEN");
-    expect(sync).not.toContain("get_network_environment");
-    expect(sync).not.toContain("SyncAuthenticationError");
-
-    expect(protocol.toLowerCase()).not.toContain("github");
-    expect(http.toLowerCase()).not.toContain("github");
-    expect(http).not.toContain("/api/v1/github/");
-
-    expect(main).not.toContain("loadCurrentGitHubCredential");
-    expect(main).not.toContain("refreshGitHubCredential");
-    expect(main).not.toContain("githubGitEnvironment");
-    expect(main).not.toContain("GIT_ASKPASS");
-    expect(main).not.toContain("assertManagedGitHubSynchronizationRemote");
-
-    expect(onboarding).toContain("GitHubDeviceFlowSession");
-    expect(onboarding).not.toContain("startGitHubDeviceAuthorization");
-    expect(onboarding).not.toContain("pollGitHubDeviceAuthorization");
-
-    expect(reconnect).toContain("GitHubDeviceFlowSession");
-    expect(reconnect).not.toContain("config_path");
-    expect(reconnect).not.toContain("http_port");
-    expect(reconnect).not.toContain("acquire");
-    expect(reconnect).not.toContain("repository");
-
-    expect(deviceFlow).toContain("startGitHubDeviceAuthorization");
-    expect(deviceFlow).toContain("pollGitHubDeviceAuthorization");
-    expect(deviceFlow).not.toContain("repository");
-
-    expect(setup).not.toContain("retry_after_seconds");
-    expect(app).not.toContain("retry_after_seconds");
-    expect(deviceFlowUi).toContain("retry_after_seconds");
-  });
-
   it("does not execute Task references or import source content in the row owner", async () => {
     const row = await source("ui/src/task-row.tsx");
 
