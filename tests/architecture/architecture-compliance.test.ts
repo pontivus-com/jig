@@ -370,6 +370,11 @@ describe("architecture compliance", () => {
       );
     }
 
+    expect(runtime).toContain("Capacitor.isNativePlatform()");
+    expect(runtime).toContain('import("./runtime-native")');
+    expect(runtime).not.toMatch(
+      /from\s+["']\.\/runtime-native["']/,
+    );
     expect(runtime).not.toMatch(/github|client_id|device[_ -]?flow/i);
     expect(runtime).not.toContain("../src/shell/");
     expect(app).toContain('from "./runtime"');
