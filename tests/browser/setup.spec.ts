@@ -65,7 +65,7 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ revision: 0, tasks: [] }),
+      body: JSON.stringify({ revision: 0, tasks: [], recurrences: [] }),
     });
   });
   await page.route("**/api/v1/status", async (route) => {
@@ -348,7 +348,7 @@ test("configured managed repository reconnects GitHub through Device Flow withou
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ revision: 0, tasks: [] }),
+      body: JSON.stringify({ revision: 0, tasks: [], recurrences: [] }),
     });
   });
   await page.route("**/api/v1/status", async (route) => {
