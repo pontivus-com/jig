@@ -12,6 +12,8 @@ import {
   type ServiceStatus,
 } from "./http";
 import { createBootstrapHttpHandler } from "./bootstrap-http";
+import { GitHubOnboardingController } from "./github-onboarding";
+import { GITHUB_APP_REGISTRATION } from "./github-registration";
 import { createSyncController } from "./sync";
 import {
   defaultConfigPath,
@@ -144,6 +146,16 @@ async function runBootstrap(): Promise<void> {
     resolveConfigured = resolvePromise;
   });
   const token = writeToken();
+  const onConfigured = (config: JigConfig): void => {
+    resolveConfigured?.(config);
+    resolveConfigured = null;
+  };
+  const githubOnboarding = new GitHubOnboardingController({
+    registration: GITHUB_APP_REGISTRATION,
+    config_path: defaultConfigPath(),
+    http_port: DEFAULT_HTTP_PORT,
+    on_configured: onConfigured,
+  });
 
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -153,10 +165,8 @@ async function runBootstrap(): Promise<void> {
       ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
       config_path: defaultConfigPath(),
       http_port: DEFAULT_HTTP_PORT,
-      on_configured: (config) => {
-        resolveConfigured?.(config);
-        resolveConfigured = null;
-      },
+      on_configured: onConfigured,
+      github_onboarding: githubOnboarding,
     }),
   });
 
