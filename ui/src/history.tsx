@@ -103,13 +103,6 @@ export function HistoryView({
 
   return (
     <div className="jig-history-view">
-      <div className="jig-reference-heading">
-        <div>
-          <h1>History</h1>
-          <p>Completed work grouped by actual completion date</p>
-        </div>
-      </div>
-
       {groups.length === 0 ? (
         <p className="jig-empty-state">No completed tasks yet.</p>
       ) : (
