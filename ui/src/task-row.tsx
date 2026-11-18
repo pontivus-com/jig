@@ -61,6 +61,14 @@ function TaskMetadata({
           {formatReminderTime(task.reminder_time)}
         </span>
       )}
+      {task.recurrence_series_id === null ? null : (
+        <span
+          className="jig-task-meta-item jig-repeat-indicator"
+          aria-label="Recurring task"
+        >
+          Repeats
+        </span>
+      )}
       {task.priority === "NORMAL" ? null : (
         <span
           className={[
