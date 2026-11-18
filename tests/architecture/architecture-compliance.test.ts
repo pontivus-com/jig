@@ -159,9 +159,10 @@ describe("architecture compliance", () => {
     const protocol = source("src/protocol.ts");
     const http = source("src/shell/http.ts");
     const main = source("src/shell/main.ts");
-    const onboarding = source("src/shell/github-onboarding.ts");
-    const reconnect = source("src/shell/github-reconnect.ts");
-    const deviceFlow = source("src/shell/github-device-flow.ts");
+    const auth = source("src/github-auth.ts");
+    const onboarding = source("src/github-onboarding.ts");
+    const reconnect = source("src/github-reconnect.ts");
+    const deviceFlow = source("src/github-device-flow.ts");
     const setup = source("ui/src/setup.tsx");
     const app = source("ui/src/app.tsx");
     const deviceFlowUi = source("ui/src/github-device-flow.tsx");
@@ -194,6 +195,7 @@ describe("architecture compliance", () => {
       "assertManagedGitHubSynchronizationRemote",
     );
 
+    expect(auth).not.toMatch(/node:|bun:|Bun\.|@capacitor/);
     expect(onboarding).toContain("GitHubDeviceFlowSession");
     expect(onboarding).not.toContain("startGitHubDeviceAuthorization");
     expect(onboarding).not.toContain("pollGitHubDeviceAuthorization");
@@ -206,11 +208,39 @@ describe("architecture compliance", () => {
 
     expect(deviceFlow).toContain("startGitHubDeviceAuthorization");
     expect(deviceFlow).toContain("pollGitHubDeviceAuthorization");
+    expect(deviceFlow).not.toMatch(/node:|bun:|Bun\.|@capacitor/);
+    expect(onboarding).not.toMatch(/node:|bun:|Bun\.|@capacitor|\.\/shell\//);
+    expect(reconnect).not.toMatch(/node:|bun:|Bun\.|@capacitor/);
     expect(deviceFlow).not.toContain("repository");
 
     expect(setup).not.toContain("retry_after_seconds");
     expect(app).not.toContain("retry_after_seconds");
     expect(deviceFlowUi).toContain("retry_after_seconds");
+
+    for (const ownerPath of [
+      "src/github-auth.ts",
+      "src/github-device-flow.ts",
+      "src/github-onboarding.ts",
+      "src/github-reconnect.ts",
+      "src/github-registration.ts",
+    ]) {
+      expect(
+        production.some(([path]) => path === ownerPath),
+        ownerPath,
+      ).toBe(true);
+    }
+    for (const obsoletePath of [
+      "src/shell/github-auth.ts",
+      "src/shell/github-device-flow.ts",
+      "src/shell/github-onboarding.ts",
+      "src/shell/github-reconnect.ts",
+      "src/shell/github-registration.ts",
+    ]) {
+      expect(
+        production.some(([path]) => path === obsoletePath),
+        obsoletePath,
+      ).toBe(false);
+    }
 
     const githubContractOwners = production.filter(([, content]) =>
       /export interface GitHubAuthorizationSnapshot\b/.test(content),
