@@ -16,6 +16,7 @@ import {
 } from "../../src/shell/github-auth";
 
 const REGISTRATION: GitHubAppRegistration = {
+  app_slug: "jig",
   client_id: "Iv1.fixture",
   client_secret: "public-fixture-secret",
   linux_callback_url:
