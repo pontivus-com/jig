@@ -389,6 +389,15 @@ body {
     font-variant-numeric: tabular-nums;
   }
 
+  .jig-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .jig-task-drag-scope {
     width: 100%;
     min-width: 0;
