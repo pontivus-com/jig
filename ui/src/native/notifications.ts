@@ -1,0 +1,181 @@
+import {
+  LocalNotifications,
+  type LocalNotificationsPlugin,
+  type PermissionState,
+} from "@capacitor/local-notifications";
+import type { Task } from "../../../src/core/task";
+
+export type AndroidReminderSchedulingOutcome =
+  | "scheduled-exact"
+  | "scheduled-inexact"
+  | "permission-required"
+  | "denied"
+  | "failed";
+
+export interface AndroidReminderPermissionStatus {
+  readonly permission:
+    | "granted"
+    | "permission-required"
+    | "denied";
+  readonly exact_alarm: "granted" | "unavailable";
+}
+
+export type AndroidLocalNotificationsPort = Pick<
+  LocalNotificationsPlugin,
+  | "schedule"
+  | "cancel"
+  | "getPending"
+  | "checkPermissions"
+  | "requestPermissions"
+  | "checkExactNotificationSetting"
+  | "changeExactNotificationSetting"
+>;
+
+function permissionMeaning(
+  state: PermissionState,
+): AndroidReminderPermissionStatus["permission"] {
+  if (state === "granted") {
+    return "granted";
+  }
+  if (state === "denied") {
+    return "denied";
+  }
+  return "permission-required";
+}
+
+export async function readAndroidReminderPermission(
+  port: AndroidLocalNotificationsPort = LocalNotifications,
+): Promise<AndroidReminderPermissionStatus> {
+  const [permission, exact] = await Promise.all([
+    port.checkPermissions(),
+    port.checkExactNotificationSetting(),
+  ]);
+  return {
+    permission: permissionMeaning(permission.display),
+    exact_alarm:
+      exact.exact_alarm === "granted"
+        ? "granted"
+        : "unavailable",
+  };
+}
+
+export async function requestAndroidReminderPermission(
+  port: AndroidLocalNotificationsPort = LocalNotifications,
+): Promise<AndroidReminderPermissionStatus> {
+  const permission = await port.requestPermissions();
+  const exact = await port.checkExactNotificationSetting();
+  return {
+    permission: permissionMeaning(permission.display),
+    exact_alarm:
+      exact.exact_alarm === "granted"
+        ? "granted"
+        : "unavailable",
+  };
+}
+
+export async function openAndroidExactAlarmSettings(
+  port: AndroidLocalNotificationsPort = LocalNotifications,
+): Promise<AndroidReminderPermissionStatus> {
+  await port.changeExactNotificationSetting();
+  return readAndroidReminderPermission(port);
+}
+
+export function androidReminderFingerprint(task: Task): string | null {
+  return task.reminder_time === null
+    ? null
+    : `${task.scheduled_date}|${task.reminder_time}`;
+}
+
+export function androidReminderDate(task: Task): Date | null {
+  if (task.reminder_time === null) {
+    return null;
+  }
+  const value = new Date(
+    `${task.scheduled_date}T${task.reminder_time}:00`,
+  );
+  return Number.isNaN(value.getTime()) ? null : value;
+}
+
+export function isFutureAndroidReminder(
+  task: Task,
+  now: Date,
+): boolean {
+  const at = androidReminderDate(task);
+  return (
+    task.completed_at === null &&
+    at !== null &&
+    at.getTime() > now.getTime()
+  );
+}
+
+export async function scheduleAndroidTaskReminder(
+  task: Task,
+  notificationId: number,
+  now: Date,
+  port: AndroidLocalNotificationsPort = LocalNotifications,
+): Promise<AndroidReminderSchedulingOutcome> {
+  const at = androidReminderDate(task);
+  if (
+    task.completed_at !== null ||
+    at === null ||
+    at.getTime() <= now.getTime()
+  ) {
+    return "failed";
+  }
+
+  let settings: AndroidReminderPermissionStatus;
+  try {
+    settings = await readAndroidReminderPermission(port);
+  } catch {
+    return "failed";
+  }
+  if (settings.permission === "denied") {
+    return "denied";
+  }
+  if (settings.permission !== "granted") {
+    return "permission-required";
+  }
+
+  const exact = settings.exact_alarm === "granted";
+  try {
+    const result = await port.schedule({
+      notifications: [
+        {
+          id: notificationId,
+          title: "Jig reminder",
+          body: task.title,
+          schedule: {
+            at,
+            allowWhileIdle: true,
+          },
+          isExactNotification: exact,
+          isExactMandatory: false,
+          extra: {
+            jig_task_id: task.id,
+            jig_reminder_fingerprint:
+              androidReminderFingerprint(task),
+          },
+        },
+      ],
+    });
+    return exact && result.warning === undefined
+      ? "scheduled-exact"
+      : "scheduled-inexact";
+  } catch {
+    return "failed";
+  }
+}
+
+export async function cancelAndroidReminder(
+  notificationId: number,
+  port: AndroidLocalNotificationsPort = LocalNotifications,
+): Promise<boolean> {
+  try {
+    await port.cancel({
+      notifications: [{ id: notificationId }],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
