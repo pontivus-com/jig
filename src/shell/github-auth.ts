@@ -8,6 +8,7 @@ export type GitHubFetch = (
 ) => Promise<Response>;
 
 export interface GitHubAppRegistration {
+  readonly app_slug: string;
   readonly client_id: string;
   readonly client_secret: string;
   readonly linux_callback_url: string;
@@ -210,6 +211,8 @@ export async function createGitHubAuthorizationRequest(
   redirectUri: string,
 ): Promise<GitHubAuthorizationRequest> {
   if (
+    registration.app_slug.length === 0 ||
+    !/^[a-z0-9-]+$/.test(registration.app_slug) ||
     registration.client_id.length === 0 ||
     registration.client_secret.length === 0 ||
     redirectUri.length === 0
