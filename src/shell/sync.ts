@@ -23,6 +23,9 @@ import {
 
 export interface SyncConfiguration {
   readonly repository_path: string;
+  readonly get_network_environment?: () => Promise<
+    Readonly<Record<string, string>>
+  >;
 }
 
 export interface SyncController {
@@ -37,7 +40,10 @@ export interface SyncEffects {
   readonly ensurePortableData: typeof ensurePortableData;
   readonly readCurrentSnapshot: typeof readCurrentPortableSnapshot;
   readonly writeSnapshot: typeof writePortableSnapshot;
-  readonly synchronize: typeof synchronizePortableData;
+  readonly synchronize: (
+    config: GitAdapterConfig,
+    networkEnvironment?: Readonly<Record<string, string>>,
+  ) => Promise<RepositoryStatus>;
   readonly mode: typeof repositorySynchronizationMode;
 }
 
@@ -157,7 +163,14 @@ export function createSyncController(
         await markExported(db, state.revision, head);
       }
 
-      const pushed = await effects.synchronize(adapter);
+      const networkEnvironment =
+        config.get_network_environment === undefined
+          ? undefined
+          : await config.get_network_environment();
+      const pushed = await effects.synchronize(
+        adapter,
+        networkEnvironment,
+      );
       failureCount = pushed === "sync-issue" ? failureCount + 1 : 0;
       firstDirtyAt = null;
 
