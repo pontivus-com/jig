@@ -76,7 +76,9 @@ describe("architecture compliance", () => {
     expect(taskOwners.map(([path]) => path)).toEqual(["src/core/task.ts"]);
 
     for (const typeName of [
-      "RepositoryStatus",
+      "LocalGitSnapshotState",
+      "RemoteGitSynchronization",
+      "RepositorySynchronizationStatus",
       "CanonicalState",
       "CommandResult",
       "ServiceStatus",
