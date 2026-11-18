@@ -38,6 +38,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
       - name: Ensure Android SDK 36
         run: |
           yes | sdkmanager --licenses >/dev/null || true
