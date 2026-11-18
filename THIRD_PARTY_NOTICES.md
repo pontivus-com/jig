@@ -54,6 +54,14 @@ No editor/plugin runtime code from these projects is bundled.
 - License: Apache License 2.0
 - The Apache-2.0 terms are also reproduced in Jig's root `LICENSE`.
 
+## Hello Pangea DnD
+
+- Package: `@hello-pangea/dnd@18.0.1`
+- Project: `hello-pangea/dnd`
+- Use in Jig: Planner Task-card list drag/drop mechanics, touch/mouse/keyboard sensors and auto-scroll
+- License: Apache License 2.0
+- Jig owns the dedicated grip, insertion indicator, Astryx semantic styling and canonical Task move semantics; the library is not a second design system or data-model owner.
+
 ---
 
 ## MIT license text
