@@ -8,6 +8,7 @@ import { isReminderDue } from "../../src/core/reminder";
 import {
   browserNotificationState,
   displayBrowserNotification,
+  prepareBrowserNotificationServiceWorker,
 } from "./browser-notifications";
 import { todayCivilDate } from "./dates";
 
@@ -95,6 +96,10 @@ export function ReminderMonitor({
   now: Date;
 }>): null {
   const attemptingKeys = useRef(new Set<string>());
+
+  useEffect(() => {
+    void prepareBrowserNotificationServiceWorker();
+  }, []);
 
   useEffect(() => {
     pruneOldReminderKeys(todayCivilDate(now));
