@@ -3,6 +3,7 @@ import { jigTheme } from "./jig.js";
 import { astryxNeutralTheme } from "./themes/astryx-neutral.js";
 import { astryxButterTheme } from "./themes/astryx-butter.js";
 import { astryxChocolateTheme } from "./themes/astryx-chocolate.js";
+import { astryxGothicTheme } from "./themes/astryx-gothic.js";
 import { astryxMatchaTheme } from "./themes/astryx-matcha.js";
 import { astryxStoneTheme } from "./themes/astryx-stone.js";
 import { astryxY2kTheme } from "./themes/astryx-y2k.js";
@@ -35,6 +36,12 @@ export const THEME_DEFINITIONS = [
     label: "Chocolate",
     group: "Astryx",
     theme: astryxChocolateTheme,
+  },
+  {
+    id: "astryx-gothic",
+    label: "Gothic",
+    group: "Astryx",
+    theme: astryxGothicTheme,
   },
   {
     id: "astryx-matcha",
