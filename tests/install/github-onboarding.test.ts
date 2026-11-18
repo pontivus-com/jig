@@ -9,11 +9,10 @@ import type {
 import type { GitHubCredential } from "../../src/shell/secret-service";
 
 const REGISTRATION: GitHubAppRegistration = {
-  app_slug: "jig-test",
-  client_id: "client-id",
-  client_secret: "public-client-secret",
-  linux_callback_url: "http://127.0.0.1:47832/setup/github/callback",
-  android_callback_url: "com.pontivus.jig://oauth/github",
+  app_slug: "jig-desktop-test",
+  client_id: "desktop-client-id",
+  client_secret: "public-desktop-client-secret",
+  callback_url: "http://127.0.0.1:47832/setup/github/callback",
 };
 
 const AUTHORIZATION: GitHubAuthorizationRequest = {
@@ -21,7 +20,7 @@ const AUTHORIZATION: GitHubAuthorizationRequest = {
   code_verifier: "verifier",
   authorization_url:
     "https://github.com/login/oauth/authorize?client_id=client-id",
-  redirect_uri: REGISTRATION.linux_callback_url,
+  redirect_uri: REGISTRATION.callback_url,
 };
 
 const CREDENTIAL: GitHubCredential = {
@@ -162,7 +161,7 @@ describe("GitHub onboarding orchestration", () => {
   it("exposes Grant and Manage access states without broadening repository scope", async () => {
     const fallbackRegistration: GitHubAppRegistration = {
       ...REGISTRATION,
-      linux_callback_url: "https://example.invalid/callback",
+      callback_url: "https://example.invalid/callback",
     };
     const startDevice = async () => ({
       device_code: "device",
@@ -184,7 +183,7 @@ describe("GitHub onboarding orchestration", () => {
       assert_secret_service: async () => undefined,
       create_authorization_request: async () => ({
         ...AUTHORIZATION,
-        redirect_uri: fallbackRegistration.linux_callback_url,
+        redirect_uri: fallbackRegistration.callback_url,
       }),
       start_device_authorization: startDevice,
       poll_device_authorization: pollDevice,
@@ -214,7 +213,7 @@ describe("GitHub onboarding orchestration", () => {
       assert_secret_service: async () => undefined,
       create_authorization_request: async () => ({
         ...AUTHORIZATION,
-        redirect_uri: fallbackRegistration.linux_callback_url,
+        redirect_uri: fallbackRegistration.callback_url,
       }),
       start_device_authorization: startDevice,
       poll_device_authorization: pollDevice,
