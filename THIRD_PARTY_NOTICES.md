@@ -1,6 +1,6 @@
 # Third-party notices
 
-Jig v1.0.6 includes **color-palette values only** from the projects below.
+Jig v1.0.6 includes **color-palette values only** from the projects below. Jig v1.1 additionally introduces the FLOSS Android/runtime dependencies recorded below.
 Jig's Astryx semantic role mapping, application-theme definitions, component
 composition and product-state mappings are original Jig integration work.
 No editor/plugin runtime code from these projects is bundled.
@@ -86,3 +86,18 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+## v1.1 Android and portable-runtime dependencies
+
+The v1.1 Android build remains source-buildable and FLOSS-only. The permanent Android dependency gate rejects Google Play Services, Firebase, Crashlytics and proprietary analytics/runtime SDKs.
+
+- **Capacitor** — `@capacitor/core@8.6.2`, `@capacitor/android@8.6.2`, `@capacitor/cli@8.6.2`, `@capacitor/app@8.1.2`, `@capacitor/filesystem@8.1.5`, `@capacitor/local-notifications@8.3.1`; MIT license. Used only for the native host and narrow Android platform capabilities.
+- **AndroidX SQLite** — `androidx.sqlite:sqlite-bundled:2.7.1`; Apache License 2.0. Used as the low-level Android SQLite driver; canonical persistence semantics remain TypeScript-owned.
+- **isomorphic-git** — `isomorphic-git@1.44.16`; MIT license. Used by the Android Git transport with injected app-owned filesystem and native HTTP adapters.
+- **React / React DOM** — `19.3.1`; MIT license. Shared application presentation used by Linux/browser and Android.
+- **Vite** — `8.3.5`; MIT license. Source build tooling for the shared web assets embedded in the Android application.
+- **TypeScript** — `7.0.2`; Apache License 2.0. Source build/type-check tooling.
+- **Bun** — `1.4.4`; MIT license. Repository build/dependency tooling and Linux runtime packaging; the F-Droid candidate recipe pins and checksum-verifies its build-tool binary.
+
+The shared GitHub App registration contains only public `app_slug`/`client_id` metadata and is not a proprietary SDK or secret-bearing build dependency.
