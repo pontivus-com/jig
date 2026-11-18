@@ -94,7 +94,10 @@ export function fakeFilesystem(): {
     async readFile(options) {
       const entry = entries.get(options.path);
       if (entry === undefined || entry.kind !== "file") {
-        missing(options.path);
+        throw new FakePluginError(
+          "OS-PLUG-FILE-0008",
+          `${options.path} does not exist`,
+        );
       }
       const data =
         options.encoding === Encoding.UTF8
@@ -185,7 +188,10 @@ export function fakeFilesystem(): {
     async stat(options) {
       const entry = entries.get(options.path);
       if (entry === undefined) {
-        missing(options.path);
+        throw new FakePluginError(
+          "OS-PLUG-FILE-0008",
+          `${options.path} does not exist`,
+        );
       }
       return info(options.path, entry);
     },
