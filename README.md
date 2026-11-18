@@ -102,20 +102,27 @@ jig uninstall       # remove runtime/configuration; preserve repo planning data
 
 ## Release status
 
-Jig **1.0.5** is the current release candidate. This corrective patch closes the
-post-v1.0.4 interaction and presentation defects with crash-free whole-card drag,
-desktop/narrow movement parity, one shared responsive Planner/navigation/menu
-semantic path, compact edge-to-edge application chrome, governed semantic icons,
-and stronger Light/Dark Task-card separation.
+Jig **1.0.6** contains the current release-line implementation. This patch keeps
+Planner full-width while giving History and Settings a continuous readable
+50rem measure, adds the governed 13-theme application catalogue with independent
+System/Light/Dark appearance, makes in-application branding theme-aware, and
+uses browser/OS Notification as the single reminder-delivery channel while Jig
+is open and permission is granted.
 
-Release publication remains PR-bound and immutable: this dedicated
-`release/v1.0.5` metadata transition is verified before merge, and the exact
-merged release commit is then re-certified by the permanent Release workflow
-before the `v1.0.5` tag and Linux x64/arm64 assets are published.
+The v1.0.6 candidate was architecture-reviewed before release. A non-governed
+Gothic preset was removed because pinned Astryx Gothic 0.7.13 is dark-only and
+JIG-106-FR-02 / AGENTS.md require the exact 13-theme catalogue. The corrected
+implementation is permanently certified without changing Task, persistence,
+protocol or Git synchronization semantics.
 
-- [v1.0.5 implementation evidence](docs/evidence/v1.0.5/README.md)
+Release publication remains PR-bound and immutable. The dedicated
+`release/v1.0.6` metadata transition is verified before merge, and the exact
+merged release commit must be re-certified by the permanent Release workflow
+before the `v1.0.6` tag and Linux x64/arm64 assets are valid.
+
+- [v1.0.6 implementation evidence](docs/evidence/v1.0.6/README.md)
 - [release process, validity contract and asset matrix](docs/releases/README.md)
-- [v1.0.5 release notes](docs/releases/v1.0.5.md)
+- [v1.0.6 release notes](docs/releases/v1.0.6.md)
 - [changelog](CHANGELOG.md)
 
 ## Documentation
