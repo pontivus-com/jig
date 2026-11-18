@@ -6,6 +6,17 @@ import {
   type FilesystemPlugin,
 } from "@capacitor/filesystem";
 
+export type AndroidFilesystemPort = Pick<
+  FilesystemPlugin,
+  | "readFile"
+  | "writeFile"
+  | "deleteFile"
+  | "mkdir"
+  | "rmdir"
+  | "readdir"
+  | "stat"
+>;
+
 const DEFAULT_SYMLINK_METADATA =
   "repository/.jig/local/android-fs-symlinks.json";
 
@@ -269,7 +280,7 @@ function registryJson(paths: ReadonlySet<string>): string {
 }
 
 async function readUtf8File(
-  plugin: FilesystemPlugin,
+  plugin: AndroidFilesystemPort,
   path: string,
 ): Promise<string> {
   try {
@@ -294,7 +305,7 @@ async function readUtf8File(
 }
 
 async function readBinaryFile(
-  plugin: FilesystemPlugin,
+  plugin: AndroidFilesystemPort,
   path: string,
 ): Promise<Uint8Array> {
   try {
@@ -318,7 +329,7 @@ async function readBinaryFile(
 }
 
 async function statRaw(
-  plugin: FilesystemPlugin,
+  plugin: AndroidFilesystemPort,
   path: string,
 ): Promise<FileInfo> {
   try {
@@ -332,7 +343,7 @@ async function statRaw(
 }
 
 export function createAndroidGitFilesystem(
-  plugin: FilesystemPlugin = Filesystem,
+  plugin: AndroidFilesystemPort = Filesystem,
   symlinkMetadataPath = DEFAULT_SYMLINK_METADATA,
 ): IsomorphicGitPromiseFs {
   const metadataPath = normalizePath(symlinkMetadataPath);
