@@ -46,11 +46,11 @@ A compact always-available synchronization indicator truthfully distinguishes sy
 
 ## 3. Visual language
 
-Use the published **Astryx 0.7.13 core** and its public theme system as the reusable visual foundation. v1.0.6 exposes thirteen complete dual-mode application themes: Jig; Astryx Neutral, Butter, Chocolate, Matcha, Stone and Y2K; and the governed community families Gruvbox, Dracula, Solarized, Nord, Catppuccin and Tokyo Night. Pinned Astryx Gothic is dark-only and is intentionally not selectable because every Jig theme must satisfy the same Light/Dark/System contract. Theme family changes palette/typography/component-theme presentation only; application structure and product semantics do not fork.
+Use the published **Astryx 0.7.13 core** and its public theme system as the reusable visual foundation. v1.0.6 exposes fourteen complete dual-mode application themes: Jig; Astryx Neutral, Butter, Chocolate, Gothic, Matcha, Stone and Y2K; and the governed community families Gruvbox, Dracula, Solarized, Nord, Catppuccin and Tokyo Night. Pinned Astryx Gothic is dark-only upstream, so Jig's Gothic preset preserves the released Dark presentation and Gothic mechanics while adding a governed Light semantic application layer; users still receive the same Light/Dark/System contract as every other preset. Theme family changes palette/typography/component-theme presentation only; application structure and product semantics do not fork.
 
 Theme ownership remains singular:
 
-- one typed presentation registry owns the exact thirteen Theme choices and one independent `System | Light | Dark` appearance value;
+- one typed presentation registry owns the exact fourteen Theme choices and one independent `System | Light | Dark` appearance value;
 - the default Jig theme retains the governed Ink/Amber/Paper palette; the Astryx presets reuse their pinned 0.7.13 theme definitions; community themes are complete semantic palette mappings over Astryx Neutral mechanics;
 - all Jig-authored theme sources are compiled with pinned `@astryxdesign/cli@0.7.13`; generated artifacts are compiler-owned and never hand-edited;
 - one shared Jig product-token contract maps today, selection, navigation, drag, priority, operational status, Task elevation and brand paint to theme semantics;
@@ -101,7 +101,7 @@ Visual rules:
 | Sync/save error | error family |
 | Unknown status | neutral grey |
 
-6. **Theme and appearance parity.** Theme family and appearance are independent. Every one of the thirteen v1.0.6 Theme presets supports System, Light and Dark; System follows browser/platform preference changes while explicit Light/Dark stays explicit. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics remain clear without relying on color alone.
+6. **Theme and appearance parity.** Theme family and appearance are independent. Every one of the fourteen v1.0.6 Theme presets supports System, Light and Dark; System follows browser/platform preference changes while explicit Light/Dark stays explicit. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics remain clear without relying on color alone.
 7. **Settings-only configuration.** Theme family is selected through one bounded Theme selector and appearance through one System/Light/Dark segmented control in Settings → Appearance. No theme or mode control appears in Planner, the header, Task cards/workspace, History actions or contextual menus.
 8. **Theme-aware brand.** The compact header uses one canonical Jig wordmark geometry. Its foreground and alignment pin consume the active theme's semantic brand roles; changing theme/mode never changes logo geometry or product identity.
 9. **Reminder presentation.** Due reminders use browser/OS Notification only while Jig is open and permission is granted. Page visibility/focus does not change channel. There is no reminder Toast fallback or duplicate.
@@ -279,7 +279,7 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Completion/History | completing removes from Planner; History remains inspectable/reopenable |
 | Daily rollover | same canonical Task appears in current-date Planner bucket on desktop and narrow |
 | Delete | cancel is no-op; confirm permanently removes Task; Git round trip preserves absence |
-| Theme/appearance semantic parity | All thirteen Theme presets resolve coherently in forced Light/Dark and System-Light/System-Dark; a live System preference change repaints without state loss; every governed surface/state follows JIG-106-SD-04; Task cards remain visibly separated from Planner canvas; combined selection/focus/priority/drag meanings remain distinct |
+| Theme/appearance semantic parity | All fourteen Theme presets resolve coherently in forced Light/Dark and System-Light/System-Dark; a live System preference change repaints without state loss; every governed surface/state follows JIG-106-SD-04; Task cards remain visibly separated from Planner canvas; combined selection/focus/priority/drag meanings remain distinct |
 | Appearance placement | Theme selector + System/Light/Dark segmented control exist only in Settings → Appearance; selection applies immediately and preserves destination, displayed week, Task/workspace draft and canonical data |
 | In-application brand | one canonical inline Jig wordmark geometry on desktop/narrow; foreground and pin resolve through active theme semantic roles with required contrast; no fixed Light/Dark application-logo switching |
 | Reminder delivery | with granted permission an eligible due reminder creates browser Notification whether visible/hidden/focused/unfocused; no reminder Toast; unsupported/default/denied states do not claim delivery and successful keys do not duplicate |
