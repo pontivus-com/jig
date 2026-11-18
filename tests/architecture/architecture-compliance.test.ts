@@ -251,10 +251,11 @@ describe("architecture compliance", () => {
       'export const ANDROID_DATA_BRANCH = "jig-data"',
     );
 
-    expect(nativeHttp).toContain('dataType = "file"');
     expect(nativeHttp).toContain(
-      'responseType: "arraybuffer"',
+      'registerPlugin<NativeHttpPort>("JigGitHttp")',
     );
+    expect(nativeHttp).not.toContain("CapacitorHttp");
+    expect(nativeHttp).not.toContain("responseType");
     expect(nativeHttp).not.toContain("fetch(");
     expect(nativeHttp).not.toContain("corsProxy");
 
@@ -313,6 +314,23 @@ describe("architecture compliance", () => {
       /\bTask\b|RecurrenceSeries|CREATE TABLE|schema_version|dataset_id/,
     );
     expect(java).not.toMatch(/RoomDatabase|androidx\.room/);
+    const gitHttpJava = source(
+      "android/app/src/main/java/com/pontivus/jig/JigGitHttpPlugin.java",
+    );
+    const gitTransportJava = source(
+      "android/app/src/main/java/com/pontivus/jig/JigGitHttpTransport.java",
+    );
+    expect(gitHttpJava).toContain(
+      '@CapacitorPlugin(name = "JigGitHttp")',
+    );
+    expect(gitHttpJava).toContain("HttpsURLConnection");
+    expect(gitHttpJava).not.toMatch(
+      /\bTask\b|RecurrenceSeries|github|client_id/i,
+    );
+    expect(gitTransportJava).toContain("HttpURLConnection");
+    expect(gitTransportJava).not.toMatch(
+      /\bTask\b|RecurrenceSeries|github|client_id/i,
+    );
     expect(gradle).toContain(
       'implementation "androidx.sqlite:sqlite-bundled:$androidxSqliteVersion"',
     );
