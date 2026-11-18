@@ -100,28 +100,20 @@ const BASE_ATTRIBUTES = [
   "github",
 ] as const;
 
-function attributes(userId: number): readonly string[] {
-  return [
-    ...BASE_ATTRIBUTES,
-    "user_id",
-    String(userId),
-  ];
-}
 
 export async function storeGitHubCredential(
   credential: GitHubCredential,
 ): Promise<void> {
   const validated = validateCredential(credential);
   await assertSecretServiceAvailable();
-  // Jig owns one active planning repository, so Linux owns one current
-  // GitHub user credential. Clear any previous provider item before storing
-  // the newly authorized or rotated credential.
-  await runSecretTool(["clear", ...BASE_ATTRIBUTES]).catch(() => null);
+  // One stable Secret Service item owns the current GitHub user credential.
+  // The user id is part of the validated payload, not the lookup key, so a
+  // refreshed or reconnected credential replaces the same item.
   const result = await runSecretTool(
     [
       "store",
       "--label=Jig GitHub",
-      ...attributes(validated.user_id),
+      ...BASE_ATTRIBUTES,
     ],
     JSON.stringify(validated),
   );
@@ -154,18 +146,8 @@ export async function loadGitHubCredential(
   if (!Number.isInteger(userId) || userId <= 0) {
     throw new SecretServiceError("GitHub user id must be a positive integer");
   }
-  await assertSecretServiceAvailable();
-  const result = await runSecretTool(["lookup", ...attributes(userId)]);
-  if (result.exit_code !== 0 || result.stdout.length === 0) {
-    return null;
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(result.stdout);
-  } catch {
-    throw new SecretServiceError("Stored GitHub credential is not valid JSON");
-  }
-  return validateCredential(parsed);
+  const current = await loadCurrentGitHubCredential();
+  return current?.user_id === userId ? current : null;
 }
 
 export async function clearGitHubCredential(
@@ -174,8 +156,11 @@ export async function clearGitHubCredential(
   if (!Number.isInteger(userId) || userId <= 0) {
     throw new SecretServiceError("GitHub user id must be a positive integer");
   }
-  await assertSecretServiceAvailable();
-  const result = await runSecretTool(["clear", ...attributes(userId)]);
+  const current = await loadCurrentGitHubCredential();
+  if (current === null || current.user_id !== userId) {
+    return;
+  }
+  const result = await runSecretTool(["clear", ...BASE_ATTRIBUTES]);
   if (result.exit_code !== 0) {
     throw new SecretServiceError(
       result.stderr || "Unable to clear GitHub credential",
