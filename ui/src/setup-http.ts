@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import type {
   GitHubCapabilityStatus,
   GitHubOnboardingSnapshot,
@@ -37,13 +38,33 @@ function asObject(value: unknown): Record<string, unknown> {
   return value;
 }
 
+function nativeSetupUnavailable(operation: string): never {
+  throw new Error(
+    `${operation} is not available in the Android shell until the governed native onboarding capability is installed`,
+  );
+}
+
 export async function readGitHubCapabilityStatus(): Promise<GitHubCapabilityStatus> {
+  if (Capacitor.isNativePlatform()) {
+    return {
+      onboarding_available: false,
+      reconnect_available: false,
+    };
+  }
   return parseGitHubCapabilityStatus(
     await fetchJson("/api/v1/github/status"),
   );
 }
 
 export async function readSetupStatus(): Promise<SetupStatus> {
+  if (Capacitor.isNativePlatform()) {
+    return {
+      mode: "bootstrap",
+      local_repository_available: false,
+      github_available: false,
+    };
+  }
+
   const [rawSetup, github] = await Promise.all([
     fetchJson("/api/v1/setup/status"),
     readGitHubCapabilityStatus(),
@@ -72,6 +93,9 @@ export async function readSetupStatus(): Promise<SetupStatus> {
 export async function configureLocalRepository(
   repositoryPath: string,
 ): Promise<string> {
+  if (Capacitor.isNativePlatform()) {
+    return nativeSetupUnavailable("Local repository setup");
+  }
   const payload = asObject(
     await postJson("/api/v1/setup/local-repository", {
       repository_path: repositoryPath,
@@ -87,30 +111,45 @@ export async function configureLocalRepository(
 }
 
 export async function startGitHubSetup(): Promise<GitHubOnboardingSnapshot> {
+  if (Capacitor.isNativePlatform()) {
+    return nativeSetupUnavailable("Connect GitHub");
+  }
   return parseGitHubOnboardingSnapshot(
     await postJson("/api/v1/setup/github/start", {}),
   );
 }
 
 export async function refreshGitHubSetup(): Promise<GitHubOnboardingSnapshot> {
+  if (Capacitor.isNativePlatform()) {
+    return nativeSetupUnavailable("GitHub setup refresh");
+  }
   return parseGitHubOnboardingSnapshot(
     await postJson("/api/v1/setup/github/refresh-access", {}),
   );
 }
 
 export async function readGitHubRepositories(): Promise<GitHubOnboardingSnapshot> {
+  if (Capacitor.isNativePlatform()) {
+    return nativeSetupUnavailable("GitHub repository access");
+  }
   return parseGitHubOnboardingSnapshot(
     await fetchJson("/api/v1/setup/github/repositories"),
   );
 }
 
 export async function startGitHubReconnect(): Promise<GitHubReconnectSnapshot> {
+  if (Capacitor.isNativePlatform()) {
+    return nativeSetupUnavailable("GitHub reconnect");
+  }
   return parseGitHubReconnectSnapshot(
     await postJson("/api/v1/github/reconnect/start", {}),
   );
 }
 
 export async function refreshGitHubReconnect(): Promise<GitHubReconnectSnapshot> {
+  if (Capacitor.isNativePlatform()) {
+    return nativeSetupUnavailable("GitHub reconnect refresh");
+  }
   return parseGitHubReconnectSnapshot(
     await postJson("/api/v1/github/reconnect/refresh", {}),
   );
@@ -119,6 +158,9 @@ export async function refreshGitHubReconnect(): Promise<GitHubReconnectSnapshot>
 export async function acquireGitHubRepository(
   repositoryId: number,
 ): Promise<string> {
+  if (Capacitor.isNativePlatform()) {
+    return nativeSetupUnavailable("GitHub repository acquisition");
+  }
   const payload = asObject(
     await postJson("/api/v1/setup/github/acquire", {
       repository_id: repositoryId,
