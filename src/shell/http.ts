@@ -8,7 +8,7 @@ import {
 import { PlanningError } from "../core/planning";
 import type {
   Diagnostics,
-  RepositoryStatus,
+  RepositorySynchronizationStatus,
   ServiceStatus,
 } from "../protocol";
 export type { Diagnostics, ServiceStatus } from "../protocol";
@@ -32,7 +32,7 @@ export interface HttpDependencies {
   readonly create_id: () => string;
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
-  readonly trigger_sync: () => Promise<RepositoryStatus>;
+  readonly trigger_sync: () => Promise<RepositorySynchronizationStatus>;
   readonly ensure_current_day_rollover: () => Promise<void>;
   readonly on_task_mutation: () => void;
 }
