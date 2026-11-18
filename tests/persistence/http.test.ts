@@ -252,6 +252,108 @@ describe("loopback HTTP admission", () => {
     });
   });
 
+  it("admits the canonical set_recurrence command and rejects widened recurrence shapes", async () => {
+    const ids = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2001",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2002",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2003",
+    ];
+    let index = 0;
+    const handle = createHttpHandler({
+      db,
+      write_token: TOKEN,
+      repository_path: root,
+      ui_directory: root,
+      now: () => "2026-11-16T01:00:00.000Z",
+      create_id: () => {
+        const id = ids[index];
+        if (id === undefined) {
+          throw new Error("HTTP recurrence id fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+      get_status: () => ({
+        ready: true,
+        repository_path: root,
+        repository_status: LOCAL_ONLY_STATUS,
+      }),
+      get_diagnostics: () => ({
+        service_healthy: true,
+        sqlite_available: true,
+        sqlite_schema_version: 3,
+        repository_path: root,
+        portable_format_version: 2,
+        repository_adapter_healthy: true,
+      }),
+      trigger_sync: async () => LOCAL_ONLY_STATUS,
+      ensure_current_day_rollover: async () => undefined,
+      on_task_mutation: () => undefined,
+    });
+
+    const created = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 0,
+        command: {
+          type: "create",
+          title: "HTTP recurrence",
+          scheduled_date: "2026-11-16",
+        },
+      }),
+    );
+    expect(created.status).toBe(200);
+
+    const repeated = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "set_recurrence",
+          task_id: ids[0],
+          recurrence: {
+            pattern: {
+              kind: "weekly",
+              interval_weeks: 1,
+              weekdays: ["MON"],
+            },
+            end_date: "2026-11-23",
+          },
+        },
+      }),
+    );
+    expect(repeated.status).toBe(200);
+    expect(await readCanonicalState(db)).toMatchObject({
+      revision: 2,
+      recurrences: [
+        {
+          id: ids[1],
+          effective_from: "2026-11-16",
+          end_date: "2026-11-23",
+        },
+      ],
+    });
+
+    const widened = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 2,
+        command: {
+          type: "set_recurrence",
+          task_id: ids[0],
+          recurrence: {
+            pattern: {
+              kind: "weekly",
+              interval_weeks: 1,
+              weekdays: ["MON"],
+              propagate_title: true,
+            },
+            end_date: "2026-11-30",
+          },
+        },
+      }),
+    );
+    expect(widened.status).toBe(400);
+    expect((await readCanonicalState(db)).revision).toBe(2);
+  });
+
   it("rejects unknown command fields instead of widening the boundary", async () => {
     const response = await handler()(
       postRequest("/api/v1/commands", {
