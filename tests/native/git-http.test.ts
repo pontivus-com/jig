@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type {
-  HttpOptions,
-  HttpResponse,
-} from "@capacitor/core";
 import {
   createAndroidGitHttpClient,
+  type NativeGitHttpRequest,
+  type NativeGitHttpResponse,
   type NativeHttpPort,
 } from "../../ui/src/native/git-http";
-import { collectBytes } from "../../ui/src/native/binary";
+import {
+  bytesToBase64,
+  collectBytes,
+} from "../../ui/src/native/binary";
 
 function requiredBody(
   body: AsyncIterableIterator<Uint8Array> | undefined,
@@ -19,8 +20,8 @@ function requiredBody(
 }
 
 function response(
-  overrides: Partial<HttpResponse> = {},
-): HttpResponse {
+  overrides: Partial<NativeGitHttpResponse> = {},
+): NativeGitHttpResponse {
   return {
     data: "",
     status: 200,
@@ -31,8 +32,8 @@ function response(
 }
 
 describe("Android isomorphic-git native HTTP adapter", () => {
-  it("sends smart-HTTP request bytes through Capacitor's raw base64 file path", async () => {
-    let captured: HttpOptions | null = null;
+  it("sends smart-HTTP request bytes through the native raw byte plugin", async () => {
+    let captured: NativeGitHttpRequest | null = null;
     const nativeHttp: NativeHttpPort = {
       async request(options) {
         captured = options;
@@ -71,8 +72,6 @@ describe("Android isomorphic-git native HTTP adapter", () => {
         accept: "application/x-git-upload-pack-result",
       },
       data: "AP8BAg==",
-      dataType: "file",
-      responseType: "arraybuffer",
     });
     expect(result).toMatchObject({
       url: "https://example.invalid/repo.git/git-upload-pack",
@@ -90,7 +89,7 @@ describe("Android isomorphic-git native HTTP adapter", () => {
   });
 
   it("does not add a request body to smart-HTTP discovery GET", async () => {
-    let captured: HttpOptions | null = null;
+    let captured: NativeGitHttpRequest | null = null;
     const nativeHttp: NativeHttpPort = {
       async request(options) {
         captured = options;
@@ -115,16 +114,17 @@ describe("Android isomorphic-git native HTTP adapter", () => {
       headers: {
         accept: "*/*",
       },
-      responseType: "arraybuffer",
     });
   });
 
-  it("preserves native error-stream text instead of treating it as base64", async () => {
+  it("decodes native error-stream bytes from the same base64 contract", async () => {
     const nativeHttp: NativeHttpPort = {
       async request() {
         return response({
           status: 401,
-          data: "authentication required",
+          data: bytesToBase64(
+            new TextEncoder().encode("authentication required"),
+          ),
           headers: {
             "www-authenticate": "Basic realm=git",
           },
