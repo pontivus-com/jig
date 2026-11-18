@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding v1.0.6 functional design v0.18, amended 2026-11-18. v1.0.5 remains the published baseline for drag/responsive/header/icon corrections; v1.0.6 governs the secondary-screen content measure, complete semantic application re-theming, theme-aware Jig branding, Settings-owned appearance configuration and browser-level reminder delivery. Canonical Task, persistence, rollover, repository ownership, installer and synchronization semantics are unchanged; reminder presentation semantics are corrected by JIG-106-FR-06.
+**Status:** Binding functional design through v1.1, amended 2026-11-18. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract below supersedes affected header, reminder, onboarding, Android and drag/drop behavior.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -15,7 +15,7 @@ On narrow/mobile layouts, the same Planner reflows to seven vertically stacked d
 The primary planning interaction is master-detail:
 
 - clicking/tapping a Task **selects it and opens the unified editable Task workspace**; selection never moves the Task and never changes application destination;
-- direct visual movement/reordering is performed by dragging anywhere on the Task card surface on desktop and narrow/mobile except genuine interactive descendants; checkbox/menu/reference/form controls never initiate drag;
+- direct visual movement/reordering is performed from a dedicated visible Task-card drag grip on desktop and narrow/mobile; the exact insertion slot is visible before drop, while the remaining card surface stays dedicated to selection/opening, controls and touch scrolling;
 - explicit non-drag rescheduling is performed by editing the Task's scheduled date;
 - existing Task selection and Add Task use the same editable field surface; there is no separate read-only inspection step and no second Edit click;
 - clicking outside both a Task card and the contextual workspace dismisses the workspace without saving; clicking another Task retargets the workspace to that Task;
@@ -313,3 +313,39 @@ Jig owns Task behavior, local persistence, deterministic portable Jig records, a
 ## 10. Non-decisions
 
 This functional specification does **not** select SQLite, file formats, a Git merge/conflict/reconciliation policy, a drag-and-drop library, CSS/media-query mechanisms, theme compiler/module structure, deployment wrappers, or the implementation component graph. Git history reconciliation is outside Jig's domain rather than a deferred Jig behavior. It does require the v1.0.6 theme-family catalogue, independent System/Light/Dark appearance semantics, complete semantic re-theming of every governed application surface/state, theme-aware in-application Jig branding, Settings-only appearance configuration, the continuous History/Settings content-measure outcome, and browser-level reminder delivery defined above. The technical and UI solutions own the minimum concrete realization of those outcomes. See [technical solution](../architecture/technical-solution.md). The technical choices satisfy this document and do not redefine it.
+## 8. v1.1 binding requirements
+
+The complete normative requirement text and acceptance matrix are in [Jig v1.1 Android mobile, reminders and repository onboarding functional design](v1.1-mobile-functional-design.md). The following JIG-110 requirements are binding and supersede older version-specific wording where they conflict:
+
+| ID | Binding v1.1 outcome |
+|---|---|
+| JIG-110-FR-01 | Narrow/mobile header is persistent/sticky and safe-area aware. |
+| JIG-110-FR-02 | Planner narrow header has application + temporal rows; History/Settings have only the application row and no Planner-only Add. |
+| JIG-110-FR-03 | Primary touch targets are usable and navigation is the Astryx compact Planner/History/Settings menu/popover, never a drawer/rail. |
+| JIG-110-FR-04 | Reminder due state is derived from incomplete/current-date/reminder-time-passed state, independent of delivery. |
+| JIG-110-FR-05 | Past-due/current reminders remain visible; session-start suppression is removed and open Jig transitions to due state as time passes. |
+| JIG-110-FR-06 | Due Tasks have persistent accessible in-card attention until the underlying Task/reminder changes. |
+| JIG-110-FR-07 | Scheduled and displayed/delivered notification outcomes are never conflated; failed/denied delivery never hides in-app attention. |
+| JIG-110-FR-08 | Android schedules/cancels/reconciles OS local notifications for future reminders without push infrastructure. |
+| JIG-110-FR-09 | Linux/browser uses the service-worker notification path while open; closed-browser scheduling remains outside the requirement. |
+| JIG-110-FR-10 | Fresh Jig starts in bootstrap before repository configuration; Task application surfaces remain unavailable until setup succeeds. |
+| JIG-110-FR-11 | Existing configured upgrades bypass onboarding. |
+| JIG-110-FR-12 | Linux bootstrap offers existing local repository or Connect GitHub; normal UI does not expose installer URL/checkout flags. |
+| JIG-110-FR-13 | A valid existing Git worktree is sufficient for local setup. |
+| JIG-110-FR-14 | Existing remotes retain their topology/authentication; later sync failure does not undo local setup. |
+| JIG-110-FR-15 | Existing repository without remote is healthy Local only; Jig does not fabricate remote/auth state. |
+| JIG-110-FR-16 | Existing local repository setup remains provider-neutral. |
+| JIG-110-FR-17 | Connect GitHub authorizes, grants/selects repository access, acquires a managed checkout and converges on canonical adoption. |
+| JIG-110-FR-18 | GitHub integration requests least privilege. |
+| JIG-110-FR-19 | GitHub owns provider authentication policy; Jig only initiates the supported flow and presents credentials to Git transport. |
+| JIG-110-FR-20 | Provider credentials never become Task/portable/repository/shareable configuration data. |
+| JIG-110-FR-21 | Linux GitHub-managed checkout uses Jig-owned persistent data storage outside the replaceable application runtime. |
+| JIG-110-FR-22 | Android repository/SQLite storage is app-owned/private and pathless to the user. |
+| JIG-110-FR-23 | All acquisition paths converge on one Jig repository adoption authority. |
+| JIG-110-FR-24 | Linux and Android exchange exactly the same portable Jig contract/dataset identity. |
+| JIG-110-FR-25 | Android uses the same Task/planning semantics including daily rollover on launch/resume/foreground midnight. |
+| JIG-110-FR-26 | Android saves locally first and retries synchronization opportunistically without making connectivity a correctness dependency. |
+| JIG-110-FR-27 | Android is locally certifiable by directly installed development APK; F-Droid is the first public Android distribution target; iOS/Play are outside v1.1. |
+| JIG-110-FR-28 | Task drag/drop uses a dedicated grip and a stable exact insertion indicator for same-date, cross-date, empty-list and inter-card-gap placement; persisted move equals displayed intent. |
+
+Older JIG-103/104/105/106 rows remain release-history provenance only when JIG-110 explicitly supersedes their affected behavior.
