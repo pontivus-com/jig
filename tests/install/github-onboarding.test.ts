@@ -160,65 +160,91 @@ describe("GitHub onboarding orchestration", () => {
   });
 
   it("exposes Grant and Manage access states without broadening repository scope", async () => {
-    const noInstallController = new GitHubOnboardingController({
-      registration: REGISTRATION,
-      config_path: "/tmp/jig-config.json",
-      http_port: 47831,
-      on_configured: () => undefined,
-      assert_secret_service: async () => undefined,
-      start_device_authorization: async () => ({
-        device_code: "device",
-        user_code: "CODE",
-        verification_uri: "https://github.com/login/device",
-        expires_in: 900,
-        interval: 5,
-      }),
-      poll_device_authorization: async () => ({
-        status: "authorized",
-        credential: CREDENTIAL,
-      }),
-      store_credential: async () => undefined,
-      list_installations: async () => [],
-      list_repositories: async () => [],
-    });
-
-    // Force device fallback with a deliberately non-loopback callback URL.
     const fallbackRegistration: GitHubAppRegistration = {
       ...REGISTRATION,
       linux_callback_url: "https://example.invalid/callback",
     };
-    const deviceController = new GitHubOnboardingController({
-      ...{
-        registration: fallbackRegistration,
-        config_path: "/tmp/jig-config.json",
-        http_port: 47831,
-        on_configured: () => undefined,
-      },
+    const startDevice = async () => ({
+      device_code: "device",
+      user_code: "CODE",
+      verification_uri: "https://github.com/login/device",
+      expires_in: 900,
+      interval: 5,
+    });
+    const pollDevice = async () => ({
+      status: "authorized" as const,
+      credential: CREDENTIAL,
+    });
+
+    const grantController = new GitHubOnboardingController({
+      registration: fallbackRegistration,
+      config_path: "/tmp/jig-config.json",
+      http_port: 47831,
+      on_configured: () => undefined,
       assert_secret_service: async () => undefined,
       create_authorization_request: async () => ({
         ...AUTHORIZATION,
         redirect_uri: fallbackRegistration.linux_callback_url,
       }),
-      start_device_authorization:
-        noInstallController["dependencies"].start_device_authorization,
-      poll_device_authorization:
-        noInstallController["dependencies"].poll_device_authorization,
+      start_device_authorization: startDevice,
+      poll_device_authorization: pollDevice,
       store_credential: async () => undefined,
       list_installations: async () => [],
       list_repositories: async () => [],
     });
 
-    const started = await deviceController.start();
+    const started = await grantController.start();
     expect(started.authorization).toMatchObject({
       mode: "device",
       user_code: "CODE",
     });
-    const access = await deviceController.refreshAccess();
-    expect(access).toMatchObject({
+    const grant = await grantController.refreshAccess();
+    expect(grant).toMatchObject({
       phase: "repository-access",
       grant_access_url:
         "https://github.com/apps/jig-test/installations/new",
       repositories: [],
+    });
+
+    const manageController = new GitHubOnboardingController({
+      registration: fallbackRegistration,
+      config_path: "/tmp/jig-config.json",
+      http_port: 47831,
+      on_configured: () => undefined,
+      assert_secret_service: async () => undefined,
+      create_authorization_request: async () => ({
+        ...AUTHORIZATION,
+        redirect_uri: fallbackRegistration.linux_callback_url,
+      }),
+      start_device_authorization: startDevice,
+      poll_device_authorization: pollDevice,
+      store_credential: async () => undefined,
+      list_installations: async () => [
+        {
+          id: 23,
+          account: {
+            id: 31,
+            login: "example-org",
+            type: "Organization",
+          },
+        },
+      ],
+      list_repositories: async () => [],
+    });
+
+    await manageController.start();
+    const manage = await manageController.refreshAccess();
+    expect(manage).toMatchObject({
+      phase: "repository-access",
+      grant_access_url: null,
+      repositories: [],
+      manage_access: [
+        {
+          installation_id: 23,
+          account_login: "example-org",
+          manage_url: "https://github.com/settings/installations/23",
+        },
+      ],
     });
   });
 });
