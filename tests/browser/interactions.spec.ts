@@ -4,6 +4,8 @@ import {
   type Locator,
   type Page,
 } from "@playwright/test";
+
+test.use({ hasTouch: true });
 import {
   apiCommand,
   apiState,
