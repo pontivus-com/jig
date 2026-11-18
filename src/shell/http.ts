@@ -1,11 +1,18 @@
 import { readFile } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve } from "node:path";
 import {
+  assertCivilDate,
   isPriority,
   TaskValidationError,
   type TaskCommand,
 } from "../core/task";
 import { PlanningError } from "../core/planning";
+import {
+  isWeekday,
+  validateRecurrencePattern,
+  type RecurrenceSpec,
+  type Weekday,
+} from "../core/recurrence";
 import type {
   Diagnostics,
   RepositorySynchronizationStatus,
@@ -90,6 +97,96 @@ function requiredString(object: JsonObject, key: string): string {
   return value;
 }
 
+function parseRecurrenceSpec(value: unknown): RecurrenceSpec {
+  const object = asObject(
+    value,
+    "recurrence must be an object",
+  );
+  exactKeys(
+    object,
+    ["pattern", "end_date"],
+    ["pattern", "end_date"],
+    "recurrence",
+  );
+  const endDate = requiredString(object, "end_date");
+  assertCivilDate(endDate, "end_date");
+
+  const patternObject = asObject(
+    object.pattern,
+    "recurrence.pattern must be an object",
+  );
+  const kind = patternObject.kind;
+  if (kind === "weekly") {
+    exactKeys(
+      patternObject,
+      ["kind", "interval_weeks", "weekdays"],
+      ["kind", "interval_weeks", "weekdays"],
+      "weekly recurrence pattern",
+    );
+    const intervalWeeks = patternObject.interval_weeks;
+    if (
+      typeof intervalWeeks !== "number" ||
+      !Number.isInteger(intervalWeeks)
+    ) {
+      throw new TaskValidationError(
+        "interval_weeks must be an integer",
+      );
+    }
+    const rawWeekdays = patternObject.weekdays;
+    if (!Array.isArray(rawWeekdays)) {
+      throw new TaskValidationError(
+        "weekdays must be an array",
+      );
+    }
+    const weekdays: Weekday[] = [];
+    for (const weekday of rawWeekdays) {
+      if (!isWeekday(weekday)) {
+        throw new TaskValidationError(
+          "weekly recurrence weekday is invalid",
+        );
+      }
+      weekdays.push(weekday);
+    }
+    return {
+      pattern: validateRecurrencePattern({
+        kind: "weekly",
+        interval_weeks: intervalWeeks,
+        weekdays,
+      }),
+      end_date: endDate,
+    };
+  }
+
+  if (kind === "monthly") {
+    exactKeys(
+      patternObject,
+      ["kind", "day_of_month"],
+      ["kind", "day_of_month"],
+      "monthly recurrence pattern",
+    );
+    const dayOfMonth = patternObject.day_of_month;
+    if (
+      typeof dayOfMonth !== "number" ||
+      !Number.isInteger(dayOfMonth)
+    ) {
+      throw new TaskValidationError(
+        "day_of_month must be an integer",
+      );
+    }
+    return {
+      pattern: validateRecurrencePattern({
+        kind: "monthly",
+        day_of_month: dayOfMonth,
+      }),
+      end_date: endDate,
+    };
+  }
+
+  throw new TaskValidationError(
+    "recurrence.pattern.kind is invalid",
+  );
+}
+
 function parseCommand(value: unknown): TaskCommand {
   const object = asObject(value, "command must be an object");
   const type = object.type;
@@ -110,6 +207,7 @@ function parseCommand(value: unknown): TaskCommand {
           "reference",
           "note",
           "reminder_time",
+          "recurrence",
         ],
         ["type", "title", "scheduled_date"],
         "create command",
@@ -138,6 +236,9 @@ function parseCommand(value: unknown): TaskCommand {
               reminder_time:
                 optionalNullableString(object, "reminder_time") ?? null,
             }),
+        ...(object.recurrence === undefined
+          ? {}
+          : { recurrence: parseRecurrenceSpec(object.recurrence) }),
       };
     }
 
@@ -210,6 +311,23 @@ function parseCommand(value: unknown): TaskCommand {
                   optionalNullableString(changes, "reminder_time") ?? null,
               }),
         },
+      };
+    }
+
+    case "set_recurrence": {
+      exactKeys(
+        object,
+        ["type", "task_id", "recurrence"],
+        ["type", "task_id", "recurrence"],
+        "set_recurrence command",
+      );
+      return {
+        type: "set_recurrence",
+        task_id: requiredString(object, "task_id"),
+        recurrence:
+          object.recurrence === null
+            ? null
+            : parseRecurrenceSpec(object.recurrence),
       };
     }
 
