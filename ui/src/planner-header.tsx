@@ -285,7 +285,7 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
         </div>
         <div className="jig-header-mobile-title">
           {destination === "planner" ? null : (
-            <DestinationTitle destination={destination} />
+            <DestinationHeading destination={destination} />
           )}
         </div>
         <div className="jig-header-mobile-actions">
