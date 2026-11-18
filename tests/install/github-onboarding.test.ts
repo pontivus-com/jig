@@ -3,8 +3,8 @@ import type {
   GitHubAppRegistration,
   GitHubCredential,
 } from "../../src/github";
-import { GitHubDeviceFlowSession } from "../../src/shell/github-device-flow";
-import { GitHubOnboardingController } from "../../src/shell/github-onboarding";
+import { GitHubDeviceFlowSession } from "../../src/github-device-flow";
+import { GitHubOnboardingController } from "../../src/github-onboarding";
 
 const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-mobile-test",
@@ -63,8 +63,9 @@ describe("GitHub onboarding orchestration", () => {
         registration: null,
         now: () => new Date("2030-01-01T00:00:00.000Z"),
       }),
-      config_path: "/tmp/jig-config.json",
-      http_port: 47831,
+      acquire_repository: async () => {
+        throw new Error("Acquisition is unavailable");
+      },
     });
 
     expect(controller.snapshot()).toMatchObject({
@@ -91,8 +92,6 @@ describe("GitHub onboarding orchestration", () => {
           stored = credential;
         },
       }),
-      config_path: "/tmp/jig-config.json",
-      http_port: 47831,
       list_installations: async () => {
         installationListCount += 1;
         return [
@@ -119,18 +118,12 @@ describe("GitHub onboarding orchestration", () => {
       },
       acquire_repository: async (selection) => {
         acquiredRepositoryId = selection.id;
-        return "/tmp/jig-managed/pontivus-com/planning";
+        return {
+          version: 1 as const,
+          repository_path: "/tmp/jig-managed/pontivus-com/planning",
+          http_port: 47831,
+        };
       },
-      initialize_repository: async (options) => ({
-        config: {
-          version: 1,
-          repository_path: options.repository_path,
-          http_port: options.http_port,
-        },
-        dataset_id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001",
-        sqlite_path: options.repository_path + "/.jig/local/jig.sqlite",
-        adopted_existing_snapshot: false,
-      }),
     });
 
     expect(await controller.start()).toMatchObject({
@@ -175,6 +168,7 @@ describe("GitHub onboarding orchestration", () => {
       http_port: 47831,
       list_installations: async () => [],
       list_repositories: async () => [],
+      acquire_repository: async () => "",
     });
 
     await grantController.start();
@@ -203,6 +197,7 @@ describe("GitHub onboarding orchestration", () => {
         },
       ],
       list_repositories: async () => [],
+      acquire_repository: async () => "",
     });
 
     await manageController.start();
