@@ -1,8 +1,4 @@
-import {
-  CapacitorHttp,
-  type HttpOptions,
-  type HttpResponse,
-} from "@capacitor/core";
+import { registerPlugin } from "@capacitor/core";
 import type {
   GitHttpResponse,
   HttpClient,
@@ -16,9 +12,28 @@ import {
 
 export type IsomorphicGitHttpClient = HttpClient;
 
-export interface NativeHttpPort {
-  request(options: HttpOptions): Promise<HttpResponse>;
+export interface NativeGitHttpRequest {
+  readonly url: string;
+  readonly method: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly data?: string;
 }
+
+export interface NativeGitHttpResponse {
+  readonly url: string;
+  readonly status: number;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly data: string;
+}
+
+export interface NativeHttpPort {
+  request(
+    options: NativeGitHttpRequest,
+  ): Promise<NativeGitHttpResponse>;
+}
+
+const nativeGitHttp =
+  registerPlugin<NativeHttpPort>("JigGitHttp");
 
 export class AndroidGitHttpError extends Error {
   constructor(message: string) {
@@ -78,19 +93,9 @@ function statusMessage(status: number): string {
   return `HTTP ${status}`;
 }
 
-function responseBytes(response: HttpResponse): Uint8Array {
-  if (response.status >= 400) {
-    if (typeof response.data === "string") {
-      return new TextEncoder().encode(response.data);
-    }
-    return new TextEncoder().encode(JSON.stringify(response.data));
-  }
-
-  if (typeof response.data !== "string") {
-    throw new AndroidGitHttpError(
-      "Native Git HTTP returned non-string binary response data",
-    );
-  }
+function responseBytes(
+  response: NativeGitHttpResponse,
+): Uint8Array {
   return base64ToBytes(response.data);
 }
 
@@ -101,7 +106,7 @@ function assertNotAborted(signal: AbortSignal | undefined): void {
 }
 
 export function createAndroidGitHttpClient(
-  nativeHttp: NativeHttpPort = CapacitorHttp,
+  nativeHttp: NativeHttpPort = nativeGitHttp,
 ): IsomorphicGitHttpClient {
   return {
     async request(request): Promise<GitHttpResponse> {
@@ -110,13 +115,11 @@ export function createAndroidGitHttpClient(
       const method = request.method ?? "GET";
       const headers = normalizedHeaders(request.headers);
       let data: string | undefined;
-      let dataType: "file" | undefined;
 
       if (request.body !== undefined) {
         const bytes = await collectBytes(request.body);
         assertNotAborted(request.signal);
         data = bytesToBase64(bytes);
-        dataType = "file";
       }
 
       const response = await nativeHttp.request({
@@ -124,8 +127,6 @@ export function createAndroidGitHttpClient(
         method,
         headers,
         ...(data === undefined ? {} : { data }),
-        ...(dataType === undefined ? {} : { dataType }),
-        responseType: "arraybuffer",
       });
       assertNotAborted(request.signal);
 
