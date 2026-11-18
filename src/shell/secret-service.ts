@@ -37,8 +37,8 @@ function validateCredential(value: unknown): GitHubCredential {
     );
   }
   if (
-    !Number.isInteger(object.user_id) ||
     typeof object.user_id !== "number" ||
+    !Number.isInteger(object.user_id) ||
     object.user_id <= 0 ||
     typeof object.access_token !== "string" ||
     object.access_token.length === 0 ||
