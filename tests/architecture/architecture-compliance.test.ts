@@ -245,7 +245,36 @@ describe("architecture compliance", () => {
     );
   });
 
-  it("keeps Android configured-runtime stubs provider-neutral", () => {
+  it("keeps Android SQLite native code as a low-level driver only", () => {
+    const nativeAdapter = source("ui/src/native/jig-sqlite.ts");
+    const nativeRuntime = source("ui/src/runtime-native.ts");
+    const java = source(
+      "android/app/src/main/java/com/pontivus/jig/JigSqlitePlugin.java",
+    );
+    const gradle = source("android/app/build.gradle");
+
+    expect(nativeAdapter).toContain(
+      'from "../../../src/persistence/sqlite"',
+    );
+    expect(nativeRuntime).toContain("applyTaskCommand");
+    expect(nativeRuntime).toContain("rollForwardOutstandingInDatabase");
+    expect(nativeRuntime).toContain("readCanonicalState");
+
+    expect(java).toContain('@CapacitorPlugin(name = "JigSqlite")');
+    expect(java).toContain("BundledSQLiteDriver");
+    expect(java).toContain("SQLiteConnection");
+    expect(java).toContain("SQLiteStatement");
+    expect(java).not.toMatch(
+      /\bTask\b|RecurrenceSeries|CREATE TABLE|schema_version|dataset_id/,
+    );
+    expect(java).not.toMatch(/RoomDatabase|androidx\.room/);
+    expect(gradle).toContain(
+      'implementation "androidx.sqlite:sqlite-bundled:$androidxSqliteVersion"',
+    );
+    expect(gradle).not.toContain("androidx.room");
+  });
+
+  it("keeps Android configured runtime provider-neutral", () => {
     const runtime = source("ui/src/runtime.ts");
     const native = source("ui/src/runtime-native.ts");
 
