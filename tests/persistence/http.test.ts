@@ -1,28 +1,28 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createHttpHandler } from "../../src/shell/http";
 import {
   applyTaskCommand,
-  initializeDatabase,
   readCanonicalState,
   rollForwardOutstandingInDatabase,
-} from "../../src/shell/sqlite";
+  type JigSqlConnection,
+} from "../../src/persistence/sqlite";
+import { initializeDatabase } from "../../src/shell/sqlite-bun";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 const TOKEN = "a".repeat(64);
 let root = "";
-let db: Database;
+let db: JigSqlConnection;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "jig-http-"));
-  db = initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
+  db = await initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
 });
 
 afterEach(async () => {
-  db.close();
+  await db.close();
   await rm(root, { recursive: true, force: true });
 });
 
@@ -49,7 +49,7 @@ function handler() {
       repository_adapter_healthy: true,
     }),
     trigger_sync: async () => "local-only",
-    ensure_current_day_rollover: () => undefined,
+    ensure_current_day_rollover: async () => undefined,
     on_task_mutation: () => undefined,
   });
 }
@@ -103,7 +103,7 @@ describe("loopback HTTP admission", () => {
     );
 
     expect(response.status).toBe(403);
-    expect(readCanonicalState(db)).toStrictEqual({
+    expect(await readCanonicalState(db)).toStrictEqual({
       revision: 0,
       tasks: [],
     });
@@ -152,11 +152,11 @@ describe("loopback HTTP admission", () => {
       error: "stale_revision",
       current_revision: 1,
     });
-    expect(readCanonicalState(db).revision).toBe(1);
+    expect((await readCanonicalState(db)).revision).toBe(1);
   });
 
   it("runs rollover before revision admission and rejects a pre-rollover command", async () => {
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -191,9 +191,9 @@ describe("loopback HTTP admission", () => {
         repository_adapter_healthy: true,
       }),
       trigger_sync: async () => "pending",
-      ensure_current_day_rollover: () => {
+      ensure_current_day_rollover: async () => {
         rolloverCalls += 1;
-        rollForwardOutstandingInDatabase(
+        await rollForwardOutstandingInDatabase(
           db,
           "2026-11-16",
           "2026-11-16T00:00:00.000Z",
@@ -218,7 +218,7 @@ describe("loopback HTTP admission", () => {
       error: "stale_revision",
       current_revision: 2,
     });
-    const state = readCanonicalState(db);
+    const state = await readCanonicalState(db);
     expect(state.revision).toBe(2);
     expect(state.tasks[0]).toMatchObject({
       scheduled_date: "2026-11-16",
@@ -267,7 +267,7 @@ describe("loopback HTTP admission", () => {
         syncCalls += 1;
         return "synchronized";
       },
-      ensure_current_day_rollover: () => undefined,
+      ensure_current_day_rollover: async () => undefined,
       on_task_mutation: () => undefined,
     });
 
