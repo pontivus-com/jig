@@ -57,9 +57,15 @@ function fakeEffects(options: {
   readonly effects: SyncEffects;
   readonly commitCalls: { count: number };
   readonly pushCalls: { count: number };
+  readonly networkEnvironments: Array<
+    Readonly<Record<string, string>> | undefined
+  >;
 } {
   const commitCalls = { count: 0 };
   const pushCalls = { count: 0 };
+  const networkEnvironments: Array<
+    Readonly<Record<string, string>> | undefined
+  > = [];
   const pushResults = [...(options.pushResults ?? ["synchronized"])];
 
   const effects: SyncEffects = {
@@ -82,8 +88,9 @@ function fakeEffects(options: {
       commitCalls.count += 1;
       return revision.toString(16).padStart(40, "0");
     },
-    synchronize: async () => {
+    synchronize: async (_config, networkEnvironment) => {
       pushCalls.count += 1;
+      networkEnvironments.push(networkEnvironment);
       return pushResults.shift() ?? "synchronized";
     },
     mode: async () =>
@@ -92,7 +99,12 @@ function fakeEffects(options: {
         : "remote",
   };
 
-  return { effects, commitCalls, pushCalls };
+  return {
+    effects,
+    commitCalls,
+    pushCalls,
+    networkEnvironments,
+  };
 }
 
 beforeEach(async () => {
@@ -124,6 +136,32 @@ describe("serialized synchronization worker", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(pushCalls.count).toBe(1);
     expect(controller.status()).toBe("synchronized");
+    controller.stop();
+  });
+
+  it("supplies runtime network authentication without persisting it in Git config", async () => {
+    const { effects, networkEnvironments } = fakeEffects();
+    const controller = createSyncController(
+      db,
+      {
+        repository_path: root,
+        get_network_environment: async () => ({
+          GIT_ASKPASS: "/tmp/jig-askpass",
+          GIT_TERMINAL_PROMPT: "0",
+          JIG_GITHUB_ACCESS_TOKEN: "device-token",
+        }),
+      },
+      effects,
+    );
+
+    expect(await controller.trigger()).toBe("synchronized");
+    expect(networkEnvironments).toStrictEqual([
+      {
+        GIT_ASKPASS: "/tmp/jig-askpass",
+        GIT_TERMINAL_PROMPT: "0",
+        JIG_GITHUB_ACCESS_TOKEN: "device-token",
+      },
+    ]);
     controller.stop();
   });
 
