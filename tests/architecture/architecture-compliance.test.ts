@@ -201,6 +201,28 @@ describe("architecture compliance", () => {
     );
   });
 
+  it("keeps Android configured-runtime stubs provider-neutral", () => {
+    const runtime = source("ui/src/runtime.ts");
+    const native = source("ui/src/runtime-native.ts");
+
+    expect(runtime).toContain("Capacitor.isNativePlatform()");
+    expect(runtime).toContain('from "./runtime-native"');
+    expect(native.toLowerCase()).not.toContain("github");
+    expect(native).not.toContain("client_id");
+    expect(native).not.toContain("TaskDTO");
+    expect(native).not.toContain("ViewModel");
+
+    for (const operation of [
+      "readCanonicalTasks",
+      "readStatus",
+      "readDiagnostics",
+      "submitTaskCommand",
+      "triggerSync",
+    ]) {
+      expect(native, operation).toContain(operation);
+    }
+  });
+
   it("isolates justified third-party assertions to boundary adapters", () => {
     const ui = production.filter(([path]) => path.startsWith("ui/src/"));
     const assertions = ui.flatMap(([path, content]) =>
