@@ -52,6 +52,7 @@ describe("GitHub onboarding orchestration", () => {
     let stored: GitHubCredential | null = null;
     let configuredPath: string | null = null;
     let acquiredRepositoryId: number | null = null;
+    let installationListCount = 0;
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
 
     const controller = new GitHubOnboardingController({
@@ -71,16 +72,19 @@ describe("GitHub onboarding orchestration", () => {
       store_credential: async (credential) => {
         stored = credential;
       },
-      list_installations: async () => [
-        {
-          id: 7,
-          account: {
-            id: 11,
-            login: "pontivus-com",
-            type: "Organization",
+      list_installations: async () => {
+        installationListCount += 1;
+        return [
+          {
+            id: 7,
+            account: {
+              id: 11,
+              login: "pontivus-com",
+              type: "Organization",
+            },
           },
-        },
-      ],
+        ];
+      },
       list_repositories: async (_token, installationId) => {
         expect(installationId).toBe(7);
         return [
@@ -124,6 +128,7 @@ describe("GitHub onboarding orchestration", () => {
     await controller.refreshAccess();
 
     expect(stored).toStrictEqual(CREDENTIAL);
+    expect(installationListCount).toBe(1);
     expect(controller.snapshot()).toMatchObject({
       phase: "repository-selection",
       repositories: [
@@ -143,6 +148,46 @@ describe("GitHub onboarding orchestration", () => {
       "/tmp/jig-managed/pontivus-com/planning",
     );
     expect(configuredPath).toBe(config.repository_path);
+  });
+
+  it("reconnects a credential without re-entering repository setup", async () => {
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    let stored: GitHubCredential | null = null;
+    let installationListCount = 0;
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      config_path: "/tmp/jig-config.json",
+      http_port: 47831,
+      on_configured: () => undefined,
+      assert_secret_service: async () => undefined,
+      now: () => new Date(nowMs),
+      start_device_authorization: async () => DEVICE_AUTHORIZATION,
+      poll_device_authorization: async () => ({
+        status: "authorized" as const,
+        credential: CREDENTIAL,
+      }),
+      store_credential: async (credential) => {
+        stored = credential;
+      },
+      list_installations: async () => {
+        installationListCount += 1;
+        return [];
+      },
+      list_repositories: async () => [],
+    });
+
+    await controller.start();
+    nowMs += DEVICE_AUTHORIZATION.interval * 1000;
+    const reconnected = await controller.refreshAuthorization();
+
+    expect(stored).toStrictEqual(CREDENTIAL);
+    expect(installationListCount).toBe(0);
+    expect(reconnected).toMatchObject({
+      phase: "idle",
+      authorization: null,
+      repositories: [],
+      error: null,
+    });
   });
 
   it("does not poll GitHub before the returned Device Flow interval", async () => {
