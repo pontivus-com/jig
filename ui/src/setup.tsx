@@ -61,9 +61,6 @@ export function SetupView({
     if (snapshot.error !== null) {
       setError(snapshot.error);
     }
-    if (snapshot.authorization?.mode === "browser") {
-      openExternal(snapshot.authorization.authorization_url);
-    }
   };
 
   const connectGitHub = async (): Promise<void> => {
@@ -199,7 +196,7 @@ export function SetupView({
               <div className="jig-setup-github-state">
                 <p>
                   Enter code <strong>{github.authorization.user_code}</strong>{" "}
-                  on GitHub to continue.
+                  at GitHub's device authorization page to continue.
                 </p>
                 <Button
                   label="Open GitHub device authorization"
@@ -210,20 +207,6 @@ export function SetupView({
                       : "");
                   }}
                 />
-                <Button
-                  label="Refresh access"
-                  variant="secondary"
-                  isLoading={isOperating}
-                  onClick={() => {
-                    void refreshGitHub();
-                  }}
-                />
-              </div>
-            ) : null}
-            {github?.phase === "authorizing" &&
-            github.authorization?.mode === "browser" ? (
-              <div className="jig-setup-github-state">
-                <p>Complete GitHub authorization in the browser window.</p>
                 <Button
                   label="Refresh access"
                   variant="secondary"
