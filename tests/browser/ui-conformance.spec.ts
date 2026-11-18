@@ -715,6 +715,112 @@ test("outstanding Task action menus are identical at desktop and narrow widths",
   expect(await menuLabels()).toEqual(desktop);
 });
 
+test("Repeat uses one shared series while Task occurrences remain ordinary canonical Tasks", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  const endDate = await browserCivilDate(page, 14);
+  await createTask(page, "Browser recurrence", today);
+  await page.reload();
+
+  await page.getByText("Browser recurrence", { exact: true }).click();
+  let workspace = page.getByRole("dialog", {
+    name: "Browser recurrence",
+  });
+  await expect(
+    workspace.getByText("Not repeating", { exact: true }),
+  ).toBeVisible();
+  await workspace
+    .getByLabel("Repeat until")
+    .fill(await displayedDateValue(page, endDate));
+  await workspace
+    .getByRole("button", { name: "Enable repeat", exact: true })
+    .click();
+
+  await expect
+    .poll(async () => {
+      const state = await apiState(page);
+      return {
+        recurrences: state.recurrences.length,
+        linked: state.tasks.filter(
+          (task) => task.recurrence_series_id !== null,
+        ).length,
+      };
+    })
+    .toEqual({
+      recurrences: 1,
+      linked: 3,
+    });
+
+  let state = await apiState(page);
+  const series = state.recurrences[0];
+  if (series === undefined) {
+    throw new Error("Expected recurrence series");
+  }
+  expect(
+    state.tasks.every(
+      (task) => task.recurrence_series_id === series.id,
+    ),
+  ).toBe(true);
+  await expect(
+    page.getByLabel("Recurring task").first(),
+  ).toBeVisible();
+  await expect(workspace.getByText(/until/).first()).toBeVisible();
+
+  await workspace
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Next week" }).click();
+  await page.getByText("Browser recurrence", { exact: true }).click();
+  workspace = page.getByRole("dialog", {
+    name: "Browser recurrence",
+  });
+  await expect(
+    workspace.getByText(/until/).first(),
+  ).toBeVisible();
+  await expect(
+    workspace.getByRole("button", {
+      name: "Stop repeating",
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  const invokingSlot = state.tasks.find(
+    (task) =>
+      task.scheduled_date !== today &&
+      task.recurrence_series_id === series.id,
+  )?.recurrence_occurrence_date;
+  if (invokingSlot === undefined || invokingSlot === null) {
+    throw new Error("Expected later recurrence occurrence");
+  }
+
+  await workspace
+    .getByRole("button", {
+      name: "Stop repeating",
+      exact: true,
+    })
+    .click();
+
+  await expect
+    .poll(async () => {
+      state = await apiState(page);
+      return {
+        tasks: state.tasks.length,
+        recurrences: state.recurrences.length,
+        remaining: state.tasks[0] ?? null,
+      };
+    })
+    .toMatchObject({
+      tasks: 1,
+      recurrences: 0,
+      remaining: {
+        recurrence_series_id: null,
+        recurrence_occurrence_date: null,
+      },
+    });
+});
+
 test("History and Settings keep one continuous 50rem measure across the Planner breakpoint", async ({
   page,
 }) => {
