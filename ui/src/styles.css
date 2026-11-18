@@ -890,6 +890,39 @@ body {
     font-weight: var(--font-weight-semibold);
   }
 
+  .jig-setup {
+    min-height: 100dvh;
+    padding: max(var(--spacing-6), env(safe-area-inset-top, 0px))
+      max(var(--spacing-4), env(safe-area-inset-right, 0px))
+      max(var(--spacing-6), env(safe-area-inset-bottom, 0px))
+      max(var(--spacing-4), env(safe-area-inset-left, 0px));
+    background: var(--color-background-application);
+    color: var(--color-text-primary);
+  }
+
+  .jig-setup-content {
+    display: grid;
+    width: min(100%, 42rem);
+    margin-inline: auto;
+    gap: var(--spacing-4);
+  }
+
+  .jig-setup-heading {
+    display: grid;
+    gap: var(--spacing-1);
+  }
+
+  .jig-setup-heading h1,
+  .jig-setup-card h2 {
+    margin: 0;
+  }
+
+  .jig-setup-heading p,
+  .jig-setup-card p {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+
   .jig-loading {
     display: grid;
     max-width: 42rem;
