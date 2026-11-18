@@ -28,6 +28,13 @@ export interface SyncConfiguration {
   >;
 }
 
+export class SyncAuthenticationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SyncAuthenticationError";
+  }
+}
+
 export interface SyncController {
   readonly start: () => Promise<void>;
   readonly stop: () => void;
@@ -182,7 +189,13 @@ export function createSyncController(
         schedule(SYNC_HEALTHY_POLL_MS);
       }
       return pushed;
-    } catch {
+    } catch (error) {
+      if (error instanceof SyncAuthenticationError) {
+        failureCount = SYNC_RETRY_SECONDS.length;
+        currentStatus = "sync-issue";
+        schedule(SYNC_HEALTHY_POLL_MS);
+        return "sync-issue";
+      }
       failureCount += 1;
       currentStatus = failureCount >= 7 ? "sync-issue" : "retrying";
       schedule(retryDelayMs(failureCount));
