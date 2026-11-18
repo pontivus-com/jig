@@ -21,7 +21,6 @@ const THEME_PRESETS = [
   "astryx-neutral",
   "astryx-butter",
   "astryx-chocolate",
-  "astryx-gothic",
   "astryx-matcha",
   "astryx-stone",
   "astryx-y2k",
@@ -794,13 +793,12 @@ test("Theme and Appearance controls exist only in Settings and apply independent
   await themeSelector.click();
 
   const options = page.getByRole("option");
-  await expect(options).toHaveCount(14);
+  await expect(options).toHaveCount(13);
   expect(await options.allTextContents()).toEqual([
     "Jig",
     "Neutral",
     "Butter",
     "Chocolate",
-    "Gothic",
     "Matcha",
     "Stone",
     "Y2K",
