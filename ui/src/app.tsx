@@ -69,7 +69,13 @@ import {
 } from "./task-workspace";
 import { useLayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
-import { readSetupStatus, type SetupStatus } from "./setup-http";
+import {
+  readSetupStatus,
+  refreshGitHubReconnect,
+  startGitHubReconnect,
+  type GitHubSetupSnapshot,
+  type SetupStatus,
+} from "./setup-http";
 interface PlannerState {
   readonly displayedWeekStart: string;
 }
@@ -114,6 +120,8 @@ function ConfiguredApp({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [isOperating, setIsOperating] = useState(false);
+  const [githubReconnect, setGitHubReconnect] =
+    useState<GitHubSetupSnapshot | null>(null);
   const [workspace, setWorkspace] = useState<TaskWorkspaceState>({
     mode: "closed",
   });
@@ -391,6 +399,58 @@ function ConfiguredApp({
     }
   }, [isOperating, refreshOperationalState]);
 
+  const reconnectGitHub = useCallback(async (): Promise<void> => {
+    if (isOperating) {
+      return;
+    }
+    setIsOperating(true);
+    setOperationError(null);
+    try {
+      const snapshot = await startGitHubReconnect();
+      setGitHubReconnect(snapshot);
+      if (snapshot.error !== null) {
+        setOperationError(snapshot.error);
+      }
+    } catch (error) {
+      setGitHubReconnect(null);
+      setOperationError(errorMessage(error));
+    } finally {
+      setIsOperating(false);
+    }
+  }, [isOperating]);
+
+  const refreshGitHubReconnectAuthorization =
+    useCallback(async (): Promise<void> => {
+      if (isOperating) {
+        return;
+      }
+      setIsOperating(true);
+      setOperationError(null);
+      try {
+        const snapshot = await refreshGitHubReconnect();
+        if (snapshot.error !== null) {
+          setGitHubReconnect(null);
+          setOperationError(snapshot.error);
+          return;
+        }
+        if (
+          snapshot.phase === "idle" &&
+          snapshot.authorization === null
+        ) {
+          setGitHubReconnect(null);
+          await triggerSync();
+          await refreshOperationalState();
+          return;
+        }
+        setGitHubReconnect(snapshot);
+      } catch (error) {
+        setGitHubReconnect(null);
+        setOperationError(errorMessage(error));
+      } finally {
+        setIsOperating(false);
+      }
+    }, [isOperating, refreshOperationalState]);
+
   const previousWeek = useCallback((): void => {
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
@@ -557,9 +617,12 @@ function ConfiguredApp({
         diagnostics={diagnostics}
         operationError={operationError}
         isOperating={isOperating}
+        githubReconnect={githubReconnect}
         onThemePresetChange={onThemePresetChange}
         onAppearanceModeChange={onAppearanceModeChange}
         onSync={syncNow}
+        onReconnectGitHub={reconnectGitHub}
+        onRefreshGitHubReconnect={refreshGitHubReconnectAuthorization}
       />
     );
 
