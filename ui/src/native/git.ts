@@ -1,0 +1,376 @@
+import {
+  add,
+  clone,
+  commit,
+  currentBranch,
+  fetch,
+  listFiles,
+  push,
+  remove,
+  resolveRef,
+  statusMatrix,
+} from "isomorphic-git";
+import {
+  serializeSnapshot,
+  validateSnapshot,
+  type PortableSnapshot,
+} from "../../src/portable";
+import type { CanonicalState } from "../../src/protocol";
+import {
+  AndroidFsError,
+  createAndroidGitFilesystem,
+  type IsomorphicGitPromiseFs,
+} from "./git-filesystem";
+import {
+  createAndroidGitHttpClient,
+  type IsomorphicGitHttpClient,
+} from "./git-http";
+import { ANDROID_GIT_WORKTREE } from "./paths";
+
+export const ANDROID_DATA_BRANCH = "jig-data";
+const ANDROID_REMOTE = "origin";
+
+export type GitCredentialProvider = () => Promise<string>;
+
+export interface AndroidGitEffects {
+  readonly fs: IsomorphicGitPromiseFs;
+  readonly http: IsomorphicGitHttpClient;
+  readonly dir: string;
+}
+
+export class AndroidGitAdapterError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AndroidGitAdapterError";
+  }
+}
+
+function isPortablePath(path: string): boolean {
+  return (
+    path === "format.json" ||
+    /^tasks\/[0-9a-f-]+\.json$/i.test(path) ||
+    /^recurrences\/[0-9a-f-]+\.json$/i.test(path)
+  );
+}
+
+function assertCredentialFreeHttpsRemote(remoteUrl: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(remoteUrl);
+  } catch {
+    throw new AndroidGitAdapterError(
+      "Android Git remote must be a valid HTTPS URL",
+    );
+  }
+  if (parsed.protocol !== "https:") {
+    throw new AndroidGitAdapterError(
+      "Android Git remote must use HTTPS",
+    );
+  }
+  if (parsed.username.length > 0 || parsed.password.length > 0) {
+    throw new AndroidGitAdapterError(
+      "Android Git remote URL must not contain credentials",
+    );
+  }
+}
+
+function authCallback(provider: GitCredentialProvider) {
+  return async (): Promise<Readonly<{ username: string }>> => {
+    const token = (await provider()).trim();
+    if (token.length === 0) {
+      throw new AndroidGitAdapterError(
+        "Android Git credential provider returned an empty token",
+      );
+    }
+    return { username: token };
+  };
+}
+
+async function ensureDirectory(
+  fs: IsomorphicGitPromiseFs,
+  path: string,
+): Promise<void> {
+  try {
+    await fs.promises.mkdir(path);
+  } catch (error) {
+    if (
+      error instanceof AndroidFsError &&
+      error.code === "EEXIST"
+    ) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function ensureWorktreeParents(
+  effects: AndroidGitEffects,
+): Promise<void> {
+  await ensureDirectory(effects.fs, "repository");
+  await ensureDirectory(effects.fs, "repository/.jig");
+}
+
+async function assertDataBranch(
+  effects: AndroidGitEffects,
+): Promise<void> {
+  const branch = await currentBranch({
+    fs: effects.fs,
+    dir: effects.dir,
+    fullname: false,
+  });
+  if (branch !== ANDROID_DATA_BRANCH) {
+    throw new AndroidGitAdapterError(
+      `Android Git worktree must be on ${ANDROID_DATA_BRANCH}; found ${branch ?? "detached HEAD"}`,
+    );
+  }
+}
+
+async function trackedPortablePaths(
+  effects: AndroidGitEffects,
+): Promise<readonly string[]> {
+  const tracked = await listFiles({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: "HEAD",
+  });
+  for (const path of tracked) {
+    if (!isPortablePath(path)) {
+      throw new AndroidGitAdapterError(
+        `Refusing Android jig-data repository containing non-Jig path ${path}`,
+      );
+    }
+  }
+  return tracked;
+}
+
+async function readUtf8(
+  effects: AndroidGitEffects,
+  relativePath: string,
+): Promise<string> {
+  const value = await effects.fs.promises.readFile(
+    `${effects.dir}/${relativePath}`,
+    "utf8",
+  );
+  if (typeof value !== "string") {
+    throw new AndroidGitAdapterError(
+      `Portable path ${relativePath} was not readable as UTF-8`,
+    );
+  }
+  return value;
+}
+
+export function createAndroidGitEffects(): AndroidGitEffects {
+  return {
+    fs: createAndroidGitFilesystem(),
+    http: createAndroidGitHttpClient(),
+    dir: ANDROID_GIT_WORKTREE,
+  };
+}
+
+export async function cloneAndroidPortableRepository(
+  effects: AndroidGitEffects,
+  remoteUrl: string,
+  credential: GitCredentialProvider,
+): Promise<PortableSnapshot> {
+  assertCredentialFreeHttpsRemote(remoteUrl);
+  await ensureWorktreeParents(effects);
+
+  await clone({
+    fs: effects.fs,
+    http: effects.http,
+    dir: effects.dir,
+    url: remoteUrl,
+    ref: ANDROID_DATA_BRANCH,
+    remote: ANDROID_REMOTE,
+    singleBranch: true,
+    noTags: true,
+    onAuth: authCallback(credential),
+  });
+
+  await assertDataBranch(effects);
+  return readAndroidPortableSnapshot(effects);
+}
+
+export async function reopenAndroidPortableRepository(
+  effects: AndroidGitEffects,
+  expectedDatasetId?: string,
+): Promise<PortableSnapshot> {
+  await assertDataBranch(effects);
+  return readAndroidPortableSnapshot(
+    effects,
+    expectedDatasetId,
+  );
+}
+
+export async function fetchAndroidPortableRepository(
+  effects: AndroidGitEffects,
+  credential: GitCredentialProvider,
+): Promise<string> {
+  await assertDataBranch(effects);
+  await fetch({
+    fs: effects.fs,
+    http: effects.http,
+    dir: effects.dir,
+    remote: ANDROID_REMOTE,
+    ref: ANDROID_DATA_BRANCH,
+    singleBranch: true,
+    tags: false,
+    onAuth: authCallback(credential),
+  });
+  return resolveRef({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: `refs/remotes/${ANDROID_REMOTE}/${ANDROID_DATA_BRANCH}`,
+  });
+}
+
+export async function readAndroidPortableSnapshot(
+  effects: AndroidGitEffects,
+  expectedDatasetId?: string,
+): Promise<PortableSnapshot> {
+  await assertDataBranch(effects);
+  const tracked = await trackedPortablePaths(effects);
+  const files = new Map<string, string>();
+
+  for (const path of tracked) {
+    files.set(path, await readUtf8(effects, path));
+  }
+
+  return validateSnapshot(files, expectedDatasetId);
+}
+
+export async function commitAndroidPortableSnapshot(
+  effects: AndroidGitEffects,
+  snapshot: PortableSnapshot,
+  revision: number,
+): Promise<string> {
+  if (!Number.isInteger(revision) || revision < 0) {
+    throw new AndroidGitAdapterError(
+      "Portable snapshot revision must be a non-negative integer",
+    );
+  }
+  await assertDataBranch(effects);
+  const tracked = await trackedPortablePaths(effects);
+  const expected = new Set(snapshot.files.keys());
+
+  await ensureDirectory(effects.fs, `${effects.dir}/tasks`);
+  await ensureDirectory(
+    effects.fs,
+    `${effects.dir}/recurrences`,
+  );
+
+  for (const [path, value] of snapshot.files) {
+    if (!isPortablePath(path)) {
+      throw new AndroidGitAdapterError(
+        `Refusing to write non-Jig portable path ${path}`,
+      );
+    }
+    await effects.fs.promises.writeFile(
+      `${effects.dir}/${path}`,
+      value,
+      "utf8",
+    );
+  }
+
+  const stale = tracked.filter((path) => !expected.has(path));
+  for (const path of stale) {
+    try {
+      await effects.fs.promises.unlink(
+        `${effects.dir}/${path}`,
+      );
+    } catch (error) {
+      if (
+        !(error instanceof AndroidFsError) ||
+        error.code !== "ENOENT"
+      ) {
+        throw error;
+      }
+    }
+  }
+
+  const expectedPaths = [...expected].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  if (expectedPaths.length > 0) {
+    await add({
+      fs: effects.fs,
+      dir: effects.dir,
+      filepath: expectedPaths,
+    });
+  }
+  if (stale.length > 0) {
+    await remove({
+      fs: effects.fs,
+      dir: effects.dir,
+      filepath: stale,
+    });
+  }
+
+  const matrix = await statusMatrix({
+    fs: effects.fs,
+    dir: effects.dir,
+  });
+  const hasStagedChange = matrix.some(
+    ([, head, , stage]) => head !== stage,
+  );
+  if (!hasStagedChange) {
+    return resolveRef({
+      fs: effects.fs,
+      dir: effects.dir,
+      ref: "HEAD",
+    });
+  }
+
+  const identity = {
+    name: "Jig",
+    email: "jig@local.invalid",
+  };
+  const oid = await commit({
+    fs: effects.fs,
+    dir: effects.dir,
+    message: `Jig snapshot revision ${revision}`,
+    author: identity,
+    committer: identity,
+    disallowEmpty: true,
+  });
+
+  await trackedPortablePaths(effects);
+  return oid;
+}
+
+export async function commitAndroidCanonicalState(
+  effects: AndroidGitEffects,
+  state: CanonicalState,
+  datasetId: string,
+): Promise<string> {
+  return commitAndroidPortableSnapshot(
+    effects,
+    serializeSnapshot(
+      state.tasks,
+      datasetId,
+      state.recurrences,
+    ),
+    state.revision,
+  );
+}
+
+export async function pushAndroidPortableRepository(
+  effects: AndroidGitEffects,
+  credential: GitCredentialProvider,
+): Promise<void> {
+  await assertDataBranch(effects);
+  const result = await push({
+    fs: effects.fs,
+    http: effects.http,
+    dir: effects.dir,
+    remote: ANDROID_REMOTE,
+    ref: ANDROID_DATA_BRANCH,
+    remoteRef: ANDROID_DATA_BRANCH,
+    onAuth: authCallback(credential),
+  });
+  if (!result.ok) {
+    throw new AndroidGitAdapterError(
+      result.error ?? "Android jig-data push failed",
+    );
+  }
+}
