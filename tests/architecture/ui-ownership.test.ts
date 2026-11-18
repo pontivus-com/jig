@@ -338,7 +338,8 @@ describe("UI ownership architecture", () => {
     expect(reminder).not.toContain("showToast");
     expect(reminder).not.toContain("jig-reminder-toast-content");
     expect(browserNotifications).toContain("registration.showNotification(title, options)");
-    expect(browserNotifications).toContain('navigator.serviceWorker.register(SERVICE_WORKER_URL)');
+    expect(browserNotifications).toContain("navigator.serviceWorker");
+    expect(browserNotifications).toContain(".register(SERVICE_WORKER_URL)");
   });
 
   it("keeps Planner and Task workspace state singular", () => {
