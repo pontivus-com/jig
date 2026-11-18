@@ -135,7 +135,7 @@ export function createGitHubHttpHandler(
                 ? error.message
                 : "GitHub setup failed",
           },
-          error instanceof InstallationError ? 400 : 400,
+          400,
         );
       }
     }
