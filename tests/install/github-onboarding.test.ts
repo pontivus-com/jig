@@ -8,8 +8,8 @@ import type {
 import type { GitHubCredential } from "../../src/shell/secret-service";
 
 const REGISTRATION: GitHubAppRegistration = {
-  app_slug: "jig-desktop-test",
-  client_id: "desktop-client-id",
+  app_slug: "jig-desktop-mobile-test",
+  client_id: "shared-client-id",
 };
 
 const DEVICE_AUTHORIZATION = {
@@ -171,7 +171,7 @@ describe("GitHub onboarding orchestration", () => {
     expect(grant).toMatchObject({
       phase: "repository-access",
       grant_access_url:
-        "https://github.com/apps/jig-desktop-test/installations/new",
+        "https://github.com/apps/jig-desktop-mobile-test/installations/new",
       repositories: [],
     });
 
