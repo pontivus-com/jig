@@ -164,8 +164,6 @@ describe("GitHub onboarding orchestration", () => {
     const grantController = new GitHubOnboardingController({
       registration: REGISTRATION,
       device_flow: deviceFlow({ now: () => new Date(nowMs) }),
-      config_path: "/tmp/jig-config.json",
-      http_port: 47831,
       list_installations: async () => [],
       list_repositories: async () => [],
       acquire_repository: async () => "",
@@ -184,8 +182,6 @@ describe("GitHub onboarding orchestration", () => {
     const manageController = new GitHubOnboardingController({
       registration: REGISTRATION,
       device_flow: deviceFlow({ now: () => new Date(nowMs) }),
-      config_path: "/tmp/jig-config.json",
-      http_port: 47831,
       list_installations: async () => [
         {
           id: 23,
