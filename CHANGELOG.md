@@ -7,6 +7,10 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 ### Added
 
 - Started Jig v1.1 implementation: Android-first native delivery, in-application repository onboarding, corrected reminder attention/delivery, persistent narrow/mobile chrome and precise Task drag/drop placement are governed by the complete JIG-110 functional/technical/implementation contract.
+- Added bounded recurring Tasks with one canonical recurrence-series owner, schema-v3 SQLite persistence, portable-format-v2 continuity and deterministic occurrence reconciliation shared across Linux and Android.
+- Added the committed Capacitor Android application shell with app-private SQLite, provider-neutral isomorphic-git synchronization, direct shared GitHub App Device Flow, Keystore-backed credentials and native reminder scheduling/reconciliation.
+- Added F-Droid candidate metadata and permanent Android build/runtime certification while keeping development APKs out of the GitHub Release asset matrix.
+- Fresh Linux installation now supports a no-repository bootstrap mode with in-application local-repository or GitHub onboarding while retaining existing `--repo` and `--repo-url` automation.
 - Settings now presents the current local Jig Git commit state separately from remote synchronization and shows the actual configured synchronization remote through a credential-free read-only identity.
 
 ### Changed
