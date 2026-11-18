@@ -1,6 +1,6 @@
 # Jig — product definition
 
-**Status:** Canonical product definition, v1.1 direction adopted 2026-11-18. v1.0.6 remains the released baseline; v1.1 adds Android, in-application repository onboarding, corrected reminders/header and precise Task placement without changing Jig's product job.  
+**Status:** Canonical product definition, v1.1 direction adopted and amended 2026-11-18. v1.0.6 remains the released baseline; v1.1 adds Android, in-application repository onboarding, corrected reminders/header, precise Task placement and bounded recurring Tasks without changing Jig's product job.  
 **Concern:** Product purpose, value, boundaries and MVP target.  
 **Product identity:** Jig / Pontivus Jig. Product descriptor: just-in-time daily planner. The name evokes a brief nudge that helps the user get on track.
 
@@ -14,7 +14,7 @@ The day is often planned the preceding evening or early morning. Circumstances c
 
 **Jig schedules attention, not project execution.**
 
-Jig gives one person an ordered calendar of lightweight work intentions, optional priority and reminders, immediate rearrangement, and a reliable view of what remains and what was completed. At the start of a new local day, unfinished earlier-day items automatically roll forward into the current day by changing their scheduled date. The cards therefore physically move into the next/current day bucket everywhere in Jig until the user completes, explicitly reschedules, or deletes them.
+Jig gives one person an ordered calendar of lightweight work intentions, optional priority, reminders and bounded repeat patterns, immediate rearrangement, and a reliable view of what remains and what was completed. At the start of a new local day, unfinished earlier-day items automatically roll forward into the current day by changing their scheduled date. The cards therefore physically move into the next/current day bucket everywhere in Jig until the user completes, explicitly reschedules, or deletes them.
 
 A Jig task represents *something to attend to on a date*, not a complete project requirement, issue, work package or implementation plan. It may point to the authoritative work in another project or system. The details and execution lifecycle continue to live there.
 
@@ -36,7 +36,7 @@ An operator must be able to:
 2. review an entire week as seven dated sequences, with narrow/mobile reflowing those same seven dates vertically rather than introducing a selected-day subview; unfinished earlier-day items automatically roll into the current day's bucket by updating their scheduled date;
 3. change the order of items at any point using drag-and-drop;
 4. move work to another date without losing it;
-5. optionally mark importance and set a reminder, without estimating duration;
+5. optionally mark importance, set a reminder, and apply a finite weekly/monthly repeat pattern with an explicit end date, without estimating duration;
 6. complete, reopen or permanently delete work and review completed versus unfinished items;
 7. follow an optional reference to the actual project or work system;
 8. retain all planning state under the selected personal Git repository and synchronize portable task data automatically when a Git remote is available;
