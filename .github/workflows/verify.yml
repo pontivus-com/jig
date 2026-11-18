@@ -9,6 +9,36 @@ permissions:
   contents: read
 
 jobs:
+  generate-v106-theme-artifacts:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Resolve v1.0.6 theme dependency graph
+        run: bun install
+      - name: Generate all Astryx theme artifacts
+        run: bun run theme:build
+      - name: Upload generated theme artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: v106-generated-theme-artifacts
+          if-no-files-found: error
+          path: |
+            bun.lock
+            ui/src/jig.js
+            ui/src/jig.css
+            ui/src/jig.css.d.ts
+            ui/src/jig.d.ts
+            ui/src/jig.variants.d.ts
+            ui/src/themes/*.js
+            ui/src/themes/*.css
+            ui/src/themes/*.css.d.ts
+            ui/src/themes/*.d.ts
+            ui/src/themes/*.variants.d.ts
+
   verify:
     runs-on: ubuntu-latest
     steps:
