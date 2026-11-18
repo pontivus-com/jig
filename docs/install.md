@@ -136,4 +136,4 @@ The in-repository F-Droid candidate recipe is maintained at:
 distribution/fdroid/metadata/com.pontivus.jig.yml
 ```
 
-The external F-Droid submission must reference the immutable public `v1.1.0` source tag. Until F-Droid actually publishes `com.pontivus.jig`, the project must describe Android as implementation/certification complete or submission pending as appropriate, not publicly available.
+The external F-Droid submission must be derived from the immutable public `v1.1.0` source tag and use that tag's exact 40-character release commit SHA in `Builds.commit`. Until F-Droid actually publishes `com.pontivus.jig`, the project must describe Android as implementation/certification complete or submission pending as appropriate, not publicly available.
