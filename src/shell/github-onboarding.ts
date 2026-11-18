@@ -129,7 +129,7 @@ export class GitHubOnboardingController {
     const request = await (
       this.dependencies.create_authorization_request ??
       createGitHubAuthorizationRequest
-    )(registration, registration.linux_callback_url);
+    )(registration);
 
     try {
       this.startLoopbackListener(request);
