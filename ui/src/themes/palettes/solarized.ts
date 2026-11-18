@@ -23,10 +23,14 @@ export const solarizedPalette = {
   textSecondary: ["#657b83", "#839496"],
   textDisabled: ["#93a1a1", "#586e75"],
   accent: ["#cb4b16", "#cb4b16"],
-  info: ["#268bd2", "#268bd2"],
-  success: ["#859900", "#859900"],
-  warning: ["#b58900", "#b58900"],
-  error: ["#dc322f", "#dc322f"],
+  // Canonical Solarized accent hues are too light as strong application
+  // status fills on base3. Preserve each hue at 70% and shade only the Light
+  // strong-role input toward base03; the shared semantic mapper then derives
+  // accessible strong/text/border roles. Dark keeps the canonical accents.
+  info: ["color-mix(in srgb, #268bd2 70%, #002b36)", "#268bd2"],
+  success: ["color-mix(in srgb, #859900 70%, #002b36)", "#859900"],
+  warning: ["color-mix(in srgb, #b58900 70%, #002b36)", "#b58900"],
+  error: ["color-mix(in srgb, #dc322f 70%, #002b36)", "#dc322f"],
   red: ["#dc322f", "#dc322f"],
   orange: ["#cb4b16", "#cb4b16"],
   yellow: ["#b58900", "#b58900"],
