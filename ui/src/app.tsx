@@ -519,7 +519,7 @@ function ConfiguredApp({
       container="section"
       collapsible={false}
     />
-  ) : status?.repository_status === "sync-issue" ? (
+  ) : repositoryStatus.key === "sync-issue" ? (
     <Banner
       status="warning"
       title="Repository synchronization issue"
