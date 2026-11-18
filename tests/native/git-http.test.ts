@@ -9,6 +9,15 @@ import {
 } from "../../ui/src/native/git-http";
 import { collectBytes } from "../../ui/src/native/binary";
 
+function requiredBody(
+  body: AsyncIterableIterator<Uint8Array> | undefined,
+): AsyncIterableIterator<Uint8Array> {
+  if (body === undefined) {
+    throw new Error("Expected Git HTTP response body");
+  }
+  return body;
+}
+
 function response(
   overrides: Partial<HttpResponse> = {},
 ): HttpResponse {
@@ -75,7 +84,7 @@ describe("Android isomorphic-git native HTTP adapter", () => {
           "application/x-git-upload-pack-result",
       },
     });
-    await expect(collectBytes(result.body)).resolves.toStrictEqual(
+    await expect(collectBytes(requiredBody(result.body))).resolves.toStrictEqual(
       Uint8Array.from([16, 32, 48, 64]),
     );
   });
@@ -130,7 +139,7 @@ describe("Android isomorphic-git native HTTP adapter", () => {
     expect(result.statusCode).toBe(401);
     expect(result.statusMessage).toBe("Unauthorized");
     await expect(
-      collectBytes(result.body).then((bytes) =>
+      collectBytes(requiredBody(result.body)).then((bytes) =>
         new TextDecoder().decode(bytes),
       ),
     ).resolves.toBe("authentication required");
