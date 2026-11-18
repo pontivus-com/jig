@@ -18,13 +18,13 @@ export const WEEKDAYS = [
 export type Weekday = (typeof WEEKDAYS)[number];
 
 export interface WeeklyRecurrencePattern {
-  readonly type: "weekly";
+  readonly kind: "weekly";
   readonly interval_weeks: number;
   readonly weekdays: readonly Weekday[];
 }
 
 export interface MonthlyRecurrencePattern {
-  readonly type: "monthly";
+  readonly kind: "monthly";
   readonly day_of_month: number;
 }
 
@@ -101,7 +101,7 @@ export function isWeekday(value: unknown): value is Weekday {
 export function validateRecurrencePattern(
   pattern: RecurrencePattern,
 ): RecurrencePattern {
-  if (pattern.type === "weekly") {
+  if (pattern.kind === "weekly") {
     if (
       !Number.isInteger(pattern.interval_weeks) ||
       pattern.interval_weeks <= 0
@@ -128,7 +128,7 @@ export function validateRecurrencePattern(
       weekdays.add(weekday);
     }
     return {
-      type: "weekly",
+      kind: "weekly",
       interval_weeks: pattern.interval_weeks,
       weekdays: WEEKDAYS.filter((weekday) => weekdays.has(weekday)),
     };
@@ -141,7 +141,7 @@ export function validateRecurrencePattern(
     "day_of_month",
   );
   return {
-    type: "monthly",
+    kind: "monthly",
     day_of_month: pattern.day_of_month,
   };
 }
@@ -206,7 +206,7 @@ export function enumerateRecurrenceDates(
   const end = civilDateToUtc(normalized.end_date);
   const dates: string[] = [];
 
-  if (normalized.pattern.type === "weekly") {
+  if (normalized.pattern.kind === "weekly") {
     const weekZero = mondayOfWeek(start);
     const selected = new Set(normalized.pattern.weekdays);
     for (
