@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Binding v1.0.6 UX/UI realization v0.18, 2026-11-18. v1.0.5 remains the responsive/interaction baseline; v1.0.6 governs continuous History/Settings content measure, the curated multi-theme application catalogue, independent System/Light/Dark appearance, complete semantic re-theming, theme-aware in-application branding, browser-level reminder delivery and Settings-only appearance configuration.
+**Status:** Binding v1.0.6 UX/UI realization v0.19, 2026-11-18. v1.0.5 remains the responsive/interaction baseline; v1.0.6 governs continuous History/Settings content measure, the curated multi-theme application catalogue, independent System/Light/Dark appearance, complete semantic re-theming, theme-aware in-application branding, browser-level reminder delivery and Settings-only appearance configuration.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07 and JIG-FR-01–22.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
