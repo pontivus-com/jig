@@ -360,9 +360,9 @@ export class GitHubOnboardingController {
         const code = url.searchParams.get("code") ?? "";
         try {
           await this.completeAuthorization(state, code);
-          queueMicrotask(() => {
+          setTimeout(() => {
             void this.stopLoopbackListener();
-          });
+          }, 25);
           return new Response(
             "<!doctype html><title>Jig GitHub authorization complete</title><p>GitHub authorization completed. You can return to Jig.</p>",
             {
@@ -372,9 +372,9 @@ export class GitHubOnboardingController {
           );
         } catch (error) {
           this.error = error instanceof Error ? error.message : String(error);
-          queueMicrotask(() => {
+          setTimeout(() => {
             void this.stopLoopbackListener();
-          });
+          }, 25);
           return new Response(
             "<!doctype html><title>Jig GitHub authorization failed</title><p>GitHub authorization could not be completed. Return to Jig and retry.</p>",
             {
