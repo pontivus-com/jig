@@ -20,10 +20,11 @@ import {
 import type { GitHubReconnectSnapshot } from "./setup-http";
 import { GitHubDeviceFlowPanel } from "./github-device-flow";
 import {
-  browserNotificationState,
-  requestBrowserNotificationPermission,
-  type BrowserNotificationState,
-} from "./browser-notifications";
+  openExactReminderSettings,
+  readNotificationSettings,
+  requestNotificationPermission,
+  type NotificationSettingsState,
+} from "./notification-settings";
 import {
   THEME_DEFINITIONS,
   THEME_GROUPS,
@@ -61,9 +62,25 @@ export interface SettingsViewProps {
 }
 
 function notificationStatusMessage(
-  state: BrowserNotificationState,
+  state: NotificationSettingsState | null,
 ): string {
-  switch (state) {
+  if (state === null) {
+    return "Checking notification settings";
+  }
+  if (state.platform === "android") {
+    switch (state.permission) {
+      case "granted":
+        return state.exact_alarm === "granted"
+          ? "Enabled · exact timing available"
+          : "Enabled · exact timing unavailable";
+      case "permission-required":
+        return "Notification permission required";
+      case "denied":
+        return "Blocked in Android settings";
+    }
+  }
+
+  switch (state.permission) {
     case "unsupported":
       return "Not supported by this browser";
     case "default":
@@ -91,17 +108,32 @@ export function SettingsView({
   onRefreshGitHubReconnect,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
-    useState<BrowserNotificationState>(browserNotificationState);
+    useState<NotificationSettingsState | null>(null);
   const repositoryStatus = repositoryStatusPresentation(status);
   const localGitStatus = localGitStatusPresentation(status);
   const remoteGitStatus = remoteGitStatusPresentation(status);
 
   useEffect(() => {
+    let disposed = false;
     const refresh = (): void => {
-      setNotificationState(browserNotificationState());
+      void readNotificationSettings()
+        .then((next) => {
+          if (!disposed) {
+            setNotificationState(next);
+          }
+        })
+        .catch(() => {
+          if (!disposed) {
+            setNotificationState(null);
+          }
+        });
     };
+    refresh();
     window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
+    return () => {
+      disposed = true;
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   return (
@@ -252,16 +284,45 @@ export function SettingsView({
 
               <div className="jig-settings-notifications">
                 <div>
-                  <strong>Browser notifications</strong>
+                  <strong>
+                    {notificationState?.platform === "android"
+                      ? "Android notifications"
+                      : "Browser notifications"}
+                  </strong>
                   <p>{notificationStatusMessage(notificationState)}</p>
+                  {notificationState?.platform === "android" &&
+                  notificationState.permission === "granted" &&
+                  notificationState.exact_alarm === "unavailable" ? (
+                    <small>
+                      Future reminders are scheduled inexactly until exact
+                      alarms are enabled in Android settings.
+                    </small>
+                  ) : null}
                 </div>
-                {notificationState === "default" ? (
+                {notificationState?.permission === "default" ||
+                (notificationState?.platform === "android" &&
+                  notificationState.permission ===
+                    "permission-required") ? (
                   <Button
                     label="Enable"
                     variant="secondary"
                     size="sm"
                     onClick={() => {
-                      void requestBrowserNotificationPermission().then(
+                      void requestNotificationPermission().then(
+                        setNotificationState,
+                      );
+                    }}
+                  />
+                ) : null}
+                {notificationState?.platform === "android" &&
+                notificationState.permission === "granted" &&
+                notificationState.exact_alarm === "unavailable" ? (
+                  <Button
+                    label="Exact timing settings"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      void openExactReminderSettings().then(
                         setNotificationState,
                       );
                     }}
@@ -315,7 +376,7 @@ export function SettingsView({
           <strong>Local-first behavior</strong>
           <p>Local planning remains usable when synchronization is unavailable.</p>
           <p>
-            Browser notifications require explicit permission; unrelated repository
+            Notifications require explicit permission; unrelated repository
             content is never touched.
           </p>
         </VStack>
