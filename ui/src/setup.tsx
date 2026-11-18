@@ -253,6 +253,33 @@ export function SetupView({
                 />
               </div>
             )}
+            {github?.phase === "repository-access" &&
+            github.manage_access.length > 0 ? (
+              <div className="jig-setup-github-state">
+                <p>
+                  The Jig GitHub App is installed, but no authorized repository
+                  is available yet. Manage access, then refresh.
+                </p>
+                {github.manage_access.map((access) => (
+                  <a
+                    key={access.installation_id}
+                    href={access.manage_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Manage GitHub access for {access.account_login}
+                  </a>
+                ))}
+                <Button
+                  label="Refresh access"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void refreshGitHub();
+                  }}
+                />
+              </div>
+            ) : null}
             {github?.repositories.length ? (
               <div className="jig-setup-github-repositories">
                 <h3>Choose a repository</h3>
