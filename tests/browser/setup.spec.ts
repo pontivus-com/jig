@@ -1,5 +1,21 @@
 import { expect, test } from "@playwright/test";
 
+async function routeGitHubStatus(
+  page: import("@playwright/test").Page,
+  status: {
+    readonly onboarding_available: boolean;
+    readonly reconnect_available: boolean;
+  },
+): Promise<void> {
+  await page.route("**/api/v1/github/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(status),
+    });
+  });
+}
+
 test("bootstrap setup gates Planner and accepts an existing local repository", async ({
   page,
 }) => {
@@ -20,17 +36,10 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
             },
       ),
     });
-
-  await page.route("**/api/v1/github/status", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        onboarding_available: false,
-        reconnect_available: false,
-      }),
-    });
   });
+  await routeGitHubStatus(page, {
+    onboarding_available: false,
+    reconnect_available: false,
   });
 
   await page.route("**/api/v1/setup/local-repository", async (route) => {
@@ -87,14 +96,24 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
 
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Set up Jig" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Use this repository" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Connect GitHub" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Set up Jig" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Use this repository" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Connect GitHub" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add task", exact: true }),
+  ).toHaveCount(0);
   expect(taskRequests).toBe(0);
 
   await page.getByLabel("Repository path").fill("/tmp/planning");
-  await page.getByRole("button", { name: "Use this repository" }).click();
+  await page
+    .getByRole("button", { name: "Use this repository" })
+    .click();
 
   await expect.poll(() => submittedPath).toBe("/tmp/planning");
   await expect(
@@ -115,17 +134,10 @@ test("bootstrap keeps invalid repository errors on the setup surface", async ({
         local_repository_available: true,
       }),
     });
-
-  await page.route("**/api/v1/github/status", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        onboarding_available: false,
-        reconnect_available: false,
-      }),
-    });
   });
+  await routeGitHubStatus(page, {
+    onboarding_available: false,
+    reconnect_available: false,
   });
   await page.route("**/api/v1/setup/local-repository", async (route) => {
     await route.fulfill({
@@ -139,7 +151,9 @@ test("bootstrap keeps invalid repository errors on the setup surface", async ({
 
   await page.goto("/");
   await page.getByLabel("Repository path").fill("/does/not/exist");
-  await page.getByRole("button", { name: "Use this repository" }).click();
+  await page
+    .getByRole("button", { name: "Use this repository" })
+    .click();
 
   await expect(
     page.getByText("Selected repository is not accessible and writable"),
@@ -148,7 +162,6 @@ test("bootstrap keeps invalid repository errors on the setup surface", async ({
     "/does/not/exist",
   );
 });
-
 
 test("Connect GitHub presents the direct Device Flow code and verification action", async ({
   page,
@@ -162,17 +175,10 @@ test("Connect GitHub presents the direct Device Flow code and verification actio
         local_repository_available: true,
       }),
     });
-
-  await page.route("**/api/v1/github/status", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        onboarding_available: true,
-        reconnect_available: false,
-      }),
-    });
   });
+  await routeGitHubStatus(page, {
+    onboarding_available: true,
+    reconnect_available: false,
   });
 
   await page.route("**/api/v1/setup/github/start", async (route) => {
@@ -213,6 +219,93 @@ test("Connect GitHub presents the direct Device Flow code and verification actio
   await expect(page.getByText(/client_secret|Redirect URI/i)).toHaveCount(0);
 });
 
+test("Device Flow continues polling when GitHub returns the same interval", async ({
+  page,
+}) => {
+  let refreshCalls = 0;
+  await page.route("**/api/v1/setup/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        mode: "bootstrap",
+        local_repository_available: true,
+      }),
+    });
+  });
+  await routeGitHubStatus(page, {
+    onboarding_available: true,
+    reconnect_available: false,
+  });
+  await page.route("**/api/v1/setup/github/start", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        available: true,
+        phase: "authorizing",
+        authorization: {
+          mode: "device",
+          verification_uri: "https://github.com/login/device",
+          user_code: "ABCD-EFGH",
+          retry_after_seconds: 1,
+        },
+        grant_access_url: null,
+        manage_access: [],
+        installations: [],
+        repositories: [],
+        error: null,
+      }),
+    });
+  });
+  await page.route(
+    "**/api/v1/setup/github/refresh-access",
+    async (route) => {
+      refreshCalls += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          refreshCalls < 2
+            ? {
+                available: true,
+                phase: "authorizing",
+                authorization: {
+                  mode: "device",
+                  verification_uri: "https://github.com/login/device",
+                  user_code: "ABCD-EFGH",
+                  retry_after_seconds: 1,
+                },
+                grant_access_url: null,
+                manage_access: [],
+                installations: [],
+                repositories: [],
+                error: null,
+              }
+            : {
+                available: true,
+                phase: "repository-access",
+                authorization: null,
+                grant_access_url:
+                  "https://github.com/apps/jig-desktop-mobile-test/installations/new",
+                manage_access: [],
+                installations: [],
+                repositories: [],
+                error: null,
+              },
+        ),
+      });
+    },
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Connect GitHub" }).click();
+
+  await expect.poll(() => refreshCalls, { timeout: 5_000 }).toBe(2);
+  await expect(
+    page.getByRole("button", { name: "Grant repository access" }),
+  ).toBeVisible();
+});
 
 test("configured managed repository reconnects GitHub through Device Flow without repository setup", async ({
   page,
@@ -226,17 +319,10 @@ test("configured managed repository reconnects GitHub through Device Flow withou
       contentType: "application/json",
       body: JSON.stringify({ mode: "configured" }),
     });
-
-  await page.route("**/api/v1/github/status", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        onboarding_available: false,
-        reconnect_available: true,
-      }),
-    });
   });
+  await routeGitHubStatus(page, {
+    onboarding_available: false,
+    reconnect_available: true,
   });
   await page.route("**/api/v1/tasks", async (route) => {
     await route.fulfill({
@@ -268,7 +354,8 @@ test("configured managed repository reconnects GitHub through Device Flow withou
         repository_path:
           "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
         portable_format_version: 1,
-        repository_adapter_healthy: repositoryStatus !== "sync-issue",
+        repository_adapter_healthy:
+          repositoryStatus !== "sync-issue",
       }),
     });
   });
@@ -289,30 +376,37 @@ test("configured managed repository reconnects GitHub through Device Flow withou
       }),
     });
   });
-  await page.route("**/api/v1/github/reconnect/refresh", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        available: true,
-        phase: "idle",
-        authorization: null,
-        error: null,
-      }),
-    });
-  });
+  await page.route(
+    "**/api/v1/github/reconnect/refresh",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          available: true,
+          phase: "idle",
+          authorization: null,
+          error: null,
+        }),
+      });
+    },
+  );
   await page.route("**/api/v1/sync", async (route) => {
     syncCalls += 1;
     repositoryStatus = "synchronized";
     await route.fulfill({
       status: 202,
       contentType: "application/json",
-      body: JSON.stringify({ repository_status: "synchronized" }),
+      body: JSON.stringify({
+        repository_status: "synchronized",
+      }),
     });
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
 
   await expect(
     page.getByRole("button", { name: "Reconnect GitHub" }),
@@ -329,7 +423,11 @@ test("configured managed repository reconnects GitHub through Device Flow withou
     .click();
 
   await expect.poll(() => syncCalls).toBe(1);
-  await expect(page.getByText("Local planning data and the configured repository are synchronized.")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Local planning data and the configured repository are synchronized.",
+    ),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Reconnect GitHub" }),
   ).toHaveCount(0);
