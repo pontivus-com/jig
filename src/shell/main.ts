@@ -1,9 +1,9 @@
 import { resolve } from "node:path";
 import {
-  PORTABLE_FORMAT_VERSION,
   rollForwardOutstandingInDatabase,
   SQLITE_SCHEMA_VERSION,
 } from "../persistence/sqlite";
+import { PORTABLE_FORMAT_VERSION } from "../portable";
 import type { RepositorySynchronizationStatus } from "../protocol";
 import { openDatabase } from "./sqlite-bun";
 import {
