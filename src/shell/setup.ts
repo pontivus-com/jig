@@ -65,7 +65,7 @@ async function git(
   return result.stdout;
 }
 
-function normalizedGitHubRepository(value: string): string | null {
+export function normalizedGitHubRepository(value: string): string | null {
   const trimmed = value.trim().replace(/\.git$/, "");
   const patterns = [
     /^https?:\/\/github\.com\/([^/]+\/[^/]+)$/i,
