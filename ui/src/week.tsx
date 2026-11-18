@@ -83,7 +83,11 @@ function DatedSection({
         </span>
       </header>
 
-      <div className="jig-week-task-area">
+      <DateDropZone
+        date={date}
+        tasks={tasks}
+        className="jig-week-task-area"
+      >
         <PlannerTaskList
           tasks={tasks}
           now={now}
@@ -96,15 +100,11 @@ function DatedSection({
           onDelete={onDelete}
           onMove={onMove}
         />
-      </div>
+      </DateDropZone>
     </section>
   );
 
-  return (
-    <DateDropZone date={date} className={className}>
-      {content}
-    </DateDropZone>
-  );
+  return <div className={className} data-date={date}>{content}</div>;
 }
 
 function WeekBoard(props: WeekViewProps): React.ReactElement {
