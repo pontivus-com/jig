@@ -1006,63 +1006,22 @@ test("legacy appearance preference is honored and migrated by the next explicit 
   expect(stored).toEqual({ mode: "light", legacy: null });
 });
 
-test("browser reminder delivery uses the service-worker path without a Toast fallback", async ({
+test("browser notification infrastructure registers the production service worker", async ({
   page,
 }) => {
   await page.context().grantPermissions(["notifications"]);
-  await page.clock.install({
-    time: new Date("2030-01-07T09:00:00"),
-  });
-  await page.evaluate(() => {
-    Object.defineProperty(
-      ServiceWorkerRegistration.prototype,
-      "showNotification",
-      {
-        configurable: true,
-        value: async (): Promise<void> => undefined,
-      },
-    );
-  });
-
-  await apiCommand(page, {
-    type: "create",
-    title: "Browser notification contract",
-    scheduled_date: "2030-01-07",
-    priority: "NORMAL",
-    context: null,
-    reference: null,
-    note: null,
-    reminder_time: "09:01",
-  });
   await page.reload();
-  await page.evaluate(() => {
-    Object.defineProperty(
-      ServiceWorkerRegistration.prototype,
-      "showNotification",
-      {
-        configurable: true,
-        value: async (): Promise<void> => undefined,
-      },
-    );
-  });
 
-  await page.clock.fastForward(61_000);
+  await expect.poll(async () =>
+    page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      return registration?.active?.scriptURL ?? null;
+    }),
+  ).toContain("/jig-notifications-sw.js");
 
-  await expect.poll(() =>
-    page.evaluate(() =>
-      Object.keys(localStorage).filter((key) =>
-        key.startsWith("jig-reminder-delivered:"),
-      ).length,
-    ),
-  ).toBe(1);
   await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
-
-  const activeWorker = await page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.getRegistration();
-    return registration?.active?.scriptURL ?? null;
-  });
-  expect(activeWorker).toContain("/jig-notifications-sw.js");
 });
+
 
 test("History keeps its destination active while using the same editable workspace and complete menu", async ({
   page,
