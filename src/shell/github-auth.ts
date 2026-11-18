@@ -11,8 +11,7 @@ export interface GitHubAppRegistration {
   readonly app_slug: string;
   readonly client_id: string;
   readonly client_secret: string;
-  readonly linux_callback_url: string;
-  readonly android_callback_url: string;
+  readonly callback_url: string;
 }
 
 export interface GitHubAuthorizationRequest {
@@ -208,26 +207,17 @@ async function credentialFromToken(
 
 export async function createGitHubAuthorizationRequest(
   registration: GitHubAppRegistration,
-  redirectUri: string,
 ): Promise<GitHubAuthorizationRequest> {
   if (
     registration.app_slug.length === 0 ||
     !/^[a-z0-9-]+$/.test(registration.app_slug) ||
     registration.client_id.length === 0 ||
     registration.client_secret.length === 0 ||
-    registration.linux_callback_url.length === 0 ||
-    registration.android_callback_url.length === 0
+    registration.callback_url.length === 0
   ) {
     throw new GitHubAuthError("GitHub App registration is incomplete");
   }
-  if (
-    redirectUri !== registration.linux_callback_url &&
-    redirectUri !== registration.android_callback_url
-  ) {
-    throw new GitHubAuthError(
-      "GitHub redirect URI is not one of the registered Jig callbacks",
-    );
-  }
+  const redirectUri = registration.callback_url;
   const state = randomBase64Url();
   const codeVerifier = randomBase64Url();
   const challenge = await pkceChallenge(codeVerifier);
