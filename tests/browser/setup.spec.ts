@@ -80,7 +80,7 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
   await expect(page.getByRole("heading", { name: "Set up Jig" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Use this repository" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect GitHub" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Add task" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(0);
   expect(taskRequests).toBe(0);
 
   await page.getByLabel("Repository path").fill("/tmp/planning");
@@ -88,7 +88,7 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
 
   await expect.poll(() => submittedPath).toBe("/tmp/planning");
   await expect(
-    page.getByRole("button", { name: "Add task" }),
+    page.getByRole("button", { name: "Add task", exact: true }),
   ).toBeVisible({ timeout: 5_000 });
   expect(taskRequests).toBeGreaterThan(0);
 });
