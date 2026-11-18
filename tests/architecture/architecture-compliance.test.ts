@@ -250,6 +250,53 @@ describe("architecture compliance", () => {
     ]);
   });
 
+  it("reuses the shared GitHub protocol and orchestration owners on Android", () => {
+    const androidSetup = source("ui/src/native/github-setup.ts");
+    const registration = source("src/github-registration.ts");
+
+    expect(androidSetup).toContain(
+      'from "../../../src/github-device-flow"',
+    );
+    expect(androidSetup).toContain(
+      'from "../../../src/github-onboarding"',
+    );
+    expect(androidSetup).toContain(
+      'from "../../../src/github-reconnect"',
+    );
+    expect(androidSetup).toContain(
+      'from "../../../src/github-registration"',
+    );
+    expect(androidSetup).toContain("new GitHubDeviceFlowSession");
+    expect(androidSetup).toContain("new GitHubOnboardingController");
+    expect(androidSetup).toContain("new GitHubReconnectController");
+    expect(androidSetup).toContain("GITHUB_APP_REGISTRATION");
+    expect(androidSetup).not.toContain(
+      "GITHUB_ANDROID_APP_REGISTRATION",
+    );
+    expect(androidSetup).not.toContain(
+      "GITHUB_DESKTOP_APP_REGISTRATION",
+    );
+    expect(androidSetup).not.toMatch(
+      /interface\s+GitHubAuthorizationSnapshot\b|interface\s+GitHubDeviceAuthorization\b/,
+    );
+
+    expect(registration).toContain(
+      'app_slug: "jig-desktop-mobile"',
+    );
+    expect(registration).toContain(
+      'client_id: "Iv23liyCoLFStLGRXgUk"',
+    );
+
+    for (const [path, content] of production) {
+      expect(content, path).not.toContain(
+        "GITHUB_ANDROID_APP_REGISTRATION",
+      );
+      expect(content, path).not.toContain(
+        "GITHUB_DESKTOP_APP_REGISTRATION",
+      );
+    }
+  });
+
   it("keeps portable records platform-neutral and Android Git provider-neutral", () => {
     const portable = source("src/portable.ts");
     const desktopGit = source("src/shell/git.ts");
