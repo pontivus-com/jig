@@ -12,6 +12,8 @@ const BASE: Task = {
   reference: null,
   note: null,
   reminder_time: "09:30",
+  recurrence_series_id: null,
+  recurrence_occurrence_date: null,
   completed_at: null,
   created_at: "2026-11-18T01:00:00.000Z",
   updated_at: "2026-11-18T01:00:00.000Z",
