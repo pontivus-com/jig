@@ -1,6 +1,7 @@
 import { defineTheme } from "@astryxdesign/core/theme";
 import { neutralTheme } from "@astryxdesign/theme-neutral/built";
 import { jigProductLocalTokens } from "./themes/product-tokens";
+import { jigProductLocalTokens } from "./themes/product-tokens";
 
 /**
  * Jig's Astryx semantic theme source.
