@@ -173,5 +173,15 @@ test("an open Planner enters reminder-due attention when local time crosses the 
 
   await expect(card).toHaveClass(/jig-task-card-reminder-due/);
   await expect(card.getByText("Reminder due", { exact: true })).toBeVisible();
-  await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
+
+  const task = await taskByTitle(page, "Open app boundary");
+  const expectedKey = [
+    "jig-reminder-delivered:",
+    task.id,
+    task.scheduled_date,
+    task.reminder_time,
+  ].join("|");
+  await expect
+    .poll(() => page.evaluate((key) => localStorage.getItem(key), expectedKey))
+    .toBe("1");
 });
