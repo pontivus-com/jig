@@ -395,7 +395,9 @@ describe("architecture compliance", () => {
     expect(plugin).toContain('putString(\n                    IV');
     expect(plugin).not.toContain("client_secret");
     expect(plugin).not.toContain("redirect_uri");
-    expect(adapter).toContain("type GitHubCredential");
+    expect(adapter).toMatch(
+      /import type \{ GitHubCredential \} from/,
+    );
     expect(adapter).not.toContain("JigConfig");
     expect(adapter).not.toContain("Task");
   });
