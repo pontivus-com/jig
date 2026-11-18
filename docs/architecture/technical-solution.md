@@ -19,7 +19,7 @@ The normal experience is: run one installer; assign repository; installer config
 |---|---|
 | Runtime and service | One Bun 1.4.4 process on Linux, `systemd --user` service, loopback HTTP, no external database or remote service |
 | Command and installer | `jig` launcher in ~/.local/bin; `scripts/install.sh --repo /absolute/existing/repo` or `--repo-url URL --checkout /new/empty/path`. URL mode delegates acquisition to Git and then converges on the same selected-checkout installation path. |
-| UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 with one root Theme owner, one typed 13-preset theme registry and one independent System/Light/Dark mode; one Planner destination, Jig-owned responsive top-header composition inside AppShell, desktop right Drawer and narrow BottomSheet for the one Task workspace |
+| UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 with one root Theme owner, one typed 14-preset theme registry and one independent System/Light/Dark mode; one Planner destination, Jig-owned responsive top-header composition inside AppShell, desktop right Drawer and narrow BottomSheet for the one Task workspace |
 | Cross-day drag | `@dnd-kit/react@0.5.3` + public sensor primitives from direct-pinned `@dnd-kit/dom@0.5.3`; one React-owned drag model across desktop and narrow/mobile; optimistic DOM sorting suppressed; Astryx handles visual primitives |
 | Live data | One Bun SQLite database at `<selected-repo>/.jig/local/jig.sqlite`; immediate transactional writes |
 | Versioned data | Deterministic Task JSON and manifest synchronized through Git inside the selected repository. The adapter may use an isolated Git namespace internally, but branch/ref/worktree lifecycle is an implementation detail confined to that adapter rather than Jig application state or user configuration. |
@@ -1047,7 +1047,7 @@ Do not introduce a notification service class, server scheduler, new shell proce
 
 Keep appearance configuration inside the existing Settings → Appearance panel:
 
-1. Add one Astryx `Selector` bound to `ThemePreset`. It renders the registry-derived catalogue grouped as **Jig**, **Astryx** and **Community**. Thirteen options are well within Selector's intended bounded-list use; do not build a custom picker.
+1. Add one Astryx `Selector` bound to `ThemePreset`. It renders the registry-derived catalogue grouped as **Jig**, **Astryx** and **Community**. Fourteen options are well within Selector's intended bounded-list use; do not build a custom picker.
 2. Keep one Astryx `SegmentedControl` for exactly `System | Light | Dark`, now bound to `AppearanceMode`.
 3. The App/root owns the two values and passes setters only to Settings. Planner, `PlannerHeader`, Task cards, Task workspace and History receive no theme setter or theme-specific props.
 4. Browser-notification permission can remain an independent Settings row; changing notification permission is not a theme action.
