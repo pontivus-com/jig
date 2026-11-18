@@ -60,7 +60,7 @@ export interface JigSqlConnection {
 }
 
 export const SQLITE_SCHEMA_VERSION = 3;
-export const PORTABLE_FORMAT_VERSION = 2;
+export { PORTABLE_FORMAT_VERSION } from "../portable";
 
 export interface PersistenceMetadata {
   readonly schema_version: number;
