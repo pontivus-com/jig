@@ -18,6 +18,12 @@ import {
   serializeSnapshot,
   validateSnapshot,
 } from "../../src/portable";
+import {
+  applyTaskCommand,
+  readCanonicalState,
+  readMetadata,
+} from "../../src/persistence/sqlite";
+import { initializeDatabase } from "../../src/shell/sqlite-bun";
 import type { CanonicalState } from "../../src/protocol";
 import {
   acquireAndroidPortableRepository,
@@ -40,6 +46,7 @@ import {
   bytesToBase64,
 } from "../../ui/src/native/binary";
 import { ANDROID_GIT_WORKTREE } from "../../ui/src/native/paths";
+import { createAndroidSyncController } from "../../ui/src/native/sync";
 import { fakeFilesystem } from "./fake-filesystem";
 
 const DATASET_ID =
@@ -579,6 +586,158 @@ describe("Android Git smart-HTTP feasibility", () => {
         )
       ).tasks,
     ).toStrictEqual([localTask]);
+  });
+
+  it("keeps Local Git committed when authenticated remote synchronization fails", async () => {
+    const { remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+    const { port: filesystemPort } = fakeFilesystem();
+    const effects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    await cloneAndroidPortableRepository(
+      effects,
+      remoteUrl,
+      async () => USER,
+    );
+
+    const database = await initializeDatabase(
+      join(root, "android-sync.sqlite"),
+      DATASET_ID,
+    );
+    try {
+      await applyTaskCommand(
+        database,
+        {
+          type: "create",
+          title: "Offline-safe mutation",
+          scheduled_date: "2026-11-18",
+        },
+        0,
+        "2026-11-18T02:00:00.000Z",
+        () =>
+          "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4020",
+      );
+
+      const controller = createAndroidSyncController(
+        database,
+        effects,
+        async () => "wrong-token",
+      );
+      await controller.start();
+      const status = await controller.trigger();
+
+      expect(status).toMatchObject({
+        local_git: "committed",
+        remote: {
+          state: "sync-issue",
+          remote_name: "origin",
+          remote_location: remoteUrl,
+        },
+      });
+      expect(await readMetadata(database)).toMatchObject({
+        revision: 1,
+        last_exported_revision: 1,
+        pending_sync: false,
+      });
+      expect(
+        (await readCanonicalState(database)).tasks[0],
+      ).toMatchObject({
+        title: "Offline-safe mutation",
+      });
+      controller.stop();
+    } finally {
+      await database.close();
+    }
+  });
+
+  it("adopts a remote fast-forward snapshot into canonical SQLite", async () => {
+    const { remote, remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+    const { port: filesystemPort } = fakeFilesystem();
+    const effects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const credential = async (): Promise<string> => USER;
+    await cloneAndroidPortableRepository(
+      effects,
+      remoteUrl,
+      credential,
+    );
+
+    const database = await initializeDatabase(
+      join(root, "android-adopt.sqlite"),
+      DATASET_ID,
+    );
+    const controller = createAndroidSyncController(
+      database,
+      effects,
+      credential,
+    );
+    try {
+      await controller.start();
+      await expect(controller.trigger()).resolves.toMatchObject({
+        local_git: "committed",
+        remote: { state: "synchronized" },
+      });
+
+      const desktop = join(root, "adopt-desktop");
+      await runGit(root, [
+        "clone",
+        "--branch",
+        "jig-data",
+        remote,
+        desktop,
+      ]);
+      await runGit(desktop, ["config", "user.name", "Fixture"]);
+      await runGit(desktop, [
+        "config",
+        "user.email",
+        "fixture@example.invalid",
+      ]);
+      const remoteTask = task(
+        "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4021",
+        "Remote adopted",
+        0,
+      );
+      await writeSnapshot(
+        desktop,
+        serializeSnapshot([remoteTask], DATASET_ID),
+      );
+      await runGit(desktop, ["add", "-A"]);
+      await runGit(desktop, [
+        "commit",
+        "-m",
+        "Remote canonical update",
+      ]);
+      await runGit(desktop, ["push", "origin", "jig-data"]);
+
+      await expect(controller.trigger()).resolves.toMatchObject({
+        local_git: "committed",
+        remote: { state: "synchronized" },
+      });
+      expect(
+        (await readCanonicalState(database)).tasks,
+      ).toStrictEqual([remoteTask]);
+      expect(await readMetadata(database)).toMatchObject({
+        revision: 1,
+        last_exported_revision: 1,
+        pending_sync: false,
+      });
+    } finally {
+      controller.stop();
+      await database.close();
+    }
   });
 
   it("reports authentication failure without putting credentials in the remote URL", async () => {
