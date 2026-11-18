@@ -5,6 +5,10 @@ import {
   type FileInfo,
   type FilesystemPlugin,
 } from "@capacitor/filesystem";
+import {
+  base64ToBytes,
+  bytesToBase64,
+} from "./binary";
 
 export type AndroidFilesystemPort = Pick<
   FilesystemPlugin,
@@ -166,26 +170,6 @@ function encodingName(
     return options.toLowerCase();
   }
   return options?.encoding?.toLowerCase() ?? null;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunk = 0x8000;
-  for (let offset = 0; offset < bytes.length; offset += chunk) {
-    binary += String.fromCharCode(
-      ...bytes.subarray(offset, Math.min(bytes.length, offset + chunk)),
-    );
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(value: string): Uint8Array {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
 }
 
 function utf8Bytes(value: string): Uint8Array {
