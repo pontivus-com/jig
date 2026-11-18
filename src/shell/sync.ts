@@ -7,6 +7,7 @@ import {
   retryDelayMs,
   serializeSnapshot,
   SYNC_HEALTHY_POLL_MS,
+  SYNC_RETRY_SECONDS,
   type GitAdapterConfig,
   synchronizePortableData,
   writePortableSnapshot,
