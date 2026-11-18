@@ -432,7 +432,6 @@ body {
     border-block-color: var(--jig-state-task-selected-border);
     border-inline-end-color: var(--jig-state-task-selected-border);
     background: var(--jig-state-task-selected-bg);
-    outline: none;
   }
 
   .jig-task-card-completed {
