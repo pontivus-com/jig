@@ -943,14 +943,34 @@ export async function alignPortableDataRef(
   expectedHead: string,
   targetHead: string,
 ): Promise<void> {
+  if (
+    expectedHead !== targetHead &&
+    await ancestor(
+      config.repository_path,
+      expectedHead,
+      targetHead,
+    ) !== true
+  ) {
+    throw new GitAdapterError(
+      "Local jig-data alignment must be a fast-forward",
+    );
+  }
+
   const moved = await runGit(config.repository_path, [
-    "update-ref", DATA_REF, targetHead, expectedHead,
+    "update-ref",
+    DATA_REF,
+    targetHead,
+    expectedHead,
   ]);
   if (moved.exit_code !== 0) {
-    throw new GitAdapterError("Local jig-data ref changed concurrently");
+    throw new GitAdapterError(
+      "Local jig-data ref changed concurrently",
+    );
   }
   await requireGit(jigWorktreePath(config), [
-    "reset", "--hard", "HEAD",
+    "reset",
+    "--hard",
+    "HEAD",
   ]);
 }
 
