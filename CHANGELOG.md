@@ -18,6 +18,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 ### Changed
 
 - Reworked the configured compact application around the UX-F0 governed hierarchy: persistent Planner/History/Settings bottom navigation replaces hamburger primary navigation, Planner Add is one floating primary action, healthy synchronization is visually subordinate, Today remains explicit text, and touch-target geometry no longer dictates visible control mass.
+- Final reviewed fidelity corrections suppress duplicate synchronization recovery chrome inside Settings, keep exact technical repository locators in Diagnostics only, and remove the second primary Add CTA from compact empty Planner so the FAB remains the single prominent creation action.
 - Reworked mobile Planner scan density without shrinking touch targets, restored a stable value-first onboarding composition with visual proof points, grouped the Task editor into Task / Schedule / Details / Notes while preserving one-Save recurrence semantics, and replaced primary Settings dashboard cards with a content-led reading hierarchy.
 - Governed new v1.1 mobile and desktop UX/UI references for onboarding and the complete Task form. The mobile reference is now the binding v1.1 form interaction standard for BottomSheet hierarchy, touch geometry, scrolling, progressive Repeat disclosure and action placement; the old mobile editor reference is historical where superseded.
 - Reopened v1.1 desktop + mobile UX/UI after implementation-fidelity review: prior geometry/screenshot retention is no longer treated as visual certification; shell/navigation, Planner density, onboarding, Task workspace, History/Settings and cross-theme visual parity must pass reviewed evidence before physical certification resumes.
@@ -41,6 +42,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Documentation
 
+- Closed UX-F0..UX-F7 on executable source candidate `611c8ced6a854a80f24bf727c53d792f5c5d556c`: permanent Verify run `44547579822` passed 41/41 test files, 250/250 core/integration/architecture tests, 80/80 real-browser tests, installer/lifecycle smoke, deterministic Android build certification and API-24 instrumentation; reviewed browser evidence is artifact `14539814508` and physical Android candidate artifact is `14541004265`.
 - Added binding v1.1 app-wide configured-application UX authority and the UX-F0 desktop/mobile fidelity audit alongside the existing onboarding/Task-form references; the new authority governs compact bottom navigation, Planner FAB, action prominence, Planner density, History/Settings composition and the reviewed visual-evidence matrix.
 - Reconciled the functional, UI, technical, repository-governance, implementation-plan and evidence authorities around the reopened mobile UX remediation; the previous green hosted candidate is no longer closure evidence for the amended mobile interaction/Settings/Repeat/drag contracts.
 
