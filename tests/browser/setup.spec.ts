@@ -161,6 +161,67 @@ test("bootstrap stays inside Jig and accepts an existing local repository", asyn
   expect(taskRequests).toBeGreaterThan(0);
 });
 
+test("governed onboarding adapts from desktop to narrow touch geometry", async ({
+  page,
+}) => {
+  await page.route("**/api/v1/setup/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        mode: "bootstrap",
+        local_repository_available: false,
+      }),
+    });
+  });
+  await routeGitHubStatus(page, {
+    onboarding_available: true,
+    reconnect_available: false,
+  });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const desktopColumns = await page.locator(".jig-setup-layout").evaluate(
+    (element) => getComputedStyle(element).gridTemplateColumns,
+  );
+  expect(desktopColumns.split(" ")).toHaveLength(2);
+  await expect(
+    page.getByRole("button", { name: "Connect GitHub repository" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Use an existing local repository" }),
+  ).toHaveCount(0);
+
+  for (const width of [320, 360, 390, 414] as const) {
+    await page.setViewportSize({ width, height: 844 });
+
+    const headerBox = await page
+      .locator(".jig-app-header-onboarding")
+      .boundingBox();
+    const connectBox = await page
+      .getByRole("button", { name: "Connect GitHub repository" })
+      .boundingBox();
+    if (headerBox === null || connectBox === null) {
+      throw new Error("Onboarding touch geometry unavailable");
+    }
+    expect(headerBox.height).toBeGreaterThanOrEqual(56);
+    expect(connectBox.width).toBeGreaterThanOrEqual(48);
+    expect(connectBox.height).toBeGreaterThanOrEqual(48);
+
+    const narrowColumns = await page.locator(".jig-setup-layout").evaluate(
+      (element) => getComputedStyle(element).gridTemplateColumns,
+    );
+    expect(narrowColumns.split(" ")).toHaveLength(1);
+
+    const geometry = await page.locator(".jig-setup").evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+  }
+});
+
 test("bootstrap keeps invalid repository errors and the entered path", async ({
   page,
 }) => {
