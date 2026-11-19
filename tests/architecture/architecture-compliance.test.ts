@@ -642,6 +642,43 @@ describe("architecture compliance", () => {
 });
 
 
+describe("brand asset ownership", () => {
+  it("derives fixed app and Android launcher icons from the canonical Jig mark", () => {
+    const canonical = source("assets/jig-icon.svg");
+    const appIcon = source("assets/jig-app-icon.svg");
+    const favicon = source("assets/jig-favicon.svg");
+    const launcher = source("android/app/src/main/res/drawable/ic_launcher.xml");
+    const manifest = source("android/app/src/main/AndroidManifest.xml");
+
+    const canonicalPath =
+      'M48 10v25c0 11-7 18-18 18h-4c-9 0-15-5-16-14';
+    expect(canonical).toContain(`d="${canonicalPath}"`);
+    expect(canonical).toContain('stroke-width="11"');
+    expect(canonical).toContain('<circle cx="28" cy="34" r="5.5"');
+
+    for (const asset of [appIcon, favicon]) {
+      expect(asset).toContain(`d="${canonicalPath}"`);
+      expect(asset).toContain('stroke-width="11"');
+      expect(asset).toContain('<circle cx="28" cy="34" r="5.5"');
+      expect(asset).toContain('#0B1426');
+      expect(asset).toContain('#F59E0B');
+    }
+
+    expect(launcher).toContain(
+      'android:pathData="M48,10v25c0,11 -7,18 -18,18h-4c-9,0 -15,-5 -16,-14"',
+    );
+    expect(launcher).toContain('android:strokeWidth="11"');
+    expect(launcher).toContain(
+      'android:pathData="M33.5,34A5.5,5.5 0,1 1,22.5,34A5.5,5.5 0,1 1,33.5,34Z"',
+    );
+    expect(launcher).toContain('#0B1426');
+    expect(launcher).toContain('#F59E0B');
+    expect(launcher).not.toContain('#111827');
+    expect(manifest).toContain('android:icon="@drawable/ic_launcher"');
+    expect(manifest).toContain('android:roundIcon="@drawable/ic_launcher"');
+  });
+});
+
 describe("v1.1 Android managed GitHub transport ownership", () => {
   it("keeps credential lookup behind the managed remote-validation shell", () => {
     const configured = source("ui/src/native/configured-sync.ts");
