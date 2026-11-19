@@ -320,6 +320,9 @@ test("retains governed empty Planner and History evidence", async ({
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator(".jig-task-card")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Add your first task", exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("v1.1-planner-empty-desktop.png"),
     fullPage: true,
@@ -347,6 +350,12 @@ test("retains governed empty Planner and History evidence", async ({
     await primaryNavigation
       .getByRole("button", { name: "Planner", exact: true })
       .click();
+    await expect(
+      page.getByRole("button", { name: "Add your first task", exact: true }),
+    ).toBeHidden();
+    await expect(
+      page.getByRole("button", { name: "Add task", exact: true }),
+    ).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath(`v1.1-planner-empty-mobile-${width}.png`),
       fullPage: true,
@@ -384,12 +393,21 @@ test("retains governed synchronization-attention evidence without exposing techn
   await expect(
     page.getByRole("button", { name: "Needs attention", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Sync needs attention", { exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("v1.1-sync-attention-planner-desktop.png"),
     fullPage: true,
   });
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByText("Sync needs attention", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Open Settings", exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByText("example/planning", { exact: true })).toBeVisible();
   await expect(
     page.getByText("/tmp/private/jig-repository", { exact: true }),
@@ -891,7 +909,7 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     }
     await page.getByRole("option", { name: "Weekly", exact: true }).click();
     await page.screenshot({
-      path: testInfo.outputPath(`v1.1-task-form-weekly-lower-mobile-${width}.png`),
+      path: testInfo.outputPath(`v1.1-task-form-weekly-mobile-${width}.png`),
       fullPage: true,
     });
 
@@ -942,7 +960,7 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     }
     expectNear(actionAfter.y, actionBefore.y, 2);
     await page.screenshot({
-      path: testInfo.outputPath(`v1.1-task-form-weekly-mobile-${width}.png`),
+      path: testInfo.outputPath(`v1.1-task-form-weekly-lower-mobile-${width}.png`),
       fullPage: true,
     });
 
