@@ -274,11 +274,25 @@ export class GitHubOnboardingController<TAcquired> {
       )(credential.access_token);
 
       const choices = new Map<number, GitHubRepositoryChoice>();
+      let restrictedProviderUrl: string | null = null;
       for (const installation of installations) {
-        const repositories = await (
-          this.dependencies.list_repositories ??
-          listGitHubRepositories
-        )(credential.access_token, installation.id);
+        let repositories;
+        try {
+          repositories = await (
+            this.dependencies.list_repositories ??
+            listGitHubRepositories
+          )(credential.access_token, installation.id);
+        } catch (error) {
+          if (
+            error instanceof GitHubAuthError &&
+            (error.status_code === 403 || error.status_code === 404)
+          ) {
+            restrictedProviderUrl ??=
+              `https://github.com/settings/installations/${installation.id}`;
+            continue;
+          }
+          throw error;
+        }
         for (const repository of repositories) {
           choices.set(repository.id, {
             ...repository,
@@ -294,7 +308,9 @@ export class GitHubOnboardingController<TAcquired> {
           `${right.owner}/${right.name}`,
         ),
       );
-      this.providerUrl = accessProviderUrl(registration, installations);
+      this.providerUrl =
+        restrictedProviderUrl ??
+        accessProviderUrl(registration, installations);
       this.error = null;
       this.transientAccessFailures = 0;
 
@@ -303,7 +319,10 @@ export class GitHubOnboardingController<TAcquired> {
         return "wait";
       }
 
-      if (this.repositories.length === 1) {
+      if (
+        this.repositories.length === 1 &&
+        restrictedProviderUrl === null
+      ) {
         this.selectedRepository = this.repositories[0] ?? null;
         this.providerUrl = null;
         this.phase = "acquiring";
