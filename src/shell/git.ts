@@ -867,7 +867,7 @@ export async function observePortableRemote(
       "fetch",
       "--no-tags",
       authority.remote.name,
-      `+refs/heads/jig-data:${trackingRef}`,
+      "refs/heads/jig-data",
     ],
     undefined,
     environment,
@@ -879,11 +879,14 @@ export async function observePortableRemote(
     );
   }
 
-  const fetchedHead = await refHead(
+  const fetchedHead = await runGit(
     config.repository_path,
-    trackingRef,
+    ["rev-parse", "FETCH_HEAD"],
   );
-  if (fetchedHead !== remoteHead) {
+  if (
+    fetchedHead.exit_code !== 0 ||
+    fetchedHead.stdout !== remoteHead
+  ) {
     throw new GitAdapterError(
       "Remote jig-data changed during observation",
     );
@@ -938,6 +941,20 @@ export async function observePortableRemote(
       ) {
         lineage = "diverged";
       }
+    }
+  }
+
+  if (!remoteRewritten) {
+    const updated = await runGit(config.repository_path, [
+      "update-ref",
+      trackingRef,
+      remoteHead,
+      previousRemoteHead ?? "0".repeat(40),
+    ]);
+    if (updated.exit_code !== 0) {
+      throw new GitAdapterError(
+        "Remote-tracking evidence changed concurrently",
+      );
     }
   }
 
