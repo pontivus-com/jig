@@ -629,6 +629,11 @@ body {
     min-width: 0;
   }
 
+  .jig-task-reference-action {
+    display: inline-flex;
+    align-items: center;
+  }
+
   .jig-repeat-indicator {
     display: inline-flex;
     align-items: center;
@@ -969,11 +974,16 @@ body {
   }
 
   .jig-editor-actions {
+    position: sticky;
+    z-index: 1;
+    inset-block-end: 0;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: var(--spacing-3);
-    padding-block-start: var(--spacing-2);
+    padding-block: var(--spacing-2);
+    border-block-start: var(--border-width) solid var(--color-border);
+    background: var(--color-background-surface);
   }
 
   .jig-repeat-field,
@@ -1252,12 +1262,9 @@ body {
     }
 
     .jig-repeat-weekday {
+      width: 48px;
       min-width: 48px;
-      min-height: 48px;
-    }
-
-    .jig-repeat-weekday > * {
-      min-width: 48px;
+      height: 48px;
       min-height: 48px;
     }
 
@@ -1278,6 +1285,7 @@ body {
     .jig-app-header-narrow [role="button"],
     .jig-date-add,
     .jig-task-menu-trigger,
+    .jig-task-reference-action,
     .jig-task-card-leading [role="checkbox"],
     .jig-editor-primary-actions button,
     .jig-task-sheet-header button,
@@ -1292,8 +1300,14 @@ body {
       gap: var(--spacing-2);
     }
 
+    .jig-editor-actions {
+      padding-block-end: calc(
+        var(--spacing-2) + env(safe-area-inset-bottom, 0px)
+      );
+    }
+
     .jig-editor-form {
-      padding-block-end: calc(var(--spacing-6) + env(safe-area-inset-bottom, 0px));
+      padding-block-end: 0;
     }
 
     .jig-diagnostics > div {
