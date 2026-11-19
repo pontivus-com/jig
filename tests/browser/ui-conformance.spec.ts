@@ -641,6 +641,29 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     expect(widthGeometry.scrollWidth).toBeLessThanOrEqual(
       widthGeometry.clientWidth + 1,
     );
+
+    const emptyDateHeights = await page
+      .locator(".jig-week-column")
+      .evaluateAll((elements) =>
+        elements
+          .filter((element) => element.querySelector(".jig-task-card") === null)
+          .map((element) => element.getBoundingClientRect().height),
+      );
+    expect(emptyDateHeights.length).toBeGreaterThan(0);
+    for (const height of emptyDateHeights) {
+      expect(height, "empty mobile date section height").toBeLessThanOrEqual(84);
+    }
+
+    const leadingControls = await page
+      .locator(".jig-task-card-leading")
+      .first()
+      .boundingBox();
+    if (leadingControls === null) {
+      throw new Error("Task leading-control geometry unavailable");
+    }
+    expect(leadingControls.height).toBeLessThanOrEqual(48.5);
+    expect(leadingControls.width).toBeGreaterThanOrEqual(95);
+
     await page.screenshot({
       path: testInfo.outputPath(`v1.1-planner-mobile-${width}.png`),
       fullPage: true,
