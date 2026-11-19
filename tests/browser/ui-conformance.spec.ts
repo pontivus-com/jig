@@ -515,7 +515,16 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
   page,
 }) => {
   const today = await browserCivilDate(page);
-  await createTask(page, "Mobile geometry inventory", today);
+  await apiCommand(page, {
+    type: "create",
+    title: "Mobile geometry inventory",
+    scheduled_date: today,
+    priority: "NORMAL",
+    context: null,
+    reference: "https://example.com/mobile-geometry",
+    note: null,
+    reminder_time: null,
+  });
   await page.reload();
 
   const expectTarget = async (
@@ -582,6 +591,16 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       page.locator(".jig-task-menu-trigger").first(),
       "Task action menu",
     );
+    await expectTarget(
+      page.getByRole("checkbox", {
+        name: "Complete Mobile geometry inventory",
+      }),
+      "Task completion",
+    );
+    await expectTarget(
+      page.getByRole("link", { name: "Open reference" }).first(),
+      "Task reference",
+    );
 
     const mobileActionRects = await page
       .locator(".jig-header-mobile-actions button")
@@ -644,9 +663,35 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       "Task form Save",
     );
 
+    const baseControls = workspace.locator(".jig-mobile-touch-control");
+    await expect(baseControls).toHaveCount(10);
+    for (let index = 0; index < 10; index += 1) {
+      await expectTarget(baseControls.nth(index), `Task form control ${index + 1}`);
+    }
+
+    const actionRegion = workspace.locator(".jig-editor-actions");
+    const actionBefore = await actionRegion.boundingBox();
+    if (actionBefore === null) {
+      throw new Error("Task action region geometry unavailable");
+    }
+
     const repeat = workspace.getByRole("combobox", { name: "Repeat" });
     await repeat.click();
+    const repeatOptions = page.getByRole("option");
+    await expect(repeatOptions).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expectTarget(repeatOptions.nth(index), `Repeat option ${index + 1}`);
+    }
     await page.getByRole("option", { name: "Weekly", exact: true }).click();
+
+    const weeklyControls = workspace.locator(".jig-mobile-touch-control");
+    await expect(weeklyControls).toHaveCount(12);
+    for (let index = 0; index < 12; index += 1) {
+      await expectTarget(
+        weeklyControls.nth(index),
+        `Expanded weekly control ${index + 1}`,
+      );
+    }
 
     const weekdays = workspace.locator(".jig-repeat-weekday");
     await expect(weekdays).toHaveCount(7);
@@ -661,11 +706,41 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await expect(notes).toBeFocused();
     await expect(
       workspace.getByRole("button", { name: "Save", exact: true }),
-    ).toBeAttached();
+    ).toBeVisible();
+
+    const actionAfter = await actionRegion.boundingBox();
+    if (actionAfter === null) {
+      throw new Error("Sticky Task action region geometry unavailable");
+    }
+    expectNear(actionAfter.y, actionBefore.y, 2);
 
     await workspace
       .getByRole("button", { name: "Close", exact: true })
       .click();
+
+    await page
+      .getByRole("button", { name: "Open navigation menu", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: /^Settings/ }).click();
+
+    const settingsControls = page
+      .locator(".jig-settings-view .jig-mobile-touch-control");
+    await expect(settingsControls).toHaveCount(4);
+    for (let index = 0; index < 4; index += 1) {
+      await expectTarget(
+        settingsControls.nth(index),
+        `Settings control ${index + 1}`,
+      );
+    }
+    await expectTarget(
+      page.getByRole("button", { name: "Show diagnostics", exact: true }),
+      "Diagnostics disclosure",
+    );
+
+    await page
+      .getByRole("button", { name: "Open navigation menu", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: /^Planner/ }).click();
   }
 });
 
