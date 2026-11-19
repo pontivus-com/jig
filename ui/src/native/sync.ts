@@ -12,9 +12,11 @@ import type {
 } from "../../../src/protocol";
 import {
   canonicalPlanningEqual,
-  decideSynchronization,
   planningFromState,
   reconcileCanonicalPlanning,
+} from "../../../src/core/reconciliation";
+import {
+  decideSynchronization,
   SYNCHRONIZATION_HEALTHY_POLL_MS,
   synchronizationRetryDelayMs,
 } from "../../../src/synchronization";
