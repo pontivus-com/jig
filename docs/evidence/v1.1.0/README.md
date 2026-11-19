@@ -1,6 +1,6 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** hosted non-device implementation/certification PASS for the product/test candidate below. This file does not constitute physical-device evidence and must not be used to close J110-IMP-09 or the physical-device portions of J110-IMP-15.
+**Status:** NON-DEVICE IMPLEMENTATION COMPLETE for the product/test candidate below. Permanent hosted certification passes for every repository/host/browser/Linux/CI/emulator-testable implementation surface. Remaining closure work is external live-acceptance evidence and the explicitly physical-device portions of J110-IMP-09/J110-IMP-15. This file does not constitute physical-device evidence.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
@@ -30,9 +30,26 @@ The product/test candidate is the source state certified by the hosted run. Late
 | FLOSS/proprietary dependency gate | **PASS** — permanent Android runtime dependency boundary passed; no Play Services/Firebase/proprietary runtime SDK is accepted by the gate. |
 | Linux x64 packaged configured/bootstrap smoke | Permanent Release certification implemented; **release-commit execution pending**. |
 | Linux arm64 packaged configured/bootstrap smoke | Permanent Release certification implemented; **release-commit execution pending**. |
-| Local `act` rehearsal | **PENDING development-environment evidence** — current connected-repository execution environment has no local checkout plus `act`/container runtime with which to execute the governed rehearsal. Hosted Actions does not substitute for this gate. |
-| Live Linux/Desktop GitHub Device Flow/private-repo acquisition | **PENDING external live verification**. |
+| Local `act` rehearsal | **NOT A CLOSURE GATE** — optional developer preflight only. Permanent hosted Verify/Release are authoritative; no local Actions scaffolding is committed in the candidate. |
+| Live Linux/Desktop GitHub Device Flow/private-repo acquisition | **IMPLEMENTATION COMPLETE / EXTERNAL LIVE ACCEPTANCE PENDING** — deterministic protocol, Secret Service, managed transport, clone/adoption, refresh/reconnect and failure semantics are implemented and permanently tested. A real user authorization/private-repository run remains external acceptance evidence tracked by issue #31. |
 | Live/physical Android GitHub Device Flow/private-repo acquisition | **PENDING physical-device verification**. |
+
+## Non-device implementation closure audit
+
+The v1.1 repository has no known remaining non-device implementation defect.
+
+The closure audit confirms:
+
+- canonical Task/planning/recurrence semantics remain in the shared TypeScript core;
+- shared persistence semantics remain in `src/persistence/sqlite.ts`; Linux and Android expose low-level drivers rather than parallel Task models;
+- generic `src/shell/sync.ts`, `src/protocol.ts`, configured `src/shell/http.ts` and `src/shell/main.ts` remain free of the GitHub policy/credential leakage prohibited by SD-38;
+- one shared GitHub protocol contract, Device Flow state/timing owner, onboarding owner, reconnect owner and React polling/presentation owner serve Linux and Android;
+- Linux Secret Service remains a credential persistence adapter and the managed GitHub transport owns remote binding, credential refresh and authenticated Git network effects;
+- the browser entrypoint lazily crosses into native runtime code only after `Capacitor.isNativePlatform()`, preventing Android/isomorphic-git evaluation in the browser;
+- Android SQLite, Git transport, GitHub Device Flow composition, reminder reconciliation, dependency/FLOSS boundary and F-Droid candidate path have permanent host/emulator certification;
+- permanent architecture tests enforce these ownership boundaries so the closure is regression-protected.
+
+The real Linux/Desktop Device Flow/private-repository exercise is deliberately classified as **external live acceptance**, not unfinished repository implementation: it requires an interactive GitHub user authorization and live Secret Service environment that the connected repository execution surface cannot manufacture. Its absence does not authorize additional code or a substitute authentication architecture.
 
 ## Development APK identity
 
@@ -50,16 +67,19 @@ Any physical-device certification must identify the exact APK/source candidate i
 
 The candidate includes a browser-bootstrap correction for the Android Git runtime boundary. Static reachability from the browser entrypoint had pulled `isomorphic-git`'s Node `Buffer` path into the production browser bundle, causing module-evaluation failure before React mounted. The corrected boundary dynamically loads `runtime-native` only after `Capacitor.isNativePlatform()` is true, and dynamically loads Android GitHub onboarding only on the native path. Permanent architecture tests forbid the static native imports, and the hosted bootstrap smoke plus 66/66 browser suite pass prove the browser surface mounts correctly.
 
-## Still required before implementation-candidate closure
+## Still required before release-candidate closure
 
-The hosted non-device implementation gates above do **not** close the remaining governed gates:
+No non-device repository implementation gap remains.
 
-1. Run the committed permanent Verify workflow locally with `act workflow_dispatch`, run the PR-event rehearsal, rehearse changed non-publishing Release certification as governed, and record the residue result.
-2. Verify the live **Jig Desktop & Mobile** GitHub App configuration and execute real Linux/Desktop Device Flow plus selected private-repository acquisition/synchronization.
-3. Execute J110-IMP-09 on a physical Android phone, including the exact drag/drop inter-card-gap gate.
-4. Execute the J110-IMP-15 Android matrix across API 24/31/33/36 with at least one physical phone, including GitHub authorization/private clone, same portable dataset as Linux, offline CRUD/order, safe-area/sticky header, rollover, native reminder policy/permission/failure semantics, notification reconciliation, token expiry/reconnect, restart persistence, reconnect-after-network, Git interoperability and uninstall/reinstall continuity.
-5. Record the physical device make/model, Android/API/WebView versions, exact source/APK identity and results here.
-6. Only after implementation/evidence closure may the separate `release/v1.1.0` metadata transition, immutable tag/Release workflow and external F-Droid submission/publication proceed.
+The remaining governed evidence is:
+
+1. **External live acceptance:** verify the live **Jig Desktop & Mobile** GitHub App configuration and execute real Linux/Desktop Device Flow plus selected private-repository acquisition/synchronization through Secret Service. This is issue #31 acceptance evidence, not an unfinished code task.
+2. **Physical device:** execute J110-IMP-09 on a physical Android phone, including the exact drag/drop inter-card-gap gate.
+3. **Physical/native matrix:** execute the J110-IMP-15 Android API 24/31/33/36 matrix with at least one physical phone, including GitHub authorization/private clone, same portable dataset as Linux, offline CRUD/order, safe-area/sticky header, rollover, native reminder policy/permission/failure semantics, notification reconciliation, token expiry/reconnect, restart persistence, reconnect-after-network, Git interoperability and uninstall/reinstall continuity.
+4. Record the physical device make/model, Android/API/WebView versions, exact source/APK identity and results here.
+5. Only after external-live and physical evidence closure may the separate `release/v1.1.0` metadata transition, immutable tag/Release workflow and external F-Droid submission/publication proceed.
+
+Local `act` rehearsal is optional developer preflight and is no longer a release-candidate closure requirement; the permanent hosted workflows are authoritative.
 
 ## Physical-device evidence
 
