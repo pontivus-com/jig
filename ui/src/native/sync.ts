@@ -32,6 +32,16 @@ import {
 
 const MUTATION_DEBOUNCE_MS = 3_000;
 
+interface ObservedAndroidRemote {
+  readonly revision: number;
+  readonly observation: AndroidPortableRemoteObservation;
+}
+
+type InterruptedAdoptionResult =
+  | "not-applicable"
+  | "finished"
+  | "unsafe";
+
 export interface AndroidSyncController {
   readonly start: () => Promise<void>;
   readonly stop: () => void;
@@ -178,14 +188,17 @@ export function createAndroidSyncController(
     await markExported(database, state.revision, head);
   };
 
-  const observe = async (): Promise<AndroidPortableRemoteObservation> => {
+  const observe = async (): Promise<ObservedAndroidRemote> => {
     const metadata = await readMetadata(database);
-    return observeAndroidPortableRemote(
-      effects,
-      metadata.dataset_id,
-      metadata.last_adopted_head,
-      credential,
-    );
+    return {
+      revision: metadata.revision,
+      observation: await observeAndroidPortableRemote(
+        effects,
+        metadata.dataset_id,
+        metadata.last_adopted_head,
+        credential,
+      ),
+    };
   };
 
   const finishInterruptedAdoption = async (
@@ -193,17 +206,11 @@ export function createAndroidSyncController(
       AndroidPortableRemoteObservation,
       { readonly state: "present" }
     >,
-  ): Promise<boolean> => {
+  ): Promise<InterruptedAdoptionResult> => {
     const state = await readCanonicalState(database);
     const metadata = await readMetadata(database);
-    if (
-      metadata.last_adopted_head !== observation.remote_head ||
-      (
-        observation.lineage !== "equal" &&
-        observation.lineage !== "remote-ahead"
-      )
-    ) {
-      return false;
+    if (metadata.last_adopted_head !== observation.remote_head) {
+      return "not-applicable";
     }
 
     const canonical = serializeSnapshot(
@@ -217,22 +224,33 @@ export function createAndroidSyncController(
         observation.remote_snapshot,
       )
     ) {
-      return false;
+      return "not-applicable";
+    }
+
+    if (
+      observation.lineage !== "equal" &&
+      observation.lineage !== "remote-ahead"
+    ) {
+      return "unsafe";
     }
 
     if (observation.local_head !== observation.remote_head) {
-      await alignAndroidPortableHead(
-        effects,
-        observation.local_head,
-        observation.remote_head,
-      );
+      try {
+        await alignAndroidPortableHead(
+          effects,
+          observation.local_head,
+          observation.remote_head,
+        );
+      } catch {
+        return "unsafe";
+      }
     }
     await markExported(
       database,
       state.revision,
       observation.remote_head,
     );
-    return true;
+    return "finished";
   };
 
   const adoptRemote = async (
@@ -240,14 +258,14 @@ export function createAndroidSyncController(
       AndroidPortableRemoteObservation,
       { readonly state: "present" }
     >,
+    expectedRevision: number,
   ): Promise<void> => {
-    const state = await readCanonicalState(database);
     const adopted = await adoptCanonicalSnapshot(
       database,
       observation.remote_snapshot.tasks,
       observation.remote_snapshot.recurrences,
       observation.remote_head,
-      state.revision,
+      expectedRevision,
     );
     await alignAndroidPortableHead(
       effects,
@@ -262,9 +280,10 @@ export function createAndroidSyncController(
   };
 
   const processObservation = async (
-    observation: AndroidPortableRemoteObservation,
+    observed: ObservedAndroidRemote,
     mayPush: boolean,
   ): Promise<RepositorySynchronizationStatus | null> => {
+    const { observation } = observed;
     const decision = decideSynchronization(
       observationFacts(observation, await isPending()),
     );
@@ -284,7 +303,7 @@ export function createAndroidSyncController(
         return setRemoteState("sync-issue");
       }
       try {
-        await adoptRemote(observation);
+        await adoptRemote(observation, observed.revision);
       } catch {
         return setRemoteState("sync-issue");
       }
@@ -306,14 +325,17 @@ export function createAndroidSyncController(
     try {
       await pushAndroidPortableRepository(effects, credential);
     } catch {
-      let afterFailure: AndroidPortableRemoteObservation;
+      let afterFailure: ObservedAndroidRemote;
       try {
         afterFailure = await observe();
       } catch {
         return setRemoteState("sync-issue");
       }
       const afterDecision = decideSynchronization(
-        observationFacts(afterFailure, await isPending()),
+        observationFacts(
+          afterFailure.observation,
+          await isPending(),
+        ),
       );
       if (afterDecision.kind === "push-local") {
         return setRemoteState("sync-issue");
@@ -335,25 +357,29 @@ export function createAndroidSyncController(
       return setRemoteState("pending", "issue");
     }
 
-    let observation: AndroidPortableRemoteObservation;
+    let observed: ObservedAndroidRemote;
     try {
-      observation = await observe();
+      observed = await observe();
     } catch {
       return setRemoteState("sync-issue");
     }
 
-    if (
-      observation.state === "present" &&
-      await finishInterruptedAdoption(observation)
-    ) {
-      try {
-        observation = await observe();
-      } catch {
+    if (observed.observation.state === "present") {
+      const interrupted =
+        await finishInterruptedAdoption(observed.observation);
+      if (interrupted === "unsafe") {
         return setRemoteState("sync-issue");
+      }
+      if (interrupted === "finished") {
+        try {
+          observed = await observe();
+        } catch {
+          return setRemoteState("sync-issue");
+        }
       }
     }
 
-    const result = await processObservation(observation, true);
+    const result = await processObservation(observed, true);
     if (result !== null) return result;
 
     try {
