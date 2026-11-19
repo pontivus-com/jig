@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jig v1.1 governed application UX/UI reference</title>
+<style>
+:root{
+  --ink:#162034;--ink7:#3e4a62;--muted:#788499;--amber:#b86c00;--amberSoft:#fff1dc;
+  --paper:#fdfcf9;--soft:#f7f4ef;--line:#dce1eb;--line2:#c0c8d6;--teal:#006b5f;
+  --info:#e9f2ff;--success:#236b45;--successSoft:#e9f7ee;--warn:#8a5200;--warnSoft:#fff4da;
+  --shadow:0 16px 44px rgba(11,20,38,.14);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)
+}
+*{box-sizing:border-box}
+body{margin:0;background:#edf0f4;font-size:14px;line-height:1.45}
+.gov{background:var(--ink);color:#fff;border-bottom:3px solid #f59e0b;padding:9px 14px;font-size:12px}
+.gov strong{color:#fee3c5}
+.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.97);padding:14px 18px;border-bottom:1px solid #d9dee7}
+.top h1{margin:0 0 4px;font-size:18px}
+.top p{margin:0;color:#5a667e;font-size:12px;max-width:92ch}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tab{border:1px solid #ccd3df;background:#fff;border-radius:999px;padding:8px 12px;color:#3e4a62;font-weight:650}
+.tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.stage{display:flex;justify-content:center;align-items:flex-start;padding:24px}
+.screen{display:none}.screen.on{display:block}
+.note{font-size:11px;color:var(--muted)}
+.iconHit{width:48px;height:48px;display:grid;place-items:center;border:0;background:transparent;color:var(--ink);border-radius:999px}
+.iconGlyph{font-size:20px;line-height:1}
+.statusDot{width:10px;height:10px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px var(--successSoft)}
+.phone{width:390px;height:844px;border:8px solid #111827;border-radius:30px;background:var(--paper);box-shadow:var(--shadow);overflow:hidden;position:relative}
+.phoneShell{height:100%;display:flex;flex-direction:column;background:var(--paper)}
+.phoneTop{height:56px;display:grid;grid-template-columns:1fr auto;align-items:center;padding:0 12px;border-bottom:1px solid var(--line);background:rgba(253,252,249,.98)}
+.wordmark{font-size:22px;font-weight:850;letter-spacing:-.04em}.wordmark b{color:#f59e0b}
+.topStatus{display:flex;align-items:center;gap:8px}
+.temporal{height:56px;display:grid;grid-template-columns:48px 1fr 48px 64px;align-items:center;border-bottom:1px solid var(--line);padding:0 6px;background:var(--paper)}
+.weekLabel{text-align:center;font-weight:800;letter-spacing:-.01em}
+.today{height:40px;border:0;background:transparent;color:var(--ink7);font-weight:750;border-radius:8px}
+.phoneBody{flex:1;overflow:auto;padding-bottom:92px}
+.day{border-bottom:1px solid var(--line);padding:0 12px}
+.dayHead{min-height:52px;display:flex;align-items:center;gap:8px}
+.dayHead strong{font-size:14px}.dayHead .count{margin-left:auto;color:var(--muted);font-size:12px}
+.dateAdd{width:40px;height:40px;border:0;background:transparent;border-radius:999px;color:var(--ink7);font-size:19px}
+.todayDay .dayHead strong{color:var(--teal)}
+.todayDay{border-top:1px solid #a8d8d0}
+.tasks{display:grid;gap:8px;padding:0 0 10px}
+.task{display:grid;grid-template-columns:36px 1fr 36px;gap:6px;align-items:start;border:1px solid var(--line2);border-radius:10px;background:#fff;padding:8px 8px 8px 6px;box-shadow:0 2px 6px rgba(11,20,38,.04)}
+.task.selected{background:var(--info);border-color:#7eaee6}
+.taskLead,.taskMore{width:36px;height:36px;display:grid;place-items:center;color:var(--muted)}
+.taskTitle{font-weight:760;margin-top:1px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 10px;color:var(--muted);font-size:11px;margin-top:4px}
+.priorityHigh{border-left:3px solid #b42318}
+.emptyWeek{margin:38px 20px;padding:22px;border:1px solid var(--line);border-radius:14px;background:#fff;text-align:center;box-shadow:0 6px 18px rgba(11,20,38,.06)}
+.emptyWeek h3{margin:0 0 6px;font-size:19px}.emptyWeek p{margin:0;color:var(--muted)}
+.fab{position:absolute;right:18px;bottom:82px;width:56px;height:56px;border:0;border-radius:18px;background:var(--amber);color:#fff;font-size:25px;font-weight:800;box-shadow:0 10px 22px rgba(184,108,0,.28)}
+.bottomNav{position:absolute;left:0;right:0;bottom:0;height:68px;padding-bottom:max(0px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);background:rgba(255,255,255,.98)}
+.navItem{border:0;background:transparent;display:grid;place-items:center;align-content:center;gap:2px;color:var(--muted);font-size:11px;font-weight:700}
+.navGlyph{font-size:18px;line-height:1}.navItem.active{color:var(--ink)}
+.navItem.active .navGlyph{background:#eef1f5;border-radius:999px;padding:4px 12px}
+.pageTitle{padding:18px 16px 8px}.pageTitle h2{margin:0;font-size:23px}.pageTitle p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.history{padding:0 16px 20px}.histGroup{padding:12px 0 4px}.histGroup h3{margin:0 0 8px;font-size:15px}
+.histRow{display:grid;grid-template-columns:28px 1fr auto;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.histRow strong{display:block}.histRow small{color:var(--muted)}
+.settings{padding:4px 16px 24px}.setGroup{padding:14px 0;border-bottom:1px solid var(--line)}.setGroup:last-child{border-bottom:0}
+.setGroup h3{margin:0 0 10px;font-size:16px}.setRow{padding:8px 0}.setLabel{font-weight:750}.setValue{margin-top:2px}.setHelp{margin-top:2px;color:var(--muted);font-size:12px}
+.choice{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:#eff1f4;padding:3px;border-radius:10px;margin-top:8px}
+.choice span{text-align:center;padding:8px;border-radius:8px}.choice .sel{background:#fff;font-weight:750;box-shadow:0 1px 3px rgba(11,20,38,.08)}
+.diag{display:flex;align-items:center;justify-content:space-between}
+.attention{margin:10px 16px 0;padding:10px 12px;border-radius:10px;background:var(--warnSoft);color:#68420b;border:1px solid #f1cf88}
+.desk{width:min(1180px,calc(100vw - 48px));height:720px;background:var(--paper);border:1px solid #ccd3df;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;position:relative}
+.deskHead{height:44px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 8px;border-bottom:1px solid var(--line);background:var(--paper)}
+.deskLeft{justify-self:start}.deskCenter{justify-self:center}.deskRight{justify-self:end;display:flex;align-items:center;gap:4px}
+.deskBrand{font-size:20px;font-weight:850}.deskBrand b{color:#f59e0b}
+.deskTemporal{display:flex;align-items:center;gap:2px}.deskTemporal .iconHit{width:32px;height:32px}.deskTemporal .today{height:32px;padding:0 10px;background:#fff;border:1px solid var(--line2)}
+.smallBtn{height:32px;border:1px solid var(--line2);background:#fff;border-radius:8px;padding:0 10px;font-weight:700}
+.smallBtn.primary{background:var(--amber);border-color:var(--amber);color:#fff}
+.navBtn{height:32px;border:0;background:transparent;padding:0 9px;border-radius:8px;font-weight:700;color:var(--ink7)}.navBtn.active{background:#eff2f7;color:var(--ink)}
+.syncText{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink7);padding:0 6px}
+.deskBoard{height:calc(100% - 44px);display:grid;grid-template-columns:repeat(7,minmax(160px,1fr));overflow:auto}
+.lane{border-left:1px solid var(--line);padding:8px}.lane:first-child{border-left:0}
+.laneHead{height:34px;display:flex;align-items:center;gap:5px;font-size:12px}.laneHead .dateAdd{width:28px;height:28px;font-size:15px}
+.deskTask{margin-top:8px;border:1px solid var(--line2);border-radius:8px;background:#fff;padding:8px;min-height:58px}.deskTask strong{font-size:12px}.deskTask .meta{font-size:10px}
+.deskContent{height:calc(100% - 44px);overflow:auto;width:min(100%,800px);margin:0 auto;padding:24px 26px}
+.deskContent h1{font-size:24px;margin:0 0 4px}.deskContent .intro{color:var(--muted);margin:0 0 20px}
+.deskHistRow{display:grid;grid-template-columns:28px 1fr auto;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.deskSetGroup{padding:16px 0;border-top:1px solid var(--line)}.deskSetGroup:first-of-type{border-top:0}
+.deskSetGroup h2{font-size:17px;margin:0 0 12px}
+.deskSetGrid{display:grid;grid-template-columns:220px 1fr;gap:8px 20px}.deskSetGrid > div{padding:5px 0}
+.legend{max-width:900px;margin:0 auto 16px;color:#3e4a62;font-size:12px}
+</style>
+</head>
+<body>
+<div class="gov"><strong>Governed v1.1 application reference.</strong> Binding for configured desktop/mobile shell, navigation, Planner hierarchy, History and Settings. Existing v1.1 onboarding and Task-form references remain binding within those surfaces. Schematic glyphs here indicate hierarchy only; production uses Astryx/Jig semantic icons.</div>
+<header class="top">
+  <h1>Jig v1.1 — application UX/UI reference</h1>
+  <p>UX-F0 correction: compact Android uses three-destination bottom navigation, one Planner FAB, quiet sync status and a readable temporal row. A 48px touch target does not require a 48px visible filled container.</p>
+  <div class="tabs">
+    <button class="tab on" data-id="m-plan">Mobile · Planner</button>
+    <button class="tab" data-id="m-history">Mobile · History</button>
+    <button class="tab" data-id="m-settings">Mobile · Settings</button>
+    <button class="tab" data-id="m-attention">Mobile · Sync attention</button>
+    <button class="tab" data-id="d-plan">Desktop · Planner</button>
+    <button class="tab" data-id="d-history">Desktop · History</button>
+    <button class="tab" data-id="d-settings">Desktop · Settings</button>
+  </div>
+</header>
+<main class="stage">
+<section class="screen on" data-screen="m-plan">
+<div class="legend">Primary hierarchy: week context and Tasks first; Add is the one prominent creation action; destination navigation is persistent; healthy sync is visible but quiet.</div>
+<div class="phone"><div class="phoneShell">
+  <div class="phoneTop"><div class="wordmark">Ji<b>g</b></div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
+  <div class="temporal"><button class="iconHit"><span class="iconGlyph">‹</span></button><div class="weekLabel">16–22 Nov 2026</div><button class="iconHit"><span class="iconGlyph">›</span></button><button class="today">Today</button></div>
+  <div class="phoneBody">
+    <section class="day"><div class="dayHead"><strong>Monday 16</strong><button class="dateAdd">+</button><span class="count">0</span></div></section>
+    <section class="day"><div class="dayHead"><strong>Tuesday 17</strong><button class="dateAdd">+</button><span class="count">0</span></div></section>
+    <section class="day"><div class="dayHead"><strong>Wednesday 18</strong><button class="dateAdd">+</button><span class="count">0</span></div></section>
+    <section class="day todayDay"><div class="dayHead"><strong>Thursday 19</strong><button class="dateAdd">+</button><span class="count">2</span></div>
+      <div class="tasks">
+        <div class="task priorityHigh"><div class="taskLead">⠿</div><div><div class="taskTitle">Review launch checklist</div><div class="meta"><span>09:00</span><span>Pontivus</span><span>High</span></div></div><div class="taskMore">•••</div></div>
+        <div class="task selected"><div class="taskLead">✓</div><div><div class="taskTitle">Prepare contract review</div><div class="meta"><span>Weekly · Wed, Fri</span><span>Legal</span></div></div><div class="taskMore">•••</div></div>
+      </div>
+    </section>
+    <section class="day"><div class="dayHead"><strong>Friday 20</strong><button class="dateAdd">+</button><span class="count">0</span></div></section>
+    <section class="day"><div class="dayHead"><strong>Saturday 21</strong><button class="dateAdd">+</button><span class="count">0</span></div></section>
+    <section class="day"><div class="dayHead"><strong>Sunday 22</strong><button class="dateAdd">+</button><span class="count">0</span></div></section>
+  </div>
+  <button class="fab" aria-label="Add task">+</button>
+  <nav class="bottomNav"><button class="navItem active"><span class="navGlyph">▦</span><span>Planner</span></button><button class="navItem"><span class="navGlyph">✓</span><span>History</span></button><button class="navItem"><span class="navGlyph">⚙</span><span>Settings</span></button></nav>
+</div></div>
+</section>
+
+<section class="screen" data-screen="m-history">
+<div class="phone"><div class="phoneShell">
+  <div class="phoneTop"><div class="wordmark">History</div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
+  <div class="phoneBody">
+    <div class="pageTitle"><p>Completed work grouped by actual completion date</p></div>
+    <div class="history">
+      <div class="histGroup"><h3>Thursday, November 19</h3>
+        <div class="histRow"><span>✓</span><div><strong>Prepare board materials</strong><small>Operations · Scheduled Thu 19</small></div><small>14:20</small></div>
+        <div class="histRow"><span>✓</span><div><strong>Send review notes</strong><small>Pontivus Legal · Scheduled Wed 18</small></div><small>11:45</small></div>
+      </div>
+      <div class="histGroup"><h3>Wednesday, November 18</h3>
+        <div class="histRow"><span>✓</span><div><strong>Finalize release checklist</strong><small>Jig · Scheduled Wed 18</small></div><small>17:10</small></div>
+      </div>
+    </div>
+  </div>
+  <nav class="bottomNav"><button class="navItem"><span class="navGlyph">▦</span><span>Planner</span></button><button class="navItem active"><span class="navGlyph">✓</span><span>History</span></button><button class="navItem"><span class="navGlyph">⚙</span><span>Settings</span></button></nav>
+</div></div>
+</section>
+
+<section class="screen" data-screen="m-settings">
+<div class="phone"><div class="phoneShell">
+  <div class="phoneTop"><div class="wordmark">Settings</div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
+  <div class="phoneBody">
+    <div class="settings">
+      <section class="setGroup"><h3>Data &amp; sync</h3>
+        <div class="setRow"><div class="setLabel">Planning data</div><div class="setValue">rpstreef/jig-planning</div><div class="setHelp">Your Jig planning data home.</div></div>
+        <div class="setRow"><div class="setLabel">Saved on this device</div><div class="setValue">Yes</div><div class="setHelp">Current work remains usable locally.</div></div>
+        <div class="setRow"><div class="setLabel">Synchronization</div><div class="setValue">Up to date</div></div>
+      </section>
+      <section class="setGroup"><h3>Appearance</h3><div class="setRow"><div class="setLabel">Theme</div><div class="setValue">Jig</div></div><div class="choice"><span class="sel">System</span><span>Light</span><span>Dark</span></div></section>
+      <section class="setGroup"><h3>Notifications</h3><div class="setRow"><div class="setLabel">Task reminders</div><div class="setValue">Allowed</div><div class="setHelp">Jig can show reminders scheduled on this device.</div></div></section>
+      <section class="setGroup"><div class="diag"><div><h3 style="margin:0">Diagnostics</h3><div class="setHelp">Technical repository and runtime details</div></div><span>›</span></div></section>
+    </div>
+  </div>
+  <nav class="bottomNav"><button class="navItem"><span class="navGlyph">▦</span><span>Planner</span></button><button class="navItem"><span class="navGlyph">✓</span><span>History</span></button><button class="navItem active"><span class="navGlyph">⚙</span><span>Settings</span></button></nav>
+</div></div>
+</section>
+
+<section class="screen" data-screen="m-attention">
+<div class="phone"><div class="phoneShell">
+  <div class="phoneTop"><div class="wordmark">Ji<b>g</b></div><button class="iconHit" aria-label="Sync needs attention"><span style="font-size:19px;color:#a15c00">!</span></button></div>
+  <div class="temporal"><button class="iconHit"><span class="iconGlyph">‹</span></button><div class="weekLabel">16–22 Nov 2026</div><button class="iconHit"><span class="iconGlyph">›</span></button><button class="today">Today</button></div>
+  <div class="phoneBody">
+    <div class="attention"><strong>Sync needs attention</strong><br>Current work is saved on this device. Open Settings to restore continuity.</div>
+    <section class="day todayDay"><div class="dayHead"><strong>Thursday 19</strong><button class="dateAdd">+</button><span class="count">1</span></div><div class="tasks"><div class="task"><div class="taskLead">⠿</div><div><div class="taskTitle">Continue working offline</div><div class="meta"><span>Saved locally</span></div></div><div class="taskMore">•••</div></div></div></section>
+  </div>
+  <button class="fab">+</button>
+  <nav class="bottomNav"><button class="navItem active"><span class="navGlyph">▦</span><span>Planner</span></button><button class="navItem"><span class="navGlyph">✓</span><span>History</span></button><button class="navItem"><span class="navGlyph">⚙</span><span>Settings</span></button></nav>
+</div></div>
+</section>
+
+<section class="screen" data-screen="d-plan">
+<div class="desk">
+  <div class="deskHead"><div class="deskLeft"><span class="deskBrand">Ji<b>g</b></span></div><div class="deskCenter"><div class="deskTemporal"><button class="iconHit">‹</button><strong>16–22 Nov 2026</strong><button class="iconHit">›</button><button class="today">Today</button></div></div><div class="deskRight"><button class="smallBtn primary">+ Add task</button><button class="navBtn active">Planner</button><button class="navBtn">History</button><button class="navBtn">Settings</button><span class="syncText"><span class="statusDot"></span>Up to date</span></div></div>
+  <div class="deskBoard">
+    <div class="lane"><div class="laneHead"><strong>Monday 16</strong><button class="dateAdd">+</button></div></div>
+    <div class="lane"><div class="laneHead"><strong>Tuesday 17</strong><button class="dateAdd">+</button></div><div class="deskTask"><strong>Prepare client notes</strong><div class="meta">Legal · 10:30</div></div></div>
+    <div class="lane"><div class="laneHead"><strong>Wednesday 18</strong><button class="dateAdd">+</button></div></div>
+    <div class="lane" style="border-top:2px solid #90d7c8"><div class="laneHead"><strong style="color:#006b5f">Thursday 19</strong><button class="dateAdd">+</button></div><div class="deskTask priorityHigh"><strong>Review launch checklist</strong><div class="meta">High · 09:00</div></div><div class="deskTask" style="background:#e9f2ff;border-color:#7eaee6"><strong>Prepare contract review</strong><div class="meta">Weekly · Wed, Fri</div></div></div>
+    <div class="lane"><div class="laneHead"><strong>Friday 20</strong><button class="dateAdd">+</button></div></div>
+    <div class="lane"><div class="laneHead"><strong>Saturday 21</strong><button class="dateAdd">+</button></div></div>
+    <div class="lane"><div class="laneHead"><strong>Sunday 22</strong><button class="dateAdd">+</button></div></div>
+  </div>
+</div>
+</section>
+
+<section class="screen" data-screen="d-history">
+<div class="desk">
+  <div class="deskHead"><div class="deskLeft"><span class="deskBrand">Ji<b>g</b></span></div><div class="deskCenter"><strong>History</strong><div class="note" style="text-align:center">Completed work grouped by actual completion date</div></div><div class="deskRight"><button class="navBtn">Planner</button><button class="navBtn active">History</button><button class="navBtn">Settings</button><span class="syncText"><span class="statusDot"></span>Up to date</span></div></div>
+  <div class="deskContent">
+    <h2 style="font-size:17px;margin:0 0 8px">Thursday, November 19</h2>
+    <div class="deskHistRow"><span>✓</span><div><strong>Prepare board materials</strong><div class="note">Operations · Scheduled Thu 19</div></div><span class="note">14:20</span></div>
+    <div class="deskHistRow"><span>✓</span><div><strong>Send review notes</strong><div class="note">Pontivus Legal · Scheduled Wed 18</div></div><span class="note">11:45</span></div>
+    <h2 style="font-size:17px;margin:28px 0 8px">Wednesday, November 18</h2>
+    <div class="deskHistRow"><span>✓</span><div><strong>Finalize release checklist</strong><div class="note">Jig · Scheduled Wed 18</div></div><span class="note">17:10</span></div>
+  </div>
+</div>
+</section>
+
+<section class="screen" data-screen="d-settings">
+<div class="desk">
+  <div class="deskHead"><div class="deskLeft"><span class="deskBrand">Ji<b>g</b></span></div><div class="deskCenter"><strong>Settings</strong><div class="note" style="text-align:center">Repository, synchronization, appearance and diagnostics</div></div><div class="deskRight"><button class="navBtn">Planner</button><button class="navBtn">History</button><button class="navBtn active">Settings</button><span class="syncText"><span class="statusDot"></span>Up to date</span></div></div>
+  <div class="deskContent">
+    <section class="deskSetGroup"><h2>Data &amp; sync</h2><div class="deskSetGrid"><div><strong>Planning data</strong></div><div>rpstreef/jig-planning<div class="note">Your Jig planning-data home.</div></div><div><strong>Saved on this device</strong></div><div>Yes<div class="note">Current work remains usable locally.</div></div><div><strong>Synchronization</strong></div><div>Up to date</div></div></section>
+    <section class="deskSetGroup"><h2>Appearance</h2><div class="deskSetGrid"><div><strong>Theme</strong></div><div>Jig</div><div><strong>Mode</strong></div><div>System · Light · Dark</div></div></section>
+    <section class="deskSetGroup"><h2>Notifications</h2><div class="deskSetGrid"><div><strong>Task reminders</strong></div><div>Allowed<div class="note">Jig can show reminders scheduled on this device.</div></div></div></section>
+    <section class="deskSetGroup"><div class="diag"><div><h2 style="margin:0">Diagnostics</h2><div class="note">Technical repository and runtime details</div></div><span>›</span></div></section>
+  </div>
+</div>
+</section>
+</main>
+<script>
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('on'));
+  document.querySelector('[data-screen="'+b.dataset.id+'"]').classList.add('on');
+});
+</script>
+</body></html>
