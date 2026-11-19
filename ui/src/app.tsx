@@ -824,7 +824,7 @@ function ConfiguredApp({
         >
           <div className="jig-content-frame">
             <div
-              className="jig-content"
+              className="jig-content jig-content-configured"
               onPointerDown={dismissWorkspaceFromContent}
             >
               {content}
