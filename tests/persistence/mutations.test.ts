@@ -6,6 +6,7 @@ import {
   adoptEmptyDatasetIdentity,
   applySynchronizedCanonicalState,
   applyTaskCommand,
+  markExported,
   readCanonicalState,
   readMetadata,
   rollForwardOutstandingInDatabase,
@@ -635,5 +636,42 @@ describe("empty bootstrap dataset identity", () => {
     expect((await readMetadata(db)).dataset_id).toBe(
       DATASET_ID,
     );
+  });
+});
+
+
+describe("export metadata truthfulness", () => {
+  it("keeps a newer SQLite mutation pending when Git represents only an older revision", async () => {
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Revision one",
+        scheduled_date: "2026-11-16",
+      },
+      0,
+      TIMES[0],
+      () => IDS[0],
+    );
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Revision two",
+        scheduled_date: "2026-11-16",
+      },
+      1,
+      TIMES[1],
+      () => IDS[1],
+    );
+
+    await markExported(db, 1, "c".repeat(40));
+
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 2,
+      last_exported_revision: 1,
+      last_exported_head: "c".repeat(40),
+      pending_sync: true,
+    });
   });
 });
