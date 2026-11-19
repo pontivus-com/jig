@@ -414,7 +414,7 @@ export async function fetchAndroidPortableRepository(
 async function readAndroidSnapshotAtOid(
   effects: AndroidGitEffects,
   oid: string,
-  expectedDatasetId?: string,
+  expectedDatasetId: string,
 ): Promise<PortableSnapshot> {
   const files = new Map<string, string>();
   const decode = new TextDecoder("utf-8", { fatal: true });
@@ -428,6 +428,7 @@ async function readAndroidSnapshotAtOid(
       dir: effects.dir,
       oid: treeOid,
     });
+
     for (const entry of tree.tree) {
       const path =
         prefix.length === 0
@@ -451,6 +452,7 @@ async function readAndroidSnapshotAtOid(
           `Refusing non-canonical jig-data tree entry ${path}`,
         );
       }
+
       const blob = await readBlob({
         fs: effects.fs,
         dir: effects.dir,
@@ -464,16 +466,34 @@ async function readAndroidSnapshotAtOid(
   return validateSnapshot(files, expectedDatasetId);
 }
 
+async function optionalAndroidRef(
+  effects: AndroidGitEffects,
+  ref: string,
+): Promise<string | null> {
+  try {
+    return await resolveRef({
+      fs: effects.fs,
+      dir: effects.dir,
+      ref,
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function readAndroidPortableSnapshot(
   effects: AndroidGitEffects,
   expectedDatasetId?: string,
 ): Promise<PortableSnapshot> {
-  const head = await androidPortableHead(effects);
-  return readAndroidSnapshotAtOid(
-    effects,
-    head,
-    expectedDatasetId,
-  );
+  await assertDataBranch(effects);
+  const tracked = await trackedPortablePaths(effects);
+  const files = new Map<string, string>();
+
+  for (const path of tracked) {
+    files.set(path, await readUtf8(effects, path));
+  }
+
+  return validateSnapshot(files, expectedDatasetId);
 }
 
 async function writeAndroidPortableFiles(
@@ -615,19 +635,27 @@ export async function commitAndroidCanonicalState(
   );
 }
 
-async function optionalAndroidRef(
+export async function androidSynchronizationRemote(
   effects: AndroidGitEffects,
-  ref: string,
-): Promise<string | null> {
-  try {
-    return await resolveRef({
-      fs: effects.fs,
-      dir: effects.dir,
-      ref,
-    });
-  } catch {
-    return null;
+): Promise<{
+  readonly name: "origin";
+  readonly location: string;
+}> {
+  const location = await getConfig({
+    fs: effects.fs,
+    dir: effects.dir,
+    path: `remote.${ANDROID_REMOTE}.url`,
+  });
+  if (location === undefined || location.length === 0) {
+    throw new AndroidGitAdapterError(
+      "Android managed repository has no origin remote",
+    );
   }
+  assertCredentialFreeHttpsRemote(location);
+  return {
+    name: ANDROID_REMOTE,
+    location,
+  };
 }
 
 export type AndroidPortableRemoteObservation =
@@ -664,18 +692,15 @@ export async function observeAndroidPortableRemote(
     trackingRef,
   );
 
-  const location = await getConfig({
-    fs: effects.fs,
-    dir: effects.dir,
-    path: `remote.${ANDROID_REMOTE}.url`,
-  });
-  if (location === undefined || location.length === 0) {
+  let location: string;
+  try {
+    location = (await androidSynchronizationRemote(effects)).location;
+  } catch {
     return {
       state: "unsafe",
       local_head: localHead,
     };
   }
-  assertCredentialFreeHttpsRemote(location);
 
   const headers = await authenticatedHeaders(credential);
   const refs = await listServerRefs({
@@ -699,8 +724,7 @@ export async function observeAndroidPortableRemote(
         lastAdoptedHead !== null,
     };
   }
-  const advertisedOid = advertised.oid;
-  if (advertisedOid === undefined || advertisedOid.length === 0) {
+  if (advertised.oid === undefined || advertised.oid.length === 0) {
     return {
       state: "unsafe",
       local_head: localHead,
@@ -718,13 +742,12 @@ export async function observeAndroidPortableRemote(
     headers,
     ...authenticationCallbacks(credential),
   });
-
   const remoteHead = await resolveRef({
     fs: effects.fs,
     dir: effects.dir,
     ref: trackingRef,
   });
-  if (remoteHead !== advertisedOid) {
+  if (remoteHead !== advertised.oid) {
     throw new AndroidGitAdapterError(
       "Android remote changed during observation; retry required",
     );
@@ -767,34 +790,31 @@ export async function observeAndroidPortableRemote(
   if (localHead === remoteHead) {
     lineage = "equal";
   } else {
-    let remoteDescendsLocal: boolean | null = null;
-    let localDescendsRemote: boolean | null = null;
+    let remoteAhead: boolean | null = null;
+    let localAhead: boolean | null = null;
     try {
-      remoteDescendsLocal = await isDescendent({
+      remoteAhead = await isDescendent({
         fs: effects.fs,
         dir: effects.dir,
         oid: remoteHead,
         ancestor: localHead,
       });
-      localDescendsRemote = await isDescendent({
+      localAhead = await isDescendent({
         fs: effects.fs,
         dir: effects.dir,
         oid: localHead,
         ancestor: remoteHead,
       });
     } catch {
-      remoteDescendsLocal = null;
-      localDescendsRemote = null;
+      remoteAhead = null;
+      localAhead = null;
     }
 
-    if (remoteDescendsLocal === true) {
+    if (remoteAhead === true) {
       lineage = "remote-ahead";
-    } else if (localDescendsRemote === true) {
+    } else if (localAhead === true) {
       lineage = "local-ahead";
-    } else if (
-      remoteDescendsLocal === false &&
-      localDescendsRemote === false
-    ) {
+    } else if (remoteAhead === false && localAhead === false) {
       lineage = "diverged";
     }
   }
@@ -833,13 +853,18 @@ export async function alignAndroidPortableHead(
       "Android jig-data head changed concurrently; retry required",
     );
   }
-  const descends = await isDescendent({
-    fs: effects.fs,
-    dir: effects.dir,
-    oid: targetHead,
-    ancestor: expectedHead,
-  });
-  if (!descends) {
+
+  if (
+    expectedHead !== targetHead &&
+    !(
+      await isDescendent({
+        fs: effects.fs,
+        dir: effects.dir,
+        oid: targetHead,
+        ancestor: expectedHead,
+      })
+    )
+  ) {
     throw new AndroidGitAdapterError(
       "Android jig-data alignment must be a fast-forward",
     );
@@ -863,8 +888,7 @@ export async function alignAndroidPortableHead(
     ref: ANDROID_DATA_BRANCH,
     force: true,
   });
-  const aligned = await androidPortableHead(effects);
-  if (aligned !== targetHead) {
+  if ((await androidPortableHead(effects)) !== targetHead) {
     throw new AndroidGitAdapterError(
       "Android jig-data head does not match fast-forward target",
     );
