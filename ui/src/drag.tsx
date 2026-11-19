@@ -326,7 +326,6 @@ export function DateDropZone({
       ]
         .filter(Boolean)
         .join(" ")}
-      data-date={date}
     >
       {children}
     </div>
