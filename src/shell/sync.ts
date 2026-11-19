@@ -29,9 +29,11 @@ import {
 } from "../persistence/sqlite";
 import {
   canonicalPlanningEqual,
-  decideSynchronization,
   planningFromState,
   reconcileCanonicalPlanning,
+} from "../core/reconciliation";
+import {
+  decideSynchronization,
   SYNCHRONIZATION_HEALTHY_POLL_MS,
   synchronizationRetryDelayMs,
 } from "../synchronization";
