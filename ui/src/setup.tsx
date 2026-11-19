@@ -332,6 +332,7 @@ export function SetupView({
                   width="100%"
                   placeholder="/home/you/planning"
                   isRequired
+                  controlClassName="jig-mobile-touch-control"
                 />
                 <Button
                   label="Use this repository"
