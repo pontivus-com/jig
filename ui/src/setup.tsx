@@ -1,6 +1,7 @@
 import {
   Banner,
   Button,
+  Icon,
   Section,
   TextInput,
   VStack,
@@ -33,6 +34,65 @@ export interface SetupViewProps {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function SetupBenefits({
+  mobile,
+}: Readonly<{ mobile: boolean }>): React.ReactElement {
+  const benefits = mobile
+    ? [
+        {
+          icon: "check" as const,
+          title: "Saved on this device",
+          detail: "Your plan remains usable locally.",
+        },
+        {
+          icon: "viewColumns" as const,
+          title: "Same plan across devices",
+          detail: "Keep planning continuity between desktop and Android.",
+        },
+        {
+          icon: "externalLink" as const,
+          title: "You stay in control",
+          detail: "GitHub authorization stays on GitHub.",
+        },
+      ]
+    : [
+        {
+          icon: "check" as const,
+          title: "Local first",
+          detail: "Your plan remains available on this computer.",
+        },
+        {
+          icon: "viewColumns" as const,
+          title: "Portable",
+          detail: "Use the same planning data on another Jig installation.",
+        },
+        {
+          icon: "externalLink" as const,
+          title: "Your repository",
+          detail: "GitHub authorization stays on GitHub.",
+        },
+      ];
+
+  return (
+    <div
+      className="jig-setup-benefits"
+      aria-label="How Jig keeps your plan"
+    >
+      {benefits.map((benefit) => (
+        <div className="jig-setup-benefit" key={benefit.title}>
+          <span className="jig-setup-benefit-icon" aria-hidden="true">
+            <Icon icon={benefit.icon} size="sm" color="inherit" />
+          </span>
+          <span className="jig-setup-benefit-copy">
+            <strong>{benefit.title}</strong>
+            <span>{benefit.detail}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function SetupView({
@@ -199,23 +259,7 @@ export function SetupView({
               </p>
             </div>
 
-            <div
-              className="jig-setup-benefits"
-              aria-label="How Jig keeps your plan"
-            >
-              <div>
-                <strong>Saved on this device</strong>
-                <span>Your plan remains usable locally.</span>
-              </div>
-              <div>
-                <strong>Portable through Git</strong>
-                <span>Use the same planning data on desktop and Android.</span>
-              </div>
-              <div>
-                <strong>You stay in control</strong>
-                <span>GitHub authorization happens on GitHub.</span>
-              </div>
-            </div>
+            <SetupBenefits mobile />
           </section>
         ) : layoutMode === "desktop" ? (
           <section className="jig-setup-value">
@@ -242,25 +286,7 @@ export function SetupView({
                     same plan between Jig installations.
                   </p>
                 </div>
-                <div
-                  className="jig-setup-benefits"
-                  aria-label="How Jig keeps your plan"
-                >
-                  <div>
-                    <strong>Local first</strong>
-                    <span>Your plan remains available on this computer.</span>
-                  </div>
-                  <div>
-                    <strong>Portable</strong>
-                    <span>
-                      Use the same planning data on another Jig installation.
-                    </span>
-                  </div>
-                  <div>
-                    <strong>Your repository</strong>
-                    <span>GitHub authorization stays on GitHub.</span>
-                  </div>
-                </div>
+                <SetupBenefits mobile={false} />
               </>
             ) : selecting ? (
               <div className="jig-setup-heading">
@@ -354,21 +380,26 @@ export function SetupView({
               </VStack>
             </Section>
           ) : initial ? (
-            <Section
-              className="jig-setup-card"
-              padding={5}
-              dividers={["top", "bottom", "start", "end"]}
+            <div
+              className={[
+                "jig-setup-choice",
+                layoutMode === "narrow"
+                  ? "jig-setup-choice-narrow"
+                  : "jig-setup-choice-desktop",
+              ].join(" ")}
             >
               <VStack gap={3}>
-                <div className="jig-setup-state-heading">
-                  <h2>Choose where Jig keeps your plan</h2>
-                  <p>
-                    Connect GitHub for continuity between Jig installations
-                    {status.local_repository_available
-                      ? ", or use a repository already on this computer."
-                      : "."}
-                  </p>
-                </div>
+                {layoutMode === "desktop" ? (
+                  <div className="jig-setup-state-heading">
+                    <h2>Choose where Jig keeps your plan</h2>
+                    <p>
+                      Connect GitHub for continuity between Jig installations
+                      {status.local_repository_available
+                        ? ", or use a repository already on this computer."
+                        : "."}
+                    </p>
+                  </div>
+                ) : null}
 
                 {status.github_available ? (
                   <Button
@@ -398,7 +429,7 @@ export function SetupView({
                   Jig continues automatically after GitHub authorization.
                 </small>
               </VStack>
-            </Section>
+            </div>
           ) : null}
 
           {connecting ? (
