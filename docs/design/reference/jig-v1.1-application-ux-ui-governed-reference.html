@@ -30,10 +30,11 @@ body{margin:0;background:#edf0f4;font-size:14px;line-height:1.45}
 .statusDot{width:10px;height:10px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px var(--successSoft)}
 .phone{width:390px;height:844px;border:8px solid #111827;border-radius:30px;background:var(--paper);box-shadow:var(--shadow);overflow:hidden;position:relative}
 .phoneShell{height:100%;display:flex;flex-direction:column;background:var(--paper)}
-.phoneTop{height:56px;display:grid;grid-template-columns:1fr auto;align-items:center;padding:0 12px;border-bottom:1px solid var(--line);background:rgba(253,252,249,.98)}
-.wordmark{font-size:22px;font-weight:850;letter-spacing:-.04em}.wordmark b{color:#f59e0b}
+.phoneTop{height:52px;display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;padding:0 4px;border-bottom:1px solid var(--line);background:rgba(253,252,249,.98)}
+.wordmark{justify-self:start;font-size:18px;font-weight:850;letter-spacing:-.04em}.wordmark b{color:#f59e0b}
+.phoneTitle{min-width:0;justify-self:center;font-size:16px;font-weight:800;line-height:1.15;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topStatus{display:flex;align-items:center;gap:8px}
-.temporal{height:56px;display:grid;grid-template-columns:48px 1fr 48px 64px;align-items:center;border-bottom:1px solid var(--line);padding:0 6px;background:var(--paper)}
+.temporal{height:52px;display:grid;grid-template-columns:48px 1fr 48px 64px;align-items:center;border-bottom:1px solid var(--line);padding:0 4px;background:var(--paper)}
 .weekLabel{text-align:center;font-weight:800;letter-spacing:-.01em}
 .today{height:40px;border:0;background:transparent;color:var(--ink7);font-weight:750;border-radius:8px}
 .phoneBody{flex:1;overflow:auto;padding-bottom:92px}
@@ -44,9 +45,9 @@ body{margin:0;background:#edf0f4;font-size:14px;line-height:1.45}
 .todayDay .dayHead strong{color:var(--teal)}
 .todayDay{border-top:1px solid #a8d8d0}
 .tasks{display:grid;gap:8px;padding:0 0 10px}
-.task{display:grid;grid-template-columns:36px 1fr 36px;gap:6px;align-items:start;border:1px solid var(--line2);border-radius:10px;background:#fff;padding:8px 8px 8px 6px;box-shadow:0 2px 6px rgba(11,20,38,.04)}
+.task{display:grid;grid-template-columns:48px 1fr 48px;gap:4px;align-items:center;border:1px solid var(--line2);border-radius:10px;background:#fff;padding:6px 6px 6px 4px;box-shadow:0 2px 6px rgba(11,20,38,.04)}
 .task.selected{background:var(--info);border-color:#7eaee6}
-.taskLead,.taskMore{width:36px;height:36px;display:grid;place-items:center;color:var(--muted)}
+.taskLead,.taskMore{width:48px;height:48px;display:grid;place-items:center;color:var(--muted)}
 .taskTitle{font-weight:760;margin-top:1px}
 .meta{display:flex;flex-wrap:wrap;gap:4px 10px;color:var(--muted);font-size:11px;margin-top:4px}
 .priorityHigh{border-left:3px solid #b42318}
@@ -54,7 +55,7 @@ body{margin:0;background:#edf0f4;font-size:14px;line-height:1.45}
 .emptyWeek h3{margin:0 0 6px;font-size:19px}.emptyWeek p{margin:0;color:var(--muted)}
 .fab{position:absolute;right:18px;bottom:82px;width:56px;height:56px;border:0;border-radius:18px;background:var(--amber);color:#fff;font-size:25px;font-weight:800;box-shadow:0 10px 22px rgba(184,108,0,.28)}
 .bottomNav{position:absolute;left:0;right:0;bottom:0;height:68px;padding-bottom:max(0px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);background:rgba(255,255,255,.98)}
-.navItem{border:0;background:transparent;display:grid;place-items:center;align-content:center;gap:2px;color:var(--muted);font-size:11px;font-weight:700}
+.navItem{border:0;background:transparent;display:grid;place-items:center;align-content:center;gap:2px;color:var(--muted);font-size:13px;font-weight:700}
 .navGlyph{font-size:18px;line-height:1}.navItem.active{color:var(--ink)}
 .navItem.active .navGlyph{background:#eef1f5;border-radius:999px;padding:4px 12px}
 .pageTitle{padding:18px 16px 8px}.pageTitle h2{margin:0;font-size:23px}.pageTitle p{margin:3px 0 0;color:var(--muted);font-size:12px}
@@ -108,7 +109,7 @@ body{margin:0;background:#edf0f4;font-size:14px;line-height:1.45}
 <section class="screen on" data-screen="m-plan">
 <div class="legend">Primary hierarchy: week context and Tasks first; Add is the one prominent creation action; destination navigation is persistent; healthy sync is visible but quiet.</div>
 <div class="phone"><div class="phoneShell">
-  <div class="phoneTop"><div class="wordmark">Ji<b>g</b></div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
+  <div class="phoneTop"><div class="wordmark">Ji<b>g</b></div><div class="phoneTitle">Planner</div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
   <div class="temporal"><button class="iconHit"><span class="iconGlyph">‹</span></button><div class="weekLabel">16–22 Nov 2026</div><button class="iconHit"><span class="iconGlyph">›</span></button><button class="today">Today</button></div>
   <div class="phoneBody">
     <section class="day"><div class="dayHead"><strong>Monday 16</strong><button class="dateAdd">+</button><span class="count">0</span></div></section>
@@ -131,9 +132,8 @@ body{margin:0;background:#edf0f4;font-size:14px;line-height:1.45}
 
 <section class="screen" data-screen="m-history">
 <div class="phone"><div class="phoneShell">
-  <div class="phoneTop"><div class="wordmark">History</div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
+  <div class="phoneTop"><div class="wordmark">Ji<b>g</b></div><div class="phoneTitle">History</div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
   <div class="phoneBody">
-    <div class="pageTitle"><p>Completed work grouped by actual completion date</p></div>
     <div class="history">
       <div class="histGroup"><h3>Thursday, November 19</h3>
         <div class="histRow"><span>✓</span><div><strong>Prepare board materials</strong><small>Operations · Scheduled Thu 19</small></div><small>14:20</small></div>
@@ -150,7 +150,7 @@ body{margin:0;background:#edf0f4;font-size:14px;line-height:1.45}
 
 <section class="screen" data-screen="m-settings">
 <div class="phone"><div class="phoneShell">
-  <div class="phoneTop"><div class="wordmark">Settings</div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
+  <div class="phoneTop"><div class="wordmark">Ji<b>g</b></div><div class="phoneTitle">Settings</div><button class="iconHit" aria-label="Up to date"><span class="statusDot"></span></button></div>
   <div class="phoneBody">
     <div class="settings">
       <section class="setGroup"><h3>Data &amp; sync</h3>
@@ -169,7 +169,7 @@ body{margin:0;background:#edf0f4;font-size:14px;line-height:1.45}
 
 <section class="screen" data-screen="m-attention">
 <div class="phone"><div class="phoneShell">
-  <div class="phoneTop"><div class="wordmark">Ji<b>g</b></div><button class="iconHit" aria-label="Sync needs attention"><span style="font-size:19px;color:#a15c00">!</span></button></div>
+  <div class="phoneTop"><div class="wordmark">Ji<b>g</b></div><div class="phoneTitle">Planner</div><button class="iconHit" aria-label="Sync needs attention"><span style="font-size:19px;color:#a15c00">!</span></button></div>
   <div class="temporal"><button class="iconHit"><span class="iconGlyph">‹</span></button><div class="weekLabel">16–22 Nov 2026</div><button class="iconHit"><span class="iconGlyph">›</span></button><button class="today">Today</button></div>
   <div class="phoneBody">
     <div class="attention"><strong>Sync needs attention</strong><br>Current work is saved on this device. Open Settings to restore continuity.</div>
