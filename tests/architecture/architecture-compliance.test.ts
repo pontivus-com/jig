@@ -117,13 +117,16 @@ describe("architecture compliance", () => {
 
     const recurrence = source("src/core/recurrence.ts");
     const planning = source("src/core/recurrence-planning.ts");
-    const editor = source("ui/src/recurrence-editor.tsx");
+    const editor = source("ui/src/task-editor.tsx");
     const nativeRuntime = source("ui/src/runtime-native.ts");
 
     expect(recurrence).toContain("export type RecurrencePattern");
     expect(planning).toContain("setTaskRecurrence");
     expect(editor).toContain("type RecurrenceSeries");
     expect(editor).toContain("type RecurrenceSpec");
+    expect(editor).toContain('label="Repeat"');
+    expect(editor).not.toContain("Enable repeat");
+    expect(editor).not.toContain("Save repeat");
     expect(editor).not.toMatch(
       /interface\s+RecurrenceSeries\s*\{|type\s+RecurrencePattern\s*=/,
     );
