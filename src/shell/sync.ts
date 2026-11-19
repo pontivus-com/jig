@@ -36,6 +36,7 @@ import {
 } from "../core/reconciliation";
 import {
   decideSynchronization,
+  runSynchronizationRemoteOperation,
   SYNCHRONIZATION_HEALTHY_POLL_MS,
   synchronizationRetryDelayMs,
 } from "../synchronization";
@@ -46,7 +47,7 @@ export interface SyncConfiguration {
 
 export interface SyncController {
   readonly start: () => Promise<void>;
-  readonly stop: () => void;
+  readonly stop: () => Promise<void>;
   readonly notifyMutation: () => void;
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
   readonly status: () => RepositorySynchronizationStatus;
@@ -356,7 +357,10 @@ export function createSyncController(
     let networkEnvironment:
       Readonly<Record<string, string>> | null;
     try {
-      networkEnvironment = await effects.networkEnvironment();
+      networkEnvironment =
+        await runSynchronizationRemoteOperation(
+          effects.networkEnvironment,
+        );
     } catch {
       return await transientRemoteFailure();
     }
@@ -368,11 +372,15 @@ export function createSyncController(
       let observation: PortableRemoteObservation;
       try {
         const datasetId = (await readMetadata(db)).dataset_id;
-        observation = await effects.observeRemote(
-          adapter,
-          datasetId,
-          networkEnvironment,
-        );
+        observation =
+          await runSynchronizationRemoteOperation(
+            () =>
+              effects.observeRemote(
+                adapter,
+                datasetId,
+                networkEnvironment,
+              ),
+          );
       } catch {
         return await transientRemoteFailure();
       }
@@ -418,11 +426,15 @@ export function createSyncController(
           if (await localPending()) {
             await exportCurrentState();
           }
-          const pushed = await effects.push(
-            adapter,
-            remote,
-            networkEnvironment,
-          );
+          const pushed =
+            await runSynchronizationRemoteOperation(
+              () =>
+                effects.push(
+                  adapter,
+                  remote,
+                  networkEnvironment,
+                ),
+            );
           if (!pushed.retryable && pushed.status === "sync-issue") {
             return structuralIssue();
           }
@@ -632,11 +644,15 @@ export function createSyncController(
             continue;
           }
           await exportCurrentState();
-          const pushed = await effects.push(
-            adapter,
-            remote,
-            networkEnvironment,
-          );
+          const pushed =
+            await runSynchronizationRemoteOperation(
+              () =>
+                effects.push(
+                  adapter,
+                  remote,
+                  networkEnvironment,
+                ),
+            );
           if (!pushed.retryable && pushed.status === "sync-issue") {
             return structuralIssue();
           }
@@ -654,11 +670,15 @@ export function createSyncController(
           if (await localPending()) {
             await exportCurrentState();
           }
-          const pushed = await effects.push(
-            adapter,
-            remote,
-            networkEnvironment,
-          );
+          const pushed =
+            await runSynchronizationRemoteOperation(
+              () =>
+                effects.push(
+                  adapter,
+                  remote,
+                  networkEnvironment,
+                ),
+            );
           if (!pushed.retryable && pushed.status === "sync-issue") {
             return structuralIssue();
           }
@@ -695,9 +715,13 @@ export function createSyncController(
       );
       schedule(0);
     },
-    stop: () => {
+    stop: async () => {
       stopped = true;
       clearTimer();
+      const active = running;
+      if (active !== null) {
+        await active.catch(() => currentStatus);
+      }
     },
     notifyMutation: () => {
       currentStatus = synchronizationStatus(
