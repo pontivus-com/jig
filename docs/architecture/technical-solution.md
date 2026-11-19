@@ -1,6 +1,6 @@
 # Jig — technical solution design
 
-**Status:** Canonical technical solution through v1.1, amended 2026-11-19. v1.0.6 remains historical release provenance; JIG-110-SD-01..41 in the release-specific v1.1 solution govern v1.1 implementation.
+**Status:** Canonical technical solution through v1.1, amended 2026-11-20 for physical-acceptance findings: recurrence-aware rollover non-accumulation, one canonical past-date scheduling guard, and compact-header/Task-card presentation corrections. v1.0.6 remains historical release provenance; JIG-110-SD-01..41 in the release-specific v1.1 solution govern v1.1 implementation.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16, JIG-105-FR-01 through JIG-105-FR-11, JIG-106-FR-01 through JIG-106-FR-07 and JIG-FR-01 through JIG-FR-22.
 **Historical v1.0.6-and-earlier scope:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service. **Current v1.1 scope is defined by `## v1.1 binding architecture` and JIG-110-SD-01..41 below; those contracts add the governed Android runtime, bootstrap/onboarding, native reminder path and cross-installation continuity while preserving the no-hosted-Jig-service boundary.**
@@ -265,14 +265,15 @@ Task references are treated as data: safe http(s) links may open with normal bro
 3. The user-selected sequence is authoritative; priority updates never reorder it.
 4. Date moves preserve all task metadata and identity except scheduled_date and position; reminder_time stays the same and is interpreted on the new date.
 5. Completion records an instant and removes the item from its outstanding sequence; reopening appends it, rather than guessing its former position.
-6. Daily rollover is an automatic canonical mutation. Every outstanding Task with `scheduled_date < current_local_date` is moved to `current_local_date`; completed Tasks are unchanged.
+6. Daily rollover is an automatic canonical mutation. Before movement, recurring series apply one non-accumulation rule: for each series preserve the latest outstanding occurrence whose immutable recurrence slot is due on/before `current_local_date`, and supersede any other outstanding occurrence in that series that is actually overdue (`scheduled_date < current_local_date`). Then every remaining overdue outstanding Task is moved to `current_local_date`. Completed Tasks and future-scheduled Tasks are unchanged.
 7. A confirmed deletion removes the Task row entirely. If the deleted Task was outstanding, the remaining positions on its scheduled date are compacted transactionally; completed deletion requires no active-order compaction.
 8. Deletion creates no tombstone, deleted status, trash record or application-level undo history.
 9. A failed mutation leaves all affected dates unchanged; UI reports failure without implying a save.
 10. Every imported complete snapshot passes the same invariants before it can replace local state; after validation, its Task membership is authoritative for that adopted snapshot.
 11. `recurrence_series_id` and `recurrence_occurrence_date` are either both null or both non-null. A recurring occurrence's `recurrence_occurrence_date` is immutable even when `scheduled_date` changes through rollover or explicit movement.
 12. Recurrence never changes ordinary Task semantics: each materialized occurrence is an independent Task and owns its own title, priority, context, reference, note, reminder, scheduled date/position and completion state. A recurrence rule determines series calendar slots only.
-13. Recurrence has exactly two write scopes. Occurrence-scope commands may mutate only the addressed Task. Series-scope recurrence commands may mutate only the shared `RecurrenceSeries` plus series membership by retaining/removing/creating occurrence rows; they must not rewrite ordinary Task fields on a retained sibling. There is no bulk Task-content propagation command in v1.1.
+13. Recurrence has exactly two **user write scopes**. Occurrence-scope commands may mutate only the addressed Task. Series-scope recurrence commands may mutate only the shared `RecurrenceSeries` plus series membership by retaining/removing/creating occurrence rows; they must not rewrite ordinary Task fields on a retained sibling. Automatic rollover supersession is planning maintenance, not a third write scope or persisted lifecycle state. There is no bulk Task-content propagation command in v1.1.
+14. Intentional active scheduling uses one rule: create/edit/move may schedule an outstanding Task only on `current_local_date` or a future civil date. The rule is a pure core predicate reused by every scheduling path. Past-date rejection never depends on drag/UI state and never mutates canonical data.
 
 ### 4.2 Operation algorithms
 
@@ -367,7 +368,7 @@ Changing Repeat is a **series-membership reconciliation** anchored at the invoki
 
 The two write scopes are deliberately non-overlapping. Occurrence-scope Task edits never mutate `RecurrenceSeries`. Series-scope Repeat edits never propagate title/priority/context/reference/note/reminder/scheduled-date/position/completion state into retained sibling Tasks. There is intentionally no "all occurrences", "this and following Task details" or template-propagation command in v1.1; a different common Task definition is represented by creating a new recurring Task.
 
-Daily rollover changes only `scheduled_date`/position. It **never** changes `recurrence_occurrence_date` or the series rule. Therefore an overdue Monday occurrence may roll into Tuesday while the Wednesday occurrence still appears on Wednesday exactly as scheduled.
+Daily rollover never changes `recurrence_occurrence_date` or the series rule. Before ordinary rollover, the core applies recurrence non-accumulation: within each series, identify the latest outstanding occurrence whose immutable slot is due on/before today; remove older outstanding siblings that are actually overdue; preserve future-scheduled siblings (including explicit user reschedules); then roll the surviving overdue occurrence to today. Superseded siblings are removed, not marked completed, so History remains truthful and no new lifecycle status is introduced.
 
 Each generated occurrence has its own `reminder_time`. The existing reminder owner therefore needs no recurrence-specific delivery state: the same time is copied when the occurrence is created, and reminder due/delivery is evaluated against that occurrence's current `scheduled_date`. A rolled occurrence keeps the time-of-day exactly as today.
 
@@ -1368,11 +1369,15 @@ rollForwardOutstanding(
   tasks,
   currentLocalDate,
   updatedAt,
-): { tasks, moved_task_ids }
+): { tasks, moved_task_ids, superseded_task_ids }
 ```
 
+`superseded_task_ids` is an internal pure-result field used only so persistence can atomically delete stale recurring occurrences and decide whether the canonical revision changed. It is not a Task status, DTO, event stream or persisted history model.
+
 Rules:
-- select outstanding Tasks with `scheduled_date < currentLocalDate`;
+- identify each recurrence series' latest outstanding occurrence whose immutable `recurrence_occurrence_date <= currentLocalDate`;
+- from that series, supersede any **other** outstanding occurrence whose `scheduled_date < currentLocalDate`; do not touch completed Tasks or Tasks explicitly scheduled into the future;
+- after supersession, select remaining outstanding Tasks with `scheduled_date < currentLocalDate`;
 - sort selected Tasks by source `scheduled_date` ascending, then source `position`;
 - move all selected Tasks directly to `currentLocalDate`;
 - place them before Tasks already scheduled for `currentLocalDate`;
@@ -1381,6 +1386,7 @@ Rules:
 - compact each affected source date;
 - preserve Task id/title/context/priority/reference/note/reminder time;
 - update `scheduled_date` and `updated_at` for moved Tasks;
+- remove superseded recurring Tasks from the current canonical Task set without synthesizing `completed_at`;
 - do not mutate completed Tasks;
 - no intermediate per-day history is created when catching up after multiple missed days.
 
@@ -1388,7 +1394,7 @@ Shell lifecycle:
 1. run rollover once during service startup before normal planning state is served;
 2. maintain one timer for the next local civil-day boundary;
 3. at the boundary, execute one SQLite transaction applying the pure core result;
-4. increment SQLite revision once when at least one Task moved;
+4. increment SQLite revision once when at least one Task moved **or recurring occurrence was superseded**;
 5. mark portable state dirty so the existing sync worker exports/synchronizes it;
 6. reschedule the next day-boundary timer;
 7. before serving canonical planning state or accepting a Task mutation, perform an idempotent catch-up check so suspend/sleep/timer delays cannot leave stale dates visible.
@@ -1401,6 +1407,8 @@ HTTP command admission order is strict:
 5. only then execute the requested Task mutation.
 
 Do not validate `expected_revision` first and perform rollover afterward.
+
+The same existing runtime-local-date owner supplies `currentLocalDate` to Task-command execution after rollover. Add one pure planning-core guard such as `assertActiveScheduleDate(currentLocalDate, candidateDate)` and call it from create, explicit Date edit and move. Do not derive local date from the UTC mutation instant, add a clock service, or duplicate past-date checks in UI/platform adapters. Presentation may pre-mark a past drag target unavailable for immediate affordance, but the core predicate remains authoritative and its error is projected through the existing operation-feedback path.
 
 The already-open browser must also revalidate canonical state across a local-day transition. The UI keeps the last observed local civil date and:
 - schedules a recheck for the next local day boundary;
@@ -1547,7 +1555,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-06 priority change | Edit operation | Only priority changes; position unchanged |
 | JIG-FR-07 unrestricted edit | Astryx edit surface + core update | All optional fields and date edited without workflow gate |
 | JIG-FR-08 completion/reopen | Core transition + timestamp + DB | Date-scheduled completion, history query, reopen same ID |
-| JIG-FR-09 daily rollover | Pure core rollover + one SQLite transaction + service day-boundary/catch-up trigger | Earlier outstanding Tasks physically move to the current date; desktop and narrow Planner show the same moved Task in the current bucket; completed Tasks never move |
+| JIG-FR-09 daily rollover | Pure recurrence-aware core rollover + one SQLite transaction + service day-boundary/catch-up trigger | One-off overdue Tasks move to today; recurring series supersede older overdue outstanding siblings before moving the surviving due occurrence; completed/future Tasks remain untouched |
 | JIG-FR-10 reminder delivery | JIG-106-SD-06 + §6 one browser reminder monitor + browser Notification API | Granted permission => one browser/OS Notification regardless visibility/focus; no reminder Toast; one delivery key suppresses duplicates; no closed-app guarantee |
 | JIG-FR-11 external context | Reference open/copy UI | Link/path accessible; no source-content import |
 | JIG-FR-12 honest outcome | HTTP/SQLite/repository-boundary outcome and UI | Failed local save or repository sync never rendered as success |
@@ -1561,14 +1569,14 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-20 low-friction idle | one Bun service, bounded timers/backoff | Measured low idle CPU/RSS and responsive reopen |
 | JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
 | JIG-FR-22 appearance | JIG-106-SD-02 through SD-05 + SD-07 | One 13-preset registry + independent System/Light/Dark mode fully re-theme all governed surfaces/states and in-app branding from Settings only, without Task/Git mutation |
-| JIG-FR-23 bounded recurrence | §4.2.1 recurrence core + schema v3 + portable format v2 | One shared series owns recurrence configuration; materialized Tasks own occurrence-local content/lifecycle; Repeat performs membership reconciliation from the invoking immutable slot without rewriting retained siblings; Stop repeating keeps the invoking Task, preserves completed History and removes every other outstanding series occurrence |
-| JIG-110-FR-30 secondary heading ownership | v1.1 SD-40 + UI solution | Application header owns the sole History/Settings title+subtitle; body-level duplicate heading is removed |
+| JIG-FR-23 bounded recurrence | §4.2.1 recurrence core + recurrence-aware rollover + schema v3 + portable format v2 | One shared series owns recurrence configuration; materialized Tasks own occurrence-local content/lifecycle; rollover prevents automatic accumulation by superseding stale overdue siblings; Repeat reconciliation remains shared-series only; Stop repeating preserves completed History and removes every other outstanding series occurrence |
+| JIG-110-FR-30 destination heading ownership | v1.1 SD-40 + UI solution | Compact header preserves Jig identity and centers Planner/History/Settings title from one owner; desktop secondary titles retain their concise subtitle; body-level duplicate heading is removed |
 | JIG-110-FR-31 user-level continuity/synchronization | structured repository status above + v1.1 SD-41 | Technical local/remote truth remains structured once; primary UI derives minimal planning-data-home/local-safety/continuity language while exact Git/service/database facts remain secondary diagnostics |
 | JIG-110-FR-24 cross-installation continuity | v1.1 SD-30 + SD-41 | Four normal outcomes (Local only / Synchronized / Adopt remote / Push local) plus exactly six bounded edge cases SYNC-E1..SYNC-E6. One pure classifier owns the decision; shell/native adapters supply effects only; unsafe states preserve both boundaries and stop rather than adding reconciliation. |
 
 ### 10.1 Test boundaries
 
-**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, completed-task rescheduling, reopening, outstanding/completed deletion, recurrence enumeration/reconciliation and edge dates including month/year boundaries. Recurrence coverage includes multiple weekdays, all-seven daily pattern, every-four-weeks cadence, inclusive end date, monthly 28/29/30/31 behavior, rollover without cadence shift, occurrence-only completion/move/delete/edit, shared-series visibility from every occurrence, Repeat membership reconciliation that preserves retained sibling IDs/content, creation-time-only copying into new slots, no bulk content propagation, and Stop repeating that preserves completed History while removing every other outstanding series occurrence including rolled/overdue siblings.
+**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, current/future scheduling acceptance, past-date create/edit/move rejection with no mutation, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, reopening, outstanding/completed deletion, recurrence enumeration/reconciliation and edge dates including month/year boundaries. Recurrence coverage includes multiple weekdays, all-seven daily pattern, every-four-weeks cadence, inclusive end date, monthly 28/29/30/31 behavior, no-accumulation rollover for one/multiple missed periods, latest-due-survivor selection, explicit future-reschedule preservation, occurrence-only completion/move/delete/edit, shared-series visibility from every occurrence, Repeat membership reconciliation that preserves retained sibling IDs/content, creation-time-only copying into new slots, no bulk content propagation, and Stop repeating that preserves completed History while removing every other outstanding series occurrence including rolled/overdue siblings.
 
 **SQLite integration:** One failed transaction rolls back every affected position/date; uniqueness and completeness checks; restart with WAL; task query by scheduled and completion dates; migration from a fresh empty database; corrupted input rejected before persistence.
 
