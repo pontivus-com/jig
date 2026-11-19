@@ -156,56 +156,62 @@ export function SettingsView({
           aria-labelledby="data-sync-heading"
         >
           <h2 id="data-sync-heading">Data &amp; sync</h2>
-          <Section
-            className="jig-settings-card"
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={4}>
-              <div className="jig-settings-row">
-                <div>
-                  <strong>Planning-data home</strong>
-                  <p>{planningDataHome.label}</p>
-                  <small>{planningDataHome.detail}</small>
-                </div>
+          <div className="jig-settings-group">
+            <div className="jig-settings-row">
+              <div>
+                <strong>Planning data</strong>
+                <p>{planningDataHome.label}</p>
+                <small>{planningDataHome.detail}</small>
               </div>
+            </div>
 
-              <div className="jig-settings-row">
-                <div>
-                  <strong>Continuity</strong>
-                  <p>{repositoryStatus.label}</p>
-                  <small>{repositoryStatus.message}</small>
-                </div>
-                {synchronizationNeedsAttention &&
-                githubReconnectAvailable &&
-                githubReconnect === null ? (
-                  <Button
-                    label="Reconnect GitHub"
-                    variant="secondary"
-                    isLoading={isOperating}
-                    onClick={() => {
-                      void onReconnectGitHub();
-                    }}
-                  />
-                ) : synchronizationNeedsAttention &&
-                  !githubReconnectAvailable ? (
-                  <Button
-                    label="Try again"
-                    variant="secondary"
-                    isLoading={isOperating}
-                    onClick={() => {
-                      void onSync();
-                    }}
-                  />
-                ) : null}
+            <div className="jig-settings-row">
+              <div>
+                <strong>Saved on this device</strong>
+                <p>{status === null ? "Status unavailable" : "Yes"}</p>
+                <small>
+                  Your current planning data remains available locally.
+                </small>
               </div>
+            </div>
 
-              <GitHubDeviceFlowPanel
-                authorization={githubReconnect?.authorization ?? null}
-                purpose="reconnect"
-              />
+            <div className="jig-settings-row">
+              <div>
+                <strong>Synchronization</strong>
+                <p>{repositoryStatus.label}</p>
+                <small>{repositoryStatus.message}</small>
+              </div>
+              {synchronizationNeedsAttention &&
+              githubReconnectAvailable &&
+              githubReconnect === null ? (
+                <Button
+                  label="Reconnect GitHub"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onReconnectGitHub();
+                  }}
+                />
+              ) : synchronizationNeedsAttention &&
+                !githubReconnectAvailable ? (
+                <Button
+                  label="Try again"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onSync();
+                  }}
+                />
+              ) : null}
+            </div>
 
-              {githubReconnect?.state === "attention" ? (
+            <GitHubDeviceFlowPanel
+              authorization={githubReconnect?.authorization ?? null}
+              purpose="reconnect"
+            />
+
+            {githubReconnect?.state === "attention" ? (
+              <div className="jig-settings-row-actions">
                 <Button
                   label="Try reconnecting GitHub"
                   variant="secondary"
@@ -214,14 +220,9 @@ export function SettingsView({
                     void onReconnectGitHub();
                   }}
                 />
-              ) : null}
-
-              <p className="jig-settings-safety-copy">
-                Planning remains usable locally while synchronization is
-                unavailable.
-              </p>
-            </VStack>
-          </Section>
+              </div>
+            ) : null}
+          </div>
         </section>
 
         <section
@@ -229,57 +230,51 @@ export function SettingsView({
           aria-labelledby="appearance-heading"
         >
           <h2 id="appearance-heading">Appearance</h2>
-          <Section
-            className="jig-settings-card"
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={3}>
-              <Selector
-                label="Theme"
-                value={themePreset}
-                options={THEME_OPTIONS}
-                presentation="adaptive"
-                controlClassName="jig-mobile-touch-control"
-                renderOption={(option) => (
-                  <span className="jig-mobile-selector-option">
-                    {option.label}
-                  </span>
-                )}
-                onChange={(value) => {
-                  if (isThemePreset(value)) {
-                    onThemePresetChange(value);
-                  }
-                }}
+          <div className="jig-settings-group jig-settings-control-stack">
+            <Selector
+              label="Theme"
+              value={themePreset}
+              options={THEME_OPTIONS}
+              presentation="adaptive"
+              controlClassName="jig-mobile-touch-control"
+              renderOption={(option) => (
+                <span className="jig-mobile-selector-option">
+                  {option.label}
+                </span>
+              )}
+              onChange={(value) => {
+                if (isThemePreset(value)) {
+                  onThemePresetChange(value);
+                }
+              }}
+            />
+            <SegmentedControl
+              label="Appearance"
+              value={appearanceMode}
+              onChange={(value) => {
+                if (isAppearanceMode(value)) {
+                  onAppearanceModeChange(value);
+                }
+              }}
+              layout="fill"
+            >
+              <SegmentedControlItem
+                value="system"
+                label="System"
+                style={{ minHeight: "48px" }}
               />
-              <SegmentedControl
-                label="Appearance"
-                value={appearanceMode}
-                onChange={(value) => {
-                  if (isAppearanceMode(value)) {
-                    onAppearanceModeChange(value);
-                  }
-                }}
-                layout="fill"
-              >
-                <SegmentedControlItem
-                  value="system"
-                  label="System"
-                  style={{ minHeight: "48px" }}
-                />
-                <SegmentedControlItem
-                  value="light"
-                  label="Light"
-                  style={{ minHeight: "48px" }}
-                />
-                <SegmentedControlItem
-                  value="dark"
-                  label="Dark"
-                  style={{ minHeight: "48px" }}
-                />
-              </SegmentedControl>
-            </VStack>
-          </Section>
+              <SegmentedControlItem
+                value="light"
+                label="Light"
+                style={{ minHeight: "48px" }}
+              />
+              <SegmentedControlItem
+                value="dark"
+                label="Dark"
+                style={{ minHeight: "48px" }}
+              />
+            </SegmentedControl>
+          </div>
         </section>
 
         <section
@@ -287,11 +282,7 @@ export function SettingsView({
           aria-labelledby="notifications-heading"
         >
           <h2 id="notifications-heading">Notifications</h2>
-          <Section
-            className="jig-settings-card"
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
+          <div className="jig-settings-group">
             <div className="jig-settings-notifications">
               <div>
                 <strong>
@@ -340,7 +331,7 @@ export function SettingsView({
                 ) : null}
               </div>
             </div>
-          </Section>
+          </div>
         </section>
 
         <section
