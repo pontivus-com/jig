@@ -39,6 +39,20 @@ export class GitHubDeviceFlowSession {
     return this.currentCredential;
   }
 
+  nextPollDelayMs(): number | null {
+    if (this.state === null) {
+      return null;
+    }
+    const decision = githubDevicePollDecision(
+      this.state,
+      this.now().getTime(),
+    );
+    if (decision.status === "expired" || decision.status === "poll") {
+      return 0;
+    }
+    return decision.state.retry_after_seconds * 1000;
+  }
+
   snapshot(): GitHubAuthorizationSnapshot {
     return {
       available: this.available(),
