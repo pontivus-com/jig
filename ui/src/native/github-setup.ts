@@ -26,6 +26,9 @@ import {
   createAndroidGitEffects,
   removeAndroidManagedCheckout,
 } from "./git";
+import {
+  androidManagedGitHubReconnectRequired,
+} from "./github-managed-transport";
 import { createAndroidGitHubFetch } from "./github-fetch";
 import {
   initializeNativeDatabase,
@@ -174,7 +177,8 @@ Promise<GitHubCapabilityStatus> {
     onboarding_available: !configured &&
       onboarding.snapshot().available,
     reconnect_available: configured &&
-      reconnect.available(),
+      reconnect.available() &&
+      await androidManagedGitHubReconnectRequired(),
   };
 }
 
