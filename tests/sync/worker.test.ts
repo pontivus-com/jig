@@ -16,6 +16,7 @@ import {
   type PortableRemoteObservation,
 } from "../../src/shell/git";
 import {
+  applySynchronizedCanonicalState,
   applyTaskCommand,
   markExported,
   readCanonicalState,
