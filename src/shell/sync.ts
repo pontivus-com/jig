@@ -14,8 +14,6 @@ import {
   type PortableRemoteObservation,
   type SynchronizationRemote,
 } from "./git";
-import type { Task } from "../core/task";
-import type { RecurrenceSeries } from "../core/recurrence";
 import type {
   LocalGitSnapshotState,
   RemoteGitSynchronization,
@@ -33,10 +31,10 @@ import {
 import {
   canonicalPlanningEqual,
   reconcileCanonicalPlanning,
+  type CanonicalPlanning,
 } from "../core/reconciliation";
 import {
   decideSynchronization,
-  runSynchronizationRemoteOperation,
   SYNCHRONIZATION_HEALTHY_POLL_MS,
   synchronizationRetryDelayMs,
 } from "../synchronization";
@@ -47,7 +45,7 @@ export interface SyncConfiguration {
 
 export interface SyncController {
   readonly start: () => Promise<void>;
-  readonly stop: () => Promise<void>;
+  readonly stop: () => void;
   readonly notifyMutation: () => void;
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
   readonly status: () => RepositorySynchronizationStatus;
@@ -60,8 +58,7 @@ export interface SyncEffects {
   readonly inspectRemote: typeof inspectSynchronizationRemote;
   readonly observeRemote: typeof observePortableRemote;
   readonly alignLocal: typeof alignPortableDataRef;
-  readonly acknowledgeRemote:
-    typeof acknowledgePortableRemoteHead;
+  readonly acknowledgeRemote: typeof acknowledgePortableRemoteHead;
   readonly push: typeof pushPortableDataRef;
   readonly networkEnvironment: () => Promise<
     Readonly<Record<string, string>> | null
@@ -80,17 +77,13 @@ const REAL_EFFECTS: SyncEffects = {
   networkEnvironment: async () => ({}),
 };
 
-function snapshotsEqual(
+function sameFiles(
   left: ReadonlyMap<string, string>,
   right: ReadonlyMap<string, string>,
 ): boolean {
-  if (left.size !== right.size) {
-    return false;
-  }
-  for (const [path, content] of left) {
-    if (right.get(path) !== content) {
-      return false;
-    }
+  if (left.size !== right.size) return false;
+  for (const [path, value] of left) {
+    if (right.get(path) !== value) return false;
   }
   return true;
 }
@@ -99,40 +92,31 @@ function remoteStatus(
   remote: SynchronizationRemote | null,
   state: Exclude<RemoteGitSynchronization["state"], "not-configured">,
 ): RemoteGitSynchronization {
-  if (remote === null) {
-    return {
-      state: "not-configured",
-      remote_name: null,
-      remote_location: null,
-    };
-  }
-  return {
-    state,
-    remote_name: remote.name,
-    remote_location: remote.location,
-  };
+  return remote === null
+    ? {
+        state: "not-configured",
+        remote_name: null,
+        remote_location: null,
+      }
+    : {
+        state,
+        remote_name: remote.name,
+        remote_location: remote.location,
+      };
 }
 
-function ambiguousRemoteStatus(): RemoteGitSynchronization {
-  return {
-    state: "sync-issue",
-    remote_name: "configured",
-    remote_location: "Ambiguous Git synchronization destination",
-  };
-}
-
-function synchronizationStatus(
-  localGit: LocalGitSnapshotState,
+function status(
+  local_git: LocalGitSnapshotState,
   remote: SynchronizationRemote | null,
   remoteState: Exclude<RemoteGitSynchronization["state"], "not-configured">,
 ): RepositorySynchronizationStatus {
   return {
-    local_git: localGit,
+    local_git,
     remote: remoteStatus(remote, remoteState),
   };
 }
 
-function remoteIdentity(
+function selectedRemote(
   observation: PortableRemoteObservation,
 ): SynchronizationRemote | null {
   return observation.authority.state === "selected"
@@ -140,50 +124,49 @@ function remoteIdentity(
     : null;
 }
 
+function planning(
+  value: {
+    readonly tasks: CanonicalPlanning["tasks"];
+    readonly recurrences: CanonicalPlanning["recurrences"];
+  },
+): CanonicalPlanning {
+  return {
+    tasks: value.tasks,
+    recurrences: value.recurrences,
+  };
+}
+
 export function createSyncController(
   db: JigSqlConnection,
   config: SyncConfiguration,
-  effectOverrides: Partial<SyncEffects> = {},
+  overrides: Partial<SyncEffects> = {},
 ): SyncController {
-  const effects: SyncEffects = {
-    ...REAL_EFFECTS,
-    ...effectOverrides,
-  };
+  const effects: SyncEffects = { ...REAL_EFFECTS, ...overrides };
   const adapter: GitAdapterConfig = {
     repository_path: config.repository_path,
   };
 
   let remote: SynchronizationRemote | null = null;
-  let currentStatus = synchronizationStatus(
-    "pending",
-    remote,
-    "pending",
-  );
+  let current = status("pending", null, "pending");
   let running: Promise<RepositorySynchronizationStatus> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let firstDirtyAt: number | null = null;
-  let localFailureCount = 0;
-  let remoteFailureCount = 0;
+  let localFailures = 0;
+  let remoteFailures = 0;
   let stopped = false;
 
   const clearTimer = (): void => {
-    if (timer !== null) {
-      clearTimeout(timer);
-      timer = null;
-    }
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
   };
 
   const schedule = (delayMs: number): void => {
-    if (stopped) {
-      return;
-    }
+    if (stopped) return;
     clearTimer();
-    timer = setTimeout(() => {
-      void trigger();
-    }, delayMs);
+    timer = setTimeout(() => void trigger(), delayMs);
   };
 
-  const localPending = async (): Promise<boolean> => {
+  const pending = async (): Promise<boolean> => {
     const metadata = await readMetadata(db);
     return (
       metadata.revision !== metadata.last_exported_revision ||
@@ -192,272 +175,190 @@ export function createSyncController(
     );
   };
 
-  const reconcileConcreteLocalSnapshot = async (): Promise<void> => {
+  const repairLocalBoundary = async (): Promise<void> => {
     const metadata = await readMetadata(db);
     const state = await readCanonicalState(db);
-    const current = await effects.readCurrentSnapshot(
+    const local = await effects.readCurrentSnapshot(
       adapter,
       metadata.dataset_id,
     );
-    if (current === null) {
-      return;
-    }
+    if (local === null) return;
 
     const expected = serializeSnapshot(
       state.tasks,
       metadata.dataset_id,
       state.recurrences,
     );
-    const contentMatches = snapshotsEqual(
-      current.snapshot.files,
-      expected.files,
-    );
-
-    if (contentMatches) {
+    if (sameFiles(local.snapshot.files, expected.files)) {
       if (
-        metadata.last_exported_head !== current.head ||
-        metadata.last_exported_revision !== state.revision
+        metadata.last_exported_revision !== state.revision ||
+        metadata.last_exported_head !== local.head
       ) {
-        await markExported(db, state.revision, current.head);
+        await markExported(db, state.revision, local.head);
       }
-      if (metadata.last_adopted_head !== current.head) {
-        await markAdoptedHead(db, current.head);
+      if (metadata.last_adopted_head !== local.head) {
+        await markAdoptedHead(db, local.head);
       }
       return;
     }
 
-    const mutationPending =
+    if (
       state.revision !== metadata.last_exported_revision ||
-      metadata.pending_sync;
-    if (mutationPending) {
+      metadata.pending_sync
+    ) {
       return;
     }
 
-    await applySynchronizedCanonicalState(
+    const applied = await applySynchronizedCanonicalState(
       db,
       state.revision,
-      current.snapshot.tasks,
-      current.snapshot.recurrences,
-      current.head,
+      local.snapshot.tasks,
+      local.snapshot.recurrences,
+      local.head,
     );
+    await markExported(db, applied.revision, local.head);
   };
 
-  const currentLocalHeadIs = async (
-    expectedHead: string | null,
-  ): Promise<boolean> => {
-    const metadata = await readMetadata(db);
-    const current = await effects.readCurrentSnapshot(
-      adapter,
-      metadata.dataset_id,
-    );
-    return current?.head === expectedHead;
-  };
-
-  const exportCurrentState = async (): Promise<string> => {
+  const exportCurrent = async (): Promise<string> => {
     const state = await readCanonicalState(db);
     const metadata = await readMetadata(db);
-    const snapshot = serializeSnapshot(
-      state.tasks,
-      metadata.dataset_id,
-      state.recurrences,
-    );
     const head = await effects.writeSnapshot(
       adapter,
-      snapshot,
+      serializeSnapshot(
+        state.tasks,
+        metadata.dataset_id,
+        state.recurrences,
+      ),
       state.revision,
     );
     await markExported(db, state.revision, head);
     return head;
   };
 
-  const applyRemotePlanning = async (
-    observation: PortableRemoteObservation,
-    expectedRevision: number,
-    tasks: readonly Task[],
-    recurrences: readonly RecurrenceSeries[],
-  ): Promise<number> => {
-    const current = await readCanonicalState(db);
-    if (current.revision !== expectedRevision) {
-      throw new Error(
-        "Canonical revision changed during synchronization; re-observation required",
-      );
-    }
-    if (
-      canonicalPlanningEqual(
-        { tasks: current.tasks, recurrences: current.recurrences },
-        { tasks, recurrences },
+  const localHeadStill = async (head: string): Promise<boolean> => {
+    const metadata = await readMetadata(db);
+    return (
+      await effects.readCurrentSnapshot(
+        adapter,
+        metadata.dataset_id,
       )
-    ) {
-      if (observation.remote_head !== null) {
-        await markAdoptedHead(db, observation.remote_head);
-      }
-      return current.revision;
+    )?.head === head;
+  };
+
+  const applyPlanning = async (
+    expectedRevision: number,
+    head: string,
+    next: CanonicalPlanning,
+  ): Promise<number> => {
+    const state = await readCanonicalState(db);
+    if (state.revision !== expectedRevision) {
+      throw new Error("Synchronization revision changed");
     }
-    if (observation.remote_head === null) {
-      throw new Error("Remote head is required to apply synchronized state");
+    if (canonicalPlanningEqual(planning(state), next)) {
+      await markAdoptedHead(db, head);
+      return state.revision;
     }
     return (
       await applySynchronizedCanonicalState(
         db,
         expectedRevision,
-        tasks,
-        recurrences,
-        observation.remote_head,
+        next.tasks,
+        next.recurrences,
+        head,
       )
     ).revision;
   };
 
-  const transientRemoteFailure =
+  const structuralIssue =
     async (): Promise<RepositorySynchronizationStatus> => {
-      remoteFailureCount += 1;
-      currentStatus = synchronizationStatus(
-        (await localPending()) ? "pending" : "committed",
-        remote,
-        remoteFailureCount >= 7 ? "sync-issue" : "retrying",
-      );
-      schedule(
-        synchronizationRetryDelayMs(remoteFailureCount),
-      );
-      return currentStatus;
+      current =
+        remote === null
+          ? {
+              local_git: (await pending()) ? "pending" : "committed",
+              remote: {
+                state: "sync-issue",
+                remote_name: "configured",
+                remote_location:
+                  "Ambiguous Git synchronization destination",
+              },
+            }
+          : status(
+              (await pending()) ? "pending" : "committed",
+              remote,
+              "sync-issue",
+            );
+      schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
+      return current;
     };
 
-  const structuralIssue = async (): Promise<RepositorySynchronizationStatus> => {
-    const committed = !(await localPending());
-    currentStatus = remote === null
-      ? {
-          local_git: committed ? "committed" : "pending",
-          remote: ambiguousRemoteStatus(),
-        }
-      : synchronizationStatus(
-          committed ? "committed" : "pending",
-          remote,
-          "sync-issue",
-        );
-    schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
-    return currentStatus;
-  };
-
-  const runOnce = async (): Promise<RepositorySynchronizationStatus> => {
-    try {
-      const datasetId = (await readMetadata(db)).dataset_id;
-      await effects.ensurePortableData(adapter, datasetId);
-      await reconcileConcreteLocalSnapshot();
-      localFailureCount = 0;
-    } catch {
-      localFailureCount += 1;
-      currentStatus = synchronizationStatus(
-        "issue",
+  const transientIssue =
+    async (): Promise<RepositorySynchronizationStatus> => {
+      remoteFailures += 1;
+      current = status(
+        (await pending()) ? "pending" : "committed",
         remote,
-        "pending",
+        remoteFailures >= 7 ? "sync-issue" : "retrying",
       );
-      schedule(synchronizationRetryDelayMs(localFailureCount));
-      return currentStatus;
-    }
+      schedule(synchronizationRetryDelayMs(remoteFailures));
+      return current;
+    };
 
-    try {
-      remote = await effects.inspectRemote(adapter);
-    } catch {
-      return await transientRemoteFailure();
-    }
-
-    let networkEnvironment:
-      Readonly<Record<string, string>> | null;
-    try {
-      networkEnvironment =
-        await runSynchronizationRemoteOperation(
-          effects.networkEnvironment,
-        );
-    } catch {
-      return await transientRemoteFailure();
-    }
-    if (networkEnvironment === null) {
-      return structuralIssue();
-    }
-
-    for (let raceAttempt = 0; raceAttempt < 3; raceAttempt += 1) {
+  const converge = async (
+    environment: Readonly<Record<string, string>>,
+  ): Promise<RepositorySynchronizationStatus> => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
       let observation: PortableRemoteObservation;
       try {
         const datasetId = (await readMetadata(db)).dataset_id;
-        observation =
-          await runSynchronizationRemoteOperation(
-            () =>
-              effects.observeRemote(
-                adapter,
-                datasetId,
-                networkEnvironment,
-              ),
-          );
+        observation = await effects.observeRemote(
+          adapter,
+          datasetId,
+          environment,
+        );
       } catch {
-        return await transientRemoteFailure();
+        return transientIssue();
       }
 
-      remote = remoteIdentity(observation);
+      remote = selectedRemote(observation);
 
       if (observation.remote_state === "none") {
-        try {
-          if (await localPending()) {
-            await exportCurrentState();
-          }
-          firstDirtyAt = null;
-          remoteFailureCount = 0;
-          currentStatus = synchronizationStatus(
-            "committed",
-            null,
-            "pending",
-          );
-          schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
-          return currentStatus;
-        } catch {
-          localFailureCount += 1;
-          currentStatus = synchronizationStatus(
-            "issue",
-            null,
-            "pending",
-          );
-          schedule(synchronizationRetryDelayMs(localFailureCount));
-          return currentStatus;
-        }
+        if (await pending()) await exportCurrent();
+        remoteFailures = 0;
+        firstDirtyAt = null;
+        current = status("committed", null, "pending");
+        schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
+        return current;
       }
-
       if (observation.remote_state === "ambiguous") {
-        remote = null;
         return structuralIssue();
       }
-
       if (observation.remote_state === "absent") {
-        if (observation.previous_remote_head !== null || remote === null) {
+        if (
+          remote === null ||
+          observation.previous_remote_head !== null
+        ) {
           return structuralIssue();
         }
-        try {
-          if (await localPending()) {
-            await exportCurrentState();
-          }
-          const pushed =
-            await runSynchronizationRemoteOperation(
-              () =>
-                effects.push(
-                  adapter,
-                  remote,
-                  networkEnvironment,
-                ),
-            );
-          if (!pushed.retryable && pushed.status === "sync-issue") {
-            return structuralIssue();
-          }
-          continue;
-        } catch {
-          continue;
+        if (await pending()) await exportCurrent();
+        const pushed = await effects.push(
+          adapter,
+          remote,
+          environment,
+        );
+        if (!pushed.retryable && pushed.status === "sync-issue") {
+          return structuralIssue();
         }
+        continue;
       }
 
-      const remoteSnapshot = observation.remote_snapshot;
       const remoteHead = observation.remote_head;
+      const remoteSnapshot = observation.remote_snapshot;
       const localHead = observation.local_head;
       if (
-        remoteSnapshot === null ||
+        remote === null ||
         remoteHead === null ||
-        localHead === null ||
-        remote === null
+        remoteSnapshot === null ||
+        localHead === null
       ) {
         return structuralIssue();
       }
@@ -466,248 +367,142 @@ export function createSyncController(
       let metadata = await readMetadata(db);
 
       if (remoteSnapshot.dataset_id !== metadata.dataset_id) {
-        const emptyBootstrap =
-          state.revision === 0 &&
-          metadata.last_exported_revision === 0 &&
-          state.tasks.length === 0 &&
-          state.recurrences.length === 0;
-        if (!emptyBootstrap) {
+        if (
+          state.revision !== 0 ||
+          metadata.last_exported_revision !== 0 ||
+          state.tasks.length !== 0 ||
+          state.recurrences.length !== 0
+        ) {
           return structuralIssue();
         }
-        try {
-          const previousDatasetId = metadata.dataset_id;
-          await adoptEmptyDatasetIdentity(
-            db,
-            previousDatasetId,
-            remoteSnapshot.dataset_id,
-          );
-          state = await readCanonicalState(db);
-          metadata = await readMetadata(db);
-          if (
-            remoteSnapshot.tasks.length > 0 ||
-            remoteSnapshot.recurrences.length > 0
-          ) {
-            const applied =
-              await applySynchronizedCanonicalState(
-                db,
-                state.revision,
-                remoteSnapshot.tasks,
-                remoteSnapshot.recurrences,
-                remoteHead,
-              );
-            await effects.alignLocal(
-              adapter,
-              localHead,
-              remoteHead,
-            );
-            await markExported(
-              db,
-              applied.revision,
-              remoteHead,
-            );
-          } else {
-            await effects.alignLocal(
-              adapter,
-              localHead,
-              remoteHead,
-            );
-            await markAdoptedHead(db, remoteHead);
-            await markExported(
-              db,
-              state.revision,
-              remoteHead,
-            );
-          }
-          continue;
-        } catch {
-          return structuralIssue();
-        }
+        await adoptEmptyDatasetIdentity(
+          db,
+          metadata.dataset_id,
+          remoteSnapshot.dataset_id,
+        );
+        state = await readCanonicalState(db);
+        const revision = await applyPlanning(
+          state.revision,
+          remoteHead,
+          planning(remoteSnapshot),
+        );
+        await effects.alignLocal(adapter, localHead, remoteHead);
+        await effects.acknowledgeRemote(adapter, remoteHead);
+        await markExported(db, revision, remoteHead);
+        continue;
       }
 
-      const currentSnapshot = serializeSnapshot(
-        state.tasks,
-        metadata.dataset_id,
-        state.recurrences,
-      );
-      const matchesRemote = snapshotsEqual(
-        currentSnapshot.files,
-        remoteSnapshot.files,
-      );
-      const pending =
-        state.revision !== metadata.last_exported_revision ||
-        metadata.last_exported_head === null ||
-        metadata.pending_sync;
+      const currentPlanning = planning(state);
+      const remotePlanning = planning(remoteSnapshot);
       const decision = decideSynchronization({
-        remote: "present",
-        previously_observed_remote:
-          observation.previous_remote_head !== null,
         remote_rewritten: observation.remote_rewritten,
         lineage: observation.lineage,
-        local_pending: pending,
-        canonical_matches_remote: matchesRemote,
+        local_pending:
+          state.revision !== metadata.last_exported_revision ||
+          metadata.pending_sync,
+        canonical_matches_remote:
+          canonicalPlanningEqual(
+            currentPlanning,
+            remotePlanning,
+          ),
         base_available: observation.base !== null,
       });
 
-      if (decision === "needs-attention") {
-        return structuralIssue();
-      }
-
+      if (decision === "attention") return structuralIssue();
       if (decision === "synchronized") {
-        remoteFailureCount = 0;
+        remoteFailures = 0;
         firstDirtyAt = null;
-        currentStatus = synchronizationStatus(
-          "committed",
-          remote,
-          "synchronized",
-        );
+        current = status("committed", remote, "synchronized");
         schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
-        return currentStatus;
+        return current;
       }
-
-      if (decision === "normalize-to-remote") {
-        try {
-          if (localHead !== remoteHead) {
-            await effects.alignLocal(
-              adapter,
-              localHead,
-              remoteHead,
-            );
-          }
-          await effects.acknowledgeRemote(
-            adapter,
-            remoteHead,
-          );
-          await markAdoptedHead(db, remoteHead);
-          await markExported(db, state.revision, remoteHead);
-          continue;
-        } catch {
-          continue;
+      if (decision === "normalize") {
+        if (localHead !== remoteHead) {
+          await effects.alignLocal(adapter, localHead, remoteHead);
         }
+        await effects.acknowledgeRemote(adapter, remoteHead);
+        await markAdoptedHead(db, remoteHead);
+        await markExported(db, state.revision, remoteHead);
+        continue;
       }
-
-      if (decision === "adopt-remote") {
-        try {
-          const expectedRevision = state.revision;
-          const applied =
-            await applySynchronizedCanonicalState(
-              db,
-              expectedRevision,
-              remoteSnapshot.tasks,
-              remoteSnapshot.recurrences,
-              remoteHead,
-            );
-          await effects.alignLocal(
-            adapter,
-            localHead,
-            remoteHead,
-          );
-          await markExported(
-            db,
-            applied.revision,
-            remoteHead,
-          );
-          continue;
-        } catch {
-          continue;
-        }
+      if (decision === "adopt") {
+        const revision = await applyPlanning(
+          state.revision,
+          remoteHead,
+          remotePlanning,
+        );
+        await effects.alignLocal(adapter, localHead, remoteHead);
+        await markExported(db, revision, remoteHead);
+        continue;
       }
-
       if (decision === "reconcile") {
         const base = observation.base;
-        if (base === null) {
-          return structuralIssue();
-        }
-        const reconciled = reconcileCanonicalPlanning(
-          {
-            tasks: base.snapshot.tasks,
-            recurrences: base.snapshot.recurrences,
-          },
-          { tasks: state.tasks, recurrences: state.recurrences },
-          {
-            tasks: remoteSnapshot.tasks,
-            recurrences: remoteSnapshot.recurrences,
-          },
+        if (base === null) return structuralIssue();
+        const merged = reconcileCanonicalPlanning(
+          planning(base.snapshot),
+          currentPlanning,
+          remotePlanning,
         );
-        if (reconciled.state === "conflict") {
+        if (merged.state === "conflict") {
           return structuralIssue();
         }
-
-        try {
-          const appliedRevision = await applyRemotePlanning(
-            observation,
-            state.revision,
-            reconciled.planning.tasks,
-            reconciled.planning.recurrences,
-          );
-          if (!(await currentLocalHeadIs(localHead))) {
-            continue;
-          }
-          if (localHead !== remoteHead) {
-            await effects.alignLocal(
-              adapter,
-              localHead,
-              remoteHead,
-            );
-          }
-          const merged = await readCanonicalState(db);
-          if (merged.revision < appliedRevision) {
-            continue;
-          }
-          await exportCurrentState();
-          const pushed =
-            await runSynchronizationRemoteOperation(
-              () =>
-                effects.push(
-                  adapter,
-                  remote,
-                  networkEnvironment,
-                ),
-            );
-          if (!pushed.retryable && pushed.status === "sync-issue") {
-            return structuralIssue();
-          }
-          continue;
-        } catch {
+        const revision = await applyPlanning(
+          state.revision,
+          remoteHead,
+          merged.planning,
+        );
+        if (!(await localHeadStill(localHead))) continue;
+        if (localHead !== remoteHead) {
+          await effects.alignLocal(adapter, localHead, remoteHead);
+        }
+        if ((await readCanonicalState(db)).revision < revision) {
           continue;
         }
+        await exportCurrent();
+      } else {
+        if (!(await localHeadStill(localHead))) continue;
+        if (await pending()) await exportCurrent();
       }
 
-      if (decision === "export-and-push") {
-        try {
-          if (!(await currentLocalHeadIs(localHead))) {
-            continue;
-          }
-          if (await localPending()) {
-            await exportCurrentState();
-          }
-          const pushed =
-            await runSynchronizationRemoteOperation(
-              () =>
-                effects.push(
-                  adapter,
-                  remote,
-                  networkEnvironment,
-                ),
-            );
-          if (!pushed.retryable && pushed.status === "sync-issue") {
-            return structuralIssue();
-          }
-          continue;
-        } catch {
-          continue;
-        }
+      const pushed = await effects.push(
+        adapter,
+        remote,
+        environment,
+      );
+      if (!pushed.retryable && pushed.status === "sync-issue") {
+        return structuralIssue();
       }
+    }
+    return transientIssue();
+  };
 
-      return structuralIssue();
+  const runOnce = async (): Promise<RepositorySynchronizationStatus> => {
+    try {
+      await effects.ensurePortableData(
+        adapter,
+        (await readMetadata(db)).dataset_id,
+      );
+      await repairLocalBoundary();
+      localFailures = 0;
+    } catch {
+      localFailures += 1;
+      current = status("issue", remote, "pending");
+      schedule(synchronizationRetryDelayMs(localFailures));
+      return current;
     }
 
-    return await transientRemoteFailure();
+    try {
+      remote = await effects.inspectRemote(adapter);
+      const environment = await effects.networkEnvironment();
+      if (environment === null) return structuralIssue();
+      return await converge(environment);
+    } catch {
+      return transientIssue();
+    }
   };
 
   const trigger = async (): Promise<RepositorySynchronizationStatus> => {
-    if (running !== null) {
-      return running;
-    }
+    if (running !== null) return running;
     clearTimer();
     running = runOnce().finally(() => {
       running = null;
@@ -718,39 +513,32 @@ export function createSyncController(
   return {
     start: async () => {
       stopped = false;
-      currentStatus = synchronizationStatus(
-        (await localPending()) ? "pending" : "committed",
+      current = status(
+        (await pending()) ? "pending" : "committed",
         remote,
         "pending",
       );
       schedule(0);
     },
-    stop: async () => {
+    stop: () => {
       stopped = true;
       clearTimer();
-      const active = running;
-      if (active !== null) {
-        await active.catch(() => currentStatus);
-      }
     },
     notifyMutation: () => {
-      currentStatus = synchronizationStatus(
-        "pending",
-        remote,
-        "pending",
-      );
+      current = status("pending", remote, "pending");
       const now = Date.now();
       firstDirtyAt ??= now;
-      const latestTarget = now + EXPORT_DEBOUNCE_MS;
-      const maximumTarget = firstDirtyAt + EXPORT_MAX_FLUSH_MS;
       schedule(
         Math.max(
           0,
-          Math.min(latestTarget, maximumTarget) - now,
+          Math.min(
+            now + EXPORT_DEBOUNCE_MS,
+            firstDirtyAt + EXPORT_MAX_FLUSH_MS,
+          ) - now,
         ),
       );
     },
     trigger,
-    status: () => currentStatus,
+    status: () => current,
   };
 }
