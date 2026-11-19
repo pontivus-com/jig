@@ -1116,6 +1116,30 @@ export async function observePortableRemote(
   };
 }
 
+export async function acknowledgePortableRemoteHead(
+  config: GitAdapterConfig,
+  head: string,
+): Promise<void> {
+  const authority = await inspectSynchronizationAuthority(config);
+  if (authority.state !== "selected") {
+    throw new GitAdapterError(
+      "Cannot acknowledge a remote head without one synchronization destination",
+    );
+  }
+  const observedRef =
+    `refs/jig/observed/${authority.remote.name}/jig-data`;
+  const current = await refHead(
+    config.repository_path,
+    observedRef,
+  );
+  await updateTrackingRef(
+    config.repository_path,
+    observedRef,
+    head,
+    current,
+  );
+}
+
 export async function alignPortableDataRef(
   config: GitAdapterConfig,
   expectedHead: string,
