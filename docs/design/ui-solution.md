@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Canonical UI solution through v1.1, amended 2026-11-19 for the physical-mobile UX remediation and the governed onboarding/Task-form visual authority. v1.0.x sections remain release history only; the v1.1 composition and screen specifications plus the governed v1.1 reference assets below supersede their mobile density, onboarding, Task movement, Settings and Task-form interaction details.
+**Status:** Canonical UI solution through v1.1, amended 2026-11-19 by UX-F0 after implementation-fidelity review. The app-wide configured desktop/mobile hierarchy is now governed by the v1.1 application reference below; the existing onboarding/Task-form references remain binding within their scopes. v1.0.x sections remain release history only.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–31.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx ownership, the governed Task-movement proof gate, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop and Android, including v1.1 onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
@@ -16,6 +16,7 @@ The v1.0.3 assets below are retained as historical structural baselines where ex
 | ![Desktop Planner v1.0.3](reference/desktop-planner-v1.0.3.svg) | [Desktop Planner](reference/desktop-planner-v1.0.3.svg) | Historical structural baseline: no sidebar; Jig home at left; page-centered week range above grouped Previous/Today/Next controls; right-side actions/navigation; seven fluid date tracks. v1.0.4 supersedes its heavier chrome and adds explicit Planner navigation. |
 | ![Mobile Planner v1.0.3](reference/mobile-planner-v1.0.3.svg) | [Mobile/narrow Planner](reference/mobile-planner-v1.0.3.svg) | Historical v1.0.3 narrow composition only. v1.0.4 supersedes its selected-date strip/list with seven vertically stacked dated sections; the asset must not be used as authority for day selection. |
 | ![Narrow Task workspace](reference/mobile-editor.svg) | [Narrow Task workspace](reference/mobile-editor.svg) | **Historical v1.0.3 provenance only for v1.1 Task-form presentation.** The governed v1.1 mobile reference below supersedes its form hierarchy, density, touch geometry, Repeat and BottomSheet action placement. |
+| [Governed v1.1 application UX/UI reference](reference/jig-v1.1-application-ux-ui-governed-reference.html) | [Configured mobile + desktop application shell, Planner, History and Settings](reference/jig-v1.1-application-ux-ui-governed-reference.html) | **Binding v1.1 app-wide authority** for compact bottom navigation, Planner FAB, shell/action prominence, temporal hierarchy, Planner density and configured History/Settings composition. |
 | [Governed v1.1 mobile UX/UI reference](reference/jig-v1.1-mobile-ux-ui-governed-reference.html) | [Android/narrow onboarding + complete Task form](reference/jig-v1.1-mobile-ux-ui-governed-reference.html) | **Binding v1.1 authority** for onboarding hierarchy/states and the complete mobile Task form, including ≥48px touch geometry, vertical form language, progressive Repeat disclosure, BottomSheet scrolling and action placement. |
 | [Governed v1.1 desktop onboarding + Task-form reference](reference/jig-v1.1-desktop-onboarding-task-form-governed-reference.html) | [Desktop onboarding + complete Task form](reference/jig-v1.1-desktop-onboarding-task-form-governed-reference.html) | **Binding v1.1 authority** for desktop onboarding composition and the complete Drawer Task form/Repeat interaction. |
 | ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history; uses the same top application navigation |
@@ -24,14 +25,14 @@ The v1.0.3 assets below are retained as historical structural baselines where ex
 
 The older `desktop-week.svg`, `desktop-week-task-drawer.svg`, `desktop-day.svg` and `mobile-day.svg` are historical design inputs after this revision. They must not be used to reintroduce a sidebar, Day/Week destinations, a Day completed section, a split date-navigation model, or a right-side mobile Drawer.
 
-### 1.1 v1.1 governed onboarding, Task-form and mobile-form authority
+### 1.1 v1.1 governed application, onboarding and Task-form authority
 
-The two v1.1 HTML references above are **normative product-design authority**, not implementation screenshots and not optional inspiration. They govern information hierarchy, user-visible state composition, responsive arrangement, form density, product-level interaction geometry and primary/secondary action hierarchy within their declared scope. Exact reusable component anatomy, theme rendering, accessible primitive behavior and token realization remain Astryx-owned.
+The three v1.1 HTML references above are **normative product-design authority**, not implementation screenshots and not optional inspiration. The app-wide reference owns configured shell/navigation/Planner/History/Settings hierarchy; the mobile and desktop onboarding/Task-form references own those surfaces. Together they govern information hierarchy, user-visible state composition, responsive arrangement, form density, product-level interaction geometry and primary/secondary action hierarchy within their declared scopes. Exact reusable component anatomy, theme rendering, accessible primitive behavior and token realization remain Astryx-owned.
 
 Authority precedence inside this scope is:
 
 1. functional requirements define observable behavior and domain semantics;
-2. this UI solution plus the two governed v1.1 references define the user-visible hierarchy, responsive composition and product-level geometry;
+2. this UI solution plus the three governed v1.1 references define the user-visible hierarchy, responsive composition and product-level geometry;
 3. pinned Astryx public APIs define reusable component mechanics and semantic styling;
 4. Jig React/CSS supplies only the smallest product-specific composition needed to realize that authority;
 5. current implementation, historical SVGs and screenshots are evidence only.
@@ -50,15 +51,16 @@ The original raster provenance recorded in repository history remains useful for
 
 ## 2. Information architecture
 
-Jig has one primary planning destination: **Planner**. Planner remains the default/Home destination and is also shown explicitly in the desktop right-side navigation beside History and Settings so destination state is immediately legible. The Jig mark remains an additional Home affordance. Narrow/mobile uses the compact hamburger presentation of the same Planner, History and Settings destination set.
+Jig has one primary planning destination: **Planner**. Planner remains the default/Home destination and is also shown explicitly in the desktop right-side navigation beside History and Settings so destination state is immediately legible. The Jig mark remains an additional Home affordance. On compact/mobile, Planner, History and Settings are the three persistent peer destinations in a bottom navigation bar.
 
 The only secondary destinations are **History** and **Settings**.
 
 - Clicking the Jig product mark/wordmark returns to Planner.
-- Desktop exposes History and Settings directly in the right side of the global header.
-- Narrow/mobile exposes the same two destinations through a compact hamburger menu/popover.
+- Desktop exposes Planner, History and Settings directly in the right side of the global header.
+- Compact/mobile exposes the same three destinations persistently in bottom navigation; a hamburger/popover is not the primary destination owner.
 - There is no desktop SideNav, mobile navigation drawer, separate Day destination, separate Week destination, or Board destination.
 - Today is a temporal shortcut inside Planner, not a destination.
+- Planner-only **Add task** is a single prominent compact/mobile FAB above the bottom navigation; History/Settings do not render it.
 
 Planner owns one temporal presentation state: the displayed week. Desktop renders all seven outstanding date sequences as columns. Narrow/mobile renders the same seven sequences as vertically stacked dated sections. There is no selected-day state or selected-day subview. Completed Tasks are absent from Planner and live in History.
 
@@ -281,41 +283,42 @@ For managed GitHub repositories, credential renewal remains invisible. **Reconne
 
 Below the 73rem Planner breakpoint, render a deliberate touch-first composition rather than compressing desktop controls.
 
-The top hierarchy is one sticky header with two Planner rows:
+The compact configured hierarchy uses three persistent regions:
 
-**Application row — minimum 56px content height**
-- Jig Home/wordmark at start;
-- Planner-only Add Task;
-- compact synchronization state;
-- primary navigation menu trigger.
+**Top application row — minimum 56px content height**
+- Planner: canonical Jig wordmark/Home at start;
+- History/Settings: destination title at start; the explanatory subtitle belongs in body/supporting content on compact screens rather than wrapping inside the bar;
+- restrained synchronization indicator at end;
+- no Planner Add button and no hamburger primary-navigation trigger.
 
-**Temporal row — minimum 56px content height**
+**Temporal row — Planner only, minimum 56px content height**
 - Previous week;
-- flexible compact week range;
+- flexible readable week range as the dominant temporal label;
 - Next week;
-- Today.
+- explicit **Today** text action.
 
-History/Settings render only the application row with their destination heading. Safe-area inset belongs to the header.
+**Bottom navigation — configured application only**
+- exactly Planner, History and Settings from the shared typed destination owner;
+- persistent across configured compact Planner/History/Settings;
+- current destination is clear through icon + label + active treatment;
+- every navigation item has a >=48px interaction target;
+- bottom system/gesture safe-area inset belongs to this navigation owner.
 
-Every standalone mobile header action has a **minimum 48×48px hit area**. Adjacent icon actions have at least **8px visible separation** unless they are deliberately represented as one segmented/grouped control. Small icon glyphs are allowed; small hit targets are not. Do not use `size="sm"` as the mobile density strategy.
+Planner additionally renders one bottom-end **Add task** FAB above the bottom navigation. It is the only control allowed the highest action prominence on the compact Planner.
 
-At 320/360/390/414px, brand/title and actions must remain non-overlapping. The flexible title/range owns truncation/wrapping; action hit areas never shrink to make text fit.
+Healthy synchronization is deliberately subordinate. Its visible glyph/status dot may be much smaller than 48px while the owning interaction target remains >=48×48px. Pending/retrying/error may increase semantic salience and a genuine problem may add the governed banner/recovery action, but synchronization must not become a second primary action.
 
-The Planner body remains seven vertically stacked dated sections. Each date header shows the full weekday name + day number and a date-specific Add action with the same >=48px mobile target. There is no horizontal selected-date strip or selected-day subview.
+Every ordinary mobile interaction has a **minimum 48×48px hit area**. This is a focus/touch geometry requirement, not a minimum visible filled-button size. Small icon glyphs inside larger transparent targets are expected for quiet toolbar actions.
 
-#### Mobile navigation menu
+At 320/360/390/414px, identity/title, status and temporal controls must remain non-overlapping. The week range owns flexible width; hit areas never shrink to make text fit.
 
-The hamburger remains a **popover/menu**, not a drawer or SideNav, but the current overly compact menu presentation is superseded.
+The Planner body remains seven vertically stacked dated sections. Empty date sections are content-driven and compact: they contain the date header but do not reserve task-card-like vertical acreage. Populated dates grow with their Task sequence. Each date header shows the full weekday name + day number and a quiet date-specific Add affordance with a >=48px target. There is no horizontal selected-date strip or selected-day subview.
 
-The opened menu:
-- contains exactly Planner, History and Settings from the shared destination owner;
-- uses one icon + label + current-state indicator alignment;
-- gives every row at least **48px** interaction height with comfortable vertical/horizontal padding;
-- has enough width for normal labels without crowding/truncation;
-- uses visible separation between rows through spacing/quiet dividers rather than packing controls together;
-- keeps one clear current-destination treatment and keyboard/focus semantics.
+#### Compact primary navigation and Add
 
-Use Astryx public DropdownMenu if its public API can meet that geometry. If it cannot, document the public-API incompatibility and compose the smallest Jig-owned menu using Astryx public Popover/Button/list leaves and tokens. Do not target Astryx private DOM/CSS to enlarge a compact menu.
+Pinned Astryx 0.7.13 has no public bottom-navigation or FAB primitive. Jig therefore owns only the product-specific bottom-navigation/FAB **placement containers**, using Astryx public Button/IconButton/Icon leaves, public tokens, focus/disabled behavior and the one typed `DESTINATIONS` owner. This is the minimum public-API compatibility exception; it does not authorize a second navigation state owner, custom button anatomy or another design system.
+
+The superseded hamburger/popover may still exist for unrelated contextual overflow if later required, but it is not the compact primary destination mechanism.
 
 Task create/edit uses a BottomSheet. Existing and new Tasks open directly into the same integrated Task form described in §4.4.
 
@@ -478,14 +481,14 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 
 | Case | Acceptance |
 |---|---|
-| Header composition | desktop remains <=44px; mobile Planner uses one sticky two-row header with each row >=56px and every standalone touch target >=48×48px; History/Settings use one >=56px application row; no overlap/overflow at 320/360/390/414px |
+| Header composition | desktop remains <=44px; compact Planner uses one >=56px application row plus one >=56px temporal row; History/Settings use one >=56px application row; visible icon/container prominence is independent from >=48×48px hit geometry; no overlap/overflow at 320/360/390/414px |
 | Week navigation | Previous/Next shift displayed week exactly seven days; Today restores the current week; no selected-day state and no Task mutation |
 | Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; content-driven heights; open lanes with whitespace/hairline separation rather than boxed panels; full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
 | Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
 | Task workspace | Click/tap opens one integrated form ordered Title · Date · Repeat · Reminder · Priority · Context · Reference · Notes; Repeat uses Does not repeat/Weekly/Monthly progressive disclosure; one Save atomically commits Task + recurrence changes; no second recurrence editor/save exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
 | Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
-| Mobile header/menu | Add/sync/menu/temporal/date-add targets are >=48×48px with >=8px separation between standalone controls; menu rows are >=48px, comfortably padded and legible; same Planner/History/Settings owner; no drawer/SideNav |
+| Mobile navigation/actions | persistent bottom navigation renders exactly Planner/History/Settings from one owner; each item is >=48px; Planner-only Add is one prominent FAB above the navigation; healthy sync is visually subordinate inside a >=48px target; Previous/Next/Today/date Add remain touch-sized without becoming equally prominent filled controls; no hamburger/drawer/SideNav as primary navigation |
 | Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
 | Secondary screen measure | History and Settings follow `min(available width, 50rem)` continuously at 1440/1168/1167/1024/900/800/600/390px; no discontinuity at 73rem; Planner remains full-width; Settings column reflow is independent |
 | Secondary destination heading | History/Settings title + governed subtitle exist exactly once in the application header on desktop and narrow/mobile; body contains no duplicate page heading/subtitle and begins with actual destination content |
@@ -506,7 +509,7 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | Reminder delivery | with granted permission an eligible due reminder creates browser Notification whether visible/hidden/focused/unfocused; no reminder Toast; unsupported/default/denied states do not claim delivery and successful keys do not duplicate |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
 
-Final production evidence is the running Astryx UI in Playwright/browser screenshots. Reference SVGs govern structure, not pixel-perfect library anatomy.
+Final production evidence is the running Astryx UI in Playwright/browser screenshots **plus explicit visual-fidelity review against the governed references**. Automated geometry/interaction assertions and screenshot capture are necessary but neither alone closes hierarchy, density, prominence or design-language fidelity. Reference assets govern product composition, not pixel-perfect Astryx internals.
 
 ## 7. Design change control
 
@@ -519,9 +522,10 @@ Implementation plans must link to this document, [Planning workbench functional 
 
 ## v1.1 UI composition
 
-- **Mobile interaction density:** phone/touch presentation uses >=48×48px ordinary interaction targets across header/menu/date controls/Task cards/BottomSheet/Repeat/Settings. Mobile header rows are >=56px; standalone adjacent controls have visible breathing room. `size="sm"` is never a justification for a smaller hit target.
-- **Narrow header:** Planner renders one sticky application row (wordmark, Add, compact sync, menu) plus one temporal row (Previous, range, Next, Today). History/Settings render only the application row with their title/subtitle. Safe-area inset belongs to this owner.
-- **Navigation menu:** remains a popover/menu from the shared destination owner, but menu rows are touch-sized and comfortably padded. If Astryx DropdownMenu cannot satisfy the governed geometry through public API, use the smallest Astryx-Popover/public-leaf composition rather than private CSS.
+- **Mobile interaction density:** phone/touch presentation uses >=48×48px ordinary interaction targets across header/navigation/date controls/Task cards/BottomSheet/Repeat/Settings. A 48px hit target does **not** require a 48px visible filled container; quiet icon controls keep visual mass subordinate while retaining accessibility geometry.
+- **Compact shell:** Planner renders one sticky application row (wordmark + restrained sync) plus one temporal row (Previous, readable range, Next, explicit Today). History/Settings render only the application row with the destination title. Safe-area inset belongs to the top owner.
+- **Compact primary navigation:** configured Planner/History/Settings use persistent bottom navigation from the shared destination owner. The old hamburger/popover primary-navigation pattern is superseded.
+- **Planner Add:** compact Planner uses one bottom-end Add task FAB above the bottom navigation. Add is absent from compact History/Settings and from onboarding.
 - **Secondary desktop heading:** History/Settings replace the center temporal navigator with the same compact title + subtitle heading; body begins with actual content.
 - **Onboarding:** bootstrap remains inside the canonical Jig shell and conforms to the governed v1.1 mobile/desktop onboarding references: product-value orientation precedes provider mechanics; Android exposes Connect GitHub only; desktop adds the genuine existing-local-repository path; authorization/repository-selection/finishing/attention retain the bounded reference hierarchy while protocol work remains automatic.
 - **Settings:** one vertical reading hierarchy, not a 2×2 dashboard: Data & sync, Appearance, Notifications, then collapsed/subordinate Diagnostics. Data & sync combines repository home, local safety, continuity and recovery; technical mechanics stay under Diagnostics.
