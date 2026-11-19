@@ -29,6 +29,7 @@ Jig owns:
 - local SQLite durability;
 - deterministic portable Jig records;
 - scheduling/triggering automatic synchronization;
+- deterministic reconciliation of **non-conflicting** concurrent changes to Jig-owned canonical Task/recurrence records, using an explicit common snapshot and without last-writer-wins; contradictory semantic changes must preserve both sides and stop safely rather than being silently chosen;
 - one structured repository synchronization status that distinguishes the current Jig local-Git snapshot boundary (pending/committed/issue) from remote synchronization (not configured/pending/retrying/synchronized/sync-issue); primary/header labels such as Local only, Syncing, Up to date and Needs attention are derived user-level presentation, while exact Local Git/Remote Git facts remain secondary diagnostics rather than a second authority;
 - validating/adopting a complete Jig portable snapshot presented by the selected repository.
 
@@ -38,8 +39,10 @@ Git owns:
 - branches, refs, worktrees, upstreams and topology;
 - user/repository identity and commit-signing policy;
 - credentials and authentication;
-- history, merge, rebase, conflict handling and reconciliation;
+- repository history, Git merge/rebase/conflict mechanics and history reconciliation;
 - normal Git configuration and transport semantics.
+
+The narrow Jig-owned planning-data reconciliation above must never be implemented as `git pull`, a Git merge/rebase workflow, forced history rewrite or a user-facing Git-conflict model. It operates only on validated canonical Jig records and emits one ordinary snapshot commit on the current remote head when the data-level merge is conflict-free.
 
 The repository adapter may invoke Git commands necessary to synchronize Jig-owned data and may use an isolation mechanism internally to ensure unrelated repository content is untouched. Those mechanics must remain private to the adapter. Do not expose or persist Git topology as Jig application state or user configuration.
 
