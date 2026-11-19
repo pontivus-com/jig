@@ -13,6 +13,38 @@ import {
   startGitHubDeviceAuthorization,
 } from "./github-auth";
 
+export type GitHubFlowSleep = (
+  milliseconds: number,
+) => Promise<void>;
+
+export class GitHubFlowWakeup {
+  private wake: (() => void) | null = null;
+
+  async wait(
+    milliseconds: number,
+    sleep: GitHubFlowSleep,
+  ): Promise<void> {
+    let wakeCurrent: (() => void) | null = null;
+    const wakePromise = new Promise<void>((resolve) => {
+      wakeCurrent = resolve;
+      this.wake = resolve;
+    });
+    await Promise.race([
+      sleep(milliseconds),
+      wakePromise,
+    ]);
+    if (this.wake === wakeCurrent) {
+      this.wake = null;
+    }
+  }
+
+  resume(): void {
+    const wake = this.wake;
+    this.wake = null;
+    wake?.();
+  }
+}
+
 export interface GitHubDeviceFlowDependencies {
   readonly registration: GitHubAppRegistration | null;
   readonly assert_credential_store: () => Promise<void>;
@@ -80,7 +112,7 @@ export class GitHubDeviceFlowSession {
   }
 
   async runUntilSettled(
-    sleep: (milliseconds: number) => Promise<void>,
+    sleep: GitHubFlowSleep,
   ): Promise<GitHubAuthorizationSnapshot> {
     while (this.state !== null) {
       const delay = this.nextPollDelayMs();
