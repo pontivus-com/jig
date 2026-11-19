@@ -92,6 +92,12 @@ export function decideSynchronization(
   if (facts.lineage === "unknown") {
     return "needs-attention";
   }
+  if (
+    facts.lineage === "diverged" &&
+    facts.canonical_matches_remote
+  ) {
+    return "normalize-to-remote";
+  }
   if (facts.lineage === "equal") {
     return facts.local_pending
       ? "export-and-push"
