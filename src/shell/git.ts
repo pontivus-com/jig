@@ -11,6 +11,7 @@ import {
   validateSnapshot,
   type PortableSnapshot,
 } from "../portable";
+import type { GitLineage } from "../synchronization";
 export {
   SnapshotValidationError,
   serializeSnapshot,
@@ -64,6 +65,31 @@ export interface SynchronizationRemote {
   readonly location: string;
 }
 
+export type SynchronizationAuthority =
+  | { readonly state: "none" }
+  | { readonly state: "ambiguous" }
+  | {
+      readonly state: "selected";
+      readonly remote: SynchronizationRemote;
+      readonly fetch_location: string;
+      readonly push_location: string;
+    };
+
+export interface PortableRemoteObservation {
+  readonly authority: SynchronizationAuthority;
+  readonly remote_state:
+    | "none"
+    | "ambiguous"
+    | "absent"
+    | "present";
+  readonly local_head: string | null;
+  readonly previous_remote_head: string | null;
+  readonly remote_head: string | null;
+  readonly remote_rewritten: boolean;
+  readonly lineage: GitLineage;
+  readonly remote_snapshot: PortableSnapshot | null;
+  readonly base: PortableSnapshotCandidate | null;
+}
 
 export class GitAdapterError extends Error {
   constructor(message: string) {
@@ -88,6 +114,7 @@ export async function runGit(
   args: readonly string[],
   input?: string,
   extraEnv: Readonly<Record<string, string>> = {},
+  timeoutMs?: number,
 ): Promise<GitCommandResult> {
   const processHandle = Bun.spawn({
     cmd: ["git", ...args],
@@ -98,16 +125,30 @@ export async function runGit(
     env: { ...process.env, ...extraEnv },
   });
 
+  let timedOut = false;
+  const timeout =
+    timeoutMs === undefined
+      ? null
+      : setTimeout(() => {
+          timedOut = true;
+          processHandle.kill("SIGKILL");
+        }, timeoutMs);
+
   const [exitCode, stdout, stderr] = await Promise.all([
     processHandle.exited,
     new Response(processHandle.stdout).text(),
     new Response(processHandle.stderr).text(),
   ]);
+  if (timeout !== null) {
+    clearTimeout(timeout);
+  }
 
   return {
     exit_code: exitCode,
     stdout: stdout.trim(),
-    stderr: stderr.trim(),
+    stderr: timedOut
+      ? "Git operation timed out"
+      : stderr.trim(),
   };
 }
 
@@ -126,9 +167,19 @@ async function requireGit(
   return result.stdout;
 }
 
-export async function discoverSynchronizationRemote(
+function endpointIdentity(value: string): string {
+  return sanitizeSynchronizationRemoteLocation(value)
+    .replace(/\.git\/?$/i, "")
+    .replace(/\/$/, "");
+}
+
+async function selectedRemoteName(
   repositoryPath: string,
-): Promise<string | null> {
+): Promise<
+  | { readonly state: "none" }
+  | { readonly state: "ambiguous" }
+  | { readonly state: "selected"; readonly name: string }
+> {
   const result = await runGit(repositoryPath, ["remote"]);
   if (result.exit_code !== 0) {
     throw new GitAdapterError(
@@ -137,7 +188,7 @@ export async function discoverSynchronizationRemote(
   }
   const remotes = result.stdout.split("\n").filter(Boolean);
   if (remotes.length === 0) {
-    return null;
+    return { state: "none" };
   }
 
   const pushDefault = await runGit(repositoryPath, [
@@ -149,7 +200,7 @@ export async function discoverSynchronizationRemote(
     pushDefault.exit_code === 0 &&
     remotes.includes(pushDefault.stdout)
   ) {
-    return pushDefault.stdout;
+    return { state: "selected", name: pushDefault.stdout };
   }
 
   const branch = await runGit(repositoryPath, [
@@ -168,13 +219,81 @@ export async function discoverSynchronizationRemote(
       branchRemote.exit_code === 0 &&
       remotes.includes(branchRemote.stdout)
     ) {
-      return branchRemote.stdout;
+      return { state: "selected", name: branchRemote.stdout };
     }
   }
 
-  return remotes.length === 1 ? remotes[0] ?? null : null;
+  return remotes.length === 1
+    ? { state: "selected", name: remotes[0] ?? "" }
+    : { state: "ambiguous" };
 }
 
+export async function inspectSynchronizationAuthority(
+  config: GitAdapterConfig,
+): Promise<SynchronizationAuthority> {
+  assertAdapterPaths(config);
+  const selected = await selectedRemoteName(config.repository_path);
+  if (selected.state !== "selected") {
+    return selected;
+  }
+
+  const fetchUrls = await runGit(config.repository_path, [
+    "remote",
+    "get-url",
+    "--all",
+    selected.name,
+  ]);
+  const pushUrls = await runGit(config.repository_path, [
+    "remote",
+    "get-url",
+    "--push",
+    "--all",
+    selected.name,
+  ]);
+  if (fetchUrls.exit_code !== 0 || pushUrls.exit_code !== 0) {
+    throw new GitAdapterError(
+      `Unable to inspect synchronization remote ${selected.name}`,
+    );
+  }
+  const fetchLocations = fetchUrls.stdout.split("\n").filter(Boolean);
+  const pushLocations = pushUrls.stdout.split("\n").filter(Boolean);
+  if (
+    fetchLocations.length !== 1 ||
+    pushLocations.length !== 1
+  ) {
+    return { state: "ambiguous" };
+  }
+  const fetchLocation = fetchLocations[0];
+  const pushLocation = pushLocations[0];
+  if (
+    fetchLocation === undefined ||
+    pushLocation === undefined ||
+    endpointIdentity(fetchLocation) !== endpointIdentity(pushLocation)
+  ) {
+    return { state: "ambiguous" };
+  }
+
+  return {
+    state: "selected",
+    remote: {
+      name: selected.name,
+      location: sanitizeSynchronizationRemoteLocation(pushLocation),
+    },
+    fetch_location: fetchLocation,
+    push_location: pushLocation,
+  };
+}
+
+export async function discoverSynchronizationRemote(
+  repositoryPath: string,
+): Promise<string | null> {
+  const authority = await inspectSynchronizationAuthority({
+    repository_path: repositoryPath,
+  });
+  return authority.state === "selected"
+    ? authority.remote.name
+    : null;
+}
 
 export async function readCurrentPortableSnapshot(
   config: GitAdapterConfig,
@@ -316,36 +435,10 @@ export function sanitizeSynchronizationRemoteLocation(
 export async function inspectSynchronizationRemote(
   config: GitAdapterConfig,
 ): Promise<SynchronizationRemote | null> {
-  const remoteName = await discoverSynchronizationRemote(
-    config.repository_path,
-  );
-  if (remoteName === null) {
-    return null;
-  }
-
-  const urls = await runGit(config.repository_path, [
-    "remote",
-    "get-url",
-    "--push",
-    "--all",
-    remoteName,
-  ]);
-  if (urls.exit_code !== 0) {
-    throw new GitAdapterError(
-      `Unable to inspect synchronization remote ${remoteName}: ${urls.stderr || urls.stdout}`,
-    );
-  }
-  const pushUrl = urls.stdout.split("\n").find((value) => value.length > 0);
-  if (pushUrl === undefined) {
-    throw new GitAdapterError(
-      `Synchronization remote ${remoteName} has no push target`,
-    );
-  }
-
-  return {
-    name: remoteName,
-    location: sanitizeSynchronizationRemoteLocation(pushUrl),
-  };
+  const authority = await inspectSynchronizationAuthority(config);
+  return authority.state === "selected"
+    ? authority.remote
+    : null;
 }
 
 export async function repositorySynchronizationMode(
@@ -676,29 +769,39 @@ export async function readSnapshotAtRef(
   ref: string,
   expectedDatasetId?: string,
 ): Promise<PortableSnapshot> {
-  const namesResult = await runGit(repositoryPath, [
+  const treeResult = await runGit(repositoryPath, [
     "ls-tree",
     "-r",
-    "--name-only",
     ref,
   ]);
-  if (namesResult.exit_code !== 0) {
+  if (treeResult.exit_code !== 0) {
     throw new GitAdapterError(
-      `Unable to enumerate candidate snapshot: ${namesResult.stderr}`,
+      `Unable to enumerate candidate snapshot: ${treeResult.stderr}`,
     );
   }
 
   const files = new Map<string, string>();
-  const names = namesResult.stdout
-    .split("\n")
-    .filter(
-      (name) =>
-        name === "format.json" ||
-        /^tasks\/.+\.json$/.test(name) ||
-        /^recurrences\/.+\.json$/.test(name),
-    );
-
-  for (const path of names) {
+  const lines = treeResult.stdout.split("\n").filter(Boolean);
+  for (const line of lines) {
+    const tab = line.indexOf("\t");
+    if (tab < 0) {
+      throw new GitAdapterError(
+        "Candidate snapshot tree entry is malformed",
+      );
+    }
+    const metadata = line.slice(0, tab).split(" ");
+    const mode = metadata[0];
+    const type = metadata[1];
+    const path = line.slice(tab + 1);
+    const allowed =
+      path === "format.json" ||
+      /^tasks\/[0-9a-f-]+\.json$/i.test(path) ||
+      /^recurrences\/[0-9a-f-]+\.json$/i.test(path);
+    if (!allowed || mode !== "100644" || type !== "blob") {
+      throw new GitAdapterError(
+        `Refusing non-canonical jig-data tree entry ${path}`,
+      );
+    }
     const content = await requireGit(repositoryPath, [
       "show",
       `${ref}:${path}`,
@@ -707,6 +810,340 @@ export async function readSnapshotAtRef(
   }
 
   return validateSnapshot(files, expectedDatasetId);
+}
+
+async function refHead(
+  repositoryPath: string,
+  ref: string,
+): Promise<string | null> {
+  const result = await runGit(repositoryPath, [
+    "show-ref",
+    "--verify",
+    "--hash",
+    ref,
+  ]);
+  return result.exit_code === 0 && result.stdout.length > 0
+    ? result.stdout
+    : null;
+}
+
+async function isAncestor(
+  repositoryPath: string,
+  ancestor: string,
+  descendant: string,
+): Promise<boolean | null> {
+  const result = await runGit(repositoryPath, [
+    "merge-base",
+    "--is-ancestor",
+    ancestor,
+    descendant,
+  ]);
+  if (result.exit_code === 0) {
+    return true;
+  }
+  if (result.exit_code === 1) {
+    return false;
+  }
+  return null;
+}
+
+async function commonBase(
+  repositoryPath: string,
+  left: string,
+  right: string,
+): Promise<string | null> {
+  const result = await runGit(repositoryPath, [
+    "merge-base",
+    left,
+    right,
+  ]);
+  return result.exit_code === 0 && result.stdout.length > 0
+    ? result.stdout.split("\n")[0] ?? null
+    : null;
+}
+
+function zeroOid(): string {
+  return "0".repeat(40);
+}
+
+async function updateTrackingRef(
+  repositoryPath: string,
+  ref: string,
+  next: string,
+  previous: string | null,
+): Promise<void> {
+  const result = await runGit(repositoryPath, [
+    "update-ref",
+    ref,
+    next,
+    previous ?? zeroOid(),
+  ]);
+  if (result.exit_code !== 0) {
+    throw new GitAdapterError(
+      "Synchronization observation changed concurrently; retry required",
+    );
+  }
+}
+
+export async function observePortableRemote(
+  config: GitAdapterConfig,
+  expectedDatasetId: string,
+  networkEnvironment: Readonly<Record<string, string>> = {},
+): Promise<PortableRemoteObservation> {
+  assertAdapterPaths(config);
+  const authority = await inspectSynchronizationAuthority(config);
+  const localHead = await refHead(config.repository_path, DATA_REF);
+
+  if (authority.state === "none") {
+    return {
+      authority,
+      remote_state: "none",
+      local_head: localHead,
+      previous_remote_head: null,
+      remote_head: null,
+      remote_rewritten: false,
+      lineage: "unknown",
+      remote_snapshot: null,
+      base: null,
+    };
+  }
+  if (authority.state === "ambiguous") {
+    return {
+      authority,
+      remote_state: "ambiguous",
+      local_head: localHead,
+      previous_remote_head: null,
+      remote_head: null,
+      remote_rewritten: false,
+      lineage: "unknown",
+      remote_snapshot: null,
+      base: null,
+    };
+  }
+
+  const trackingRef =
+    `refs/remotes/${authority.remote.name}/jig-data`;
+  const previousRemoteHead = await refHead(
+    config.repository_path,
+    trackingRef,
+  );
+  const advertised = await runGit(
+    config.repository_path,
+    [
+      "ls-remote",
+      "--heads",
+      authority.remote.name,
+      "refs/heads/jig-data",
+    ],
+    undefined,
+    networkEnvironment,
+    60_000,
+  );
+  if (advertised.exit_code !== 0) {
+    throw new GitAdapterError(
+      advertised.stderr || "Unable to observe remote jig-data head",
+    );
+  }
+  if (advertised.stdout.length === 0) {
+    return {
+      authority,
+      remote_state: "absent",
+      local_head: localHead,
+      previous_remote_head: previousRemoteHead,
+      remote_head: null,
+      remote_rewritten: false,
+      lineage: "unknown",
+      remote_snapshot: null,
+      base: null,
+    };
+  }
+
+  const remoteHead = advertised.stdout.split(/\s+/, 1)[0];
+  if (remoteHead === undefined || remoteHead.length === 0) {
+    throw new GitAdapterError("Remote jig-data advertisement is malformed");
+  }
+  const fetched = await runGit(
+    config.repository_path,
+    [
+      "fetch",
+      "--no-tags",
+      authority.remote.name,
+      "refs/heads/jig-data",
+    ],
+    undefined,
+    networkEnvironment,
+    60_000,
+  );
+  if (fetched.exit_code !== 0) {
+    throw new GitAdapterError(
+      fetched.stderr || "Unable to fetch remote jig-data",
+    );
+  }
+
+  const remoteSnapshot = await readSnapshotAtRef(
+    config.repository_path,
+    remoteHead,
+    expectedDatasetId,
+  );
+
+  let remoteRewritten = false;
+  if (
+    previousRemoteHead !== null &&
+    previousRemoteHead !== remoteHead
+  ) {
+    const advances = await isAncestor(
+      config.repository_path,
+      previousRemoteHead,
+      remoteHead,
+    );
+    remoteRewritten = advances !== true;
+  }
+
+  let lineage: GitLineage = "unknown";
+  let base: PortableSnapshotCandidate | null = null;
+  if (localHead !== null) {
+    if (localHead === remoteHead) {
+      lineage = "equal";
+      base = {
+        head: localHead,
+        snapshot: await readSnapshotAtRef(
+          config.repository_path,
+          localHead,
+          expectedDatasetId,
+        ),
+      };
+    } else {
+      const localToRemote = await isAncestor(
+        config.repository_path,
+        localHead,
+        remoteHead,
+      );
+      const remoteToLocal = await isAncestor(
+        config.repository_path,
+        remoteHead,
+        localHead,
+      );
+      if (localToRemote === true) {
+        lineage = "remote-ahead";
+        base = {
+          head: localHead,
+          snapshot: await readSnapshotAtRef(
+            config.repository_path,
+            localHead,
+            expectedDatasetId,
+          ),
+        };
+      } else if (remoteToLocal === true) {
+        lineage = "local-ahead";
+        base = {
+          head: remoteHead,
+          snapshot: remoteSnapshot,
+        };
+      } else if (
+        localToRemote === false &&
+        remoteToLocal === false
+      ) {
+        lineage = "diverged";
+        const mergeBase = await commonBase(
+          config.repository_path,
+          localHead,
+          remoteHead,
+        );
+        if (mergeBase !== null) {
+          base = {
+            head: mergeBase,
+            snapshot: await readSnapshotAtRef(
+              config.repository_path,
+              mergeBase,
+              expectedDatasetId,
+            ),
+          };
+        }
+      }
+    }
+  }
+
+  if (!remoteRewritten) {
+    await updateTrackingRef(
+      config.repository_path,
+      trackingRef,
+      remoteHead,
+      previousRemoteHead,
+    );
+  }
+
+  return {
+    authority,
+    remote_state: "present",
+    local_head: localHead,
+    previous_remote_head: previousRemoteHead,
+    remote_head: remoteHead,
+    remote_rewritten: remoteRewritten,
+    lineage,
+    remote_snapshot: remoteSnapshot,
+    base,
+  };
+}
+
+export async function alignPortableDataRef(
+  config: GitAdapterConfig,
+  expectedHead: string,
+  targetHead: string,
+): Promise<void> {
+  const moved = await runGit(config.repository_path, [
+    "update-ref",
+    DATA_REF,
+    targetHead,
+    expectedHead,
+  ]);
+  if (moved.exit_code !== 0) {
+    throw new GitAdapterError(
+      "Local jig-data ref changed concurrently; retry required",
+    );
+  }
+  const refreshed = await runGit(jigWorktreePath(config), [
+    "reset",
+    "--hard",
+    "HEAD",
+  ]);
+  if (refreshed.exit_code !== 0) {
+    throw new GitAdapterError(
+      "Unable to refresh the private Jig worktree",
+    );
+  }
+}
+
+export async function pushPortableDataRef(
+  config: GitAdapterConfig,
+  expectedRemote: SynchronizationRemote,
+  networkEnvironment: Readonly<Record<string, string>> = {},
+): Promise<RepositorySynchronizationResult> {
+  const authority = await inspectSynchronizationAuthority(config);
+  if (
+    authority.state !== "selected" ||
+    authority.remote.name !== expectedRemote.name ||
+    authority.remote.location !== expectedRemote.location
+  ) {
+    return { status: "sync-issue", retryable: false };
+  }
+  const result = await runGit(
+    config.repository_path,
+    [
+      "push",
+      authority.remote.name,
+      `${DATA_REF}:refs/heads/jig-data`,
+    ],
+    undefined,
+    networkEnvironment,
+    60_000,
+  );
+  return {
+    status:
+      result.exit_code === 0
+        ? "synchronized"
+        : "sync-issue",
+    retryable: result.exit_code !== 0,
+  };
 }
 
 async function pushJigDataRef(
