@@ -321,38 +321,59 @@ describe("architecture compliance", () => {
     }
   });
 
-  it("keeps synchronization remediation small, provider-neutral and out of the functional core", () => {
-    const policy = source("src/synchronization.ts");
+  it("keeps synchronization semantics in one strict functional core and effects in platform shells", () => {
+    const policy = source("src/core/synchronization.ts");
+    const persistence = source("src/persistence/sqlite.ts");
     const desktopSync = source("src/shell/sync.ts");
     const desktopGit = source("src/shell/git.ts");
     const androidSync = source("ui/src/native/sync.ts");
     const androidGit = source("ui/src/native/git.ts");
 
     expect(policy).toContain("export function decideSynchronization");
-    expect(policy).toContain("synchronizationRetryDelayMs");
+    expect(policy).toContain("export type SynchronizationFacts");
+    expect(policy).toContain("export type SynchronizationDecision");
     expect(policy).not.toMatch(
-      /node:|bun:|Bun\.|@capacitor|isomorphic-git|github/i,
+      /node:|bun:|Bun\.|@capacitor|isomorphic-git|github|setTimeout|Promise\.race/i,
     );
-    expect(policy).not.toMatch(/Task|RecurrenceSeries|mergeBase|three-way/i);
+    expect(policy).not.toMatch(
+      /Task|RecurrenceSeries|retry|poll|credential|repository_path/i,
+    );
 
+    expect(desktopSync).toContain(
+      'from "../core/synchronization"',
+    );
+    expect(androidSync).toContain(
+      'from "../../../src/core/synchronization"',
+    );
     for (const sync of [desktopSync, androidSync]) {
       expect(sync).toContain("decideSynchronization");
       expect(sync).not.toMatch(
-        /reconcileCanonicalPlanning|core\/reconciliation|three-way/i,
+        /reconcileCanonicalPlanning|three-way|adoptEmptyDatasetIdentity|applySynchronizedCanonicalState/,
       );
+      expect(sync).not.toMatch(/for\s*\([^)]*attempt/);
     }
 
+    expect(desktopGit).not.toContain("decideSynchronization");
+    expect(androidGit).not.toContain("decideSynchronization");
+    expect(desktopGit).not.toContain("refs/jig/observed");
+    expect(androidGit).not.toContain("refs/jig/observed");
     expect(desktopGit).not.toMatch(
       /["']push["'][\s\S]{0,250}(?:--force|-f\b|\+refs\/heads\/jig-data)/,
     );
     expect(desktopGit).not.toMatch(/["']pull["']|["']rebase["']/);
-    expect(desktopGit).not.toContain("commonBase");
-    expect(desktopGit).not.toContain("findMergeBase");
-
-    expect(androidGit).not.toContain("findMergeBase");
-    expect(androidGit).not.toContain("reconcileCanonicalPlanning");
-    expect(androidGit).not.toContain("rebase");
+    expect(androidGit).not.toContain("normalizeAndroidPortableHead");
+    expect(androidGit).not.toContain("synchronizeAndroidPortableRepository");
     expect(androidGit).toContain("fastForwardOnly: true");
+
+    expect(persistence).toContain(
+      "export async function adoptCanonicalSnapshot",
+    );
+    expect(persistence).not.toContain(
+      "export async function applySynchronizedCanonicalState",
+    );
+    expect(persistence).not.toContain(
+      "export async function adoptEmptyDatasetIdentity",
+    );
   });
 
   it("keeps portable records platform-neutral and Android Git provider-neutral", () => {
