@@ -1002,28 +1002,49 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
   await page.emulateMedia({ colorScheme: "no-preference" });
 });
 
-test("Settings shows local Git and configured remote synchronization separately", async ({
+test("Settings leads with continuity and keeps Git mechanics in Diagnostics", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
 
+  const planningData = page
+    .getByRole("heading", { name: "Planning data", exact: true })
+    .locator("xpath=following-sibling::*[1]");
   const synchronization = page
     .getByRole("heading", { name: "Synchronization", exact: true })
     .locator("xpath=following-sibling::*[1]");
+  const diagnostics = page
+    .getByRole("heading", { name: "Diagnostics", exact: true })
+    .locator("xpath=following-sibling::*[1]");
 
+  await expect(planningData).toContainText("/tmp/jig-playwright-remote.git");
+  await expect(
+    synchronization.getByText("Up to date", { exact: true }),
+  ).toBeVisible();
   await expect(synchronization.getByText("Local Git", { exact: true }))
-    .toBeVisible();
+    .toHaveCount(0);
   await expect(synchronization.getByText("Remote Git", { exact: true }))
-    .toBeVisible();
+    .toHaveCount(0);
+  await expect(
+    synchronization.getByRole("button", { name: "Sync now", exact: true }),
+  ).toHaveCount(0);
 
-  await synchronization
+  await expect(diagnostics.getByText("Local Git", { exact: true }))
+    .toBeVisible();
+  await expect(diagnostics.getByText("Remote Git", { exact: true }))
+    .toBeVisible();
+  await expect(
+    diagnostics.getByRole("button", { name: "Sync now", exact: true }),
+  ).toBeVisible();
+
+  await diagnostics
     .getByRole("button", { name: "Sync now", exact: true })
     .click();
 
   await expect
     .poll(async () => {
-      const localGit = synchronization
+      const localGit = diagnostics
         .locator("dt", { hasText: "Local Git" })
         .locator("xpath=following-sibling::dd[1]");
       return (await localGit.textContent())?.trim() ?? "";
@@ -1032,14 +1053,14 @@ test("Settings shows local Git and configured remote synchronization separately"
 
   await expect
     .poll(async () => {
-      const remoteGit = synchronization
+      const remoteGit = diagnostics
         .locator("dt", { hasText: "Remote Git" })
         .locator("xpath=following-sibling::dd[1]");
       return (await remoteGit.textContent())?.trim() ?? "";
     }, { timeout: 10_000 })
     .toBe("Synchronized");
 
-  const remoteRepository = synchronization
+  const remoteRepository = diagnostics
     .locator("dt", { hasText: "Remote repository" })
     .locator("xpath=following-sibling::dd[1]");
   await expect(remoteRepository).toContainText("/tmp/jig-playwright-remote.git");
@@ -1050,9 +1071,9 @@ test("Settings shows local Git and configured remote synchronization separately"
   await expect(
     page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
   ).toHaveCount(1);
-  await expect(synchronization.getByText("Local Git", { exact: true }))
+  await expect(diagnostics.getByText("Local Git", { exact: true }))
     .toBeVisible();
-  await expect(synchronization.getByText("Remote Git", { exact: true }))
+  await expect(diagnostics.getByText("Remote Git", { exact: true }))
     .toBeVisible();
 });
 
