@@ -1377,9 +1377,7 @@ body {
     .jig-content-frame {
       height: 100%;
       margin: 0;
-      padding-block-end: calc(
-        64px + env(safe-area-inset-bottom, 0px)
-      );
+      padding: 0;
       overflow: auto;
       border: 0;
       border-radius: 0;
@@ -1391,6 +1389,12 @@ body {
       min-height: 0;
       margin: 0;
       padding: 0;
+    }
+
+    .jig-content-configured {
+      padding-block-end: calc(
+        64px + env(safe-area-inset-bottom, 0px)
+      );
     }
 
     .jig-header-center {
