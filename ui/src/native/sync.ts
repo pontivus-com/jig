@@ -58,7 +58,6 @@ function observationFacts(
     case "absent":
       return {
         kind: "remote-absent",
-        local_pending: localPending,
         previously_synchronized: observation.previously_synchronized,
       };
     case "unsafe":
