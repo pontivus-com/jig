@@ -1282,6 +1282,7 @@ body {
     }
 
     .jig-mobile-touch-control {
+      min-width: 48px;
       min-height: 48px;
     }
 
