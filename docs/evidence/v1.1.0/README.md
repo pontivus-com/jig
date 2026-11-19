@@ -85,6 +85,9 @@ The development APK retained by permanent Verify run `44547579822` is the **post
 - Artifact ZIP size: `7,172,937` bytes.
 - Artifact digest: `sha256:e6f12bf275b921ea2cc2e9ff5094dea71b9c5c6cc441dd910a8f85515cb662ca`.
 - APK file in the artifact: `app-debug.apk`.
+- Unpacked `app-debug.apk` size: `9,779,844` bytes.
+- Unpacked `app-debug.apk` SHA-256: `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`, computed directly from artifact `14541004265`.
+- Repository package authority expects Android application ID `com.pontivus.jig` with package-derived version identity. The physical preflight must still verify those APK badging fields with governed Build Tools `aapt`; the recorded SHA does not substitute for that check.
 
 Before physical certification, the device preflight must record/verify the unpacked APK identity/hash for this exact artifact. Any later **executable** change invalidates that APK identity and requires a new certified artifact; later documentation-only closure commits do not change the recorded executable/APK lineage.
 
