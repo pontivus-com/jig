@@ -378,10 +378,16 @@ export class GitHubOnboardingController<TAcquired> {
     }
   }
 
-  private fail(error: unknown): void {
+  private fail(_error: unknown): void {
+    this.recovery =
+      this.phase === "repository-access"
+        ? "repository-access"
+        : this.phase === "acquiring"
+          ? "acquisition"
+          : "authorization";
     this.phase = "attention";
-    this.recovery = "authorization";
-    this.error = error instanceof Error ? error.message : String(error);
+    this.error =
+      "Jig could not continue connecting this repository. Try again.";
   }
 
   private requireRegistration(): GitHubAppRegistration {
