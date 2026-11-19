@@ -11,6 +11,7 @@ export interface GitHubHttpDependencies {
   readonly write_token: string;
   readonly onboarding?: GitHubOnboardingController<JigConfig>;
   readonly reconnect?: GitHubReconnectController;
+  readonly reconnect_required?: () => Promise<boolean>;
   readonly is_configured: () => boolean;
 }
 
@@ -71,6 +72,18 @@ export function createGitHubHttpHandler(
 ): (request: Request) => Promise<Response | null> {
   return async (request: Request): Promise<Response | null> => {
     const pathname = new URL(request.url).pathname;
+    const reconnectAvailable = async (): Promise<boolean> => {
+      const reconnect = dependencies.reconnect;
+      if (reconnect === undefined || !reconnect.available()) {
+        return false;
+      }
+      if (reconnect.snapshot().state !== "initial") {
+        return true;
+      }
+      return dependencies.reconnect_required === undefined
+        ? true
+        : dependencies.reconnect_required();
+    };
 
     if (
       request.method === "GET" &&
@@ -79,8 +92,7 @@ export function createGitHubHttpHandler(
       return jsonResponse({
         onboarding_available:
           dependencies.onboarding?.snapshot().available === true,
-        reconnect_available:
-          dependencies.reconnect?.available() === true,
+        reconnect_available: await reconnectAvailable(),
       });
     }
 
@@ -148,7 +160,7 @@ export function createGitHubHttpHandler(
       pathname === "/api/v1/github/reconnect/state"
     ) {
       const reconnect = dependencies.reconnect;
-      return reconnect === undefined || !reconnect.available()
+      return reconnect === undefined || !(await reconnectAvailable())
         ? unavailableReconnect()
         : jsonResponse(reconnect.snapshot());
     }
@@ -166,7 +178,7 @@ export function createGitHubHttpHandler(
       }
 
       const reconnect = dependencies.reconnect;
-      if (reconnect === undefined || !reconnect.available()) {
+      if (reconnect === undefined || !(await reconnectAvailable())) {
         return unavailableReconnect();
       }
 
