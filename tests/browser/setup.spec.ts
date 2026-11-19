@@ -131,7 +131,9 @@ test("bootstrap stays inside Jig and accepts an existing local repository", asyn
   await expect(page.locator(".jig-app-shell")).toBeVisible();
   await expect(page.locator(".jig-app-header-onboarding")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Connect your planning data" }),
+    page.getByRole("heading", {
+      name: "Plan your week. Keep the data yours.",
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Connect GitHub repository" }),
@@ -358,7 +360,9 @@ test("GitHub access is observed automatically and stops only for a genuine repos
 
   await expect.poll(() => stateReads, { timeout: 5_000 }).toBeGreaterThan(1);
   await expect(
-    page.getByRole("heading", { name: "Choose a repository" }),
+    page.getByRole("heading", {
+      name: "Choose your planning repository",
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "example/planning" }),
@@ -475,10 +479,9 @@ test("configured managed repository reconnects automatically without repository 
   await expect.poll(() => reconnectReads, { timeout: 5_000 })
     .toBeGreaterThan(1);
   await expect(
-    page.locator(".jig-settings-sync-card").getByText(
-      "Up to date",
-      { exact: true },
-    ),
+    page.locator(".jig-settings-section").filter({
+      has: page.getByRole("heading", { name: "Data & sync" }),
+    }).getByText("Up to date", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Reconnect GitHub" }),
