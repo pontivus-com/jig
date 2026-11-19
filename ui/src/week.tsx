@@ -87,7 +87,6 @@ function DatedSection({
 
       <DateDropZone
         date={date}
-        tasks={tasks}
         className="jig-week-task-area"
       >
         <PlannerTaskList
