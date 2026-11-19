@@ -1561,7 +1561,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-22 appearance | JIG-106-SD-02 through SD-05 + SD-07 | One 13-preset registry + independent System/Light/Dark mode fully re-theme all governed surfaces/states and in-app branding from Settings only, without Task/Git mutation |
 | JIG-FR-23 bounded recurrence | §4.2.1 recurrence core + schema v3 + portable format v2 | One shared series owns recurrence configuration; materialized Tasks own occurrence-local content/lifecycle; Repeat performs membership reconciliation from the invoking immutable slot without rewriting retained siblings; Stop repeating keeps the invoking Task, preserves completed History and removes every other outstanding series occurrence |
 | JIG-110-FR-30 secondary heading ownership | v1.1 SD-40 + UI solution | Application header owns the sole History/Settings title+subtitle; body-level duplicate heading is removed |
-| JIG-110-FR-31 local/remote Git transparency | structured repository status above + v1.1 SD-41 | Current revision's local Git commit state is distinct from credential-free configured remote identity and remote synchronization state; compact status is derived |
+| JIG-110-FR-31 user-level continuity/synchronization | structured repository status above + v1.1 SD-41 | Technical local/remote truth remains structured once; primary UI derives minimal planning-data-home/local-safety/continuity language while exact Git/service/database facts remain secondary diagnostics |
 
 ### 10.1 Test boundaries
 
@@ -1609,8 +1609,8 @@ Independent phone installation, native mobile Git/process/filesystem integration
 
 The detailed normative solution contracts are [JIG-110-SD-01..41](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
 
-- runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error;
-- Linux setup uses one bootstrap API/UI and canonical local-repository adoption; optimized GitHub acquisition uses the platform-specific **Jig Desktop** GitHub App, platform secure credentials and deterministic managed checkout; Android uses a separate **Jig Android** GitHub App with the same least-privilege repository semantics. The two App registrations never share client IDs/secrets/callbacks, while both converge on the same canonical repository/portable-data contract;
+- runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error; both modes render inside the same canonical Jig application frame, with onboarding as a distinct body state rather than a standalone technical setup page;
+- Linux and Android share one governed **Jig Desktop & Mobile** public GitHub App registration and the same intent-level onboarding contract. One Connect GitHub repository action starts automatic authorization/access/acquisition/adoption orchestration; provider-owned consent and repository selection when genuinely required are the only normal user interruptions. Linux additionally supports the genuine choice of an existing local repository;
 - Android is a committed Capacitor 8 shell using the same React UI/core/protocol contracts, package ID `com.pontivus.jig`, private app-owned repository storage and F-Droid-compatible FLOSS dependencies;
 - root `package.json.version` is the sole release-version authority; Android `versionName` equals it and `versionCode = major*1_000_000 + minor*1_000 + patch`;
 - canonical SQLite semantics move to one asynchronous TypeScript persistence owner with a Bun driver on Linux and a narrow AndroidX bundled-SQLite native driver on Android;
@@ -1620,7 +1620,7 @@ The detailed normative solution contracts are [JIG-110-SD-01..41](v1.1-mobile-te
 - Task drag/drop removes dnd-kit and uses the single Pangea list/touch owner with a dedicated handle, explicit destination index and exact insertion indicator; browser/emulator implementation proceeds first, while physical-Android proof is deferred to the final device-certification wave and remains a release blocker;
 - bounded recurrence is owned by one pure recurrence-date enumerator plus canonical series/occurrence persistence; finite weekly/monthly series materialize ordinary Tasks, reminders copy per occurrence, rollover never shifts the recurrence slot, SQLite advances to schema v3 and portable snapshots advance to format v2 with v1 upgrade acceptance;
 - History/Settings destination title + subtitle have one application-header owner; their content surfaces contain no duplicate page-heading block;
-- repository synchronization presentation has one structured shell owner with separate local Git commit and remote synchronization facts; Settings shows the sanitized actual synchronization remote while the compact header label is derived from the same state;
+- repository synchronization has one structured shell owner retaining exact local Git and remote facts; primary Settings/header derive user-level planning-data-home, local-safety and continuity language from that owner, while exact remote/Git/service/database facts are secondary diagnostics; automatic synchronization is not represented as a standing user-operated process;
 - development APKs are local certification artifacts; F-Droid is the first public Android distribution target; no Google Play/iOS release work is part of v1.1.
 
 The complete FR→SD traceability remains owned by the versioned v1.1 functional/technical documents and the complete v1.1 implementation plan.
