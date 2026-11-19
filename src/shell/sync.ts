@@ -442,13 +442,16 @@ export function createSyncController(
       }
 
       if (!allowPush) {
-        currentStatus = synchronizationStatus(
-          (await localPending()) ? "pending" : "committed",
-          remoteIdentity,
-          "pending",
-        );
-        schedule(0);
-        return currentStatus;
+        if (await localPending()) {
+          currentStatus = synchronizationStatus(
+            "pending",
+            remoteIdentity,
+            "pending",
+          );
+          schedule(0);
+          return currentStatus;
+        }
+        return transientIssue();
       }
 
       if (remoteIdentity === null) {
