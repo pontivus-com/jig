@@ -191,6 +191,7 @@ describe("managed GitHub transport", () => {
 
     try {
       await expect(transport.reconnect_required()).resolves.toBe(true);
+      await expect(transport.network_environment()).resolves.toBeNull();
 
       credential = {
         user_id: 42,
@@ -200,6 +201,10 @@ describe("managed GitHub transport", () => {
         refresh_token_expires_at: "2030-07-01T00:00:00.000Z",
       };
       await expect(transport.reconnect_required()).resolves.toBe(false);
+      await expect(transport.network_environment()).resolves.toMatchObject({
+        GIT_TERMINAL_PROMPT: "0",
+        JIG_GITHUB_ACCESS_TOKEN: "access-token",
+      });
     } finally {
       await transport.dispose();
     }
@@ -240,7 +245,6 @@ describe("managed GitHub transport", () => {
       access_token_expires_at: "2030-01-01T08:00:00.000Z",
     };
     let stored: GitHubCredential | null = null;
-    let environment: Readonly<Record<string, string>> | null = null;
 
     const transport = await createManagedGitHubTransport(
       path,
@@ -254,10 +258,6 @@ describe("managed GitHub transport", () => {
         store_credential: async (credential) => {
           stored = credential;
         },
-        synchronize: async (_config, nextEnvironment) => {
-          environment = nextEnvironment ?? null;
-          return { status: "synchronized", retryable: false };
-        },
         now: () => new Date("2030-01-01T00:00:00.000Z"),
       },
       home,
@@ -268,17 +268,13 @@ describe("managed GitHub transport", () => {
 
     try {
       await expect(
-        transport.synchronize({ repository_path: path }),
-      ).resolves.toStrictEqual({
-        status: "synchronized",
-        retryable: false,
-      });
-      expect(stored).toStrictEqual(newCredential);
-      await expect(transport.reconnect_required()).resolves.toBe(false);
-      expect(environment).toMatchObject({
+        transport.network_environment(),
+      ).resolves.toMatchObject({
         GIT_TERMINAL_PROMPT: "0",
         JIG_GITHUB_ACCESS_TOKEN: "new-token",
       });
+      expect(stored).toStrictEqual(newCredential);
+      await expect(transport.reconnect_required()).resolves.toBe(false);
     } finally {
       await transport.dispose();
     }

@@ -26,14 +26,10 @@ export type TaskCommand =
       readonly recurrence?: RecurrenceSpec;
     }
   | {
-      readonly type: "set_recurrence";
-      readonly task_id: string;
-      readonly recurrence: RecurrenceSpec | null;
-    }
-  | {
       readonly type: "edit";
       readonly task_id: string;
       readonly changes: TaskEditChanges;
+      readonly recurrence?: RecurrenceSpec | null;
     }
   | {
       readonly type: "move";

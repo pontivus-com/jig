@@ -7,24 +7,22 @@ import {
   ListItem,
 } from "@astryxdesign/core";
 import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
-import {
-  Draggable,
-  type DraggableProvided,
-} from "@hello-pangea/dnd";
-import type { Ref } from "react";
+import { useRef, type Ref } from "react";
+import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { isReminderDue } from "../../src/core/reminder";
 import { formatReminderTime } from "./dates";
 import { JigIcon } from "./jig-icons";
+import { recurrenceSummary } from "./task-editor";
 
 export interface TaskRowProps {
   readonly task: Task;
+  readonly recurrenceSeries?: RecurrenceSeries | null;
   readonly now: Date;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
-  readonly dragProvided?: DraggableProvided | undefined;
+  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
   readonly isDragging?: boolean | undefined;
-  readonly dropIndicator?: "before" | "after" | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -49,7 +47,11 @@ function stopPointer(event: React.PointerEvent): void {
 
 function TaskMetadata({
   task,
-}: Readonly<{ task: Task }>): React.ReactElement {
+  recurrenceSeries = null,
+}: Readonly<{
+  task: Task;
+  recurrenceSeries?: RecurrenceSeries | null;
+}>): React.ReactElement {
   return (
     <div className="jig-task-meta">
       {task.context === null ? null : (
@@ -64,9 +66,15 @@ function TaskMetadata({
       {task.recurrence_series_id === null ? null : (
         <span
           className="jig-task-meta-item jig-repeat-indicator"
-          aria-label="Recurring task"
+          aria-label={
+            recurrenceSeries === null
+              ? "Recurring task"
+              : `Recurring task: ${recurrenceSummary(recurrenceSeries)}`
+          }
         >
-          Repeats
+          {recurrenceSeries === null
+            ? "Repeats"
+            : recurrenceSummary(recurrenceSeries)}
         </span>
       )}
       {task.priority === "NORMAL" ? null : (
@@ -83,7 +91,7 @@ function TaskMetadata({
       {task.reference === null ? null : isSafeWebReference(task.reference) ? (
         <Link
           data-jig-drag-excluded="true"
-          className="jig-task-meta-item"
+          className="jig-task-reference-action jig-task-meta-item"
           href={task.reference}
           target="_blank"
           type="inherit"
@@ -101,9 +109,8 @@ function TaskMetadata({
           data-jig-drag-excluded="true"
           label="Copy reference"
           variant="ghost"
-          size="sm"
           icon={<Icon icon="copy" size="xsm" color="inherit" />}
-          className="jig-copy-reference jig-task-meta-item"
+          className="jig-task-reference-action jig-copy-reference jig-task-meta-item"
           onPointerDown={stopPointer}
           onClick={(event) => {
             event.stopPropagation();
@@ -114,6 +121,46 @@ function TaskMetadata({
         </Button>
       )}
     </div>
+  );
+}
+
+function TaskCompletionControl({
+  task,
+  completed,
+  onToggleComplete,
+}: Readonly<{
+  task: Task;
+  completed: boolean;
+  onToggleComplete: () => void;
+}>): React.ReactElement {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <span
+      className="jig-task-completion-target"
+      data-jig-drag-excluded="true"
+      onClick={(event) => {
+        // Astryx CheckboxInput intentionally keeps a label-hidden checkbox as
+        // a 24px marker and exposes no public control-class hook. The Task row
+        // cannot own that checkbox's hit area because the independent drag
+        // grip shares the same leading region. This wrapper is therefore the
+        // smallest Jig-owned semantic fallback: it retains Astryx's checkbox
+        // and native input semantics while forwarding only otherwise-empty
+        // 48px target space through the component's public input ref.
+        if (event.target === event.currentTarget) {
+          inputRef.current?.click();
+        }
+        event.stopPropagation();
+      }}
+    >
+      <CheckboxInput
+        ref={inputRef}
+        label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
+        isLabelHidden
+        value={completed}
+        onChange={onToggleComplete}
+      />
+    </span>
   );
 }
 
@@ -219,7 +266,6 @@ export function TaskActionMenu(
           icon: <Icon icon="moreHorizontal" color="inherit" />,
           isIconOnly: true,
           variant: "ghost",
-          size: "sm",
           className: "jig-task-menu-trigger",
         }}
         items={items}
@@ -250,12 +296,12 @@ export function TaskCardPreview({
 
 export function TaskRow({
   task,
+  recurrenceSeries = null,
   now,
   isSelected = false,
   rowRef,
-  dragProvided,
+  dragHandleRef,
   isDragging = false,
-  dropIndicator,
   onSelect,
   onToggleComplete,
   onEdit,
@@ -269,9 +315,7 @@ export function TaskRow({
 
   return (
     <ListItem
-      {...(dragProvided === undefined
-        ? (rowRef === undefined ? {} : { ref: rowRef })
-        : { ref: dragProvided.innerRef, ...dragProvided.draggableProps })}
+      {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
       {...(onSelect === undefined ? {} : { onClick: onSelect })}
       className={[
@@ -291,34 +335,27 @@ export function TaskRow({
           className="jig-task-card-leading"
           data-jig-drag-excluded="true"
         >
-          {dragProvided?.dragHandleProps === null ||
-          dragProvided?.dragHandleProps === undefined ? null : (
+          {dragHandleRef === undefined ? null : (
             <span
-              {...dragProvided.dragHandleProps}
+              ref={dragHandleRef}
               className="jig-task-drag-handle"
+              role="button"
+              tabIndex={0}
               aria-label={`Move ${task.title}`}
               onClick={(event) => event.stopPropagation()}
             >
               <JigIcon name="drag" color="inherit" size="sm" />
             </span>
           )}
-          <CheckboxInput
-            label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
-            isLabelHidden
-            value={completed}
-            onChange={onToggleComplete}
-            size="sm"
+          <TaskCompletionControl
+            task={task}
+            completed={completed}
+            onToggleComplete={onToggleComplete}
           />
         </span>
       }
       label={
         <div className="jig-task-body">
-          {dropIndicator === undefined ? null : (
-            <span
-              className={`jig-task-drop-indicator jig-task-drop-indicator-${dropIndicator}`}
-              aria-hidden="true"
-            />
-          )}
           <div className="jig-task-title-row">
             <span
               className={
@@ -330,7 +367,7 @@ export function TaskRow({
               {task.title}
             </span>
           </div>
-          <TaskMetadata task={task} />
+          <TaskMetadata task={task} recurrenceSeries={recurrenceSeries} />
           {reminderDue ? (
             <span className="jig-reminder-due-indicator" aria-label="Reminder due">
               <Icon icon="clock" size="xsm" color="inherit" />
@@ -351,35 +388,5 @@ export function TaskRow({
         />
       }
     />
-  );
-}
-
-export interface DraggableTaskRowProps
-  extends Omit<
-    TaskRowProps,
-    "rowRef" | "dragProvided" | "isDragging" | "dropIndicator"
-  > {
-  readonly index: number;
-  readonly dropIndicator?: "before" | "after" | undefined;
-}
-
-export function DraggableTaskRow({
-  task,
-  index,
-  dropIndicator,
-  ...rowProps
-}: DraggableTaskRowProps): React.ReactElement {
-  return (
-    <Draggable draggableId={task.id} index={index}>
-      {(provided, snapshot) => (
-        <TaskRow
-          {...rowProps}
-          task={task}
-          dragProvided={provided}
-          isDragging={snapshot.isDragging}
-          {...(dropIndicator === undefined ? {} : { dropIndicator })}
-        />
-      )}
-    </Draggable>
   );
 }

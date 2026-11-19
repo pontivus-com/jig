@@ -85,7 +85,10 @@ async function runConfigured(config: JigConfig): Promise<void> {
     { repository_path: config.repository_path },
     managedGitHub === null
       ? {}
-      : { synchronize: managedGitHub.synchronize },
+      : {
+          networkEnvironment:
+            managedGitHub.network_environment,
+        },
   );
   const githubReconnect =
     managedGitHub === null

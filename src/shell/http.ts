@@ -245,7 +245,7 @@ function parseCommand(value: unknown): TaskCommand {
     case "edit": {
       exactKeys(
         object,
-        ["type", "task_id", "changes"],
+        ["type", "task_id", "changes", "recurrence"],
         ["type", "task_id", "changes"],
         "edit command",
       );
@@ -311,23 +311,14 @@ function parseCommand(value: unknown): TaskCommand {
                   optionalNullableString(changes, "reminder_time") ?? null,
               }),
         },
-      };
-    }
-
-    case "set_recurrence": {
-      exactKeys(
-        object,
-        ["type", "task_id", "recurrence"],
-        ["type", "task_id", "recurrence"],
-        "set_recurrence command",
-      );
-      return {
-        type: "set_recurrence",
-        task_id: requiredString(object, "task_id"),
-        recurrence:
-          object.recurrence === null
-            ? null
-            : parseRecurrenceSpec(object.recurrence),
+        ...(object.recurrence === undefined
+          ? {}
+          : {
+              recurrence:
+                object.recurrence === null
+                  ? null
+                  : parseRecurrenceSpec(object.recurrence),
+            }),
       };
     }
 
