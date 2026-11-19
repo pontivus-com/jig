@@ -1,4 +1,5 @@
 import {
+  acknowledgePortableRemoteHead,
   alignPortableDataRef,
   ensurePortableData,
   EXPORT_DEBOUNCE_MS,
@@ -58,6 +59,8 @@ export interface SyncEffects {
   readonly inspectRemote: typeof inspectSynchronizationRemote;
   readonly observeRemote: typeof observePortableRemote;
   readonly alignLocal: typeof alignPortableDataRef;
+  readonly acknowledgeRemote:
+    typeof acknowledgePortableRemoteHead;
   readonly push: typeof pushPortableDataRef;
   readonly networkEnvironment: () => Promise<
     Readonly<Record<string, string>> | null
@@ -71,6 +74,7 @@ const REAL_EFFECTS: SyncEffects = {
   inspectRemote: inspectSynchronizationRemote,
   observeRemote: observePortableRemote,
   alignLocal: alignPortableDataRef,
+  acknowledgeRemote: acknowledgePortableRemoteHead,
   push: pushPortableDataRef,
   networkEnvironment: async () => ({}),
 };
@@ -551,6 +555,10 @@ export function createSyncController(
               remoteHead,
             );
           }
+          await effects.acknowledgeRemote(
+            adapter,
+            remoteHead,
+          );
           const current = await readCanonicalState(db);
           await markAdoptedHead(db, remoteHead);
           await markExported(db, current.revision, remoteHead);
