@@ -607,17 +607,17 @@ export function TaskEditor({
             <SegmentedControlItem
               value="HIGH"
               label="High"
-              className="jig-mobile-touch-control"
+              style={{ minHeight: "48px" }}
             />
             <SegmentedControlItem
               value="NORMAL"
               label="Normal"
-              className="jig-mobile-touch-control"
+              style={{ minHeight: "48px" }}
             />
             <SegmentedControlItem
               value="LOW"
               label="Low"
-              className="jig-mobile-touch-control"
+              style={{ minHeight: "48px" }}
             />
           </SegmentedControl>
         </div>
