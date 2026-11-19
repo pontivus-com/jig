@@ -131,6 +131,22 @@ describe("repository status presentation", () => {
       label: "Local only",
       detail: "Planning data is stored in the selected local repository.",
     });
+    expect(
+      planningDataHomePresentation({
+        ...configured("synchronized"),
+        repository_status: {
+          local_git: "committed",
+          remote: {
+            state: "synchronized",
+            remote_name: "origin",
+            remote_location: "/tmp/jig-playwright-remote.git",
+          },
+        },
+      }),
+    ).toStrictEqual({
+      label: "Connected repository",
+      detail: "A configured repository carries cross-device continuity.",
+    });
     expect(remoteGitStatusPresentation(localOnly())).toMatchObject({
       label: "No remote configured",
       remoteName: null,
