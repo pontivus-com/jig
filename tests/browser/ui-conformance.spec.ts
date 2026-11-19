@@ -989,7 +989,7 @@ test("outstanding Task action menus are identical at desktop and narrow widths",
 
 test("Repeat uses one shared series while Task occurrences remain ordinary canonical Tasks", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
   const endDate = await browserCivilDate(page, 14);
@@ -1006,6 +1006,10 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   await workspace
     .getByLabel("Ends on")
     .fill(await displayedDateValue(page, endDate));
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-task-form-weekly-desktop.png"),
+    fullPage: true,
+  });
   await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
