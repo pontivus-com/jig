@@ -916,46 +916,6 @@ export async function rollForwardOutstandingInDatabase(
   });
 }
 
-export async function adoptEmptyDatasetIdentity(
-  connection: JigSqlConnection,
-  expectedDatasetId: string,
-  nextDatasetId: string,
-): Promise<void> {
-  assertUuid(expectedDatasetId, "expected dataset_id");
-  assertUuid(nextDatasetId, "next dataset_id");
-
-  await withTransaction(connection, async () => {
-    const metadata = await readMetadata(connection);
-    const state = await readCanonicalState(connection);
-    if (metadata.dataset_id !== expectedDatasetId) {
-      throw new PersistenceConfigurationError(
-        "Local dataset identity changed during synchronization",
-      );
-    }
-    if (
-      state.revision !== 0 ||
-      metadata.last_exported_revision !== 0 ||
-      state.tasks.length !== 0 ||
-      state.recurrences.length !== 0
-    ) {
-      throw new PersistenceConfigurationError(
-        "Dataset identity may only change for an empty never-mutated bootstrap",
-      );
-    }
-
-    await connection.execute(
-      `UPDATE app_metadata
-       SET
-         dataset_id = ?,
-         last_exported_head = NULL,
-         last_adopted_head = NULL,
-         pending_sync = 1
-       WHERE singleton = 1`,
-      [nextDatasetId],
-    );
-  });
-}
-
 export async function markExported(
   connection: JigSqlConnection,
   exportedRevision: number,
@@ -994,23 +954,29 @@ export async function markAdoptedHead(
   );
 }
 
-export async function applySynchronizedCanonicalState(
+export async function adoptCanonicalSnapshot(
   connection: JigSqlConnection,
-  expectedRevision: number,
   tasks: readonly Task[],
   recurrences: readonly RecurrenceSeries[],
-  adoptedHead: string,
+  adoptedHead: string | null,
+  expectedRevision?: number,
 ): Promise<CanonicalState> {
   assertRecurrenceState(tasks, recurrences);
-  if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+  if (
+    expectedRevision !== undefined &&
+    (!Number.isInteger(expectedRevision) || expectedRevision < 0)
+  ) {
     throw new PersistenceConfigurationError(
-      "Expected synchronization revision must be a non-negative integer",
+      "Expected adoption revision must be a non-negative integer",
     );
   }
 
   return withTransaction(connection, async () => {
     const current = await readCanonicalState(connection);
-    if (current.revision !== expectedRevision) {
+    if (
+      expectedRevision !== undefined &&
+      current.revision !== expectedRevision
+    ) {
       throw new StaleRevisionError(current.revision);
     }
 
@@ -1021,55 +987,31 @@ export async function applySynchronizedCanonicalState(
       tasks,
       recurrences,
     );
-    const revision = current.revision + 1;
-    await connection.execute(
-      `UPDATE app_metadata
-       SET
-         revision = ?,
-         last_adopted_head = ?,
-         pending_sync = 1
-       WHERE singleton = 1`,
-      [revision, adoptedHead],
-    );
-
-    return {
-      revision,
-      tasks: await readTasks(connection),
-      recurrences: await readRecurrences(connection),
-    };
-  });
-}
-
-export async function adoptCanonicalSnapshot(
-  connection: JigSqlConnection,
-  tasks: readonly Task[],
-  recurrences: readonly RecurrenceSeries[],
-  adoptedHead: string | null,
-): Promise<CanonicalState> {
-  assertRecurrenceState(tasks, recurrences);
-
-  return withTransaction(connection, async () => {
-    const current = await readCanonicalState(connection);
-    await persistCanonicalSet(
-      connection,
-      current.tasks,
-      current.recurrences,
-      tasks,
-      recurrences,
-    );
 
     const revision = current.revision + 1;
-    await connection.execute(
-      `UPDATE app_metadata
-       SET
-         revision = ?,
-         last_exported_revision = ?,
-         last_exported_head = ?,
-         last_adopted_head = ?,
-         pending_sync = 0
-       WHERE singleton = 1`,
-      [revision, revision, adoptedHead, adoptedHead],
-    );
+    if (expectedRevision === undefined) {
+      await connection.execute(
+        `UPDATE app_metadata
+         SET
+           revision = ?,
+           last_exported_revision = ?,
+           last_exported_head = ?,
+           last_adopted_head = ?,
+           pending_sync = 0
+         WHERE singleton = 1`,
+        [revision, revision, adoptedHead, adoptedHead],
+      );
+    } else {
+      await connection.execute(
+        `UPDATE app_metadata
+         SET
+           revision = ?,
+           last_adopted_head = ?,
+           pending_sync = 1
+         WHERE singleton = 1`,
+        [revision, adoptedHead],
+      );
+    }
 
     return {
       revision,
