@@ -674,6 +674,12 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       name: "Mobile geometry inventory",
     });
     await expect(workspace).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Primary" }),
+    ).toHaveCount(0);
+    await expect(
+      workspace.getByRole("heading", { level: 3 }),
+    ).toHaveText(["Task", "Schedule", "Details", "Notes"]);
 
     await expectTarget(
       workspace.getByRole("button", { name: "Close", exact: true }),
@@ -754,6 +760,7 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await workspace
       .getByRole("button", { name: "Close", exact: true })
       .click();
+    await expect(primaryNavigation).toBeVisible();
 
     await primaryNavigation
       .getByRole("button", { name: "Settings", exact: true })
