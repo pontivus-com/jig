@@ -131,6 +131,7 @@ export async function runGit(
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, ...extraEnv },
+    detached: timeoutMs !== undefined,
   });
 
   let timedOut = false;
@@ -139,7 +140,11 @@ export async function runGit(
       ? null
       : setTimeout(() => {
           timedOut = true;
-          processHandle.kill("SIGKILL");
+          try {
+            process.kill(-processHandle.pid, "SIGKILL");
+          } catch {
+            processHandle.kill("SIGKILL");
+          }
         }, timeoutMs);
 
   try {
@@ -889,6 +894,7 @@ export async function observePortableRemote(
     [
       "fetch",
       "--no-tags",
+      "--refmap=",
       authority.remote.name,
       "refs/heads/jig-data",
     ],
