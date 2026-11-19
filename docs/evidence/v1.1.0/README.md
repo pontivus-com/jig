@@ -80,7 +80,7 @@ No non-device repository implementation gap remains.
 
 The remaining governed evidence is:
 
-1. **External live acceptance:** verify the live **Jig Desktop & Mobile** GitHub App configuration and execute real Linux/Desktop Device Flow plus selected private-repository acquisition/synchronization through Secret Service. This is issue #31 acceptance evidence, not an unfinished code task.
+1. **External live acceptance:** verify the live **Jig Desktop & Mobile** GitHub App configuration and execute real Linux/Desktop Device Flow plus selected private-repository acquisition/synchronization through Secret Service. This is non-device external acceptance requiring an interactive GitHub user session and live Secret Service environment; it is issue #31 evidence, not an unfinished repository code task and cannot be manufactured by the repository execution surface.
 2. **Physical device:** execute J110-IMP-09 on a physical Android phone, including the exact drag/drop inter-card-gap gate.
 3. **Physical/native matrix:** execute the J110-IMP-15 Android API 24/31/33/36 matrix with at least one physical phone, including GitHub authorization/private clone, same portable dataset as Linux, offline CRUD/order, safe-area/sticky header, rollover, native reminder policy/permission/failure semantics, notification reconciliation, token expiry/reconnect, restart persistence, reconnect-after-network, Git interoperability and uninstall/reinstall continuity.
 4. Record the physical device make/model, Android/API/WebView versions, exact source/APK identity and results here.
