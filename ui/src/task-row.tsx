@@ -7,10 +7,7 @@ import {
   ListItem,
 } from "@astryxdesign/core";
 import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
-import {
-  Draggable,
-  type DraggableProvided,
-} from "@hello-pangea/dnd";
+import { useDraggable } from "@dnd-kit/react";
 import type { Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
@@ -25,9 +22,8 @@ export interface TaskRowProps {
   readonly now: Date;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
-  readonly dragProvided?: DraggableProvided | undefined;
+  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
   readonly isDragging?: boolean | undefined;
-  readonly dropIndicator?: "before" | "after" | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -265,9 +261,8 @@ export function TaskRow({
   now,
   isSelected = false,
   rowRef,
-  dragProvided,
+  dragHandleRef,
   isDragging = false,
-  dropIndicator,
   onSelect,
   onToggleComplete,
   onEdit,
@@ -281,9 +276,7 @@ export function TaskRow({
 
   return (
     <ListItem
-      {...(dragProvided === undefined
-        ? (rowRef === undefined ? {} : { ref: rowRef })
-        : { ref: dragProvided.innerRef, ...dragProvided.draggableProps })}
+      {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
       {...(onSelect === undefined ? {} : { onClick: onSelect })}
       className={[
@@ -303,11 +296,12 @@ export function TaskRow({
           className="jig-task-card-leading"
           data-jig-drag-excluded="true"
         >
-          {dragProvided?.dragHandleProps === null ||
-          dragProvided?.dragHandleProps === undefined ? null : (
+          {dragHandleRef === undefined ? null : (
             <span
-              {...dragProvided.dragHandleProps}
+              ref={dragHandleRef}
               className="jig-task-drag-handle"
+              role="button"
+              tabIndex={0}
               aria-label={`Move ${task.title}`}
               onClick={(event) => event.stopPropagation()}
             >
@@ -324,12 +318,6 @@ export function TaskRow({
       }
       label={
         <div className="jig-task-body">
-          {dropIndicator === undefined ? null : (
-            <span
-              className={`jig-task-drop-indicator jig-task-drop-indicator-${dropIndicator}`}
-              aria-hidden="true"
-            />
-          )}
           <div className="jig-task-title-row">
             <span
               className={
@@ -368,29 +356,39 @@ export function TaskRow({
 export interface DraggableTaskRowProps
   extends Omit<
     TaskRowProps,
-    "rowRef" | "dragProvided" | "isDragging" | "dropIndicator"
+    "rowRef" | "dragHandleRef" | "isDragging"
   > {
   readonly index: number;
-  readonly dropIndicator?: "before" | "after" | undefined;
 }
 
 export function DraggableTaskRow({
   task,
   index,
-  dropIndicator,
   ...rowProps
 }: DraggableTaskRowProps): React.ReactElement {
+  const draggable = useDraggable({
+    id: task.id,
+    type: "jig-task",
+    data: {
+      date: task.scheduled_date,
+      index,
+    },
+  });
+
+  const rowRef = (element: HTMLLIElement | null): void => {
+    draggable.ref(element);
+  };
+  const dragHandleRef = (element: HTMLSpanElement | null): void => {
+    draggable.handleRef(element);
+  };
+
   return (
-    <Draggable draggableId={task.id} index={index}>
-      {(provided, snapshot) => (
-        <TaskRow
-          {...rowProps}
-          task={task}
-          dragProvided={provided}
-          isDragging={snapshot.isDragging}
-          {...(dropIndicator === undefined ? {} : { dropIndicator })}
-        />
-      )}
-    </Draggable>
+    <TaskRow
+      {...rowProps}
+      task={task}
+      rowRef={rowRef}
+      dragHandleRef={dragHandleRef}
+      isDragging={draggable.isDragging}
+    />
   );
 }
