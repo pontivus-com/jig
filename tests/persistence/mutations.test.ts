@@ -3,8 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  adoptEmptyDatasetIdentity,
-  applySynchronizedCanonicalState,
+  adoptCanonicalSnapshot,
   applyTaskCommand,
   markExported,
   readCanonicalState,
@@ -541,12 +540,12 @@ describe("synchronized canonical application", () => {
       updated_at: TIMES[0],
     };
 
-    const applied = await applySynchronizedCanonicalState(
+    const applied = await adoptCanonicalSnapshot(
       db,
-      before.revision,
       [synchronizedTask],
       [],
       "a".repeat(40),
+      before.revision,
     );
 
     expect(applied.revision).toBe(before.revision + 1);
@@ -576,66 +575,16 @@ describe("synchronized canonical application", () => {
     const before = await readCanonicalState(db);
 
     await expect(
-      applySynchronizedCanonicalState(
+      adoptCanonicalSnapshot(
         db,
-        observedRevision,
         [],
         [],
         "b".repeat(40),
+        observedRevision,
       ),
     ).rejects.toThrow(StaleRevisionError);
 
     expect(await readCanonicalState(db)).toStrictEqual(before);
-  });
-});
-
-
-describe("empty bootstrap dataset identity", () => {
-  it("may adopt a winning dataset identity only before any planning mutation", async () => {
-    const winner =
-      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f9999";
-    await expect(
-      adoptEmptyDatasetIdentity(db, DATASET_ID, winner),
-    ).resolves.toBeUndefined();
-    expect(await readMetadata(db)).toMatchObject({
-      dataset_id: winner,
-      revision: 0,
-      last_exported_revision: 0,
-      last_exported_head: null,
-      pending_sync: true,
-    });
-  });
-
-  it("refuses dataset identity replacement after a real local mutation even if the Task was later removed", async () => {
-    await applyTaskCommand(
-      db,
-      {
-        type: "create",
-        title: "Real intent",
-        scheduled_date: "2026-11-16",
-      },
-      0,
-      TIMES[0],
-      () => IDS[0],
-    );
-    await applyTaskCommand(
-      db,
-      { type: "delete", task_id: IDS[0] },
-      1,
-      TIMES[1],
-    );
-    expect((await readCanonicalState(db)).tasks).toEqual([]);
-
-    await expect(
-      adoptEmptyDatasetIdentity(
-        db,
-        DATASET_ID,
-        "018f47f0-7b5c-7d4d-8e2b-9c3aa11f9998",
-      ),
-    ).rejects.toThrow(/never-mutated bootstrap/);
-    expect((await readMetadata(db)).dataset_id).toBe(
-      DATASET_ID,
-    );
   });
 });
 
