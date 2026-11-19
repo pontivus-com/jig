@@ -476,6 +476,7 @@ describe("Android Git smart-HTTP feasibility", () => {
     const installed = await initializeRepositoryInstallation({
       repository_path: desktop,
       http_port: 47831,
+      config_path: join(root, "desktop-config.json"),
     });
     const desktopDb = await openDatabase(installed.sqlite_path);
     const desktopSync = createSyncController(
