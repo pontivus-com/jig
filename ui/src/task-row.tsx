@@ -250,7 +250,7 @@ export function TaskCardPreview({
         <span className="jig-task-title">{task.title}</span>
         <Icon icon="moreHorizontal" color="secondary" />
       </div>
-      <TaskMetadata task={task} recurrenceSeries={recurrenceSeries} />
+      <TaskMetadata task={task} />
     </div>
   );
 }
@@ -329,7 +329,7 @@ export function TaskRow({
               {task.title}
             </span>
           </div>
-          <TaskMetadata task={task} />
+          <TaskMetadata task={task} recurrenceSeries={recurrenceSeries} />
           {reminderDue ? (
             <span className="jig-reminder-due-indicator" aria-label="Reminder due">
               <Icon icon="clock" size="xsm" color="inherit" />
