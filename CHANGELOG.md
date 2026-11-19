@@ -17,8 +17,10 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Changed
 
+- Reworked the configured compact application around the UX-F0 governed hierarchy: persistent Planner/History/Settings bottom navigation replaces hamburger primary navigation, Planner Add is one floating primary action, healthy synchronization is visually subordinate, Today remains explicit text, and touch-target geometry no longer dictates visible control mass.
+- Reworked mobile Planner scan density without shrinking touch targets, restored a stable value-first onboarding composition with visual proof points, grouped the Task editor into Task / Schedule / Details / Notes while preserving one-Save recurrence semantics, and replaced primary Settings dashboard cards with a content-led reading hierarchy.
 - Governed new v1.1 mobile and desktop UX/UI references for onboarding and the complete Task form. The mobile reference is now the binding v1.1 form interaction standard for BottomSheet hierarchy, touch geometry, scrolling, progressive Repeat disclosure and action placement; the old mobile editor reference is historical where superseded.
-- Reopened v1.1 mobile UX/UI after physical Android validation: mobile controls/menu now require >=48px touch targets with deliberate spacing, Settings is redesigned as Data & sync / Appearance / Notifications / subordinate Diagnostics, and Repeat is integrated into the single Task form with progressive disclosure and one atomic Save.
+- Reopened v1.1 desktop + mobile UX/UI after implementation-fidelity review: prior geometry/screenshot retention is no longer treated as visual certification; shell/navigation, Planner density, onboarding, Task workspace, History/Settings and cross-theme visual parity must pass reviewed evidence before physical certification resumes.
 - Rejected the Pangea Task-movement implementation after physical-device failure and governed a proof-gated current dnd-kit replacement using a dedicated grip, explicit before/between/after insertion slots and mandatory terminal drag-state cleanup.
 
 - History and Settings use the application header as the single title/subtitle owner; their content surfaces begin directly with destination content instead of repeating page headings.
@@ -39,13 +41,13 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Documentation
 
-- Added binding v1.1 HTML reference authority for Android/narrow onboarding + complete Task form and desktop onboarding + complete Task form, and traced those references through AGENTS, functional/technical design, implementation, Android certification and evidence.
+- Added binding v1.1 app-wide configured-application UX authority and the UX-F0 desktop/mobile fidelity audit alongside the existing onboarding/Task-form references; the new authority governs compact bottom navigation, Planner FAB, action prominence, Planner density, History/Settings composition and the reviewed visual-evidence matrix.
 - Reconciled the functional, UI, technical, repository-governance, implementation-plan and evidence authorities around the reopened mobile UX remediation; the previous green hosted candidate is no longer closure evidence for the amended mobile interaction/Settings/Repeat/drag contracts.
 
 - Canonicalized product, functional, technical, UI/theme and repository-governance authorities for v1.1 while retaining v1.0.6 clauses as historical release provenance where superseded.
 - Reopened the v1.1 onboarding/reconnect/Settings implementation against the corrected intent-first authority and made all non-device implementation/certification complete before the final physical-device wave; permanent hosted verification remains the authoritative CI gate and local `act` remains optional preflight.
 - Consolidated all v1.1 implementation, evidence and certification state onto the single authoritative `v1.1` integration branch; temporary work/CI branches are non-authoritative and physical failures are corrected on `v1.1` before final promotion to `master`.
-- Closed the repository/host/emulator v1.1 remediation gate on source candidate `305b2cd8f14f8f6ac791e3d5d07340b9d5e45efd` with permanent Verify run `44516299671`: 41/41 test files and 250/250 core/integration/architecture tests, 77/77 browser tests, deterministic Android build/F-Droid certification, API-24 instrumentation and retained governed browser screenshots all passed.
+- Retained source candidate `305b2cd8f14f8f6ac791e3d5d07340b9d5e45efd` / Verify run `44516299671` as functional/runtime evidence only. Its former UX/UI closure is withdrawn because passing geometry tests and retained screenshots did not prove governed visual fidelity; UX-F0..UX-F7 now require a new reviewed post-remediation candidate.
 
 ## [1.0.6] - 2026-11-18
 
