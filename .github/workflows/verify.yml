@@ -44,6 +44,13 @@ jobs:
 
       - name: Real-browser acceptance
         run: bun run test:browser
+      - name: Retain governed v1.1 browser evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: jig-v1.1-browser-evidence-${{ github.sha }}
+          path: test-results/**/v1.1-*.png
+          if-no-files-found: error
+          retention-days: 7
       - name: Shell syntax
         run: bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/installer-smoke.sh tests/install/release-bundle-smoke.sh tests/certification/resource-gate.sh tests/certification/installed-readiness-gate.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh
       - name: Installer and lifecycle smoke

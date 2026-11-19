@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { GitHubDeviceFlowPanel } from "./github-device-flow";
+import type { LayoutMode } from "./use-layout-mode";
 import { installNativeActiveListener } from "./native/app-lifecycle";
 import {
   configureLocalRepository,
@@ -27,6 +28,7 @@ import {
 
 export interface SetupViewProps {
   readonly status: SetupStatus;
+  readonly layoutMode: LayoutMode;
 }
 
 function errorMessage(error: unknown): string {
@@ -35,6 +37,7 @@ function errorMessage(error: unknown): string {
 
 export function SetupView({
   status,
+  layoutMode,
 }: SetupViewProps): React.ReactElement {
   const [repositoryPath, setRepositoryPath] = useState("");
   const [showLocalRepository, setShowLocalRepository] = useState(false);
@@ -172,204 +175,377 @@ export function SetupView({
   const selecting = github?.state === "repository-selection";
   const attention = github?.state === "attention";
 
+  const openProvider = (): void => {
+    if (github?.provider_url !== null && github?.provider_url !== undefined) {
+      window.open(
+        github.provider_url,
+        "_blank",
+        "noopener,noreferrer",
+      );
+    }
+  };
+
   return (
-    <div className="jig-setup">
-      <div className="jig-setup-content">
-        <div className="jig-setup-heading">
-          <h1>Connect your planning data</h1>
-          <p>
-            Jig keeps your planning data in a Git repository so it can stay
-            local and move with you.
-          </p>
-        </div>
+    <div className="jig-setup" aria-labelledby="jig-setup-title">
+      <div className="jig-setup-layout">
+        {layoutMode === "narrow" && initial && !showLocalRepository ? (
+          <section className="jig-setup-value">
+            <div className="jig-setup-heading">
+              <span className="jig-setup-eyebrow">Welcome to Jig</span>
+              <h1 id="jig-setup-title">Plan your week. Keep the data yours.</h1>
+              <p>
+                Jig keeps planning data local and uses Git to carry the same
+                plan between Jig installations.
+              </p>
+            </div>
 
-        {error === null ? null : (
-          <Banner
-            status="error"
-            title="Jig needs attention"
-            description={error}
-            collapsible={false}
-          />
-        )}
+            <div
+              className="jig-setup-benefits"
+              aria-label="How Jig keeps your plan"
+            >
+              <div>
+                <strong>Saved on this device</strong>
+                <span>Your plan remains usable locally.</span>
+              </div>
+              <div>
+                <strong>Portable through Git</strong>
+                <span>Use the same planning data on desktop and Android.</span>
+              </div>
+              <div>
+                <strong>You stay in control</strong>
+                <span>GitHub authorization happens on GitHub.</span>
+              </div>
+            </div>
+          </section>
+        ) : layoutMode === "desktop" ? (
+          <section className="jig-setup-value">
+            {showLocalRepository ? (
+              <div className="jig-setup-heading">
+                <span className="jig-setup-eyebrow">Existing repository</span>
+                <h1 id="jig-setup-title">
+                  Use the plan already on this computer.
+                </h1>
+                <p>
+                  This path remains provider-neutral and may be healthy Local
+                  only.
+                </p>
+              </div>
+            ) : initial ? (
+              <>
+                <div className="jig-setup-heading">
+                  <span className="jig-setup-eyebrow">Welcome to Jig</span>
+                  <h1 id="jig-setup-title">
+                    Plan your week. Keep the data yours.
+                  </h1>
+                  <p>
+                    Jig keeps planning data local and uses Git to carry the
+                    same plan between Jig installations.
+                  </p>
+                </div>
+                <div
+                  className="jig-setup-benefits"
+                  aria-label="How Jig keeps your plan"
+                >
+                  <div>
+                    <strong>Local first</strong>
+                    <span>Your plan remains available on this computer.</span>
+                  </div>
+                  <div>
+                    <strong>Portable</strong>
+                    <span>
+                      Use the same planning data on another Jig installation.
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Your repository</strong>
+                    <span>GitHub authorization stays on GitHub.</span>
+                  </div>
+                </div>
+              </>
+            ) : selecting ? (
+              <div className="jig-setup-heading">
+                <span className="jig-setup-eyebrow">
+                  Connect your planning data
+                </span>
+                <h1 id="jig-setup-title">Choose one repository.</h1>
+                <p>
+                  Jig asks only when more than one eligible repository remains.
+                </p>
+              </div>
+            ) : attention ? (
+              <div className="jig-setup-heading">
+                <span className="jig-setup-eyebrow">
+                  Connection needs attention
+                </span>
+                <h1 id="jig-setup-title">Your plan is not configured yet.</h1>
+                <p>
+                  Recovery stays user-facing while Git and service mechanics
+                  remain behind Jig.
+                </p>
+              </div>
+            ) : (
+              <div className="jig-setup-heading">
+                <span className="jig-setup-eyebrow">Your planning data</span>
+                <h1 id="jig-setup-title">Same plan. Different devices.</h1>
+                <p>
+                  Keep working locally while Git provides continuity between
+                  Jig installations.
+                </p>
+              </div>
+            )}
+          </section>
+        ) : null}
 
-        {initial ? (
-          <Section
-            className="jig-setup-card"
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={3}>
-              {status.github_available ? (
+        <section className="jig-setup-pane" aria-label="Set up planning data">
+          {error === null ? null : (
+            <Banner
+              status="error"
+              title="Jig needs attention"
+              description={error}
+              collapsible={false}
+            />
+          )}
+
+          {initial && showLocalRepository ? (
+            <Section
+              className="jig-setup-card"
+              padding={5}
+              dividers={["top", "bottom", "start", "end"]}
+            >
+              <VStack gap={3}>
+                <div className="jig-setup-state-heading">
+                  {layoutMode === "narrow" ? (
+                    <span className="jig-setup-eyebrow">
+                      Existing repository
+                    </span>
+                  ) : null}
+                  <h2 id={layoutMode === "narrow" ? "jig-setup-title" : undefined}>Use an existing local repository</h2>
+                  <p>
+                    Enter the absolute path to the repository that already
+                    carries your planning data.
+                  </p>
+                </div>
+                <TextInput
+                  label="Repository path"
+                  value={repositoryPath}
+                  onChange={setRepositoryPath}
+                  width="100%"
+                  placeholder="/home/you/planning"
+                  isRequired
+                  controlClassName="jig-mobile-touch-control"
+                />
                 <Button
-                  label="Connect GitHub repository"
+                  label="Use this repository"
                   variant="primary"
                   isLoading={isOperating}
                   onClick={() => {
-                    void connectGitHub();
+                    void completeLocalSetup();
                   }}
                 />
-              ) : (
-                <p>Connect GitHub is unavailable in this runtime.</p>
-              )}
-
-              {status.local_repository_available ? (
                 <Button
-                  label="Use an existing local repository"
+                  label="Back"
                   variant="secondary"
+                  isDisabled={isOperating}
                   onClick={() => {
-                    setShowLocalRepository((current) => !current);
+                    setShowLocalRepository(false);
                     setError(null);
                   }}
                 />
-              ) : null}
+              </VStack>
+            </Section>
+          ) : initial ? (
+            <Section
+              className="jig-setup-card"
+              padding={5}
+              dividers={["top", "bottom", "start", "end"]}
+            >
+              <VStack gap={3}>
+                <div className="jig-setup-state-heading">
+                  <h2>Choose where Jig keeps your plan</h2>
+                  <p>
+                    Connect GitHub for continuity between Jig installations
+                    {status.local_repository_available
+                      ? ", or use a repository already on this computer."
+                      : "."}
+                  </p>
+                </div>
 
-              {showLocalRepository ? (
-                <div className="jig-setup-local-repository">
-                  <TextInput
-                    label="Repository path"
-                    value={repositoryPath}
-                    onChange={setRepositoryPath}
-                    width="100%"
-                    placeholder="/home/you/planning"
-                    isRequired
-                  />
+                {status.github_available ? (
                   <Button
-                    label="Use this repository"
-                    variant="secondary"
+                    label="Connect GitHub repository"
+                    variant="primary"
                     isLoading={isOperating}
                     onClick={() => {
-                      void completeLocalSetup();
+                      void connectGitHub();
                     }}
                   />
-                </div>
-              ) : null}
-            </VStack>
-          </Section>
-        ) : null}
+                ) : (
+                  <p>Connect GitHub is unavailable in this runtime.</p>
+                )}
 
-        {connecting ? (
-          <Section
-            className="jig-setup-card"
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={3}>
-              <div>
-                <h2>Connecting repository…</h2>
-                <p>Jig will continue automatically when it can.</p>
-              </div>
+                {status.local_repository_available ? (
+                  <Button
+                    label="Use an existing local repository"
+                    variant="secondary"
+                    onClick={() => {
+                      setShowLocalRepository(true);
+                      setError(null);
+                    }}
+                  />
+                ) : null}
 
-              <GitHubDeviceFlowPanel
-                authorization={github.authorization}
-                purpose="continue"
-              />
+                <small className="jig-secondary-copy">
+                  Jig continues automatically after GitHub authorization.
+                </small>
+              </VStack>
+            </Section>
+          ) : null}
 
-              {github.provider_url === null ? null : (
-                <div className="jig-setup-github-state">
+          {connecting ? (
+            <Section
+              className="jig-setup-card"
+              padding={5}
+              dividers={["top", "bottom", "start", "end"]}
+            >
+              <VStack gap={3}>
+                <div className="jig-setup-state-heading">
+                  {layoutMode === "narrow" ? (
+                    <span className="jig-setup-eyebrow">
+                      Connect your planning data
+                    </span>
+                  ) : null}
+                  <h2
+                    id={layoutMode === "narrow" ? "jig-setup-title" : undefined}
+                  >
+                    {github.authorization !== null
+                      ? "Authorize Jig on GitHub"
+                      : github.provider_url !== null
+                        ? "Repository access on GitHub"
+                        : "Getting your plan ready…"}
+                  </h2>
                   <p>
-                    Choose or review repository access on GitHub. Jig will
-                    check the result automatically when you return.
+                    {github.authorization !== null
+                      ? "Enter the code on GitHub. Jig will continue automatically after authorization."
+                      : github.provider_url !== null
+                        ? "Review repository access on GitHub. Jig will check again automatically when you return."
+                        : "Jig is connecting your planning data. No additional action is required."}
                   </p>
+                </div>
+
+                <GitHubDeviceFlowPanel
+                  authorization={github.authorization}
+                  purpose="continue"
+                />
+
+                {github.provider_url === null ? null : (
                   <Button
                     label="Open GitHub"
-                    variant="secondary"
-                    onClick={() => {
-                      if (github.provider_url !== null) {
-                        window.open(
-                          github.provider_url,
-                          "_blank",
-                          "noopener,noreferrer",
-                        );
-                      }
-                    }}
+                    variant="primary"
+                    onClick={openProvider}
                   />
+                )}
+
+                {github.authorization === null &&
+                github.provider_url === null ? (
+                  <p className="jig-secondary-copy">
+                    You’ll go straight to Planner when it’s ready.
+                  </p>
+                ) : null}
+              </VStack>
+            </Section>
+          ) : null}
+
+          {selecting ? (
+            <Section
+              className="jig-setup-card"
+              padding={5}
+              dividers={["top", "bottom", "start", "end"]}
+            >
+              <VStack gap={3}>
+                <div className="jig-setup-state-heading">
+                  {layoutMode === "narrow" ? (
+                    <span className="jig-setup-eyebrow">
+                      Connect your planning data
+                    </span>
+                  ) : null}
+                  <h2 id={layoutMode === "narrow" ? "jig-setup-title" : undefined}>Choose your planning repository</h2>
+                  <p>
+                    Choose the repository that carries your Jig planning data.
+                  </p>
                 </div>
-              )}
-
-              {github.authorization === null &&
-              github.provider_url === null ? (
-                <p className="jig-secondary-copy">
-                  Finishing the repository connection…
-                </p>
-              ) : null}
-            </VStack>
-          </Section>
-        ) : null}
-
-        {selecting ? (
-          <Section
-            className="jig-setup-card"
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={3}>
-              <div>
-                <h2>Choose a repository</h2>
-                <p>Select the repository Jig should use for planning data.</p>
-              </div>
-              <div className="jig-setup-github-repositories">
-                {github.repositories.map((repository) => (
+                <div className="jig-setup-github-repositories">
+                  {github.repositories.map((repository) => (
+                    <Button
+                      key={repository.id}
+                      label={`${repository.owner}/${repository.name}`}
+                      variant="secondary"
+                      isLoading={isOperating}
+                      onClick={() => {
+                        void selectRepository(repository.id);
+                      }}
+                    />
+                  ))}
+                </div>
+                {github.provider_url === null ? null : (
                   <Button
-                    key={repository.id}
-                    label={`${repository.owner}/${repository.name}`}
+                    label="Repository not listed? Open GitHub"
                     variant="secondary"
-                    isLoading={isOperating}
+                    onClick={openProvider}
+                  />
+                )}
+              </VStack>
+            </Section>
+          ) : null}
+
+          {attention ? (
+            <Section
+              className="jig-setup-card"
+              padding={5}
+              dividers={["top", "bottom", "start", "end"]}
+            >
+              <VStack gap={3}>
+                <div className="jig-setup-state-heading">
+                  {layoutMode === "narrow" ? (
+                    <span className="jig-setup-eyebrow">
+                      Connection needs attention
+                    </span>
+                  ) : null}
+                  <h2 id={layoutMode === "narrow" ? "jig-setup-title" : undefined}>Connection needs attention</h2>
+                  <p>
+                    {github.error ??
+                      "Jig cannot continue until the connection is available."}
+                  </p>
+                </div>
+                {github.provider_url === null ? null : (
+                  <Button
+                    label="Open GitHub"
+                    variant="primary"
+                    onClick={openProvider}
+                  />
+                )}
+                <Button
+                  label="Try again"
+                  variant={github.provider_url === null ? "primary" : "secondary"}
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void retryGitHub();
+                  }}
+                />
+                {status.local_repository_available ? (
+                  <Button
+                    label="Use an existing local repository"
+                    variant="secondary"
                     onClick={() => {
-                      void selectRepository(repository.id);
+                      setGitHub(null);
+                      setShowLocalRepository(true);
+                      setError(null);
                     }}
                   />
-                ))}
-              </div>
-              {github.provider_url === null ? null : (
-                <Button
-                  label="Repository not listed? Open GitHub"
-                  variant="secondary"
-                  onClick={() => {
-                    if (github.provider_url !== null) {
-                      window.open(
-                        github.provider_url,
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                    }
-                  }}
-                />
-              )}
-            </VStack>
-          </Section>
-        ) : null}
-
-        {attention ? (
-          <Section
-            className="jig-setup-card"
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={3}>
-              <h2>Connection needs attention</h2>
-              {github.error === null ? null : <p>{github.error}</p>}
-              <Button
-                label="Try again"
-                variant="primary"
-                isLoading={isOperating}
-                onClick={() => {
-                  void retryGitHub();
-                }}
-              />
-              {status.local_repository_available ? (
-                <Button
-                  label="Use an existing local repository"
-                  variant="secondary"
-                  onClick={() => {
-                    setGitHub(null);
-                    setShowLocalRepository(true);
-                    setError(null);
-                  }}
-                />
-              ) : null}
-            </VStack>
-          </Section>
-        ) : null}
+                ) : null}
+              </VStack>
+            </Section>
+          ) : null}
+        </section>
       </div>
     </div>
   );

@@ -68,7 +68,7 @@ import {
   type TaskWorkspacePresentation,
   type TaskWorkspaceState,
 } from "./task-workspace";
-import { useLayoutMode } from "./use-layout-mode";
+import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
 import { installNativeActiveListener } from "./native/app-lifecycle";
@@ -139,6 +139,7 @@ function workspaceTaskId(state: TaskWorkspaceState): string | null {
 }
 
 interface ConfiguredAppProps {
+  readonly layoutMode: LayoutMode;
   readonly themePreset: ThemePreset;
   readonly appearanceMode: AppearanceMode;
   readonly onThemePresetChange: (value: ThemePreset) => void;
@@ -146,12 +147,12 @@ interface ConfiguredAppProps {
 }
 
 function ConfiguredApp({
+  layoutMode,
   themePreset,
   appearanceMode,
   onThemePresetChange,
   onAppearanceModeChange,
 }: ConfiguredAppProps): React.ReactElement {
-  const layoutMode = useLayoutMode();
   const reminderNow = useReminderClock();
   const [destination, setDestination] = useState<Destination>("planner");
   const [plannerState, setPlannerState] =
@@ -459,12 +460,18 @@ function ConfiguredApp({
 
   const selectTask = useCallback((task: Task): void => {
     setOperationError(null);
+    const recurrenceSeries =
+      task.recurrence_series_id === null
+        ? null
+        : canonical?.recurrences.find(
+            (series) => series.id === task.recurrence_series_id,
+          ) ?? null;
     setWorkspace({
       mode: "task",
       taskId: task.id,
-      draft: draftFor(task, task.scheduled_date),
+      draft: draftFor(task, task.scheduled_date, recurrenceSeries),
     });
-  }, []);
+  }, [canonical?.recurrences]);
 
   const openCreate = useCallback((date: string): void => {
     setOperationError(null);
@@ -481,11 +488,14 @@ function ConfiguredApp({
       if (result === null || !("task" in result)) {
         return false;
       }
-      setWorkspace({
+      setWorkspace((current) => ({
         mode: "task",
         taskId: result.task.id,
-        draft: draftFor(result.task, result.task.scheduled_date),
-      });
+        draft:
+          current.mode === "task" || current.mode === "create"
+            ? current.draft
+            : draftFor(result.task, result.task.scheduled_date),
+      }));
       return true;
     },
     [runCommand],
@@ -717,6 +727,7 @@ function ConfiguredApp({
     ) : destination === "planner" ? (
       <Planner
         tasks={tasks}
+        recurrences={canonical.recurrences}
         now={reminderNow}
         displayedDates={displayedDates}
         selectedTask={selectedTask}
@@ -865,6 +876,7 @@ function ConfiguredApp({
 
 
 export function App(): React.ReactElement {
+  const layoutMode = useLayoutMode();
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [themePreset, setThemePreset] =
@@ -896,7 +908,7 @@ export function App(): React.ReactElement {
 
   const bootstrapBody =
     setupStatus?.mode === "bootstrap" ? (
-      <SetupView status={setupStatus} />
+      <SetupView status={setupStatus} layoutMode={layoutMode} />
     ) : (
       <div className="jig-loading">
         {setupError === null ? (
@@ -926,6 +938,7 @@ export function App(): React.ReactElement {
       <LayerProvider>
         {setupStatus?.mode === "configured" ? (
           <ConfiguredApp
+            layoutMode={layoutMode}
             themePreset={themePreset}
             appearanceMode={appearanceMode}
             onThemePresetChange={changeThemePreset}

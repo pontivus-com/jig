@@ -117,13 +117,16 @@ describe("architecture compliance", () => {
 
     const recurrence = source("src/core/recurrence.ts");
     const planning = source("src/core/recurrence-planning.ts");
-    const editor = source("ui/src/recurrence-editor.tsx");
+    const editor = source("ui/src/task-editor.tsx");
     const nativeRuntime = source("ui/src/runtime-native.ts");
 
     expect(recurrence).toContain("export type RecurrencePattern");
     expect(planning).toContain("setTaskRecurrence");
     expect(editor).toContain("type RecurrenceSeries");
     expect(editor).toContain("type RecurrenceSpec");
+    expect(editor).toContain('label="Repeat"');
+    expect(editor).not.toContain("Enable repeat");
+    expect(editor).not.toContain("Save repeat");
     expect(editor).not.toMatch(
       /interface\s+RecurrenceSeries\s*\{|type\s+RecurrencePattern\s*=/,
     );
@@ -316,6 +319,83 @@ describe("architecture compliance", () => {
         "GITHUB_DESKTOP_APP_REGISTRATION",
       );
     }
+  });
+
+  it("keeps synchronization semantics in one strict functional core and effects in platform shells", () => {
+    const policy = source("src/core/synchronization.ts");
+    const persistence = source("src/persistence/sqlite.ts");
+    const desktopSync = source("src/shell/sync.ts");
+    const desktopGit = source("src/shell/git.ts");
+    const androidSync = source("ui/src/native/sync.ts");
+    const androidGit = source("ui/src/native/git.ts");
+
+    expect(policy).toContain("export function decideSynchronization");
+    expect(policy).toContain("export type SynchronizationFacts");
+    expect(policy).toContain("export type SynchronizationDecision");
+    expect(policy).not.toMatch(
+      /node:|bun:|Bun\.|@capacitor|isomorphic-git|github|setTimeout|Promise\.race/i,
+    );
+    expect(policy).not.toMatch(
+      /Task|RecurrenceSeries|retry|poll|credential|repository_path/i,
+    );
+
+    expect(desktopSync).toContain(
+      'from "../core/synchronization"',
+    );
+    expect(androidSync).toContain(
+      'from "../../../src/core/synchronization"',
+    );
+    for (const sync of [desktopSync, androidSync]) {
+      expect(sync).toContain("decideSynchronization");
+      expect(sync).not.toMatch(
+        /reconcileCanonicalPlanning|three-way|adoptEmptyDatasetIdentity|applySynchronizedCanonicalState/,
+      );
+      expect(sync).not.toMatch(/for\s*\([^)]*attempt/);
+    }
+
+    expect(desktopGit).not.toContain("decideSynchronization");
+    expect(androidGit).not.toContain("decideSynchronization");
+    expect(desktopGit).not.toContain("refs/jig/observed");
+    expect(androidGit).not.toContain("refs/jig/observed");
+    expect(desktopGit).not.toMatch(
+      /["']push["'][\s\S]{0,250}(?:--force|-f\b|\+refs\/heads\/jig-data)/,
+    );
+    expect(desktopGit).not.toMatch(/["']pull["']|["']rebase["']/);
+    expect(androidGit).not.toContain("normalizeAndroidPortableHead");
+    expect(androidGit).not.toContain("synchronizeAndroidPortableRepository");
+    expect(androidGit).toContain("fastForwardOnly: true");
+
+    expect(persistence).toContain(
+      "export async function adoptCanonicalSnapshot",
+    );
+    expect(persistence).not.toContain(
+      "export async function applySynchronizedCanonicalState",
+    );
+    expect(persistence).not.toContain(
+      "export async function adoptEmptyDatasetIdentity",
+    );
+  });
+
+  it("keeps synchronization retry and timeout ownership in the existing platform shells", () => {
+    const policy = source("src/core/synchronization.ts");
+    const desktopSync = source("src/shell/sync.ts");
+    const androidSync = source("ui/src/native/sync.ts");
+    const nativeTransport = source(
+      "android/app/src/main/java/com/pontivus/jig/JigGitHttpTransport.java",
+    );
+
+    expect(policy).not.toMatch(/retry|timeout|poll|setTimeout/i);
+    expect(desktopSync).toContain("retryDelayMs");
+    expect(desktopSync).toContain("SYNC_HEALTHY_POLL_MS");
+    expect(androidSync).not.toMatch(
+      /retryDelayMs|SYNC_RETRY|Promise\.race/,
+    );
+    expect(nativeTransport).toContain(
+      "CONNECT_TIMEOUT_MS = 15_000",
+    );
+    expect(nativeTransport).toContain(
+      "READ_TIMEOUT_MS = 30_000",
+    );
   });
 
   it("keeps portable records platform-neutral and Android Git provider-neutral", () => {

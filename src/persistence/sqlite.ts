@@ -674,30 +674,31 @@ function executeCoreCommand(
     );
   }
 
-  if (command.type === "set_recurrence") {
-    return setTaskRecurrence(
-      state.tasks,
-      state.recurrences,
-      command.task_id,
-      command.recurrence,
-      createId,
-      createId,
-      now,
-    );
-  }
-
   let result:
     | { readonly tasks: readonly Task[]; readonly task: Task }
     | { readonly tasks: readonly Task[]; readonly deleted_task_id: string };
   switch (command.type) {
-    case "edit":
-      result = editTask(
+    case "edit": {
+      const edited = editTask(
         state.tasks,
         command.task_id,
         command.changes,
         now,
       );
-      break;
+      if (command.recurrence === undefined) {
+        result = edited;
+        break;
+      }
+      return setTaskRecurrence(
+        edited.tasks,
+        state.recurrences,
+        command.task_id,
+        command.recurrence,
+        createId,
+        createId,
+        now,
+      );
+    }
     case "move":
       result = moveTask(
         state.tasks,
@@ -958,11 +959,27 @@ export async function adoptCanonicalSnapshot(
   tasks: readonly Task[],
   recurrences: readonly RecurrenceSeries[],
   adoptedHead: string | null,
+  expectedRevision?: number,
 ): Promise<CanonicalState> {
   assertRecurrenceState(tasks, recurrences);
+  if (
+    expectedRevision !== undefined &&
+    (!Number.isInteger(expectedRevision) || expectedRevision < 0)
+  ) {
+    throw new PersistenceConfigurationError(
+      "Expected adoption revision must be a non-negative integer",
+    );
+  }
 
   return withTransaction(connection, async () => {
     const current = await readCanonicalState(connection);
+    if (
+      expectedRevision !== undefined &&
+      current.revision !== expectedRevision
+    ) {
+      throw new StaleRevisionError(current.revision);
+    }
+
     await persistCanonicalSet(
       connection,
       current.tasks,
@@ -972,17 +989,38 @@ export async function adoptCanonicalSnapshot(
     );
 
     const revision = current.revision + 1;
-    await connection.execute(
-      `UPDATE app_metadata
-       SET
-         revision = ?,
-         last_exported_revision = ?,
-         last_exported_head = ?,
-         last_adopted_head = ?,
-         pending_sync = 0
-       WHERE singleton = 1`,
-      [revision, revision, adoptedHead, adoptedHead],
-    );
+    if (expectedRevision === undefined) {
+      await connection.execute(
+        `UPDATE app_metadata
+         SET
+           revision = ?,
+           last_exported_revision = ?,
+           last_exported_head = ?,
+           last_adopted_head = ?,
+           pending_sync = 0
+         WHERE singleton = 1`,
+        [revision, revision, adoptedHead, adoptedHead],
+      );
+    } else if (adoptedHead === null) {
+      await connection.execute(
+        `UPDATE app_metadata
+         SET
+           revision = ?,
+           pending_sync = 1
+         WHERE singleton = 1`,
+        [revision],
+      );
+    } else {
+      await connection.execute(
+        `UPDATE app_metadata
+         SET
+           revision = ?,
+           last_adopted_head = ?,
+           pending_sync = 1
+         WHERE singleton = 1`,
+        [revision, adoptedHead],
+      );
+    }
 
     return {
       revision,

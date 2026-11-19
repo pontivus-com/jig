@@ -1,15 +1,14 @@
 import {
   Button,
-  DropdownMenu,
   Icon,
   IconButton,
+  Popover,
 } from "@astryxdesign/core";
-import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
 import type {
   IconName,
   NamespacedIconName,
 } from "@astryxdesign/core/Icon";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { JIG_ICON_KEYS, JigIcon } from "./jig-icons";
 import { JigLogo } from "./jig-logo";
 import type { LayoutMode } from "./use-layout-mode";
@@ -196,22 +195,64 @@ function DestinationNav({
   );
 }
 
-function destinationMenuItems(
-  destination: Destination,
-  onNavigate: PlannerHeaderProps["onNavigate"],
-): DropdownMenuItemData[] {
-  return DESTINATIONS.map((item) => ({
-    id: item.id,
-    label: item.label,
-    icon: <DestinationIcon icon={item.icon} />,
-    endContent:
-      destination === item.id ? (
-        <span aria-label="Current page">
-          <Icon icon="check" size="xsm" color="inherit" />
-        </span>
-      ) : undefined,
-    onClick: () => onNavigate(item.id),
-  }));
+function NarrowDestinationMenu({
+  destination,
+  onNavigate,
+}: Readonly<
+  Pick<PlannerHeaderProps, "destination" | "onNavigate">
+>): React.ReactElement {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Popover
+      label="Primary navigation"
+      role="none"
+      presentation="popover"
+      placement="below"
+      alignment="end"
+      padding={1}
+      isOpen={isOpen}
+      onOpenChange={setIsOpen}
+      content={
+        <div
+          className="jig-navigation-menu"
+          role="menu"
+          aria-label="Primary"
+        >
+          {DESTINATIONS.map((item) => (
+            <Button
+              key={item.id}
+              label={item.label}
+              icon={<DestinationIcon icon={item.icon} />}
+              endContent={
+                destination === item.id ? (
+                  <span aria-label="Current page">
+                    <Icon icon="check" size="xsm" color="inherit" />
+                  </span>
+                ) : undefined
+              }
+              variant="ghost"
+              width="100%"
+              role="menuitem"
+              aria-current={destination === item.id ? "page" : undefined}
+              className="jig-navigation-menu-item"
+              onClick={() => {
+                onNavigate(item.id);
+                setIsOpen(false);
+              }}
+            />
+          ))}
+        </div>
+      }
+    >
+      <IconButton
+        label="Open navigation menu"
+        icon={<Icon icon="menu" color="inherit" />}
+        variant="ghost"
+        size="sm"
+      />
+    </Popover>
+  );
 }
 
 function DesktopHeader(props: PlannerHeaderProps): React.ReactElement {
@@ -299,18 +340,9 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
             />
           ) : null}
           {compactStatusControl}
-          <DropdownMenu
-            presentation="popover"
-            button={{
-              label: "Open navigation menu",
-              icon: <Icon icon="menu" color="inherit" />,
-              isIconOnly: true,
-              variant: "ghost",
-              size: "sm",
-            }}
-            items={destinationMenuItems(destination, onNavigate)}
-            placement="below"
-            alignment="end"
+          <NarrowDestinationMenu
+            destination={destination}
+            onNavigate={onNavigate}
           />
         </div>
       </div>
