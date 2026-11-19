@@ -194,15 +194,14 @@ export class GitHubOnboardingController<TAcquired> {
   }
 
   private async continueAuthorization(): Promise<void> {
-    const delay = this.dependencies.device_flow.nextPollDelayMs();
-    if (delay !== null && delay > 0) {
-      await this.sleep(delay);
-    }
+    const authorization =
+      await this.dependencies.device_flow.runUntilSettled(
+        (milliseconds) => this.sleep(milliseconds),
+      );
     if (this.phase !== "authorizing") {
       return;
     }
 
-    const authorization = await this.dependencies.device_flow.poll();
     const credential = this.dependencies.device_flow.credential();
     if (credential !== null) {
       this.phase = "repository-access";
@@ -211,10 +210,11 @@ export class GitHubOnboardingController<TAcquired> {
       this.transientAccessFailures = 0;
       return;
     }
-    if (authorization.error !== null) {
-      this.phase = "attention";
-      this.error = authorization.error;
-    }
+
+    this.phase = "attention";
+    this.error =
+      authorization.error ??
+      "GitHub authorization did not complete. Try GitHub authorization again.";
   }
 
   private async continueRepositoryAccess():
