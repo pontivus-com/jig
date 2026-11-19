@@ -76,7 +76,7 @@ function TaskWorkspaceContent({
   return (
     <div className="jig-task-workspace-form">
       <TaskEditor
-        formId={editorFormId}
+        {...(editorFormId === undefined ? {} : { formId: editorFormId })}
         showActions={showEditorActions}
         task={task}
         recurrenceSeries={recurrenceSeries}
