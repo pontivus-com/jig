@@ -88,7 +88,6 @@ export interface PortableRemoteObservation {
   readonly remote_rewritten: boolean;
   readonly lineage: GitLineage;
   readonly remote_snapshot: PortableSnapshot | null;
-  readonly base: PortableSnapshotCandidate | null;
 }
 
 export class GitAdapterError extends Error {
@@ -880,21 +879,6 @@ async function isAncestor(
   return null;
 }
 
-async function commonBase(
-  repositoryPath: string,
-  left: string,
-  right: string,
-): Promise<string | null> {
-  const result = await runGit(repositoryPath, [
-    "merge-base",
-    left,
-    right,
-  ]);
-  return result.exit_code === 0 && result.stdout.length > 0
-    ? result.stdout.split("\n")[0] ?? null
-    : null;
-}
-
 function zeroOid(): string {
   return "0".repeat(40);
 }
@@ -937,7 +921,6 @@ export async function observePortableRemote(
       remote_rewritten: false,
       lineage: "unknown",
       remote_snapshot: null,
-      base: null,
     };
   }
   if (authority.state === "ambiguous") {
@@ -950,7 +933,6 @@ export async function observePortableRemote(
       remote_rewritten: false,
       lineage: "unknown",
       remote_snapshot: null,
-      base: null,
     };
   }
 
@@ -992,7 +974,6 @@ export async function observePortableRemote(
       remote_rewritten: false,
       lineage: "unknown",
       remote_snapshot: null,
-      base: null,
     };
   }
 
@@ -1037,18 +1018,9 @@ export async function observePortableRemote(
   }
 
   let lineage: GitLineage = "unknown";
-  let base: PortableSnapshotCandidate | null = null;
   if (localHead !== null) {
     if (localHead === remoteHead) {
       lineage = "equal";
-      base = {
-        head: localHead,
-        snapshot: await readSnapshotAtRef(
-          config.repository_path,
-          localHead,
-          expectedDatasetId,
-        ),
-      };
     } else {
       const localToRemote = await isAncestor(
         config.repository_path,
@@ -1062,40 +1034,13 @@ export async function observePortableRemote(
       );
       if (localToRemote === true) {
         lineage = "remote-ahead";
-        base = {
-          head: localHead,
-          snapshot: await readSnapshotAtRef(
-            config.repository_path,
-            localHead,
-            expectedDatasetId,
-          ),
-        };
       } else if (remoteToLocal === true) {
         lineage = "local-ahead";
-        base = {
-          head: remoteHead,
-          snapshot: remoteSnapshot,
-        };
       } else if (
         localToRemote === false &&
         remoteToLocal === false
       ) {
         lineage = "diverged";
-        const mergeBase = await commonBase(
-          config.repository_path,
-          localHead,
-          remoteHead,
-        );
-        if (mergeBase !== null) {
-          base = {
-            head: mergeBase,
-            snapshot: await readSnapshotAtRef(
-              config.repository_path,
-              mergeBase,
-              expectedDatasetId,
-            ),
-          };
-        }
       }
     }
   }
@@ -1118,32 +1063,7 @@ export async function observePortableRemote(
     remote_rewritten: remoteRewritten,
     lineage,
     remote_snapshot: remoteSnapshot,
-    base,
   };
-}
-
-export async function acknowledgePortableRemoteHead(
-  config: GitAdapterConfig,
-  head: string,
-): Promise<void> {
-  const authority = await inspectSynchronizationAuthority(config);
-  if (authority.state !== "selected") {
-    throw new GitAdapterError(
-      "Cannot acknowledge a remote head without one synchronization destination",
-    );
-  }
-  const observedRef =
-    `refs/jig/observed/${authority.remote.name}/jig-data`;
-  const current = await refHead(
-    config.repository_path,
-    observedRef,
-  );
-  await updateTrackingRef(
-    config.repository_path,
-    observedRef,
-    head,
-    current,
-  );
 }
 
 export async function alignPortableDataRef(
