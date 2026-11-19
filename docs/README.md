@@ -1,6 +1,6 @@
 # Jig documentation
 
-**Status:** Jig v1.0.6 is published and immutable. v1.1 is **reopened for mobile UX/UI remediation** after physical Android use exposed failed Task movement plus touch-density, Settings and Repeat-form defects. Unaffected core/runtime evidence remains valid, but a new combined candidate is required before physical/release closure.
+**Status:** Jig v1.0.6 is published and immutable. v1.1 is **reopened for mobile UX/UI remediation and cross-installation synchronization correction**. Physical Android use exposed failed Task movement plus touch-density, Settings and Repeat-form defects; subsequent Desktop/Linux use exposed that the current Desktop synchronization path does not fetch/adopt a valid Android remote advance before push. Unaffected core/runtime and Android transport evidence remains valid, but bidirectional interoperability and the amended UX contracts require a new combined candidate before physical/release closure.
 
 Jig is a small, local-first, just-in-time daily planner. It schedules attention rather than duplicating the underlying project work. All planning data must live under the Jig directory of the user-selected personal Git repository, with a lightweight local desktop service and automatic Git sync.
 
