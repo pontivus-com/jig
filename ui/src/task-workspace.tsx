@@ -9,7 +9,6 @@ import {
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Task, TaskCommand } from "../../src/core/task";
 import { formatCivilDate } from "./dates";
-import { RecurrenceEditor } from "./recurrence-editor";
 import { TaskEditor, type TaskDraft } from "./task-editor";
 
 export type TaskWorkspaceState =
@@ -72,6 +71,7 @@ function TaskWorkspaceContent({
     <div className="jig-task-workspace-form">
       <TaskEditor
         task={task}
+        recurrenceSeries={recurrenceSeries}
         draft={workspace.draft}
         externalError={externalError}
         isSaving={isSaving}
@@ -80,25 +80,10 @@ function TaskWorkspaceContent({
         onSave={onSave}
       />
       {task === null ? null : (
-        <RecurrenceEditor
-          task={task}
-          series={recurrenceSeries}
-          isSaving={isSaving}
-          onSetRecurrence={async (recurrence) =>
-            onSave({
-              type: "set_recurrence",
-              task_id: task.id,
-              recurrence,
-            })
-          }
-        />
-      )}
-      {task === null ? null : (
         <div className="jig-task-workspace-actions">
           <Button
             label={task.completed_at === null ? "Mark complete" : "Reopen"}
             variant="secondary"
-            size="sm"
             onClick={() => {
               void onToggleComplete(task);
             }}
@@ -107,7 +92,6 @@ function TaskWorkspaceContent({
           <Button
             label="Delete…"
             variant="ghost"
-            size="sm"
             className="jig-workspace-delete"
             onClick={() => onDelete(task)}
             isDisabled={isSaving}
