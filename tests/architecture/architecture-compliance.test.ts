@@ -341,7 +341,9 @@ describe("architecture compliance", () => {
     expect(nativeGit.toLowerCase()).not.toContain("github");
     expect(nativeGit).not.toContain("client_id");
     expect(nativeGit).not.toContain("device flow");
-    expect(nativeGit).toContain("onAuth: authCallback(credential)");
+    expect(nativeGit).toContain("...authenticationCallbacks(credential)");
+    expect(nativeGit).toContain("onAuthFailure");
+    expect(nativeGit).toContain("onAuthSuccess");
     expect(nativeGit).not.toMatch(
       /https?:\/\/[^"']*(?:token|password|secret)@/i,
     );
