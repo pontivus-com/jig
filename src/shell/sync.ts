@@ -19,6 +19,7 @@ import type {
   RemoteGitSynchronization,
   RepositorySynchronizationStatus,
 } from "../protocol";
+import { portableSnapshotsEqual } from "../portable";
 import {
   adoptCanonicalSnapshot,
   markAdoptedHead,
@@ -70,17 +71,6 @@ const UNRESOLVED_REMOTE: SynchronizationRemote = {
   name: "unresolved",
   location: "Configured Git synchronization is unavailable or ambiguous",
 };
-
-function filesEqual(
-  left: ReadonlyMap<string, string>,
-  right: ReadonlyMap<string, string>,
-): boolean {
-  if (left.size !== right.size) return false;
-  for (const [path, content] of left) {
-    if (right.get(path) !== content) return false;
-  }
-  return true;
-}
 
 function remoteStatus(
   remote: SynchronizationRemote | null,
@@ -236,7 +226,7 @@ export function createSyncController(
       metadata.dataset_id,
       state.recurrences,
     );
-    if (filesEqual(current.snapshot.files, canonical.files)) {
+    if (portableSnapshotsEqual(current.snapshot, canonical)) {
       if (
         metadata.last_exported_head !== current.head ||
         metadata.last_exported_revision !== state.revision
@@ -316,9 +306,9 @@ export function createSyncController(
       state.recurrences,
     );
     if (
-      !filesEqual(
-        canonical.files,
-        observation.remote_snapshot.files,
+      !portableSnapshotsEqual(
+        canonical,
+        observation.remote_snapshot,
       )
     ) {
       return false;
