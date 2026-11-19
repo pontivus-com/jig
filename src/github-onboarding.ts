@@ -168,6 +168,13 @@ export class GitHubOnboardingController<TAcquired> {
       })
       .finally(() => {
         this.worker = null;
+        if (
+          this.phase === "authorizing" ||
+          this.phase === "repository-access" ||
+          this.phase === "acquiring"
+        ) {
+          this.ensureWorker();
+        }
       });
   }
 
