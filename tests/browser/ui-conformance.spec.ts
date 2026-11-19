@@ -1020,26 +1020,30 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
 
-  const planningData = page.locator(
-    ".jig-settings-planning .jig-settings-card",
-  );
-  const synchronization = page.locator(".jig-settings-sync-card");
-  const diagnostics = page.locator(
-    ".jig-settings-diagnostics .jig-settings-card",
-  );
+  const dataSync = page.locator(".jig-settings-section").filter({
+    has: page.getByRole("heading", { name: "Data & sync" }),
+  });
+  const diagnosticsSection = page.locator(".jig-settings-diagnostics");
 
-  await expect(planningData).toContainText("/tmp/jig-playwright-remote.git");
+  await expect(dataSync).toContainText("/tmp/jig-playwright-remote.git");
   await expect(
-    synchronization.getByText("Syncing", { exact: true }),
+    dataSync.getByText("Syncing", { exact: true }),
   ).toBeVisible();
-  await expect(synchronization.getByText("Local Git", { exact: true }))
+  await expect(dataSync.getByText("Local Git", { exact: true }))
     .toHaveCount(0);
-  await expect(synchronization.getByText("Remote Git", { exact: true }))
+  await expect(dataSync.getByText("Remote Git", { exact: true }))
     .toHaveCount(0);
   await expect(
-    synchronization.getByRole("button", { name: "Sync now", exact: true }),
+    dataSync.getByRole("button", { name: "Sync now", exact: true }),
   ).toHaveCount(0);
 
+  await expect(diagnosticsSection.getByText("Local Git", { exact: true }))
+    .toHaveCount(0);
+  await diagnosticsSection
+    .getByRole("button", { name: "Show diagnostics", exact: true })
+    .click();
+
+  const diagnostics = diagnosticsSection.locator(".jig-settings-card");
   await expect(diagnostics.getByText("Local Git", { exact: true }))
     .toBeVisible();
   await expect(diagnostics.getByText("Remote Git", { exact: true }))
@@ -1071,7 +1075,7 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
     .toBe("Synchronized");
 
   await expect(
-    synchronization.getByText("Up to date", { exact: true }),
+    dataSync.getByText("Up to date", { exact: true }),
   ).toBeVisible();
 
   const remoteRepository = diagnostics
