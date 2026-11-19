@@ -641,22 +641,16 @@ function ConfiguredApp({
   ) : repositoryStatus.key === "sync-issue" ? (
     <Banner
       status="warning"
-      title={
-        repositoryStatus.label === "Git issue"
-          ? "Local Git issue"
-          : "Repository synchronization issue"
-      }
+      title="Sync needs attention"
       description={repositoryStatus.message}
       container="section"
       collapsible={false}
       endContent={
         <Button
-          label="Retry"
+          label="Open Settings"
           variant="secondary"
           size="sm"
-          onClick={() => {
-            void syncNow();
-          }}
+          onClick={() => navigateDestination("settings")}
         />
       }
     />
