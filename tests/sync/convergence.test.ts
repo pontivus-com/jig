@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Task } from "../../src/core/task";
 import {
-  decideSynchronization,
   reconcileCanonicalPlanning,
+} from "../../src/core/reconciliation";
+import {
+  decideSynchronization,
 } from "../../src/synchronization";
 
 function task(
