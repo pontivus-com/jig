@@ -263,62 +263,17 @@ export function SetupView({
           </section>
         ) : layoutMode === "desktop" ? (
           <section className="jig-setup-value">
-            {showLocalRepository ? (
-              <div className="jig-setup-heading">
-                <span className="jig-setup-eyebrow">Existing repository</span>
-                <h1 id="jig-setup-title">
-                  Use the plan already on this computer.
-                </h1>
-                <p>
-                  This path remains provider-neutral and may be healthy Local
-                  only.
-                </p>
-              </div>
-            ) : initial ? (
-              <>
-                <div className="jig-setup-heading">
-                  <span className="jig-setup-eyebrow">Welcome to Jig</span>
-                  <h1 id="jig-setup-title">
-                    Plan your week. Keep the data yours.
-                  </h1>
-                  <p>
-                    Jig keeps planning data local and uses Git to carry the
-                    same plan between Jig installations.
-                  </p>
-                </div>
-                <SetupBenefits mobile={false} />
-              </>
-            ) : selecting ? (
-              <div className="jig-setup-heading">
-                <span className="jig-setup-eyebrow">
-                  Connect your planning data
-                </span>
-                <h1 id="jig-setup-title">Choose one repository.</h1>
-                <p>
-                  Jig asks only when more than one eligible repository remains.
-                </p>
-              </div>
-            ) : attention ? (
-              <div className="jig-setup-heading">
-                <span className="jig-setup-eyebrow">
-                  Connection needs attention
-                </span>
-                <h1 id="jig-setup-title">Your plan is not configured yet.</h1>
-                <p>
-                  Recovery stays user-facing while Git and service mechanics
-                  remain behind Jig.
-                </p>
-              </div>
-            ) : (
-              <div className="jig-setup-heading">
-                <span className="jig-setup-eyebrow">Your planning data</span>
-                <h1 id="jig-setup-title">Same plan. Different devices.</h1>
-                <p>
-                  Keep working locally while Git provides continuity between
-                  Jig installations.
-                </p>
-              </div>
-            )}
+            <div className="jig-setup-heading">
+              <span className="jig-setup-eyebrow">Welcome to Jig</span>
+              <h1 id="jig-setup-title">
+                Plan your week. Keep the data yours.
+              </h1>
+              <p>
+                Jig keeps planning data local and uses Git to carry the same
+                plan between Jig installations.
+              </p>
+            </div>
+            <SetupBenefits mobile={false} />
           </section>
         ) : null}
 
