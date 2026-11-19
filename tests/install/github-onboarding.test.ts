@@ -211,14 +211,18 @@ describe("GitHub onboarding orchestration", () => {
 
   it("routes a restricted installation to its GitHub-owned access surface", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    let sleepCalls = 0;
     const controller = new GitHubOnboardingController({
       registration: REGISTRATION,
       device_flow: deviceFlow({
         now: () => new Date(nowMs),
       }),
       sleep: async (delay) => {
+        sleepCalls += 1;
         nowMs += delay;
-        await new Promise<void>(() => undefined);
+        if (sleepCalls > 1) {
+          await new Promise<void>(() => undefined);
+        }
       },
       list_installations: async () => [
         {
