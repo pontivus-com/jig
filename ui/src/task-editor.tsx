@@ -458,7 +458,13 @@ export function TaskEditor({
             label="Repeat"
             value={draft.repeatKind}
             options={REPEAT_OPTIONS}
+            presentation="adaptive"
             controlClassName="jig-mobile-touch-control"
+            renderOption={(option) => (
+              <span className="jig-mobile-selector-option">
+                {option.label}
+              </span>
+            )}
             onChange={(value) => {
               if (isRepeatKind(value)) {
                 changeRepeatKind(value);
