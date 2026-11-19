@@ -1,4 +1,5 @@
 import { List } from "@astryxdesign/core";
+import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { DraggableTaskRow } from "./task-row";
@@ -6,6 +7,7 @@ import { useTaskDragState } from "./drag";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
   readonly now: Date;
   readonly date: string;
   readonly selectedTask: Task | null;
@@ -24,6 +26,7 @@ export interface PlannerTaskListProps {
 interface PlannerSequenceRowProps
   extends Omit<PlannerTaskListProps, "tasks" | "date" | "selectedTask"> {
   readonly task: Task;
+  readonly recurrenceSeries: RecurrenceSeries | null;
   readonly index: number;
   readonly date: string;
   readonly sequenceLength: number;
@@ -33,6 +36,7 @@ interface PlannerSequenceRowProps
 
 function PlannerSequenceRow({
   task,
+  recurrenceSeries,
   now,
   index,
   date,
@@ -77,6 +81,7 @@ function PlannerSequenceRow({
   return (
     <DraggableTaskRow
       {...rowProps}
+      recurrenceSeries={recurrenceSeries}
       now={now}
       index={index}
       {...(dropIndicator === undefined ? {} : { dropIndicator })}
@@ -86,6 +91,7 @@ function PlannerSequenceRow({
 
 export function PlannerTaskList({
   tasks,
+  recurrences,
   now,
   date,
   selectedTask,
@@ -126,6 +132,13 @@ export function PlannerTaskList({
         <PlannerSequenceRow
           key={task.id}
           task={task}
+          recurrenceSeries={
+            task.recurrence_series_id === null
+              ? null
+              : recurrences.find(
+                  (series) => series.id === task.recurrence_series_id,
+                ) ?? null
+          }
           now={now}
           index={index}
           date={date}
