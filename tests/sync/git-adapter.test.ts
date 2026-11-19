@@ -499,8 +499,11 @@ describe("isolated jig-data adapter", () => {
     );
     const remote = await remoteFixture(repo);
     const writer = await cloneDataBranch(remote, "symlink-tree");
-    await symlink("format.json", join(writer, "alias.json"));
-    await git(writer, ["add", "alias.json"]);
+    const symlinkPath =
+      "tasks/018f47f0-7b5c-7d4d-8e2b-9c3aa11f0771.json";
+    await mkdir(join(writer, "tasks"), { recursive: true });
+    await symlink("../format.json", join(writer, symlinkPath));
+    await git(writer, ["add", symlinkPath]);
     await git(writer, ["commit", "-m", "Add invalid symlink"]);
     await git(writer, ["push", "origin", "jig-data"]);
 
@@ -527,7 +530,7 @@ describe("isolated jig-data adapter", () => {
       "submodule",
       "add",
       other,
-      "embedded",
+      "tasks/018f47f0-7b5c-7d4d-8e2b-9c3aa11f0772.json",
     ]);
     await git(writer, ["commit", "-m", "Add invalid submodule"]);
     await git(writer, ["push", "origin", "jig-data"]);
