@@ -589,6 +589,113 @@ describe("Android Git smart-HTTP feasibility", () => {
     }
   });
 
+  it("round-trips one repository Desktop → Android → Desktop through the real synchronization controllers", async () => {
+    const { remote, remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+
+    const desktop = join(root, "reverse-desktop");
+    await runGit(root, ["clone", remote, desktop]);
+    const installed = await initializeRepositoryInstallation({
+      repository_path: desktop,
+      http_port: 47831,
+      config_path: join(root, "reverse-desktop-config.json"),
+    });
+    const desktopDb = await openDatabase(installed.sqlite_path);
+    const desktopSync = createSyncController(
+      desktopDb,
+      { repository_path: desktop },
+    );
+
+    const { port: filesystemPort } = fakeFilesystem();
+    const androidEffects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const credential = async (): Promise<string> => PASSWORD;
+    await cloneAndroidPortableRepository(
+      androidEffects,
+      remoteUrl,
+      credential,
+    );
+    const androidDb = await initializeDatabase(
+      join(root, "reverse-android.sqlite"),
+      DATASET_ID,
+    );
+    const androidSync = createAndroidSyncController(
+      androidDb,
+      androidEffects,
+      credential,
+    );
+
+    try {
+      await desktopSync.start();
+      await androidSync.start();
+      await desktopSync.trigger();
+      await androidSync.trigger();
+
+      await applyTaskCommand(
+        desktopDb,
+        {
+          type: "create",
+          title: "Desktop first",
+          scheduled_date: "2026-11-18",
+        },
+        (await readCanonicalState(desktopDb)).revision,
+        "2026-11-18T04:30:00.000Z",
+        () =>
+          "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4032",
+      );
+      desktopSync.notifyMutation();
+      await expect(desktopSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
+
+      await expect(androidSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
+      expect(
+        (await readCanonicalState(androidDb)).tasks.map(
+          (candidate) => candidate.title,
+        ),
+      ).toEqual(["Desktop first"]);
+
+      await applyTaskCommand(
+        androidDb,
+        {
+          type: "create",
+          title: "Android second",
+          scheduled_date: "2026-11-18",
+        },
+        (await readCanonicalState(androidDb)).revision,
+        "2026-11-18T05:00:00.000Z",
+        () =>
+          "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4033",
+      );
+      androidSync.notifyMutation();
+      await expect(androidSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
+
+      await expect(desktopSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
+      expect(
+        (await readCanonicalState(desktopDb)).tasks
+          .map((candidate) => candidate.title)
+          .sort(),
+      ).toEqual(["Android second", "Desktop first"]);
+    } finally {
+      desktopSync.stop();
+      androidSync.stop();
+      await desktopDb.close();
+      await androidDb.close();
+    }
+  });
+
   it("preserves both sides and stops safely on a real cross-runtime semantic conflict", async () => {
     const { remote, remoteUrl } = await fixture();
     const port = server?.port;
