@@ -513,7 +513,7 @@ test("desktop header stays compact while narrow header uses sticky destination-s
 
 test("mobile interaction inventory meets the governed geometry and expanded-form contract", async ({
   page,
-}) => {
+}, testInfo) => {
   const today = await browserCivilDate(page);
   await apiCommand(page, {
     type: "create",
@@ -644,6 +644,10 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     expect(widthGeometry.scrollWidth).toBeLessThanOrEqual(
       widthGeometry.clientWidth + 1,
     );
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-planner-mobile-${width}.png`),
+      fullPage: true,
+    });
 
     await page.getByText("Mobile geometry inventory", { exact: true }).click();
     const workspace = page.getByRole("dialog", {
@@ -722,6 +726,10 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       throw new Error("Sticky Task action region geometry unavailable");
     }
     expectNear(actionAfter.y, actionBefore.y, 2);
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-task-form-weekly-mobile-${width}.png`),
+      fullPage: true,
+    });
 
     await workspace
       .getByRole("button", { name: "Close", exact: true })
@@ -763,6 +771,10 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       );
     }
     await page.keyboard.press("Escape");
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-settings-mobile-${width}.png`),
+      fullPage: true,
+    });
 
     await page
       .getByRole("button", { name: "Open navigation menu", exact: true })
