@@ -614,6 +614,21 @@ export async function commitAndroidCanonicalState(
   );
 }
 
+async function optionalAndroidRef(
+  effects: AndroidGitEffects,
+  ref: string,
+): Promise<string | null> {
+  try {
+    return await resolveRef({
+      fs: effects.fs,
+      dir: effects.dir,
+      ref,
+    });
+  } catch {
+    return null;
+  }
+}
+
 export type AndroidPortableRemoteObservation =
   | {
       readonly state: "absent";
@@ -643,6 +658,10 @@ export async function observeAndroidPortableRemote(
   const localHead = await androidPortableHead(effects);
   const trackingRef =
     `refs/remotes/${ANDROID_REMOTE}/${ANDROID_DATA_BRANCH}`;
+  const previousRemoteHead = await optionalAndroidRef(
+    effects,
+    trackingRef,
+  );
 
   const location = await getConfig({
     fs: effects.fs,
@@ -674,7 +693,9 @@ export async function observeAndroidPortableRemote(
     return {
       state: "absent",
       local_head: localHead,
-      previously_synchronized: lastAdoptedHead !== null,
+      previously_synchronized:
+        previousRemoteHead !== null ||
+        lastAdoptedHead !== null,
     };
   }
   const advertisedOid = advertised.oid;
@@ -724,8 +745,8 @@ export async function observeAndroidPortableRemote(
 
   let remoteRewritten = false;
   if (
-    lastAdoptedHead !== null &&
-    lastAdoptedHead !== remoteHead
+    previousRemoteHead !== null &&
+    previousRemoteHead !== remoteHead
   ) {
     try {
       remoteRewritten = !(
@@ -733,7 +754,7 @@ export async function observeAndroidPortableRemote(
           fs: effects.fs,
           dir: effects.dir,
           oid: remoteHead,
-          ancestor: lastAdoptedHead,
+          ancestor: previousRemoteHead,
         })
       );
     } catch {
