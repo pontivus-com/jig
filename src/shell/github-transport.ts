@@ -282,15 +282,15 @@ export async function createManagedGitHubTransport(
   return {
     network_environment: networkEnvironment,
     reconnect_required: async (): Promise<boolean> => {
-      if (reconnectRequired) {
-        return true;
-      }
       try {
         const credential = await loadCredential();
-        return credential === null ||
+        const required =
+          credential === null ||
           credentialNeedsReconnect(credential, now());
+        reconnectRequired = required;
+        return required;
       } catch {
-        return false;
+        return reconnectRequired;
       }
     },
     dispose: askpass.dispose,
