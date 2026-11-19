@@ -352,7 +352,7 @@ describe("UI ownership architecture", () => {
     const deviceFlow = source("ui/src/github-device-flow.tsx");
 
     expect(app).toContain("<OnboardingHeader />");
-    expect(app).toContain("<SetupView status={setupStatus} />");
+    expect(app).toContain("<SetupView status={setupStatus} layoutMode={layoutMode} />");
     expect(setup).not.toContain("<main");
     expect(setup).toContain('label="Connect GitHub repository"');
     expect(setup).toContain('label="Use an existing local repository"');
