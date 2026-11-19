@@ -1,6 +1,6 @@
 # Jig documentation
 
-**Status:** Jig v1.0.6 is published and immutable. v1.1 is **reopened for desktop + mobile UX/UI implementation-fidelity remediation**. The prior non-device candidate remains valid for core/domain/runtime/synchronization/build/emulator mechanics, but the retained screenshots and current renders show that major governed UX/UI work was only partially applied and was incorrectly reported as complete. IMP-03 presentation, IMP-06 presentation and the presentation portion of IMP-16 are reopened; UX-F0..UX-F7 must produce a new reviewed `v1.1` candidate before physical/release closure.
+**Status:** Jig v1.0.6 is published and immutable. v1.1 has a **certified post-UX non-device candidate**: UX-F0..UX-F7 are closed on executable source `611c8ced6a854a80f24bf727c53d792f5c5d556c` / Verify `44547579822`, with reviewed browser artifact `14539814508` and Android candidate artifact `14541004265`. J110-IMP-09 physical Task movement is the next gate; J110-IMP-15 physical/native certification and live Linux/Desktop GitHub acceptance remain open before promotion to `master`/release.
 
 Jig is a small, local-first, just-in-time daily planner. It schedules attention rather than duplicating the underlying project work. All planning data must live under the Jig directory of the user-selected personal Git repository, with a lightweight local desktop service and automatic Git sync.
 
