@@ -9,6 +9,36 @@ export const SYNCHRONIZATION_RETRY_SECONDS = [
 ] as const;
 
 export const SYNCHRONIZATION_HEALTHY_POLL_MS = 60_000;
+export const SYNCHRONIZATION_REMOTE_DEADLINE_MS = 60_000;
+
+export class SynchronizationDeadlineError extends Error {
+  constructor() {
+    super("Synchronization remote operation exceeded its deadline");
+    this.name = "SynchronizationDeadlineError";
+  }
+}
+
+export async function runSynchronizationRemoteOperation<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      operation(),
+      new Promise<T>((_resolve, reject) => {
+        timeout = setTimeout(
+          () => reject(new SynchronizationDeadlineError()),
+          SYNCHRONIZATION_REMOTE_DEADLINE_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
 
 export function synchronizationRetryDelayMs(
   failureCount: number,
