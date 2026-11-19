@@ -342,14 +342,14 @@ Enabling recurrence on an existing Task:
 4. creates one ordinary Task for each slot, copying the seed Task's title, priority, context, reference, note and `reminder_time` **at that moment only**, while assigning a fresh Task ID, the slot as both `scheduled_date` and `recurrence_occurrence_date`, and normal initial priority-based position for that date;
 5. persists the series + all Task changes in one transaction and increments the canonical revision once.
 
-The canonical command surface adds recurrence without folding it into ordinary single-Task edits:
+The canonical command surface keeps occurrence and series semantics distinct while allowing the integrated Task form to save atomically:
 
 ~~~text
 create { ..., recurrence? }
-set_recurrence { task_id, recurrence: RecurrencePattern + end_date | null }
+edit { task_id, changes, recurrence? }
 ~~~
 
-`create.recurrence` creates the seed and bounded series atomically. `set_recurrence` is the series-scope Repeat control for an existing occurrence. Ordinary `edit`, `move`, `complete`, `reopen` and `delete` are occurrence-scope commands and may mutate only the addressed Task. Every occurrence resolves its visible Repeat configuration by `recurrence_series_id` from the same canonical `RecurrenceSeries`; there is no per-Task recurrence configuration copy to synchronize.
+`create.recurrence` creates the seed and bounded series atomically. Existing-Task `edit.changes` remains occurrence-local. The optional top-level `edit.recurrence` is only the series mutation input: omitted means unchanged, a spec means enable/update, and `null` means stop. Persistence applies the occurrence edit and optional recurrence reconciler in one transaction/revision so the UI has one Save and cannot partially commit. The separate public `set_recurrence` command is removed after migration rather than retained as a parallel user-save path. `move`, `complete`, `reopen` and `delete` remain occurrence-scope commands. Every occurrence resolves visible Repeat configuration through the one canonical `RecurrenceSeries`; no per-Task recurrence configuration copy exists.
 
 Changing Repeat is a **series-membership reconciliation** anchored at the invoking occurrence's immutable `recurrence_occurrence_date`. It updates the one shared series configuration rather than creating a per-occurrence rule or propagating Task content:
 
