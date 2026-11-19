@@ -133,6 +133,14 @@ v1.1 adds one independently installable **Android** application while preserving
 - Do not introduce DTO/mapping hierarchies, service/repository class stacks, workflow frameworks, or parallel semantic owners without a demonstrated requirement.
 - At an external-system integration boundary, preserve the authoritative system's protocol/configuration terminology for fields and concepts. Jig may classify how that material is handled, but must not rename the external concern into a parallel Jig vocabulary. v1.1 GitHub authorization uses GitHub App Device Flow directly between Jig and GitHub: the native registration owns only the public `client_id` plus public App routing metadata. `client_secret` and `redirect_uri` are not part of the governed Device Flow client contract and must not be added merely because other GitHub OAuth flows use them.
 
+## v1.1 branch governance
+
+- `v1.1` is the single authoritative integration branch for all v1.1 implementation, documentation, evidence and physical-certification corrections until the version is ready for final promotion.
+- Do not distribute v1.1 implementation state across parallel `work/v1.1-*`, remediation, certification or synchronization branches. Temporary branches may be used only as short-lived transport/CI mechanisms; once their content is accepted it must be integrated into `v1.1` immediately and they are not product-state authority.
+- All v1.1 status/evidence assessments must read the `v1.1` branch. A green temporary-branch SHA is evidence only when that exact executable content is contained in `v1.1`.
+- IMP-09 and IMP-15 block **promotion from `v1.1` to `master` / release**, not integration of the candidate implementation into `v1.1`. Physical failures are corrected on `v1.1`; do not fork a competing implementation line.
+- `master` remains the published-release line until the governed v1.1 promotion/release sequence explicitly advances it.
+
 ## Release governance
 
 A merged implementation PR is **not** a release. Release publication is a separate governed transition.
