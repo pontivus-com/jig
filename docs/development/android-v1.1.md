@@ -1,6 +1,6 @@
 # Android v1.1 development and physical-device certification
 
-**Status:** v1.1 implementation support document. This document defines the repeatable local Android development loop and the evidence required for the physical-device gates J110-IMP-09 and the physical-device portions of J110-IMP-15. J110-IMP-08 is a non-device Android-shell/debug-APK gate and does not require a physical phone. This document does not itself constitute physical-device evidence.
+**Status:** v1.1 implementation support document, amended after the 2026-11-19 physical UX failure. The previous Pangea drag candidate failed J110-IMP-09. This document now governs proof of the replacement Task-movement candidate plus the broader physical mobile UX audit required by J110-IMP-15.
 
 **Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-24, SD-34 and SD-35; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08 and J110-IMP-09.
 
@@ -106,25 +106,45 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 
 J110-IMP-08 closes on the governed deterministic Android shell/debug-APK build and its non-device verification. A real physical-phone launch of the candidate APK is deferred to J110-IMP-15 and must not be used as an IMP-08 prerequisite.
 
-## 5. J110-IMP-09 physical drag/drop gate
+## 5. J110-IMP-09 replacement Task-movement physical gate
 
-Using the production Pangea implementation and dedicated visible Task grip, verify all of the following on the physical phone:
+The previous Pangea implementation is a recorded **FAIL** and must not be retested as the release candidate.
 
-1. the grip reliably starts drag and the dragged Task remains visibly identifiable;
-2. swiping the Task body scrolls rather than initiating drag;
-3. same-date first/middle/last placement;
-4. cross-date first/middle/last placement;
-5. movement into an empty date;
-6. the insertion indicator follows the intended destination;
-7. inter-card whitespace retains a stable destination/indicator;
-8. release persists exactly the last visible destination index;
-9. cancellation/outside drop makes no canonical mutation;
-10. long-Planner auto-scroll remains usable;
-11. checkbox, menu, reference and card-open interactions remain independent from drag.
+Using the exact replacement candidate source/APK from IMP-04:
 
-Record device, APK identity/hash, exact source commit, each result and any relevant logs/screenshots in the v1.1 evidence directory.
+1. record source SHA, APK SHA-256, device model, Android version and WebView/Chrome version;
+2. run at least 20 sequential grip drags with no stranded overlay/floating card;
+3. confirm the >=48×48 grip initiates directly without long press;
+4. confirm Task-body swipe scroll never initiates drag;
+5. same-date first/middle/last;
+6. cross-date first/middle/last;
+7. empty date;
+8. target every explicit inter-card insertion slot;
+9. verify visible slot == persisted date/index;
+10. cancel/outside drop and pointer/system cancellation restore exactly;
+11. verify long-list auto-scroll while maintaining target;
+12. verify checkbox/menu/reference/card-open independence;
+13. repeat after scrolling and after opening/closing the BottomSheet.
 
-If touch initiation or destination updates are materially unreliable, stop. Do not layer another drag framework or a custom sensor stack on top of Pangea. Return to SD-34/SD-35 design review as required by the implementation plan.
+Any repeated missed drop, floating-card residue, unstable slot or scroll conflict is **FAIL**. Return to SD-34/35. Do not add Pangea, another drag library or a platform-only sensor stack.
+
+### Broader mobile UX observations for J110-IMP-15
+
+On the same candidate, physically inspect:
+- header/menu/date/Task/BottomSheet/Repeat/Settings hit targets and adjacent-target spacing;
+- menu row size/readability and mis-tap risk;
+- integrated Repeat progressive disclosure and one-Save flow;
+- Settings Data & sync / Appearance / Notifications / Diagnostics hierarchy and scanability;
+- safe-area/sticky behavior and normal vertical scrolling.
+
+Browser geometry is necessary but does not replace this physical usability evidence.
+
+### Gate outcome
+
+- **PASS:** the exact replacement drag matrix passes and is eligible to proceed into full J110-IMP-15.
+- **FAIL:** record concrete device/WebView behavior and return to SD-34/35.
+- **NOT RUN:** implementation remains open.
+
 
 ## 6. Gate outcome
 
