@@ -892,14 +892,16 @@ body {
 
   .jig-history-groups {
     display: grid;
-    gap: calc(var(--spacing-6) + var(--spacing-0-5));
+    gap: var(--spacing-6);
     margin-block-start: var(--spacing-5);
   }
 
   .jig-history-group-heading {
-    display: grid;
-    gap: var(--spacing-1);
-    margin-block-end: var(--spacing-4);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin-block-end: var(--spacing-2);
   }
 
   .jig-history-group-heading h2 {
@@ -1018,10 +1020,12 @@ body {
   }
 
   .jig-history-task-row {
-    min-height: 70px;
-    margin-block-start: var(--spacing-3);
-    border: var(--border-width) solid var(--jig-task-border, var(--color-border));
-    border-radius: var(--radius-element);
+    min-height: 64px;
+    margin-block-start: 0;
+    border: 0;
+    border-block-start: var(--border-width) solid
+      var(--jig-task-border, var(--color-border));
+    border-radius: 0;
     background: var(--jig-task-surface, var(--color-background-surface));
   }
 
