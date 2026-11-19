@@ -1,6 +1,7 @@
 import {
   DragDropProvider,
   DragOverlay,
+  useDraggable,
   useDroppable,
 } from "@dnd-kit/react";
 import {
@@ -15,7 +16,11 @@ import {
 } from "react";
 import type { Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
-import { TaskCardPreview } from "./task-row";
+import {
+  TaskCardPreview,
+  TaskRow,
+  type TaskRowProps,
+} from "./task-row";
 
 export interface TaskDropIntent {
   readonly task_id: string;
@@ -211,6 +216,46 @@ export function TaskDragProvider({
         </DragOverlay>
       </TaskDragContext.Provider>
     </DragDropProvider>
+  );
+}
+
+export interface DraggableTaskRowProps
+  extends Omit<
+    TaskRowProps,
+    "rowRef" | "dragHandleRef" | "isDragging"
+  > {
+  readonly index: number;
+}
+
+export function DraggableTaskRow({
+  task,
+  index,
+  ...rowProps
+}: DraggableTaskRowProps): React.ReactElement {
+  const draggable = useDraggable({
+    id: task.id,
+    type: "jig-task",
+    data: {
+      date: task.scheduled_date,
+      index,
+    },
+  });
+
+  const rowRef = (element: HTMLLIElement | null): void => {
+    draggable.ref(element);
+  };
+  const dragHandleRef = (element: HTMLSpanElement | null): void => {
+    draggable.handleRef(element);
+  };
+
+  return (
+    <TaskRow
+      {...rowProps}
+      task={task}
+      rowRef={rowRef}
+      dragHandleRef={dragHandleRef}
+      isDragging={draggable.isDragging}
+    />
   );
 }
 
