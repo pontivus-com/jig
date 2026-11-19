@@ -315,6 +315,114 @@ test("retains governed desktop Planner History and Settings evidence", async ({
   });
 });
 
+test("retains governed empty Planner and History evidence", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator(".jig-task-card")).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-planner-empty-desktop.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(
+    page.getByText("No completed tasks yet.", { exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-history-empty-desktop.png"),
+    fullPage: true,
+  });
+
+  for (const width of [320, 360, 390, 414] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    await waitForResponsiveHeader(page, width);
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-history-empty-mobile-${width}.png`),
+      fullPage: true,
+    });
+    const primaryNavigation = page.getByRole("navigation", {
+      name: "Primary",
+    });
+    await primaryNavigation
+      .getByRole("button", { name: "Planner", exact: true })
+      .click();
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-planner-empty-mobile-${width}.png`),
+      fullPage: true,
+    });
+    await primaryNavigation
+      .getByRole("button", { name: "History", exact: true })
+      .click();
+  }
+});
+
+test("retains governed synchronization-attention evidence without exposing technical locators", async ({
+  page,
+}, testInfo) => {
+  await page.route("**/api/v1/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ready: true,
+        repository_path: "/tmp/private/jig-repository",
+        repository_status: {
+          local_git: "committed",
+          remote: {
+            state: "sync-issue",
+            remote_name: "origin",
+            remote_location: "https://github.com/example/planning.git",
+          },
+        },
+      }),
+    });
+  });
+  await page.reload();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(
+    page.getByRole("button", { name: "Needs attention", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-sync-attention-planner-desktop.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByText("example/planning", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("/tmp/private/jig-repository", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Needs attention", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: /^(Try again|Reconnect GitHub)$/,
+    }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-sync-attention-settings-desktop.png"),
+    fullPage: true,
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-sync-attention-settings-mobile-390.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("navigation", { name: "Primary" })
+    .getByRole("button", { name: "Planner", exact: true })
+    .click();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-sync-attention-planner-mobile-390.png"),
+    fullPage: true,
+  });
+});
+
 test("temporal group stays page-centered in one row and navigation has no selected-day state", async ({
   page,
 }) => {
@@ -766,6 +874,11 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       );
     }
 
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-task-form-off-mobile-${width}.png`),
+      fullPage: true,
+    });
+
     const repeat = workspace.getByRole("combobox", { name: "Repeat" });
     await repeat.click();
     const repeatOptions = page.getByRole("option");
@@ -774,6 +887,10 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       await expectTarget(repeatOptions.nth(index), `Repeat option ${index + 1}`);
     }
     await page.getByRole("option", { name: "Weekly", exact: true }).click();
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-task-form-weekly-lower-mobile-${width}.png`),
+      fullPage: true,
+    });
 
     const weeklyControls = workspace.locator(".jig-mobile-touch-control");
     await expect(weeklyControls).toHaveCount(9);
@@ -789,6 +906,17 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     for (let index = 0; index < 7; index += 1) {
       await expectTarget(weekdays.nth(index), `Repeat weekday ${index + 1}`);
     }
+
+    await repeat.click();
+    await page.getByRole("option", { name: "Monthly", exact: true }).click();
+    await expect(workspace.getByLabel("Day of month")).toBeVisible();
+    await expect(workspace.getByLabel("Ends on")).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-task-form-monthly-mobile-${width}.png`),
+      fullPage: true,
+    });
+    await repeat.click();
+    await page.getByRole("option", { name: "Weekly", exact: true }).click();
 
     const actionRegion = workspace.locator(".jig-editor-actions");
     const actionBefore = await actionRegion.boundingBox();
@@ -859,6 +987,18 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       path: testInfo.outputPath(`v1.1-settings-mobile-${width}.png`),
       fullPage: true,
     });
+    await page
+      .getByRole("button", { name: "Show diagnostics", exact: true })
+      .click();
+    await page.screenshot({
+      path: testInfo.outputPath(
+        `v1.1-settings-diagnostics-mobile-${width}.png`,
+      ),
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Hide diagnostics", exact: true })
+      .click();
 
     await primaryNavigation
       .getByRole("button", { name: "History", exact: true })
@@ -1110,6 +1250,16 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
     name: "Browser recurrence",
   });
   const repeat = workspace.getByRole("combobox", { name: "Repeat" });
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-task-form-off-desktop.png"),
+    fullPage: true,
+  });
+  await repeat.click();
+  await page.getByRole("option", { name: "Monthly", exact: true }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-task-form-monthly-desktop.png"),
+    fullPage: true,
+  });
   await repeat.click();
   await page.getByRole("option", { name: "Weekly", exact: true }).click();
   await workspace
@@ -1198,6 +1348,26 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   await expect(
     workspace.getByText("Stop this series when you save?", { exact: true }),
   ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-task-form-stop-desktop.png"),
+    fullPage: true,
+  });
+
+  for (const width of [320, 360, 390, 414] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    await waitForResponsiveHeader(page, width);
+    workspace = page.getByRole("dialog", {
+      name: "Browser recurrence",
+    });
+    await expect(
+      workspace.getByText("Stop this series when you save?", { exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-task-form-stop-mobile-${width}.png`),
+      fullPage: true,
+    });
+  }
+
   await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
@@ -1382,16 +1552,35 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
 
 test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System mode", async ({
   page,
-}) => {
+}, testInfo) => {
   test.setTimeout(120_000);
   const today = await browserCivilDate(page);
   await createTask(page, "Theme matrix contract", today);
   await page.reload();
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   for (const preset of THEME_PRESETS) {
     for (const mode of ["light", "dark"] as const) {
       await setAppearance(page, preset, mode);
       const snapshot = await themeSnapshot(page);
+      if (preset === "jig") {
+        await page.screenshot({
+          path: testInfo.outputPath(
+            `v1.1-theme-jig-${mode}-desktop.png`,
+          ),
+          fullPage: true,
+        });
+        await page.setViewportSize({ width: 390, height: 844 });
+        await waitForResponsiveHeader(page, 390);
+        await page.screenshot({
+          path: testInfo.outputPath(
+            `v1.1-theme-jig-${mode}-mobile-390.png`,
+          ),
+          fullPage: true,
+        });
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await waitForResponsiveHeader(page, 1440);
+      }
       expect(snapshot.rootTheme).toBe(preset);
       expect(snapshot.explicitMode).toBe(mode);
       expect(snapshot.taskBackground, `${preset}/${mode} task vs canvas`)
