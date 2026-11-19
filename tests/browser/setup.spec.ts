@@ -489,7 +489,7 @@ test("narrow finishing and recovery remain focused onboarding states", async ({
     reconnect_available: false,
   });
 
-  let snapshot = {
+  let snapshot: unknown = {
     available: true,
     state: "connecting",
     authorization: null,
