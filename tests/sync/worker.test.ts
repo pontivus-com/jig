@@ -196,6 +196,13 @@ function fakeEffects(
         repo.lineage = "local-ahead";
         return repo.localHead;
       },
+      inspectRemote: async () =>
+        options.noRemote === true
+          ? null
+          : {
+              name: "origin",
+              location: REMOTE_LOCATION,
+            },
       observeRemote: async () => {
         observes.count += 1;
         if (options.noRemote === true) {
