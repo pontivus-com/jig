@@ -1294,7 +1294,7 @@ body {
 
     .jig-mobile-selector-option {
       display: flex;
-      min-height: 36px;
+      min-height: 40px;
       align-items: center;
     }
 
