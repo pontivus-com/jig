@@ -127,6 +127,24 @@ afterEach(async () => {
 });
 
 describe("isolated jig-data adapter", () => {
+  it("bounds a hung remote Git subprocess instead of occupying synchronization indefinitely", async () => {
+    const repo = await fixture();
+    const result = await runGit(
+      repo,
+      [
+        "-c",
+        "alias.jig-hang=!sleep 5",
+        "jig-hang",
+      ],
+      undefined,
+      {},
+      10,
+    );
+
+    expect(result.exit_code).not.toBe(0);
+    expect(result.stderr).toBe("Git operation timed out");
+  });
+
   it("leaves unrelated staged and unstaged user state unchanged", async () => {
     const repo = await fixture();
     await ensureJigLocalExclude(repo);
