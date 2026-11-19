@@ -56,9 +56,9 @@ export interface SyncEffects {
   >;
 }
 
-const AMBIGUOUS_REMOTE: SynchronizationRemote = {
+const UNRESOLVED_REMOTE: SynchronizationRemote = {
   name: "unresolved",
-  location: "Configured Git synchronization destination is ambiguous",
+  location: "Configured Git synchronization is unavailable or ambiguous",
 };
 
 const REAL_EFFECTS: SyncEffects = {
@@ -148,7 +148,7 @@ function remoteFromObservation(
   observation: PortableRemoteObservation,
 ): SynchronizationRemote | null {
   if (observation.state === "ambiguous") {
-    return AMBIGUOUS_REMOTE;
+    return UNRESOLVED_REMOTE;
   }
   return observation.state === "absent" ||
     observation.state === "present" ||
@@ -530,6 +530,7 @@ export function createSyncController(
         return transientIssue();
       }
       if (environment === null) {
+        remoteIdentity ??= UNRESOLVED_REMOTE;
         return structuralIssue();
       }
 
@@ -537,6 +538,7 @@ export function createSyncController(
       try {
         observation = await observe(environment);
       } catch {
+        remoteIdentity ??= UNRESOLVED_REMOTE;
         return transientIssue();
       }
 
