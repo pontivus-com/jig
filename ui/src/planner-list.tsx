@@ -3,8 +3,10 @@ import { Fragment } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
-import { DraggableTaskRow } from "./task-row";
-import { TaskInsertionSlot } from "./drag";
+import {
+  DraggableTaskRow,
+  TaskInsertionSlot,
+} from "./drag";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
