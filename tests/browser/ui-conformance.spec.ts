@@ -592,9 +592,7 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       "Task action menu",
     );
     await expectTarget(
-      page.getByRole("checkbox", {
-        name: "Complete Mobile geometry inventory",
-      }),
+      page.locator(".jig-task-completion-target").first(),
       "Task completion",
     );
     await expectTarget(
