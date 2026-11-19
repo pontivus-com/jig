@@ -139,7 +139,7 @@ async function runConfigured(config: JigConfig): Promise<void> {
       clearTimeout(rolloverTimer);
       rolloverTimer = null;
     }
-    await sync.stop();
+    sync.stop();
     if (managedGitHub !== null) {
       await managedGitHub.dispose();
     }
