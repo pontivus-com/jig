@@ -112,7 +112,6 @@ interface FakeRepository {
   remoteHead: string | null;
   remoteSnapshot: PortableSnapshot | null;
   baseHead: string;
-  baseSnapshot: PortableSnapshot;
   remoteRewritten: boolean;
   lineage:
     | "equal"
@@ -147,7 +146,6 @@ function observation(
       remote_rewritten: false,
       lineage: "unknown",
       remote_snapshot: null,
-      base: null,
     };
   }
   return {
@@ -162,10 +160,6 @@ function observation(
         ? "equal"
         : repo.lineage,
     remote_snapshot: repo.remoteSnapshot,
-    base: {
-      head: repo.baseHead,
-      snapshot: repo.baseSnapshot,
-    },
   };
 }
 
@@ -236,16 +230,9 @@ function fakeEffects(
             remote_rewritten: false,
             lineage: "unknown",
             remote_snapshot: null,
-            base: null,
-          };
+                };
         }
         return observation(repo);
-      },
-      acknowledgeRemote: async (
-        _config,
-        head,
-      ) => {
-        repo.baseHead = head;
       },
       alignLocal: async (
         _config,
@@ -333,7 +320,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead: "b".repeat(40),
       remoteSnapshot: remote,
       baseHead: BASE_HEAD,
-      baseSnapshot: base,
       remoteRewritten: false,
       lineage: "remote-ahead",
     };
@@ -360,55 +346,6 @@ describe("convergence-first synchronization worker", () => {
     controller.stop();
   });
 
-  it("reconciles non-conflicting local SQLite and remote changes before committing", async () => {
-    const base = serializeSnapshot([], DATASET_ID);
-    const remote = serializeSnapshot(
-      [task("202", "Remote task")],
-      DATASET_ID,
-    );
-    await markExported(db, 0, BASE_HEAD);
-    await applyTaskCommand(
-      db,
-      {
-        type: "create",
-        title: "Local task",
-        scheduled_date: "2026-11-19",
-      },
-      0,
-      "2026-11-19T02:00:00.000Z",
-      () =>
-        "018f47f0-7b5c-7d4d-8e2b-000000000203",
-    );
-    const repo: FakeRepository = {
-      localHead: BASE_HEAD,
-      localSnapshot: base,
-      remoteHead: "c".repeat(40),
-      remoteSnapshot: remote,
-      baseHead: BASE_HEAD,
-      baseSnapshot: base,
-      remoteRewritten: false,
-      lineage: "remote-ahead",
-    };
-    const { effects, writes, pushes } = fakeEffects(repo);
-    const controller = createSyncController(
-      db,
-      { repository_path: root },
-      effects,
-    );
-
-    expect(await controller.trigger()).toStrictEqual(
-      configuredStatus("synchronized"),
-    );
-    expect(writes.count).toBe(1);
-    expect(pushes.count).toBe(1);
-    expect(
-      (await readCanonicalState(db)).tasks
-        .map((candidate) => candidate.title)
-        .sort(),
-    ).toEqual(["Local task", "Remote task"]);
-    controller.stop();
-  });
-
   it("re-observes a push race rather than blindly retrying the rejected push", async () => {
     const base = serializeSnapshot([], DATASET_ID);
     await markExported(db, 0, BASE_HEAD);
@@ -430,7 +367,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead: BASE_HEAD,
       remoteSnapshot: base,
       baseHead: BASE_HEAD,
-      baseSnapshot: base,
       remoteRewritten: false,
       lineage: "equal",
     };
@@ -451,19 +387,18 @@ describe("convergence-first synchronization worker", () => {
     );
 
     expect(await controller.trigger()).toStrictEqual(
-      configuredStatus("synchronized"),
+      configuredStatus("sync-issue"),
     );
-    expect(pushes.count).toBe(2);
-    expect(observes.count).toBeGreaterThanOrEqual(3);
+    expect(pushes.count).toBe(1);
+    expect(observes.count).toBeGreaterThanOrEqual(2);
     expect(
       (await readCanonicalState(db)).tasks
-        .map((candidate) => candidate.title)
-        .sort(),
-    ).toEqual(["Desktop pending", "Other client"]);
+        .map((candidate) => candidate.title),
+    ).toEqual(["Desktop pending"]);
     controller.stop();
   });
 
-  it("settles a semantic conflict into a quiescent sync issue without writing", async () => {
+  it("stops safely when remote advances while local SQLite is pending", async () => {
     const baseTask = task("206", "Base");
     const base = serializeSnapshot([baseTask], DATASET_ID);
     await applyTaskCommand(
@@ -502,7 +437,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead: "e".repeat(40),
       remoteSnapshot: remote,
       baseHead: BASE_HEAD,
-      baseSnapshot: base,
       remoteRewritten: false,
       lineage: "remote-ahead",
     };
@@ -544,7 +478,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead: BASE_HEAD,
       remoteSnapshot: base,
       baseHead: BASE_HEAD,
-      baseSnapshot: base,
       remoteRewritten: false,
       lineage: "equal",
     };
@@ -586,7 +519,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead: BASE_HEAD,
       remoteSnapshot: base,
       baseHead: BASE_HEAD,
-      baseSnapshot: base,
       remoteRewritten: false,
       lineage: "equal",
     };
@@ -634,7 +566,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead: committedHead,
       remoteSnapshot: committed,
       baseHead: committedHead,
-      baseSnapshot: committed,
       remoteRewritten: false,
       lineage: "equal",
     };
@@ -678,7 +609,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead: "1".repeat(40),
       remoteSnapshot,
       baseHead: BASE_HEAD,
-      baseSnapshot: base,
       remoteRewritten: false,
       lineage: "remote-ahead",
     };
@@ -716,7 +646,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead,
       remoteSnapshot,
       baseHead: BASE_HEAD,
-      baseSnapshot: base,
       remoteRewritten: false,
       lineage: "equal",
     };
@@ -763,7 +692,6 @@ describe("convergence-first synchronization worker", () => {
       remoteHead: null,
       remoteSnapshot: null,
       baseHead: BASE_HEAD,
-      baseSnapshot: base,
       remoteRewritten: false,
       lineage: "unknown",
     };
