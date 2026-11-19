@@ -1175,8 +1175,9 @@ body {
 
   .jig-setup-heading h1 {
     max-width: 18ch;
-    font-size: var(--font-size-2xl);
-    line-height: 1.15;
+    font-size: calc(var(--font-size-2xl) * 1.35);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
   }
 
   .jig-setup-eyebrow {
@@ -1193,14 +1194,53 @@ body {
     gap: var(--spacing-4);
   }
 
-  .jig-setup-benefits > div {
+  .jig-setup-benefit {
     display: grid;
-    gap: var(--spacing-1);
+    align-content: start;
+    gap: var(--spacing-2);
   }
 
-  .jig-setup-benefits span {
+  .jig-setup-benefit-icon {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-element);
+    background: var(--color-background-muted);
+    color: var(--color-text-primary);
+  }
+
+  .jig-setup-benefit-copy {
+    display: grid;
+    gap: var(--spacing-0-5);
+  }
+
+  .jig-setup-benefit-copy > span {
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
+  }
+
+  .jig-setup-choice {
+    min-width: 0;
+  }
+
+  .jig-setup-choice-desktop {
+    padding: var(--spacing-5);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: calc(var(--radius-element) + var(--border-width));
+    background: var(--color-background-surface);
+    box-shadow: var(--shadow-med);
+  }
+
+  .jig-setup-choice-narrow {
+    padding-block-start: var(--spacing-1);
+  }
+
+  .jig-setup-card {
+    border-radius: calc(var(--radius-element) + var(--border-width));
+    background: var(--color-background-surface);
+    box-shadow: var(--shadow-med);
   }
 
   .jig-setup-github-actions {
@@ -1257,8 +1297,27 @@ body {
       gap: var(--spacing-3);
     }
 
+    .jig-setup-benefit {
+      grid-template-columns: 40px minmax(0, 1fr);
+      align-items: start;
+      gap: var(--spacing-3);
+    }
+
+    .jig-setup-heading h1 {
+      font-size: var(--font-size-2xl);
+      line-height: 1.12;
+    }
+
+    .jig-setup-choice-narrow {
+      padding-block-start: 0;
+    }
+
     .jig-setup-pane {
       width: 100%;
+    }
+
+    .jig-setup-card {
+      box-shadow: none;
     }
 
     .jig-app-shell {
