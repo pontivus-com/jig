@@ -481,8 +481,9 @@ describe("transactional recurrence persistence", () => {
     const stopped = await applyTaskCommand(
       db,
       {
-        type: "set_recurrence",
+        type: "edit",
         task_id: invoking.id,
+        changes: {},
         recurrence: null,
       },
       2,
