@@ -5,6 +5,7 @@ import {
   useDroppable,
 } from "@dnd-kit/react";
 import {
+  KeyboardSensor,
   PointerActivationConstraints,
   PointerSensor,
 } from "@dnd-kit/dom";
@@ -131,11 +132,18 @@ export function TaskDragProvider({
   return (
     <DragDropProvider
       sensors={(defaults) => [
-        ...defaults.filter((sensor) => sensor !== PointerSensor),
+        ...defaults.filter(
+          (sensor) =>
+            sensor !== PointerSensor &&
+            sensor !== KeyboardSensor,
+        ),
         PointerSensor.configure({
           activationConstraints: [
             new PointerActivationConstraints.Distance({ value: 6 }),
           ],
+        }),
+        KeyboardSensor.configure({
+          offset: 8,
         }),
       ]}
       onDragStart={({ operation }) => {
