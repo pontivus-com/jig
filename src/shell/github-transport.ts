@@ -48,6 +48,7 @@ export interface ManagedGitHubTransport {
   readonly synchronize: (
     config: GitAdapterConfig,
   ) => Promise<RepositorySynchronizationResult>;
+  readonly reconnect_required: () => Promise<boolean>;
   readonly dispose: () => Promise<void>;
 }
 
@@ -155,6 +156,41 @@ function nonRetryableIssue(): RepositorySynchronizationResult {
   return { status: "sync-issue", retryable: false };
 }
 
+function refreshAuthorizationFailed(error: unknown): boolean {
+  return (
+    error instanceof GitHubAuthError &&
+    (
+      error.status_code === null ||
+      error.status_code === 400 ||
+      error.status_code === 401
+    )
+  );
+}
+
+function credentialNeedsReconnect(
+  credential: GitHubCredential,
+  now: Date,
+): boolean {
+  if (credential.access_token_expires_at === null) {
+    return false;
+  }
+  const accessExpiry = Date.parse(credential.access_token_expires_at);
+  if (!Number.isFinite(accessExpiry)) {
+    return true;
+  }
+  if (accessExpiry - now.getTime() > 5 * 60 * 1000) {
+    return false;
+  }
+  if (credential.refresh_token === null) {
+    return true;
+  }
+  if (credential.refresh_token_expires_at === null) {
+    return false;
+  }
+  const refreshExpiry = Date.parse(credential.refresh_token_expires_at);
+  return !Number.isFinite(refreshExpiry) || refreshExpiry <= now.getTime();
+}
+
 export async function createManagedGitHubTransport(
   repositoryPath: string,
   dependencies: ManagedGitHubTransportDependencies,
@@ -166,6 +202,11 @@ export async function createManagedGitHubTransport(
 
   const askpass: GitHubAskpassHelper =
     await createGitHubAskpassHelper();
+  let reconnectRequired = false;
+  const loadCredential =
+    dependencies.load_credential ??
+    loadCurrentGitHubCredential;
+  const now = dependencies.now ?? (() => new Date());
 
   return {
     synchronize: async (
@@ -177,39 +218,48 @@ export async function createManagedGitHubTransport(
           home,
         );
 
-        let credential = await (
-          dependencies.load_credential ??
-          loadCurrentGitHubCredential
-        )();
+        let credential = await loadCredential();
         if (credential === null) {
+          reconnectRequired = true;
           return nonRetryableIssue();
         }
 
-        if (credential.access_token_expires_at !== null) {
-          const expiryMs = Date.parse(
-            credential.access_token_expires_at,
-          );
-          if (!Number.isFinite(expiryMs)) {
-            return nonRetryableIssue();
-          }
-          const now = (dependencies.now ?? (() => new Date()))();
-          if (expiryMs - now.getTime() <= 5 * 60 * 1000) {
+        const currentTime = now();
+        if (credentialNeedsReconnect(credential, currentTime)) {
+          reconnectRequired = true;
+          return nonRetryableIssue();
+        }
+
+        if (
+          credential.access_token_expires_at !== null &&
+          Date.parse(credential.access_token_expires_at) -
+            currentTime.getTime() <=
+            5 * 60 * 1000
+        ) {
+          try {
             credential = await (
               dependencies.refresh_credential ??
               refreshGitHubCredential
             )(
               dependencies.registration,
               credential,
-              now,
+              currentTime,
             );
             await (
               dependencies.store_credential ??
               storeGitHubCredential
             )(credential);
+            reconnectRequired = false;
+          } catch (error) {
+            if (refreshAuthorizationFailed(error)) {
+              reconnectRequired = true;
+              return nonRetryableIssue();
+            }
+            throw error;
           }
         }
 
-        return (
+        const result = await (
           dependencies.synchronize ??
           synchronizePortableData
         )(
@@ -219,7 +269,15 @@ export async function createManagedGitHubTransport(
             credential.access_token,
           ),
         );
+        if (result.status === "synchronized") {
+          reconnectRequired = false;
+        }
+        return result;
       } catch (error) {
+        if (refreshAuthorizationFailed(error)) {
+          reconnectRequired = true;
+          return nonRetryableIssue();
+        }
         if (
           error instanceof GitHubAuthError ||
           error instanceof SecretServiceError ||
@@ -228,6 +286,18 @@ export async function createManagedGitHubTransport(
           return nonRetryableIssue();
         }
         throw error;
+      }
+    },
+    reconnect_required: async (): Promise<boolean> => {
+      if (reconnectRequired) {
+        return true;
+      }
+      try {
+        const credential = await loadCredential();
+        return credential === null ||
+          credentialNeedsReconnect(credential, now());
+      } catch {
+        return false;
       }
     },
     dispose: askpass.dispose,
