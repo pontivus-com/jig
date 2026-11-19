@@ -18,10 +18,12 @@ import {
   synchronizationRetryDelayMs,
 } from "../../../src/synchronization";
 import {
+  acknowledgeAndroidRemoteHead,
   alignAndroidPortableHead,
   androidPortableHead,
   androidSynchronizationRemote,
   commitAndroidCanonicalState,
+  normalizeAndroidPortableHead,
   observeAndroidPortableRemote,
   pushAndroidPortableRepository,
   reopenAndroidPortableRepository,
@@ -275,12 +277,16 @@ export function createAndroidSyncController(
       if (decision === "normalize-to-remote") {
         try {
           if (observation.local_head !== remoteHead) {
-            await alignAndroidPortableHead(
+            await normalizeAndroidPortableHead(
               effects,
               observation.local_head,
               remoteHead,
             );
           }
+          await acknowledgeAndroidRemoteHead(
+            effects,
+            remoteHead,
+          );
           const currentState = await readCanonicalState(database);
           await markAdoptedHead(database, remoteHead);
           await markExported(
