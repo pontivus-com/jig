@@ -60,7 +60,7 @@ function diagnostics(remoteHealthy = true) {
 
 test("bootstrap stays inside Jig and accepts an existing local repository", async ({
   page,
-}) => {
+}, testInfo) => {
   let configured = false;
   let submittedPath: string | null = null;
   let taskRequests = 0;
@@ -126,6 +126,7 @@ test("bootstrap stays inside Jig and accepts an existing local repository", asyn
     });
   });
 
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
 
   await expect(page.locator(".jig-app-shell")).toBeVisible();
@@ -149,6 +150,10 @@ test("bootstrap stays inside Jig and accepts an existing local repository", asyn
   await page
     .getByRole("button", { name: "Use an existing local repository" })
     .click();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-local-repository-desktop.png"),
+    fullPage: true,
+  });
   await page.getByLabel("Repository path").fill("/tmp/planning");
   await page
     .getByRole("button", { name: "Use this repository" })
