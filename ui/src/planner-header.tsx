@@ -2,13 +2,12 @@ import {
   Button,
   Icon,
   IconButton,
-  Popover,
 } from "@astryxdesign/core";
 import type {
   IconName,
   NamespacedIconName,
 } from "@astryxdesign/core/Icon";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { JIG_ICON_KEYS, JigIcon } from "./jig-icons";
 import { JigLogo } from "./jig-logo";
 import type { LayoutMode } from "./use-layout-mode";
@@ -135,11 +134,11 @@ function TemporalNavigator({
         onClick={onNextWeek}
       />
       {compact === true ? (
-        <IconButton
+        <Button
           label="Today"
-          icon={<Icon icon="calendar" color="inherit" />}
           variant="ghost"
           size="sm"
+          className="jig-mobile-today"
           onClick={onToday}
         />
       ) : (
@@ -157,16 +156,20 @@ function TemporalNavigator({
 
 function DestinationHeading({
   destination,
+  compact = false,
 }: Readonly<{
   destination: Exclude<Destination, "planner">;
+  compact?: boolean;
 }>): React.ReactElement {
   const definition = destinationDefinition(destination);
   return (
     <div className="jig-header-destination-heading">
       <h1 className="jig-header-destination-title">{definition.label}</h1>
-      <span className="jig-header-destination-subtitle">
-        {definition.subtitle}
-      </span>
+      {compact ? null : (
+        <span className="jig-header-destination-subtitle">
+          {definition.subtitle}
+        </span>
+      )}
     </div>
   );
 }
@@ -192,66 +195,6 @@ function DestinationNav({
         />
       ))}
     </nav>
-  );
-}
-
-function NarrowDestinationMenu({
-  destination,
-  onNavigate,
-}: Readonly<
-  Pick<PlannerHeaderProps, "destination" | "onNavigate">
->): React.ReactElement {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <Popover
-      label="Primary navigation"
-      role="none"
-      presentation="popover"
-      placement="below"
-      alignment="end"
-      padding={1}
-      isOpen={isOpen}
-      onOpenChange={setIsOpen}
-      content={
-        <div
-          className="jig-navigation-menu"
-          role="menu"
-          aria-label="Primary"
-        >
-          {DESTINATIONS.map((item) => (
-            <Button
-              key={item.id}
-              label={item.label}
-              icon={<DestinationIcon icon={item.icon} />}
-              endContent={
-                destination === item.id ? (
-                  <span aria-label="Current page">
-                    <Icon icon="check" size="xsm" color="inherit" />
-                  </span>
-                ) : undefined
-              }
-              variant="ghost"
-              width="100%"
-              role="menuitem"
-              aria-current={destination === item.id ? "page" : undefined}
-              className="jig-navigation-menu-item"
-              onClick={() => {
-                onNavigate(item.id);
-                setIsOpen(false);
-              }}
-            />
-          ))}
-        </div>
-      }
-    >
-      <IconButton
-        label="Open navigation menu"
-        icon={<Icon icon="menu" color="inherit" />}
-        variant="ghost"
-        size="sm"
-      />
-    </Popover>
   );
 }
 
@@ -314,36 +257,20 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
     onPreviousWeek,
     onToday,
     onNextWeek,
-    onAdd,
-    onNavigate,
   } = props;
 
   return (
     <header className="jig-app-header jig-app-header-narrow">
       <div className="jig-header-mobile-application-row">
-        <div className="jig-header-left">
-          <BrandHome onHome={onHome} />
-        </div>
-        <div className="jig-header-mobile-title">
-          {destination === "planner" ? null : (
-            <DestinationHeading destination={destination} />
+        <div className="jig-header-mobile-identity">
+          {destination === "planner" ? (
+            <BrandHome onHome={onHome} />
+          ) : (
+            <DestinationHeading destination={destination} compact />
           )}
         </div>
         <div className="jig-header-mobile-actions">
-          {destination === "planner" ? (
-            <IconButton
-              label="Add task"
-              icon={<JigIcon name="add" color="inherit" />}
-              variant="primary"
-              size="sm"
-              onClick={onAdd}
-            />
-          ) : null}
           {compactStatusControl}
-          <NarrowDestinationMenu
-            destination={destination}
-            onNavigate={onNavigate}
-          />
         </div>
       </div>
       {destination === "planner" ? (
@@ -358,6 +285,60 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
         </div>
       ) : null}
     </header>
+  );
+}
+
+export interface CompactApplicationNavigationProps
+  extends Pick<PlannerHeaderProps, "destination" | "onAdd" | "onNavigate"> {
+  readonly showAdd: boolean;
+}
+
+export function CompactApplicationNavigation({
+  destination,
+  onAdd,
+  onNavigate,
+  showAdd,
+}: CompactApplicationNavigationProps): React.ReactElement {
+  return (
+    <>
+      {destination === "planner" && showAdd ? (
+        <IconButton
+          label="Add task"
+          icon={<JigIcon name="add" color="inherit" />}
+          variant="primary"
+          className="jig-mobile-add-fab"
+          onClick={onAdd}
+        />
+      ) : null}
+      <nav className="jig-mobile-bottom-navigation" aria-label="Primary">
+        {DESTINATIONS.map((item) => {
+          const isCurrent = destination === item.id;
+          return (
+            <Button
+              key={item.id}
+              label={item.label}
+              variant="ghost"
+              width="100%"
+              aria-current={isCurrent ? "page" : undefined}
+              className={[
+                "jig-mobile-nav-item",
+                isCurrent ? "jig-mobile-nav-item-active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => onNavigate(item.id)}
+            >
+              <span className="jig-mobile-nav-content">
+                <span className="jig-mobile-nav-icon" aria-hidden="true">
+                  <DestinationIcon icon={item.icon} />
+                </span>
+                <span className="jig-mobile-nav-label">{item.label}</span>
+              </span>
+            </Button>
+          );
+        })}
+      </nav>
+    </>
   );
 }
 
