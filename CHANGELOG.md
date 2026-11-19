@@ -37,6 +37,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Documentation
 
+- Added FR-32 / SD-42 / IMP-17 as a v1.1 release-blocking cross-installation synchronization-convergence investigation: reproduce the mobile→repository→desktop failure, identify the first divergence, govern repository outlier handling, and authorize only the evidence-backed fix while preserving local-first safety and the Git ownership boundary.
 - Added binding v1.1 HTML reference authority for Android/narrow onboarding + complete Task form and desktop onboarding + complete Task form, and traced those references through AGENTS, functional/technical design, implementation, Android certification and evidence.
 - Reconciled the functional, UI, technical, repository-governance, implementation-plan and evidence authorities around the reopened mobile UX remediation; the previous green hosted candidate is no longer closure evidence for the amended mobile interaction/Settings/Repeat/drag contracts.
 
