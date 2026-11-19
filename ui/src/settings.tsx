@@ -239,7 +239,13 @@ export function SettingsView({
                 label="Theme"
                 value={themePreset}
                 options={THEME_OPTIONS}
+                presentation="adaptive"
                 controlClassName="jig-mobile-touch-control"
+                renderOption={(option) => (
+                  <span className="jig-mobile-selector-option">
+                    {option.label}
+                  </span>
+                )}
                 onChange={(value) => {
                   if (isThemePreset(value)) {
                     onThemePresetChange(value);
