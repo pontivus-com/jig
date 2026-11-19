@@ -1191,6 +1191,68 @@ test("drag persists first middle and last positions within and across dates", as
   }
 });
 
+
+test("Task-body touch scroll never activates drag", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 600 });
+  const today = await browserCivilDate(page);
+  for (let index = 0; index < 12; index += 1) {
+    await createTask(page, \`Body-scroll task \${index + 1}\`, today);
+  }
+  await page.reload();
+
+  const body = (await taskCard(page, "Body-scroll task 1")).locator(
+    ".jig-task-body",
+  );
+  const bodyBox = await body.boundingBox();
+  if (bodyBox === null) {
+    throw new Error("Task-body scroll geometry unavailable");
+  }
+
+  const client = await page.context().newCDPSession(page);
+  const point = (x: number, y: number) => ({
+    x,
+    y,
+    radiusX: 1,
+    radiusY: 1,
+    force: 1,
+    id: 71,
+  });
+  const x = bodyBox.x + bodyBox.width / 2;
+  const startY = bodyBox.y + bodyBox.height / 2;
+
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [point(x, startY)],
+  });
+  for (let step = 1; step <= 8; step += 1) {
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [point(x, startY - step * 28)],
+    });
+  }
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await client.detach();
+
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+    "data-jig-drag-active",
+    "false",
+  );
+  await expect(
+    page.getByRole("dialog", { name: "Body-scroll task 1" }),
+  ).toHaveCount(0);
+  await expect
+    .poll(async () =>
+      page.locator(".jig-content-frame").evaluate(
+        (element) => element.scrollTop,
+      ),
+    )
+    .toBeGreaterThan(0);
+});
+
 test("references stay data-only: HTTP(S) opens and non-HTTP stays copy-only", async ({
   page,
 }) => {
