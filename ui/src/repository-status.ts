@@ -116,14 +116,16 @@ export function remoteGitStatusPresentation(
   }
 }
 
-function humanRepositoryIdentity(location: string): string {
+function humanRepositoryIdentity(location: string): string | null {
   const githubPrefix = "https://github.com/";
   if (location.toLowerCase().startsWith(githubPrefix)) {
     return location
       .slice(githubPrefix.length)
       .replace(/\.git$/i, "");
   }
-  return location;
+
+  const githubSsh = location.match(/^git@github\.com:(.+?)(?:\.git)?$/i);
+  return githubSsh?.[1] ?? null;
 }
 
 export function planningDataHomePresentation(
@@ -141,9 +143,13 @@ export function planningDataHomePresentation(
     remote.state !== "not-configured" &&
     remote.remote_location !== null
   ) {
+    const identity = humanRepositoryIdentity(remote.remote_location);
     return {
-      label: humanRepositoryIdentity(remote.remote_location),
-      detail: "Repository used for cross-device continuity.",
+      label: identity ?? "Connected repository",
+      detail:
+        identity === null
+          ? "A configured repository carries cross-device continuity."
+          : "Repository used for cross-device continuity.",
     };
   }
 
