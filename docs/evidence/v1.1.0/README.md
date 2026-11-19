@@ -1,6 +1,6 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** NON-DEVICE IMPLEMENTATION CLOSED / PHYSICAL-LIVE ACCEPTANCE OPEN — the combined repository/host/emulator candidate is permanently certified. Only J110-IMP-09 physical Task-movement proof, J110-IMP-15 physical/native certification, issue #31 live Linux/Desktop GitHub acceptance and the later governed release ceremony remain open.
+**Status:** UX/UI FIDELITY REOPENED / CORE-RUNTIME NON-DEVICE EVIDENCE RETAINED / PHYSICAL CERTIFICATION BLOCKED — the 2026-11-19 fidelity review found that prior closure incorrectly treated geometry assertions and retained screenshots as proof of completed UX/UI. The existing candidate/run remain valid evidence for core/domain/runtime/synchronization/build/emulator mechanics, but desktop/mobile presentation must be remediated through UX-F0..UX-F7 before J110-IMP-09 or J110-IMP-15 resumes.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
@@ -16,7 +16,7 @@
 - Android API-24 instrumentation: `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`.
 - `package.json.version` remains `1.0.6` by design; the `1.1.0` version transition remains owned by the later `release/v1.1.0` metadata PR.
 
-This candidate closes every repository/host/emulator-capable v1.1 implementation and verification task. It does **not** close J110-IMP-09 physical Task-movement proof, J110-IMP-15 physical/native certification, or the live Linux/Desktop GitHub acceptance tracked by issue #31.
+This candidate closes the repository/host/emulator **functional and runtime mechanics** recorded below, but it no longer closes UX/UI fidelity. The retained screenshots expose unresolved hierarchy/composition defects and the previous browser suite did not include a visual-fidelity acceptance gate. UX-F0..UX-F7 must establish a new post-remediation candidate before J110-IMP-09, J110-IMP-15 or release-candidate closure.
 
 ## Historical pre-remediation candidate
 
@@ -36,7 +36,7 @@ The presentation authority used by the current remediation candidate is explicit
 | Gate | Evidence state |
 | --- | --- |
 | Linux/browser permanent Verify | **PASS** — run `44516299671`; 41/41 test files and 250/250 core/integration/architecture tests passed; production build passed; browser bootstrap smoke passed; 77/77 real-browser tests passed; shell syntax and installer/lifecycle smoke passed. |
-| Governed browser screenshot evidence | **PASS** — onboarding desktop + 320/360/390/414 mobile states, mobile Planner/Settings/expanded Weekly Task form states and desktop expanded Weekly Task form state were retained in artifact `14525538706` with ZIP digest `sha256:7b3cdc34b75fb8c89cb1df1dcd14f8843303c4b639895f83ba62d4d2d91a3314`. |
+| Governed browser screenshot evidence | **RETAINED EVIDENCE / UX FIDELITY NOT CLOSED** — artifact `14525538706` captured onboarding desktop + 320/360/390/414 mobile states, mobile Planner/Settings/expanded Weekly Task form states and desktop expanded Weekly Task form state. The artifact is now defect evidence as well as regression evidence: it was never paired with a governed visual-diff or explicit expert fidelity review, and it omits several desktop/mobile states required for complete UX certification. ZIP digest `sha256:7b3cdc34b75fb8c89cb1df1dcd14f8843303c4b639895f83ba62d4d2d91a3314`. |
 | Browser/native platform isolation | **PASS** — permanent architecture tests require lazy native-runtime/native-GitHub loading; hosted browser bootstrap smoke proves Android Git/isomorphic-git is not evaluated in the browser entrypoint. |
 | Android deterministic build certification | **PASS** — run `44516299671`; Gradle dependency locks, Android unit/static checks, FLOSS boundary, version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention passed. APK artifact id `14525298721`. |
 | Android API-24 instrumentation | **PASS** — run `44516299671`; `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`. |
@@ -53,9 +53,9 @@ The presentation authority used by the current remediation candidate is explicit
 | Live Linux/Desktop GitHub Device Flow/private-repo acquisition | **IMPLEMENTATION COMPLETE / EXTERNAL LIVE ACCEPTANCE PENDING** — deterministic protocol, Secret Service, managed transport, pagination, access recheck, clone/adoption, refresh/reconnect and failure semantics are permanently tested. Real interactive acceptance remains issue #31. |
 | Live/physical Android GitHub Device Flow/private-repo acquisition | **PENDING physical-device verification** under J110-IMP-15. |
 
-## Non-device closure audit
+## Non-device functional closure and UX/UI fidelity reopening audit
 
-The repository-executable defects that reopened v1.1 are now closed on the certified candidate: app-wide mobile touch geometry/menu density, Settings information design, integrated Repeat form/save semantics, the replacement dnd-kit Task-movement candidate, governed onboarding presentation and FR-24/SD-41 cross-installation synchronization convergence. The Task-movement implementation is still subject to the separate IMP-09 physical proof before merge approval.
+The certified candidate remains valid for the functional/runtime corrections it actually proves: synchronization convergence, recurrence/domain semantics, bootstrap/GitHub orchestration, Android build/runtime boundaries and the replacement dnd-kit movement candidate. The following prior closure claims are withdrawn for presentation fidelity: app-wide mobile hierarchy/navigation, governed onboarding on desktop/mobile, Settings visual hierarchy, the Task workspace/form presentation, and comprehensive desktop visual conformance. Minimum target geometry and screenshot retention are necessary evidence but are not sufficient to close UX/UI.
 
 The closure audit confirms:
 
@@ -94,12 +94,14 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 
 ## Still required before release-candidate closure
 
-1. Run **J110-IMP-09** on the exact certified candidate APK lineage and prove the replacement dnd-kit Task-movement implementation on physical Android. The old Pangea result cannot close this gate.
-2. Run the remaining **J110-IMP-15** physical/native matrix on the same candidate: onboarding, complete mobile touch/menu/Task form/Settings usability, Weekly/Monthly expanded form scrolling and IME reachability, Stop repeating consequence, first-empty-Planner activation, safe-area/header behavior, reminders, lifecycle/restart and physical cross-installation Git interoperability, including physical Android GitHub authorization/private-repository acquisition.
-3. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
-4. Only after those gates pass may the `release/v1.1.0` metadata/tag/GitHub Release/F-Droid publication ceremony proceed.
+1. Complete **UX-F0..UX-F7** on the authoritative `v1.1` branch: cross-platform fidelity baseline/authority lock, shared shell/navigation, Planner/Task-card composition, onboarding, Task workspace/form presentation, History/Settings, cross-theme/state parity and reviewed non-device visual acceptance.
+2. Establish a **new exact post-UX `v1.1` candidate** with permanent Verify green and a complete reviewed desktop/mobile visual-evidence matrix. The earlier candidate/run remains supporting functional evidence only.
+3. Run **J110-IMP-09** on the exact post-UX candidate APK lineage and prove the replacement dnd-kit Task-movement implementation on physical Android. The old Pangea result cannot close this gate.
+4. Run the remaining **J110-IMP-15** physical/native matrix on the same candidate, including real-device usability of the corrected onboarding, shell/navigation, Planner, Task form, Settings and History plus reminders/lifecycle/Git interoperability.
+5. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
+6. Only after those gates pass may the `release/v1.1.0` metadata/tag/GitHub Release/F-Droid publication ceremony proceed.
 
-All repository/host/emulator-capable implementation and verification work is closed. Governed browser screenshots are already retained by run `44516299671`; the screenshots/notes still missing are specifically physical-device evidence owned by IMP-09/IMP-15.
+Repository/host/emulator **functional** verification remains strong, but UX/UI repository work is open again. Physical certification is intentionally blocked until the visual remediation is complete rather than being used as a substitute design-review stage.
 
 ## Physical-device evidence
 
