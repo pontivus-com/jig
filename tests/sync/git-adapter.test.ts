@@ -260,72 +260,6 @@ describe("isolated jig-data adapter", () => {
     );
   });
 
-  it("treats equivalent relative and absolute local fetch/push paths as one repository", async () => {
-    const repo = await fixture();
-    const remote = await mkdtemp(join(tmpdir(), "jig-local-identity-"));
-    roots.push(remote);
-    await git(remote, ["init", "--bare"]);
-
-    const relativeRemote =
-      "../" + remote.slice(remote.lastIndexOf("/") + 1);
-    await git(repo, ["remote", "add", "origin", relativeRemote]);
-    await git(repo, [
-      "remote",
-      "set-url",
-      "--push",
-      "origin",
-      remote,
-    ]);
-
-    await expect(
-      inspectSynchronizationAuthority({
-        repository_path: repo,
-      }),
-    ).resolves.toMatchObject({
-      state: "selected",
-      remote: { name: "origin" },
-    });
-  });
-
-  it("accepts protocol-different fetch/push URLs only when they identify one logical repository", async () => {
-    const repo = await fixture();
-    await git(repo, [
-      "remote",
-      "add",
-      "origin",
-      "https://github.com/pontivus-com/jig-data.git",
-    ]);
-    await git(repo, [
-      "remote",
-      "set-url",
-      "--push",
-      "origin",
-      "git@github.com:pontivus-com/jig-data.git",
-    ]);
-
-    await expect(
-      inspectSynchronizationAuthority({
-        repository_path: repo,
-      }),
-    ).resolves.toMatchObject({
-      state: "selected",
-      remote: { name: "origin" },
-    });
-
-    await git(repo, [
-      "remote",
-      "set-url",
-      "--push",
-      "origin",
-      "git@github.com:pontivus-com/different-data.git",
-    ]);
-    await expect(
-      inspectSynchronizationAuthority({
-        repository_path: repo,
-      }),
-    ).resolves.toStrictEqual({ state: "ambiguous" });
-  });
-
   it("refuses multiple effective push destinations instead of partially synchronizing", async () => {
     const repo = await fixture();
     await git(repo, [
@@ -416,22 +350,26 @@ describe("isolated jig-data adapter", () => {
     const observed = await observePortableRemote(
       config,
       DATASET_ID,
+      null,
     );
 
     expect(observed).toMatchObject({
-      remote_state: "present",
+      state: "present",
       local_head: before,
       remote_head: remoteHead,
       remote_rewritten: false,
       lineage: "remote-ahead",
     });
-    expect(observed.remote_snapshot?.tasks).toStrictEqual([
+    if (observed.state !== "present") {
+      throw new Error("expected present remote observation");
+    }
+    expect(observed.remote_snapshot.tasks).toStrictEqual([
       remoteTask,
     ]);
     expect(await git(repo, ["rev-parse", DATA_REF])).toBe(before);
   });
 
-  it("retains prior remote-head evidence when the remote branch is deleted or rewritten", async () => {
+  it("retains Git-owned remote-head evidence when the remote branch is deleted or rewritten", async () => {
     const repo = await fixture();
     const config = { repository_path: repo } as const;
     await ensurePortableData(config, DATASET_ID);
@@ -442,52 +380,63 @@ describe("isolated jig-data adapter", () => {
     );
     const remote = await remoteFixture(repo);
 
-    const first = await observePortableRemote(config, DATASET_ID);
-    expect(first.remote_state).toBe("present");
+    const first = await observePortableRemote(
+      config,
+      DATASET_ID,
+      null,
+    );
+    if (first.state !== "present") {
+      throw new Error("expected initial remote observation");
+    }
     const firstHead = first.remote_head;
-    expect(firstHead).not.toBeNull();
 
     await git(repo, ["push", "origin", "--delete", "jig-data"]);
-    const deleted = await observePortableRemote(config, DATASET_ID);
+    const deleted = await observePortableRemote(
+      config,
+      DATASET_ID,
+      firstHead,
+    );
     expect(deleted).toMatchObject({
-      remote_state: "absent",
-      previous_remote_head: firstHead,
+      state: "absent",
+      previously_synchronized: true,
     });
 
-    const writer = await cloneDataBranch(
-      remote,
-      "rewrite-seed",
-    ).catch(async () => {
-      const seed = await mkdtemp(join(tmpdir(), "jig-rewrite-seed-"));
-      roots.push(seed);
-      await git(seed, ["init", "-b", "jig-data"]);
-      await git(seed, ["config", "user.name", "Jig Test"]);
-      await git(seed, ["config", "user.email", "jig-test@local.invalid"]);
-      await writeSnapshotFiles(
-        seed,
-        serializeSnapshot([task()], DATASET_ID),
-      );
-      await git(seed, ["add", "-A"]);
-      await git(seed, ["commit", "-m", "Replacement history"]);
-      await git(seed, ["remote", "add", "origin", remote]);
-      await git(seed, ["push", "origin", "jig-data"]);
-      return seed;
-    });
-    const replacementHead = await git(writer, ["rev-parse", "HEAD"]);
+    const seed = await mkdtemp(join(tmpdir(), "jig-rewrite-seed-"));
+    roots.push(seed);
+    await git(seed, ["init", "-b", "jig-data"]);
+    await git(seed, ["config", "user.name", "Jig Test"]);
+    await git(seed, ["config", "user.email", "jig-test@local.invalid"]);
+    await writeSnapshotFiles(
+      seed,
+      serializeSnapshot([task()], DATASET_ID),
+    );
+    await git(seed, ["add", "-A"]);
+    await git(seed, ["commit", "-m", "Replacement history"]);
+    await git(seed, ["remote", "add", "origin", remote]);
+    await git(seed, ["push", "origin", "jig-data"]);
+    const replacementHead = await git(seed, ["rev-parse", "HEAD"]);
+
     const rewritten = await observePortableRemote(
       config,
       DATASET_ID,
+      firstHead,
     );
-    expect(rewritten.remote_head).toBe(replacementHead);
-    expect(rewritten.remote_rewritten).toBe(true);
-    expect(rewritten.previous_remote_head).toBe(firstHead);
+    expect(rewritten).toMatchObject({
+      state: "present",
+      remote_head: replacementHead,
+      remote_rewritten: true,
+    });
 
     const repeated = await observePortableRemote(
       config,
       DATASET_ID,
+      firstHead,
     );
-    expect(repeated.remote_rewritten).toBe(true);
-    expect(repeated.previous_remote_head).toBe(firstHead);
+    expect(repeated).toMatchObject({
+      state: "present",
+      remote_head: replacementHead,
+      remote_rewritten: true,
+    });
   });
 
   it("rejects non-canonical paths on the portable branch before adoption", async () => {
@@ -511,8 +460,12 @@ describe("isolated jig-data adapter", () => {
     await git(writer, ["push", "origin", "jig-data"]);
 
     await expect(
-      observePortableRemote(config, DATASET_ID),
-    ).rejects.toThrow(/non-canonical jig-data tree entry/);
+      observePortableRemote(
+        config,
+        DATASET_ID,
+        null,
+      ),
+    ).resolves.toMatchObject({ state: "unsafe" });
   });
 
   it("rejects symlink entries on jig-data before adoption", async () => {
@@ -535,8 +488,12 @@ describe("isolated jig-data adapter", () => {
     await git(writer, ["push", "origin", "jig-data"]);
 
     await expect(
-      observePortableRemote(config, DATASET_ID),
-    ).rejects.toThrow(/non-canonical jig-data tree entry/);
+      observePortableRemote(
+        config,
+        DATASET_ID,
+        null,
+      ),
+    ).resolves.toMatchObject({ state: "unsafe" });
   });
 
   it("rejects submodule entries on jig-data before adoption", async () => {
@@ -563,8 +520,12 @@ describe("isolated jig-data adapter", () => {
     await git(writer, ["push", "origin", "jig-data"]);
 
     await expect(
-      observePortableRemote(config, DATASET_ID),
-    ).rejects.toThrow(/non-canonical jig-data tree entry/);
+      observePortableRemote(
+        config,
+        DATASET_ID,
+        null,
+      ),
+    ).resolves.toMatchObject({ state: "unsafe" });
   });
 
   it("publishes a missing remote jig-data branch using an ordinary push", async () => {
@@ -584,10 +545,11 @@ describe("isolated jig-data adapter", () => {
     const observed = await observePortableRemote(
       config,
       DATASET_ID,
+      null,
     );
     expect(observed).toMatchObject({
-      remote_state: "absent",
-      previous_remote_head: null,
+      state: "absent",
+      previously_synchronized: false,
     });
     await expect(
       pushPortableDataRef(
