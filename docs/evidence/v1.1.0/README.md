@@ -1,10 +1,10 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** POST-UX NON-DEVICE CANDIDATE CERTIFIED / REVIEWED UX-F0..UX-F7 CLOSED / J110-IMP-09 PHYSICAL TASK MOVEMENT COMPLETE / J110-IMP-15 + LIVE DESKTOP ACCEPTANCE OPEN — the 2026-11-19 fidelity remediation is complete on the authoritative `v1.1` branch. Exact executable source candidate `611c8ced6a854a80f24bf727c53d792f5c5d556c` passed permanent Verify run `44547579822` / #1521 across Linux/browser, deterministic Android build certification and API-24 instrumentation. The retained browser matrix was explicitly reviewed against the corrected UX-F0 authority. J110-IMP-09 physical Task movement was completed on physical Android, but the detailed execution record was not retained and must not be reconstructed. J110-IMP-15 and live Linux/Desktop GitHub acceptance remain open.
+**Status:** PHYSICAL-ACCEPTANCE REMEDIATION OPEN / J110-IMP-09 COMPLETE / J110-IMP-18..21 OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — prior post-UX candidate `611c8ced6a854a80f24bf727c53d792f5c5d556c` remains certified historical non-device evidence. Executable head `222f2fe0e672b122424042b3fa39747efb991610` adds the Desktop Secret Service and Android Git synchronization corrections and has 41/41 local test files / 252/252 tests plus physical Samsung SM-S901E synchronization/restart evidence. Hosted Verify #1541 passed Linux/browser and Android build certification but the API-24 emulator failed to boot before instrumentation. Physical use exposed bounded UX/domain defects now governed by IMP-18..21; J110-IMP-15 cannot close until those corrections are implemented and re-certified. Live Linux/Desktop GitHub acceptance remains issue #31.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
-## Current combined non-device candidate
+## Prior certified post-UX non-device baseline
 
 - Authoritative integration branch: `v1.1`. The completed non-device tree and both branch histories were integrated into `v1.1` by merge commit `fceaed0ae9a6adfeb8dc16f628fa9578a726a5cd`; temporary work/CI branches are not implementation-state authority.
 - **Certified executable/product source candidate:** `611c8ced6a854a80f24bf727c53d792f5c5d556c`.
@@ -18,7 +18,28 @@
 - Android API-24 instrumentation: `cd android && ./gradlew :app:connectedDebugAndroidTest` ended **`BUILD SUCCESSFUL`**.
 - `package.json.version` remains `1.0.6` by design; the `1.1.0` version transition remains owned by the later `release/v1.1.0` metadata PR.
 
-This candidate closes the repository/host/emulator **functional, runtime and UX/UI non-device gates**. J110-IMP-09 physical Task movement has also completed, although its detailed execution record was lost. The retained source/APK lineage remains the governed input for the remaining J110-IMP-15 physical certification. Any later executable change invalidates that current physical-candidate identity and requires a new certified artifact.
+This candidate remains valid provenance for the gates it actually passed, but it is **not** the current release-candidate lineage after later executable changes. J110-IMP-09 remains complete, but the 2026-11-20 executable/session evidence and the amended IMP-18..21 authority supersede this baseline for final certification.
+
+## Current executable / physical-session evidence — 2026-11-20
+
+- Executable source head exercised: `222f2fe0e672b122424042b3fa39747efb991610`.
+- Desktop Secret Service prerequisite correction: **PASS** — the runtime uses a non-mutating lookup instead of `secret-tool --version`; configured bootstrap/service state was preserved and healthy.
+- Local verification: **PASS — 41/41 test files, 252/252 tests**, plus typecheck and targeted Secret Service/Android Git tests.
+- Physical Android device: **Samsung SM-S901E**, Android **16 / API 36**.
+- Installed package: `com.pontivus.jig`.
+- Physical APK SHA-256: `b3d134786827dea601f4f3cbd89ad4269578393151efd5dab056812a682c8d4b`.
+- Physical-device preflight: **PASS**.
+- Android Git synchronization: **PASS for the exercised path** — local Android changes committed, remote push completed, Settings reported **Up to date**, and restart/relaunch preserved Planner data and synchronization state.
+- Physical UI evidence was captured for Planner, Task form/IME, Repeat states, History, Settings and healthy synchronization, but review exposed the IMP-18/19/20 defects recorded below; this evidence therefore cannot close IMP-15.
+- Hosted Verify run `44635494793` / #1541 on exact head `222f2fe…`: Linux/browser **PASS**, Android build certification **PASS**, API-24 runtime **INFRASTRUCTURE FAILURE before instrumentation** because `emulator-5554` never appeared and the boot wait timed out. A green permanent Verify is still required for the final executable candidate.
+
+**Physical acceptance findings that reopen implementation:**
+1. compact header identity/title/chrome and interactive-label legibility;
+2. Task grip/checkbox vertical alignment;
+3. explicit current/future scheduling rule plus past-date rejection feedback;
+4. recurring rollover non-accumulation.
+
+These are governed by J110-IMP-18..21. They do not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture or dnd-kit framework ownership.
 
 ## Historical pre-remediation candidate
 
@@ -99,17 +120,21 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 
 ## Still required before release-candidate closure
 
-UX-F0..UX-F7 and the complete non-device post-UX candidate are now closed. Remaining gates are external/physical:
+The 2026-11-20 physical session has reopened bounded implementation work. Required order:
 
-1. Run the remaining **J110-IMP-15** physical/native matrix on the governed current APK/source lineage, including real-device usability of onboarding, shell/navigation, Planner, Task form, Settings and History plus reminders/lifecycle/Git interoperability. J110-IMP-09 is already complete and must not be rerun solely to reconstruct its lost detailed record.
-2. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
-3. Only after those two remaining acceptance streams pass may `v1.1` be promoted to `master` and the `release/v1.1.0` metadata/tag/GitHub Release/F-Droid publication ceremony proceed.
+1. Implement and close **J110-IMP-18** compact shell/typography/Task-leading alignment.
+2. Implement and close **J110-IMP-19** canonical current/future scheduling + past-date feedback.
+3. Implement and close **J110-IMP-20** recurrence-aware rollover non-accumulation.
+4. Close **J110-IMP-21** with complete automated/browser/hosted/physical recertification on one exact executable head; permanent hosted Verify must be green.
+5. Complete the remaining **J110-IMP-15** physical/native matrix and formal evidence disposition. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
+6. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
+7. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
 
-No additional repository UX/UI remediation is currently identified by the reviewed non-device matrix. A physical failure must reopen the affected governed contract on `v1.1`; it must not create a competing branch or unreviewed substitute architecture.
+Do not create a competing branch, platform-specific recurrence/scheduling rule or substitute UI/error architecture to close these findings.
 
 ## Physical-device evidence
 
-Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It records the corrected J110-IMP-09 disposition as completed with detailed execution evidence lost, and remains the active evidence record for J110-IMP-15. The current retained candidate is source `611c8ced6a854a80f24bf727c53d792f5c5d556c`, artifact `14541004265` and unpacked APK SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`. Do not backfill unknown IMP-09 execution details from browser/emulator/hosted-CI evidence.
+Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and now records the 2026-11-20 **partial IMP-15** session on source `222f2fe0e672b122424042b3fa39747efb991610`, Samsung SM-S901E / Android 16 API 36, package `com.pontivus.jig`, APK SHA-256 `b3d134786827dea601f4f3cbd89ad4269578393151efd5dab056812a682c8d4b`. This is partial evidence only; a new final candidate lineage is required after IMP-18..20.
 
 **J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-15 OPEN.** The earlier Pangea failure and associated UX findings reopened the design; the replacement Task-movement implementation was subsequently exercised successfully on physical Android. The detailed IMP-09 execution record was not retained, so unknown device, source/APK and per-check facts must not be reconstructed. The remaining physical work is the J110-IMP-15 matrix.
 
