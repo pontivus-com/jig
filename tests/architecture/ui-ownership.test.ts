@@ -295,7 +295,7 @@ describe("UI ownership architecture", () => {
     expect(css).toContain("padding: env(safe-area-inset-top, 0px) 0 0;");
     expect(css).toContain(".jig-header-mobile-application-row {");
     expect(css).toContain(".jig-header-mobile-temporal-row {");
-    expect(css).toContain("min-height: 44px;");
+    expect(css).toContain("min-height: 56px;");
     expect(css).not.toContain("height: 3.5rem;");
     expect(css).toContain("@media (max-width: 72.999rem)");
     expect(css).not.toContain("@media (max-width: 75.999rem)");
@@ -311,7 +311,8 @@ describe("UI ownership architecture", () => {
     expect(css).toContain(".jig-settings-view {");
     expect(css).toContain("max-width: 50rem;");
     expect(css).toContain("margin-inline: auto;");
-    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));");
+    expect(css).toContain(".jig-settings-sections {");
+    expect(css).not.toContain(".jig-settings-grid {");
     expect(css).not.toContain("grid-template-columns: 560px minmax(0, 580px);");
     expect(css).not.toMatch(
       /\.jig-history-view,\s*\n\s*\.jig-settings-view\s*\{[^}]*max-width:\s*none/s,
