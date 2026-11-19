@@ -110,7 +110,7 @@ J110-IMP-08 closes on the governed deterministic Android shell/debug-APK build a
 
 The previous Pangea implementation is a recorded **FAIL** and must not be retested as the release candidate.
 
-Using the exact replacement candidate source/APK from IMP-04:
+Using the exact certified post-UX replacement candidate source/APK from IMP-04 — currently source `611c8ced6a854a80f24bf727c53d792f5c5d556c` and GitHub Actions APK artifact `14541004265` unless a later executable change establishes a newly certified lineage:
 
 1. record source SHA, APK SHA-256, device model, Android version and WebView/Chrome version;
 2. run at least 20 sequential grip drags with no stranded overlay/floating card;
@@ -130,11 +130,13 @@ Any repeated missed drop, floating-card residue, unstable slot or scroll conflic
 
 ### Broader mobile UX observations for J110-IMP-15
 
-Use `../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html` as the binding Android/narrow presentation target. On the same candidate, physically inspect:
+Use both `../design/reference/jig-v1.1-application-ux-ui-governed-reference.html` and `../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html` as the binding Android/narrow presentation targets. The app-wide reference owns the configured shell/navigation/Planner/History/Settings hierarchy; the mobile reference owns onboarding and the complete Task BottomSheet/Repeat composition. On the same candidate, physically inspect:
 
 - onboarding welcome, GitHub authorization, repository-selection, finishing/attention and first-empty-Planner states preserve the governed hierarchy and remain usable at device width;
-- header/menu/date/Task/BottomSheet/Repeat/Settings hit targets and adjacent-target spacing;
-- menu row size/readability and mis-tap risk;
+- the configured application row, Planner temporal row and persistent Planner/History/Settings bottom navigation remain legible, reachable and non-overlapping with system/safe-area insets;
+- the Planner-only FAB is the single highest-prominence creation action and does not obscure Tasks, date Add controls or bottom navigation;
+- healthy synchronization remains visually subordinate while warning/error attention is understandable and actionable;
+- Previous/Next/Today/date Add/Task/BottomSheet/Repeat/Settings controls preserve their >=48px interaction targets without becoming equally prominent filled controls;
 - the **complete** Task BottomSheet remains one scrollable form ordered Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes;
 - Weekly and Monthly progressive disclosure does not hide or make Reminder/Priority/Context/Reference/Notes unreachable;
 - weekday controls are physically usable, wrap without overlap and preserve the >=48px target contract;
