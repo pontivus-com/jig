@@ -8,11 +8,9 @@ export type SynchronizationLineage =
 export type SynchronizationFacts =
   | {
       readonly kind: "no-remote";
-      readonly local_pending: boolean;
     }
   | {
       readonly kind: "remote-absent";
-      readonly local_pending: boolean;
       readonly previously_synchronized: boolean;
     }
   | {
