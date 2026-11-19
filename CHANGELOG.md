@@ -26,6 +26,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 ### Documentation
 
 - Canonicalized product, functional, technical, UI/theme and repository-governance authorities for v1.1 while retaining v1.0.6 clauses as historical release provenance where superseded.
+- Closed the v1.1 non-device implementation audit: permanent hosted verification is the authoritative CI gate, local `act` is optional developer preflight, and live interactive GitHub authorization is tracked as external acceptance rather than unfinished repository implementation.
 
 ## [1.0.6] - 2026-11-18
 
