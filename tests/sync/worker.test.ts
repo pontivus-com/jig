@@ -220,6 +220,12 @@ function fakeEffects(
         }
         return observation(repo);
       },
+      acknowledgeRemote: async (
+        _config,
+        head,
+      ) => {
+        repo.baseHead = head;
+      },
       alignLocal: async (
         _config,
         expectedHead,
