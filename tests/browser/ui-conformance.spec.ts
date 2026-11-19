@@ -766,7 +766,12 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   await expect(
     page.getByLabel("Recurring task").first(),
   ).toBeVisible();
-  await expect(workspace.getByText(/until/).first()).toBeVisible();
+  await expect(
+    workspace.getByRole("combobox", { name: "Repeat" }),
+  ).toContainText("Weekly");
+  await expect(workspace.getByLabel("Ends on")).toHaveValue(
+    await displayedDateValue(page, endDate),
+  );
 
   await workspace
     .getByRole("button", { name: "Close", exact: true })
@@ -777,8 +782,11 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
     name: "Browser recurrence",
   });
   await expect(
-    workspace.getByText(/until/).first(),
-  ).toBeVisible();
+    workspace.getByRole("combobox", { name: "Repeat" }),
+  ).toContainText("Weekly");
+  await expect(workspace.getByLabel("Ends on")).toHaveValue(
+    await displayedDateValue(page, endDate),
+  );
   await expect(
     workspace.getByText(
       "Repeat changes the series schedule. Other Task fields change this Task only.",
