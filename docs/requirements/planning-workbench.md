@@ -239,7 +239,7 @@ Desktop Planner is one wide weekly planning surface plus one global application 
 
 **Task workspace:** clicking a Planner Task selects it and opens the canonical editable Task form directly in the non-blocking right-side workspace. There is no read-only detail step and no second Edit click. The workspace overlays from the right and **must not resize, reflow or narrow the seven Planner columns**. Selection itself performs no move. Clicking Planner/History content outside a Task card and outside the workspace closes it without saving; clicking another Task retargets it.
 
-**Task editing/creation:** existing and new Tasks use the same field surface: Title, Date, Context, Priority, Reminder, Repeat, Reference and Notes. Add task populates an originating/default date but does not hide optional fields. Global Add derives the default date from the displayed week and current local weekday. A per-date `+` uses its explicit date directly. No date selection is created by either path, and no full-width Add control remains at the bottom of a lane. Save persists through the canonical create/edit command; Cancel or outside dismissal closes without persistence.
+**Task editing/creation:** existing and new Tasks use the same complete field surface in the canonical v1.1 order: **Title, Date, Repeat, Reminder, Priority, Context, Reference and Notes**. Repeat progressively discloses its Weekly/Monthly detail controls in place between Date and Reminder; it never becomes a second form. Add task populates an originating/default date but does not hide optional fields. Global Add derives the default date from the displayed week and current local weekday. A per-date `+` uses its explicit date directly. No date selection is created by either path, and no full-width Add control remains at the bottom of a lane. Save persists through the canonical create/edit command; Cancel or outside dismissal closes without persistence.
 
 **History:** selecting a completed Task opens the same right-side Task workspace while History remains the active destination.
 
@@ -324,7 +324,7 @@ The initial experience starts **before** the user sees the planner:
 
 The SQLite database **lives in the target repository's Jig area** but is not itself committed as a binary Git merge source. Portable textual Task records are synchronized through the repository adapter using an adapter-private isolation mechanism; branch/ref/worktree details are not part of Jig's user workflow or configuration. Unrelated repository content and the user's normal staging area remain untouched. Repository transport is optional for local use; when no synchronization target is available Jig shows an unambiguous `local-only` state.
 
-A responsive visual structure and touch-accessible controls are required at initial desktop delivery, while an independently installed mobile runtime remains future work. The UI screenshots are governed by the [Jig UI solution design](../design/ui-solution.md); they are visual references, not separate domain authority.
+A responsive visual structure and touch-accessible controls are required. The [Jig UI solution design](../design/ui-solution.md) and its governed v1.1 mobile/desktop onboarding + complete Task-form references own the user-visible hierarchy and responsive composition; they remain presentation authority rather than separate domain authority. For v1.1, the mobile reference is also the binding default form interaction standard for the Task BottomSheet and directly analogous mobile form surfaces.
 
 ### Everyday acceptance scenarios
 
@@ -350,14 +350,14 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 |---|---|
 | JIG-110-FR-01 | Narrow/mobile header is persistent/sticky and safe-area aware. |
 | JIG-110-FR-02 | Planner narrow header has application + temporal rows; History/Settings have only the application row and no Planner-only Add. |
-| JIG-110-FR-03 | Mobile interaction geometry is application-wide: ordinary touch targets are >=48×48px, standalone adjacent controls are visibly separated, Planner header rows are >=56px, and Planner/History/Settings menu rows are touch-sized/legible rather than compacted desktop controls. |
+| JIG-110-FR-03 | Mobile interaction geometry is application-wide: ordinary touch targets are >=48×48px, standalone adjacent controls are visibly separated, Planner header rows are >=56px, and onboarding/Task BottomSheet/directly analogous mobile forms conform to the governed v1.1 mobile hierarchy, scrolling and action-placement standard rather than compressed desktop controls. |
 | JIG-110-FR-04 | Reminder due state is derived from incomplete/current-date/reminder-time-passed state, independent of delivery. |
 | JIG-110-FR-05 | Past-due/current reminders remain visible; session-start suppression is removed and open Jig transitions to due state as time passes. |
 | JIG-110-FR-06 | Due Tasks have persistent accessible in-card attention until the underlying Task/reminder changes. |
 | JIG-110-FR-07 | Scheduled and displayed/delivered notification outcomes are never conflated; failed/denied delivery never hides in-app attention. |
 | JIG-110-FR-08 | Android schedules/cancels/reconciles OS local notifications for future reminders without push infrastructure. |
 | JIG-110-FR-09 | Linux/browser uses the service-worker notification path while open; closed-browser scheduling remains outside the requirement. |
-| JIG-110-FR-10 | Fresh Jig starts in onboarding before repository configuration, but onboarding remains inside the canonical Jig application frame/header/body; Task application surfaces remain unavailable until setup succeeds. |
+| JIG-110-FR-10 | Fresh Jig starts in onboarding before repository configuration, but onboarding remains inside the canonical Jig application frame/header/body and follows the governed value-first mobile/desktop onboarding references; Task application surfaces remain unavailable until setup succeeds. |
 | JIG-110-FR-11 | Existing configured upgrades bypass onboarding. |
 | JIG-110-FR-12 | Linux bootstrap offers existing local repository or Connect GitHub; normal UI does not expose installer URL/checkout flags. |
 | JIG-110-FR-13 | A valid existing Git worktree is sufficient for local setup. |
@@ -376,7 +376,7 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-26 | Android saves locally first and retries synchronization opportunistically without making connectivity a correctness dependency. |
 | JIG-110-FR-27 | Android is locally certifiable by directly installed development APK; F-Droid is the first public Android distribution target; iOS/Play are outside v1.1. |
 | JIG-110-FR-28 | Task movement must be physically reliable: the failed Pangea path is replaced through a proof gate; dedicated-grip dragging targets explicit before/between/after insertion slots, commits only on successful drop, always cleans up terminal drag state, and retains Move up/down + Date edit alternatives. |
-| JIG-110-FR-29 | Tasks support finite weekly/monthly recurrence with independent occurrences, and Repeat is integrated into the one Task form with Does not repeat/Weekly/Monthly progressive disclosure; one Save atomically applies occurrence-local Task edits plus any shared-series recurrence change. |
+| JIG-110-FR-29 | Tasks support finite weekly/monthly recurrence with independent occurrences, and Repeat is integrated into the **complete** Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes form with Does not repeat/Weekly/Monthly progressive disclosure in place; one Save atomically applies occurrence-local Task edits plus any shared-series recurrence change. |
 | JIG-110-FR-30 | History and Settings have one destination-heading owner: their application header presents both title and concise subtitle, and the content surface does not duplicate either heading before the actual page content. |
 | JIG-110-FR-31 | Settings is one content-sized reading hierarchy: Data & sync combines repository home/local safety/continuity/action; Appearance contains only appearance; Notifications is separate; technical Git/service/database/path/manual-sync details are subordinate/collapsed Diagnostics. |
 
