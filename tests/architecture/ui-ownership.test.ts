@@ -379,6 +379,10 @@ describe("UI ownership architecture", () => {
     );
     expect(taskEditor).toContain('presentation="adaptive"');
     expect(taskEditor).toContain("jig-mobile-selector-option");
+    expect(taskEditor).toContain('style={{ minHeight: "48px" }}');
+    expect(source("ui/src/settings.tsx")).toContain(
+      'style={{ minHeight: "48px" }}',
+    );
     const taskRow = source("ui/src/task-row.tsx");
     expect(taskRow).toContain("TaskCompletionControl");
     expect(taskRow).toContain('className="jig-task-completion-target"');
