@@ -102,7 +102,9 @@ async function mouseDrag(
 
   const dragScope = page.locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
-  await expect(page.locator(".jig-task-drop-indicator")).toBeVisible();
+  await expect(
+    page.locator(".jig-task-insertion-slot-active .jig-task-drop-indicator"),
+  ).toBeVisible();
 
   const intent = await dragScope.evaluate((element) => ({
     date: element.getAttribute("data-jig-drop-date") ?? "",
@@ -122,46 +124,39 @@ async function touchDrag(
   if (sourceBox === null) {
     throw new Error("Touch drag source geometry unavailable");
   }
+
   const startPoint = {
     x: sourceBox.x + sourceBox.width / 2,
     y: sourceBox.y + sourceBox.height / 2,
   };
+  const client = await page.context().newCDPSession(page);
 
-  await source.evaluate((element, point) => {
-    element.dispatchEvent(
-      new PointerEvent("pointerdown", {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        pointerId: 41,
-        pointerType: "touch",
-        isPrimary: true,
-        button: 0,
-        buttons: 1,
-        clientX: point.x,
-        clientY: point.y,
-        pressure: 0.5,
-      }),
-    );
-  }, startPoint);
-
-  await page.evaluate((point) => {
-    window.dispatchEvent(
-      new PointerEvent("pointermove", {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        pointerId: 41,
-        pointerType: "touch",
-        isPrimary: true,
-        button: 0,
-        buttons: 1,
-        clientX: point.x + 8,
-        clientY: point.y + 8,
-        pressure: 0.5,
-      }),
-    );
-  }, startPoint);
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [
+      {
+        x: startPoint.x,
+        y: startPoint.y,
+        radiusX: 1,
+        radiusY: 1,
+        force: 1,
+        id: 41,
+      },
+    ],
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [
+      {
+        x: startPoint.x + 8,
+        y: startPoint.y + 8,
+        radiusX: 1,
+        radiusY: 1,
+        force: 1,
+        id: 41,
+      },
+    ],
+  });
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
   const targetBox = await target.boundingBox();
@@ -175,25 +170,18 @@ async function touchDrag(
 
   for (let step = 1; step <= 12; step += 1) {
     const progress = step / 12;
-    await page.evaluate((move) => {
-      window.dispatchEvent(
-        new PointerEvent("pointermove", {
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-          pointerId: 41,
-          pointerType: "touch",
-          isPrimary: true,
-          button: 0,
-          buttons: 1,
-          clientX: move.x,
-          clientY: move.y,
-          pressure: 0.5,
-        }),
-      );
-    }, {
-      x: startPoint.x + (endPoint.x - startPoint.x) * progress,
-      y: startPoint.y + (endPoint.y - startPoint.y) * progress,
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: startPoint.x + (endPoint.x - startPoint.x) * progress,
+          y: startPoint.y + (endPoint.y - startPoint.y) * progress,
+          radiusX: 1,
+          radiusY: 1,
+          force: 1,
+          id: 41,
+        },
+      ],
     });
   }
 
@@ -206,23 +194,11 @@ async function touchDrag(
     index: Number(element.getAttribute("data-jig-drop-index")),
   }));
 
-  await page.evaluate((point) => {
-    window.dispatchEvent(
-      new PointerEvent("pointerup", {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        pointerId: 41,
-        pointerType: "touch",
-        isPrimary: true,
-        button: 0,
-        buttons: 0,
-        clientX: point.x,
-        clientY: point.y,
-        pressure: 0,
-      }),
-    );
-  }, endPoint);
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await client.detach();
 
   return intent;
 }
