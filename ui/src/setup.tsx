@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { GitHubDeviceFlowPanel } from "./github-device-flow";
+import type { LayoutMode } from "./use-layout-mode";
 import { installNativeActiveListener } from "./native/app-lifecycle";
 import {
   configureLocalRepository,
@@ -27,6 +28,7 @@ import {
 
 export interface SetupViewProps {
   readonly status: SetupStatus;
+  readonly layoutMode: LayoutMode;
 }
 
 function errorMessage(error: unknown): string {
@@ -35,6 +37,7 @@ function errorMessage(error: unknown): string {
 
 export function SetupView({
   status,
+  layoutMode,
 }: SetupViewProps): React.ReactElement {
   const [repositoryPath, setRepositoryPath] = useState("");
   const [showLocalRepository, setShowLocalRepository] = useState(false);
@@ -185,31 +188,113 @@ export function SetupView({
   return (
     <div className="jig-setup" aria-labelledby="jig-setup-title">
       <div className="jig-setup-layout">
-        <section className="jig-setup-value">
-          <div className="jig-setup-heading">
-            <span className="jig-setup-eyebrow">Welcome to Jig</span>
-            <h1 id="jig-setup-title">Plan your week. Keep the data yours.</h1>
-            <p>
-              Jig keeps planning data local and uses Git to carry the same
-              plan between Jig installations.
-            </p>
-          </div>
+        {layoutMode === "narrow" && initial && !showLocalRepository ? (
+          <section className="jig-setup-value">
+            <div className="jig-setup-heading">
+              <span className="jig-setup-eyebrow">Welcome to Jig</span>
+              <h1 id="jig-setup-title">Plan your week. Keep the data yours.</h1>
+              <p>
+                Jig keeps planning data local and uses Git to carry the same
+                plan between Jig installations.
+              </p>
+            </div>
 
-          <div className="jig-setup-benefits" aria-label="How Jig keeps your plan">
-            <div>
-              <strong>Local first</strong>
-              <span>Your plan remains usable on this device.</span>
+            <div
+              className="jig-setup-benefits"
+              aria-label="How Jig keeps your plan"
+            >
+              <div>
+                <strong>Saved on this device</strong>
+                <span>Your plan remains usable locally.</span>
+              </div>
+              <div>
+                <strong>Portable through Git</strong>
+                <span>Use the same planning data on desktop and Android.</span>
+              </div>
+              <div>
+                <strong>You stay in control</strong>
+                <span>GitHub authorization happens on GitHub.</span>
+              </div>
             </div>
-            <div>
-              <strong>Portable</strong>
-              <span>The same planning data can move between devices.</span>
-            </div>
-            <div>
-              <strong>Your repository</strong>
-              <span>GitHub authorization happens on GitHub.</span>
-            </div>
-          </div>
-        </section>
+          </section>
+        ) : layoutMode === "desktop" ? (
+          <section className="jig-setup-value">
+            {showLocalRepository ? (
+              <div className="jig-setup-heading">
+                <span className="jig-setup-eyebrow">Existing repository</span>
+                <h1 id="jig-setup-title">
+                  Use the plan already on this computer.
+                </h1>
+                <p>
+                  This path remains provider-neutral and may be healthy Local
+                  only.
+                </p>
+              </div>
+            ) : initial ? (
+              <>
+                <div className="jig-setup-heading">
+                  <span className="jig-setup-eyebrow">Welcome to Jig</span>
+                  <h1 id="jig-setup-title">
+                    Plan your week. Keep the data yours.
+                  </h1>
+                  <p>
+                    Jig keeps planning data local and uses Git to carry the
+                    same plan between Jig installations.
+                  </p>
+                </div>
+                <div
+                  className="jig-setup-benefits"
+                  aria-label="How Jig keeps your plan"
+                >
+                  <div>
+                    <strong>Local first</strong>
+                    <span>Your plan remains available on this computer.</span>
+                  </div>
+                  <div>
+                    <strong>Portable</strong>
+                    <span>
+                      Use the same planning data on another Jig installation.
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Your repository</strong>
+                    <span>GitHub authorization stays on GitHub.</span>
+                  </div>
+                </div>
+              </>
+            ) : selecting ? (
+              <div className="jig-setup-heading">
+                <span className="jig-setup-eyebrow">
+                  Connect your planning data
+                </span>
+                <h1 id="jig-setup-title">Choose one repository.</h1>
+                <p>
+                  Jig asks only when more than one eligible repository remains.
+                </p>
+              </div>
+            ) : attention ? (
+              <div className="jig-setup-heading">
+                <span className="jig-setup-eyebrow">
+                  Connection needs attention
+                </span>
+                <h1 id="jig-setup-title">Your plan is not configured yet.</h1>
+                <p>
+                  Recovery stays user-facing while Git and service mechanics
+                  remain behind Jig.
+                </p>
+              </div>
+            ) : (
+              <div className="jig-setup-heading">
+                <span className="jig-setup-eyebrow">Your planning data</span>
+                <h1 id="jig-setup-title">Same plan. Different devices.</h1>
+                <p>
+                  Keep working locally while Git provides continuity between
+                  Jig installations.
+                </p>
+              </div>
+            )}
+          </section>
+        ) : null}
 
         <section className="jig-setup-pane" aria-label="Set up planning data">
           {error === null ? null : (
@@ -229,6 +314,11 @@ export function SetupView({
             >
               <VStack gap={3}>
                 <div className="jig-setup-state-heading">
+                  {layoutMode === "narrow" ? (
+                    <span className="jig-setup-eyebrow">
+                      Existing repository
+                    </span>
+                  ) : null}
                   <h2>Use an existing local repository</h2>
                   <p>
                     Enter the absolute path to the repository that already
@@ -318,6 +408,11 @@ export function SetupView({
             >
               <VStack gap={3}>
                 <div className="jig-setup-state-heading">
+                  {layoutMode === "narrow" ? (
+                    <span className="jig-setup-eyebrow">
+                      Connect your planning data
+                    </span>
+                  ) : null}
                   <h2>
                     {github.authorization !== null
                       ? "Authorize Jig on GitHub"
@@ -365,6 +460,11 @@ export function SetupView({
             >
               <VStack gap={3}>
                 <div className="jig-setup-state-heading">
+                  {layoutMode === "narrow" ? (
+                    <span className="jig-setup-eyebrow">
+                      Connect your planning data
+                    </span>
+                  ) : null}
                   <h2>Choose your planning repository</h2>
                   <p>
                     Choose the repository that carries your Jig planning data.
@@ -402,6 +502,11 @@ export function SetupView({
             >
               <VStack gap={3}>
                 <div className="jig-setup-state-heading">
+                  {layoutMode === "narrow" ? (
+                    <span className="jig-setup-eyebrow">
+                      Connection needs attention
+                    </span>
+                  ) : null}
                   <h2>Connection needs attention</h2>
                   <p>
                     {github.error ??
