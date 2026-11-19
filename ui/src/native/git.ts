@@ -331,11 +331,29 @@ export async function acquireAndroidPortableRepository(
       committer: identity,
       disallowEmpty: true,
     });
-    await pushAndroidPortableRepository(
-      effects,
-      credential,
-    );
-    return snapshot;
+    try {
+      await pushAndroidPortableRepository(
+        effects,
+        credential,
+      );
+      return snapshot;
+    } catch (pushError) {
+      // Another fresh Jig installation may have created jig-data
+      // after the server-ref observation above. This checkout still
+      // contains only a generated empty bootstrap, so it is safe to
+      // discard and adopt the winning remote dataset.
+      await removeAndroidManagedCheckout(effects);
+      try {
+        return await cloneAndroidPortableRepository(
+          effects,
+          remoteUrl,
+          credential,
+        );
+      } catch {
+        await removeAndroidManagedCheckout(effects);
+        throw pushError;
+      }
+    }
   } catch (error) {
     await removeAndroidManagedCheckout(effects);
     throw error;
