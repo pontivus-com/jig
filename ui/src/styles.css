@@ -763,8 +763,6 @@ body {
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--spacing-3);
-    padding-block-end: var(--spacing-3);
-    border-block-end: var(--border-width) solid var(--color-border);
   }
 
   .jig-task-sheet-header > div {
@@ -979,16 +977,15 @@ body {
   }
 
   .jig-editor-actions {
-    position: sticky;
-    z-index: 1;
-    inset-block-end: 0;
     display: flex;
     align-items: center;
     justify-content: flex-end;
     gap: var(--spacing-3);
     padding-block: var(--spacing-2);
-    border-block-start: var(--border-width) solid var(--color-border);
-    background: var(--color-background-surface);
+  }
+
+  .jig-task-workspace-footer-actions {
+    padding-block: 0;
   }
 
   .jig-repeat-field,
@@ -1315,12 +1312,6 @@ body {
     .jig-header-mobile-actions,
     .jig-header-temporal {
       gap: var(--spacing-2);
-    }
-
-    .jig-editor-actions {
-      padding-block-end: calc(
-        var(--spacing-2) + env(safe-area-inset-bottom, 0px)
-      );
     }
 
     .jig-editor-form {
