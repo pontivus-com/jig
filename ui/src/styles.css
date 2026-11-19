@@ -1063,11 +1063,28 @@ body {
 
   .jig-editor-form {
     display: grid;
+    gap: var(--spacing-5);
+    padding-block-end: var(--spacing-1);
+  }
+
+  .jig-editor-section {
+    display: grid;
+    min-width: 0;
     gap: var(--spacing-3);
   }
 
-  .jig-editor-form {
-    padding-block-end: var(--spacing-1);
+  .jig-editor-section + .jig-editor-section {
+    padding-block-start: var(--spacing-1);
+    border-block-start: var(--border-width) solid var(--color-border);
+  }
+
+  .jig-editor-section-heading h3 {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .jig-editor-group-field {
