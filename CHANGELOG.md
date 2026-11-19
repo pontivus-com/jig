@@ -35,6 +35,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - GitHub installation/repository discovery now consumes every API page instead of silently truncating authorized choices at the first 100 results.
 - Returning from GitHub authorization/access no longer requires a manual Refresh action; desktop and Android orchestration resume/recheck automatically, and configured reconnect retries synchronization without re-running repository setup.
 - Hardened cross-installation synchronization so remote observation cannot mutate tracking evidence before validation, deleted/recreated remote history retains last-adopted lineage for rewrite detection, transport outages still finish the local portable snapshot, bounded Git timeouts terminate spawned process trees, and managed GitHub reconnect state re-evaluates restored credentials.
+- Stabilized keyboard Task movement by explicitly configuring the single dnd-kit KeyboardSensor with insertion-slot-scale movement, so keyboard dragging traverses the same exact before/between/after targets as pointer dragging.
 
 ### Documentation
 
