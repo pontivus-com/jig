@@ -952,8 +952,12 @@ export async function observePortableRemote(
     `refs/jig/observed/${authority.remote.name}/jig-data`;
   const legacyTrackingRef =
     `refs/remotes/${authority.remote.name}/jig-data`;
+  const observedRefHead = await refHead(
+    config.repository_path,
+    observedRef,
+  );
   const previousRemoteHead =
-    (await refHead(config.repository_path, observedRef)) ??
+    observedRefHead ??
     (await refHead(config.repository_path, legacyTrackingRef));
   const advertised = await runGit(
     config.repository_path,
@@ -1095,7 +1099,7 @@ export async function observePortableRemote(
       config.repository_path,
       observedRef,
       remoteHead,
-      previousRemoteHead,
+      observedRefHead,
     );
   }
 
