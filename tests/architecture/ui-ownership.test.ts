@@ -421,7 +421,6 @@ describe("UI ownership architecture", () => {
       "<SetupView status={setupStatus} layoutMode={layoutMode} />",
     );
 
-    const taskEditor = source("ui/src/task-editor.tsx");
     for (const section of ["Task", "Schedule", "Details", "Notes"]) {
       expect(taskEditor).toContain(`<h3>${section}</h3>`);
     }
