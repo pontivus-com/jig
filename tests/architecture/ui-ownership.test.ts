@@ -235,10 +235,13 @@ describe("UI ownership architecture", () => {
     expect(header).toContain("type Destination = (typeof DESTINATIONS)[number]");
     expect(header).toContain("IconName");
     expect(header).toContain("NamespacedIconName");
-    expect(header).toContain("destinationMenuItems");
+    expect(header).toContain("function NarrowDestinationMenu");
+    expect(header).toContain("<Popover");
     expect(header).toContain('presentation="popover"');
-    expect(header).toContain("items={destinationMenuItems(destination, onNavigate)}");
-    expect(header).not.toContain('items={[\n              {\n                id: "history"');
+    expect(header).toContain("DESTINATIONS.map((item)");
+    expect(header).toContain('role="menuitem"');
+    expect(header).toContain('className="jig-navigation-menu-item"');
+    expect(header).not.toContain("<DropdownMenu");
 
     expect(layoutMode).toContain(
       'DESKTOP_LAYOUT_MEDIA_QUERY = "(min-width: 73rem)"',
