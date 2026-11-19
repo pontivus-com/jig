@@ -17,6 +17,9 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Changed
 
+- Reopened v1.1 mobile UX/UI after physical Android validation: mobile controls/menu now require >=48px touch targets with deliberate spacing, Settings is redesigned as Data & sync / Appearance / Notifications / subordinate Diagnostics, and Repeat is integrated into the single Task form with progressive disclosure and one atomic Save.
+- Rejected the Pangea Task-movement implementation after physical-device failure and governed a proof-gated current dnd-kit replacement using a dedicated grip, explicit before/between/after insertion slots and mandatory terminal drag-state cleanup.
+
 - History and Settings use the application header as the single title/subtitle owner; their content surfaces begin directly with destination content instead of repeating page headings.
 - Repository status remains one structured provider-neutral technical contract, while the header and primary Settings projection use Local only, Syncing, Up to date and Needs attention instead of exposing Git mechanics as product workflow.
 - GitHub onboarding/reconnect now exposes one product intent, the provider-required device code and genuine repository choice only; polling, provider-access discovery/recheck, repository acquisition/adoption and reconnect continuation are automatic.
@@ -32,6 +35,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - Returning from GitHub authorization/access no longer requires a manual Refresh action; desktop and Android orchestration resume/recheck automatically, and configured reconnect retries synchronization without re-running repository setup.
 
 ### Documentation
+
+- Reconciled the functional, UI, technical, repository-governance, implementation-plan and evidence authorities around the reopened mobile UX remediation; the previous green hosted candidate is no longer closure evidence for the amended mobile interaction/Settings/Repeat/drag contracts.
 
 - Canonicalized product, functional, technical, UI/theme and repository-governance authorities for v1.1 while retaining v1.0.6 clauses as historical release provenance where superseded.
 - Reopened the v1.1 onboarding/reconnect/Settings implementation against the corrected intent-first authority and made all non-device implementation/certification complete before the final physical-device wave; permanent hosted verification remains the authoritative CI gate and local `act` remains optional preflight.

@@ -342,14 +342,14 @@ Enabling recurrence on an existing Task:
 4. creates one ordinary Task for each slot, copying the seed Task's title, priority, context, reference, note and `reminder_time` **at that moment only**, while assigning a fresh Task ID, the slot as both `scheduled_date` and `recurrence_occurrence_date`, and normal initial priority-based position for that date;
 5. persists the series + all Task changes in one transaction and increments the canonical revision once.
 
-The canonical command surface adds recurrence without folding it into ordinary single-Task edits:
+The canonical command surface keeps occurrence and series semantics distinct while allowing the integrated Task form to save atomically:
 
 ~~~text
 create { ..., recurrence? }
-set_recurrence { task_id, recurrence: RecurrencePattern + end_date | null }
+edit { task_id, changes, recurrence? }
 ~~~
 
-`create.recurrence` creates the seed and bounded series atomically. `set_recurrence` is the series-scope Repeat control for an existing occurrence. Ordinary `edit`, `move`, `complete`, `reopen` and `delete` are occurrence-scope commands and may mutate only the addressed Task. Every occurrence resolves its visible Repeat configuration by `recurrence_series_id` from the same canonical `RecurrenceSeries`; there is no per-Task recurrence configuration copy to synchronize.
+`create.recurrence` creates the seed and bounded series atomically. Existing-Task `edit.changes` remains occurrence-local. The optional top-level `edit.recurrence` is only the series mutation input: omitted means unchanged, a spec means enable/update, and `null` means stop. Persistence applies the occurrence edit and optional recurrence reconciler in one transaction/revision so the UI has one Save and cannot partially commit. The separate public `set_recurrence` command is removed after migration rather than retained as a parallel user-save path. `move`, `complete`, `reopen` and `delete` remain occurrence-scope commands. Every occurrence resolves visible Repeat configuration through the one canonical `RecurrenceSeries`; no per-Task recurrence configuration copy exists.
 
 Changing Repeat is a **series-membership reconciliation** anchored at the invoking occurrence's immutable `recurrence_occurrence_date`. It updates the one shared series configuration rather than creating a per-occurrence rule or propagating Task content:
 
@@ -1595,7 +1595,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **Automatic bounded Git sync instead of manual export:** Local SQLite saves trigger background commit/fetch/push with safe retries even when the browser is closed; network status is separately visible.
 - **Repository boundary instead of a Jig Git state machine:** Jig exports/validates portable snapshots and receives only operational synchronization outcomes. Git acquisition, topology, policy, credentials, history and reconciliation stay with Git tooling and never become Jig domain/configuration/state.
 - **Astryx directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows.
-- **dnd-kit instead of Astryx same-list reordering plus custom cross-day dragging:** One coordinated drag system across all seven date columns with a single canonical move command.
+- **One proof-gated drag adapter instead of framework layering:** the failed Pangea implementation is removed. Current dnd-kit is the candidate sensor/drop engine behind Jig-owned explicit insertion-slot semantics; it may ship only after desktop and physical-Android proof, and canonical movement remains one move command.
 - **Browser-side reminder monitor instead of background infrastructure:** one browser Notification channel while Jig is open and permission is granted, independent of visibility/focus, with no Toast fallback and no closed-app delivery guarantee.
 - **One Task and derived views instead of multiple planning objects:** Satisfies all Task semantics without building a project manager.
 - **One Planner state instead of Day/Week destinations:** `displayedWeekStart` alone drives both the desktop seven-column board and narrow seven-section stack; responsive composition never creates another planning authority or selected-day subview.
@@ -1616,11 +1616,11 @@ The detailed normative solution contracts are [JIG-110-SD-01..41](v1.1-mobile-te
 - canonical SQLite semantics move to one asynchronous TypeScript persistence owner with a Bun driver on Linux and a narrow AndroidX bundled-SQLite native driver on Android;
 - Android Git uses the selected isomorphic-git/native-filesystem/native-HTTP adapter only after the mandatory automated/emulator feasibility gate; the same transport is physically confirmed in the final device-certification wave, and failure at either gate returns to design review rather than silently adding another transport;
 - reminders use one pure due predicate, one UI clock, browser service-worker delivery and Android local scheduling with exact typed outcomes; notification side-effect state is non-canonical;
-- narrow header is one sticky application region with the governed two-row Planner composition and Astryx compact menu; the old <=56px total narrow height is removed;
-- Task drag/drop removes dnd-kit and uses the single Pangea list/touch owner with a dedicated handle, explicit destination index and exact insertion indicator; browser/emulator implementation proceeds first, while physical-Android proof is deferred to the final device-certification wave and remains a release blocker;
-- bounded recurrence is owned by one pure recurrence-date enumerator plus canonical series/occurrence persistence; finite weekly/monthly series materialize ordinary Tasks, reminders copy per occurrence, rollover never shifts the recurrence slot, SQLite advances to schema v3 and portable snapshots advance to format v2 with v1 upgrade acceptance;
+- narrow header is one sticky application region with two Planner rows; mobile rows are >=56px, ordinary touch targets are >=48×48px with deliberate separation, and the navigation menu remains a popover but its trigger/rows are touch-sized rather than compact desktop controls;
+- physical Android use rejected the Pangea owner under the v1.1 hard gate. The replacement uses one proof-gated current dnd-kit adapter only if it passes desktop + physical Android validation; a dedicated grip targets N+1 explicit before/between/after insertion slots per date, Task body remains normal scroll/open content, and every terminal path clears drag/overlay state;
+- bounded recurrence remains one pure series/occurrence owner, while the UI integrates Repeat into the one Task form with progressive disclosure. Existing-Task edit carries an optional recurrence change so ordinary occurrence edits and series reconciliation commit atomically in one transaction/revision; the separate public set_recurrence command is removed after migration;
 - History/Settings destination title + subtitle have one application-header owner; their content surfaces contain no duplicate page-heading block;
-- repository synchronization has one structured shell owner retaining exact local Git and remote facts; primary Settings/header derive user-level planning-data-home, local-safety and continuity language from that owner, while exact remote/Git/service/database facts are secondary diagnostics; automatic synchronization is not represented as a standing user-operated process;
+- repository synchronization keeps one structured shell owner, while Settings uses one content-sized sequence: Data & sync → Appearance → Notifications → subordinate/collapsed Diagnostics. Data & sync combines repository home/local safety/continuity/recovery; technical remote/Git/service/database/path/manual-sync facts stay in Diagnostics and automatic sync is not a standing primary action;
 - development APKs are local certification artifacts; F-Droid is the first public Android distribution target; no Google Play/iOS release work is part of v1.1.
 
 The complete FR→SD traceability remains owned by the versioned v1.1 functional/technical documents and the complete v1.1 implementation plan.

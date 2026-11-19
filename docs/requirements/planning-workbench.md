@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding functional design through v1.1, amended 2026-11-19. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract below supersedes affected header, secondary-screen heading, synchronization, reminder, onboarding, Android and drag/drop behavior.
+**Status:** Binding functional design through v1.1, amended 2026-11-19 for physical-mobile UX remediation. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract supersedes affected header/touch geometry, Task movement, Task-form Repeat, Settings, synchronization, reminder, onboarding and Android behavior.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -350,7 +350,7 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 |---|---|
 | JIG-110-FR-01 | Narrow/mobile header is persistent/sticky and safe-area aware. |
 | JIG-110-FR-02 | Planner narrow header has application + temporal rows; History/Settings have only the application row and no Planner-only Add. |
-| JIG-110-FR-03 | Primary touch targets are usable and navigation is the Astryx compact Planner/History/Settings menu/popover, never a drawer/rail. |
+| JIG-110-FR-03 | Mobile interaction geometry is application-wide: ordinary touch targets are >=48×48px, standalone adjacent controls are visibly separated, Planner header rows are >=56px, and Planner/History/Settings menu rows are touch-sized/legible rather than compacted desktop controls. |
 | JIG-110-FR-04 | Reminder due state is derived from incomplete/current-date/reminder-time-passed state, independent of delivery. |
 | JIG-110-FR-05 | Past-due/current reminders remain visible; session-start suppression is removed and open Jig transitions to due state as time passes. |
 | JIG-110-FR-06 | Due Tasks have persistent accessible in-card attention until the underlying Task/reminder changes. |
@@ -375,9 +375,9 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-25 | Android uses the same Task/planning semantics including daily rollover on launch/resume/foreground midnight. |
 | JIG-110-FR-26 | Android saves locally first and retries synchronization opportunistically without making connectivity a correctness dependency. |
 | JIG-110-FR-27 | Android is locally certifiable by directly installed development APK; F-Droid is the first public Android distribution target; iOS/Play are outside v1.1. |
-| JIG-110-FR-28 | Task drag/drop uses a dedicated grip and a stable exact insertion indicator for same-date, cross-date, empty-list and inter-card-gap placement; persisted move equals displayed intent. |
-| JIG-110-FR-29 | Tasks support finite weekly/monthly recurrence with an inclusive end date; generated occurrences are ordinary independent Tasks, reminders repeat at the occurrence's scheduled date/time, and rollover/rescheduling of one occurrence never shifts the series cadence. |
+| JIG-110-FR-28 | Task movement must be physically reliable: the failed Pangea path is replaced through a proof gate; dedicated-grip dragging targets explicit before/between/after insertion slots, commits only on successful drop, always cleans up terminal drag state, and retains Move up/down + Date edit alternatives. |
+| JIG-110-FR-29 | Tasks support finite weekly/monthly recurrence with independent occurrences, and Repeat is integrated into the one Task form with Does not repeat/Weekly/Monthly progressive disclosure; one Save atomically applies occurrence-local Task edits plus any shared-series recurrence change. |
 | JIG-110-FR-30 | History and Settings have one destination-heading owner: their application header presents both title and concise subtitle, and the content surface does not duplicate either heading before the actual page content. |
-| JIG-110-FR-31 | Settings presents planning-data home, local safety and continuity in user language; low-level Git/service/database facts remain secondary diagnostics, and retry/reconnect appears only when actionable. |
+| JIG-110-FR-31 | Settings is one content-sized reading hierarchy: Data & sync combines repository home/local safety/continuity/action; Appearance contains only appearance; Notifications is separate; technical Git/service/database/path/manual-sync details are subordinate/collapsed Diagnostics. |
 
 Older JIG-103/104/105/106 rows remain release-history provenance only when JIG-110 explicitly supersedes their affected behavior.

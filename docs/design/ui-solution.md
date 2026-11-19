@@ -1,8 +1,8 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Canonical UI solution through v1.1, amended 2026-11-19. v1.0.x sections below remain release history; the v1.1 composition section supersedes affected onboarding, synchronization, narrow-header, reminder and drag/drop interactions.
+**Status:** Canonical UI solution through v1.1, amended 2026-11-19 for the physical-mobile UX remediation. v1.0.x sections remain release history only; the v1.1 composition and screen specifications below supersede their mobile density, Task movement, Settings and Task-form interaction details.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–31.
-**Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
+**Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx ownership, the governed Task-movement proof gate, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop and Android, including v1.1 onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
 
 ## 1. Source mockups and governed reference assets
@@ -188,61 +188,100 @@ Clicking a Task opens the full editable Task form directly in the non-blocking r
 
 Remove descriptive/meta copy. The desktop interface must not display phrases such as “Week of”, “full available canvas”, “selected date view”, “Today is a shortcut”, or similar explanatory design text.
 
-### 4.2 Desktop History and Settings
+### 4.2 History and Settings — one reading hierarchy across desktop and mobile
 
-Planner, History and Settings share the same global application-header language and adjacent desktop navigation group. The active destination is clear through the governed neutral active-navigation treatment without reintroducing a sidebar.
+Planner, History and Settings share the same global application-header language and destination owner. History remains a chronological reading surface. Settings is a configuration/status reading surface; it is **not a dashboard** and must not use equal cards merely to fill a grid.
 
-For History and Settings, the **application header is the sole destination-heading owner**. Its center region renders a compact semantic heading group instead of Planner's temporal navigator:
+For History and Settings, the **application header is the sole destination-heading owner**:
 
 - History: **History** + `Completed work grouped by actual completion date`;
 - Settings: **Settings** + `Repository, synchronization, appearance and diagnostics`.
 
-The title is the page's semantic `h1` even though it is physically inside application chrome; the subtitle is secondary text in the same heading group. The body must not render another `h1`/subtitle block. History body begins with the first completion-date group or empty state; Settings begins with the first settings section. This same ownership applies at narrow/mobile widths, where the title/subtitle group remains inside the single sticky application row and may use compact wrapping without creating another header row.
+The title is the page semantic `h1`; the body begins immediately with meaningful content and never repeats that heading.
 
-Unlike Planner's seven-track canvas, History and Settings are reading/configuration surfaces and continuously use a centered **50rem / approximately 800px maximum width** whenever that much space is available. The full-width application header and content frame remain edge-to-edge; only the semantic History/Settings content column is bounded. The outer measure does **not** switch at the 73rem Planner composition breakpoint: below 50rem available width it simply becomes full available width.
+History and Settings continuously use one centered **50rem / approximately 800px maximum reading measure** when space permits. Below that width the content consumes the available width. Mobile retains component-owned internal padding even though the outer application frame is full-bleed.
 
-Settings keeps its internal two-column grouping inside that bounded measure using two equal fluid columns rather than fixed 560px/580px tracks. Its internal grid may reflow to one column at the existing 73rem layout boundary without removing or changing the outer 50rem content measure.
+#### Settings information architecture
 
-The Settings **Synchronization** section leads with user-level continuity rather than Git topology. It shows:
-- the selected planning-data home as a human-readable repository identity when available, or **Local only**;
-- one concise state such as **Up to date**, **Syncing**, **Saved locally · Sync needs attention** or **Needs attention**;
-- a recovery action only when the user can materially resolve the condition.
+Settings uses one vertical sequence of content-sized groups. Do not render a 2×2 dashboard, equal-height cards, large empty minimum-height boxes or one-line values floating in oversized surfaces.
 
-Automatic synchronization is the normal behavior, so **Sync now** is not a standing primary Settings control. Reconnect/retry appears only when synchronization actually needs user intervention.
+The canonical order is:
 
-A secondary **Diagnostics / technical details** region may show Local Git snapshot state, configured remote name/location, service health, database health and other engineering facts. That region is explicitly diagnostic and visually subordinate. It does not determine the primary Settings hierarchy and does not expose credentials, access tokens, raw askpass material or provider-specific internal IDs.
+1. **Data & sync**
+2. **Appearance**
+3. **Notifications**
+4. **Diagnostics / technical details**
 
-For a managed GitHub repository, credential renewal is normally invisible: Jig refreshes expiring Device-Flow credentials before the network operation. **Reconnect GitHub** appears only when that automatic renewal is impossible or GitHub has revoked/rejected the authorization. Reconnect uses the same bounded device-code presentation described above and returns automatically to synchronization when GitHub authorizes; it never shows a repository picker or repeats onboarding.
+**Data & sync** is one coherent continuity group because the user asks one question: “Where is my planning data, is my current work safe, and is continuity up to date?” It contains compact rows:
 
-The compact header status is the concise projection of the same underlying synchronization state; it is not a separate state store. When the remote has a problem while current work is durable locally, both header/Settings messaging preserve that truth without requiring Git vocabulary.
+- **Planning data** — human-readable repository identity or **Local only**, with short supporting copy;
+- **Saved on this device** — explicit local durability/safety state;
+- **Synchronization** — **Local only / Syncing / Up to date / Needs attention**, with concise supporting copy;
+- an action row only when a genuine user recovery is required: **Reconnect GitHub**, **Try again**, or equivalent. No standing primary **Sync now**.
 
-On History, selecting a completed Task opens the same right-side Task workspace while History remains active. Settings has no Planner week navigator because week controls operate only on Planner state. Clicking Jig returns to Planner and preserves the session's Planner date/week state.
+The local-first promise is supporting text inside this group when it clarifies safety; it is not another decorative panel.
+
+**Appearance** contains only Theme and System/Light/Dark.
+
+**Notifications** is its own semantic group, not a child of Appearance. It presents permission/scheduling state, concise consequences and only the action currently available (Enable, Android settings, exact-timing settings as applicable).
+
+**Diagnostics / technical details** is visually subordinate and **collapsed by default**. Its summary communicates whether technical details are healthy/available without forcing them into the default scan. Expanding it reveals repository path, Jig service, local database, portable-data adapter state, Local Git, Remote Git, sanitized remote identity and the expert **Sync now** trigger. It must not expose credentials or provider internals.
+
+Rows use a stable label → primary value → optional supporting text hierarchy. Values align consistently; long repository/path text wraps rather than shrinking neighboring controls. Section height is content-driven.
+
+On desktop the 50rem reading column remains intentionally linear; do not split Data & sync into two columns merely because horizontal space is available. Small related controls such as Theme/Appearance may use internal responsive composition, but the section order and reading sequence stay the same.
+
+On mobile every interactive Settings row/action obeys the application-wide 48px touch-target rule. Diagnostics disclosure, notification actions and reconnect/retry must remain easy to operate with one hand and must not create dense button clusters.
+
+For managed GitHub repositories, credential renewal remains invisible. **Reconnect GitHub** appears only when automatic renewal is impossible or authorization is rejected, and returns automatically to synchronization without repository selection/re-acquisition.
 
 ### 4.3 Narrow/mobile Planner
 
-Below the technical 73rem semantic breakpoint, render a deliberate narrow Planner composition rather than hiding desktop pieces with CSS.
+Below the 73rem Planner breakpoint, render a deliberate touch-first composition rather than compressing desktop controls.
 
-The top hierarchy is:
+The top hierarchy is one sticky header with two Planner rows:
 
-1. Jig product mark/home on the left; compact sync state plus hamburger on the right;
-2. centered active week range;
-3. grouped Previous/Today/Next controls immediately beneath the range;
-4. seven vertically stacked dated sections for the displayed week;
-5. each section header shows the full weekday name + day number (for example `Thursday 19`) plus a compact `+`, followed by that date's outstanding Task list;
-6. global Add task remains available as a week-context shortcut using the derived weekday-matching default date.
+**Application row — minimum 56px content height**
+- Jig Home/wordmark at start;
+- Planner-only Add Task;
+- compact synchronization state;
+- primary navigation menu trigger.
 
-There is no horizontal date strip, selected-date heading, or selected-day Task subview.
+**Temporal row — minimum 56px content height**
+- Previous week;
+- flexible compact week range;
+- Next week;
+- Today.
 
-Do not render `Day`, `Week`, `Attention`, `Your ordered plan`, `selected date view`, or other labels that restate the visible hierarchy.
+History/Settings render only the application row with their destination heading. Safe-area inset belongs to the header.
 
-The hamburger opens a compact menu/popover containing the same Planner, History and Settings destination set as desktop. It is not a drawer; the semantic destination definition is shared and only the presentation differs.
+Every standalone mobile header action has a **minimum 48×48px hit area**. Adjacent icon actions have at least **8px visible separation** unless they are deliberately represented as one segmented/grouped control. Small icon glyphs are allowed; small hit targets are not. Do not use `size="sm"` as the mobile density strategy.
 
-Task create/edit uses a BottomSheet rising from the bottom. Existing Tasks open directly into the full editable field surface. Add uses the same full field surface with its derived or explicit originating date and canonical defaults. Delete confirmation remains the sole blocking Task dialog.
+At 320/360/390/414px, brand/title and actions must remain non-overlapping. The flexible title/range owns truncation/wrapping; action hit areas never shrink to make text fit.
 
-Narrow/mobile supports the same direct dedicated-handle drag semantics as desktop using touch/pen/mouse input. Move up/Move down remains the non-drag accessibility alternative within the date, and Edit date remains the explicit non-drag cross-date rescheduling path.
+The Planner body remains seven vertically stacked dated sections. Each date header shows the full weekday name + day number and a date-specific Add action with the same >=48px mobile target. There is no horizontal selected-date strip or selected-day subview.
 
+#### Mobile navigation menu
 
-### 4.3.1 v1.0.5 narrow/mobile parity correction
+The hamburger remains a **popover/menu**, not a drawer or SideNav, but the current overly compact menu presentation is superseded.
+
+The opened menu:
+- contains exactly Planner, History and Settings from the shared destination owner;
+- uses one icon + label + current-state indicator alignment;
+- gives every row at least **48px** interaction height with comfortable vertical/horizontal padding;
+- has enough width for normal labels without crowding/truncation;
+- uses visible separation between rows through spacing/quiet dividers rather than packing controls together;
+- keeps one clear current-destination treatment and keyboard/focus semantics.
+
+Use Astryx public DropdownMenu if its public API can meet that geometry. If it cannot, document the public-API incompatibility and compose the smallest Jig-owned menu using Astryx public Popover/Button/list leaves and tokens. Do not target Astryx private DOM/CSS to enlarge a compact menu.
+
+Task create/edit uses a BottomSheet. Existing and new Tasks open directly into the same integrated Task form described in §4.4. All mobile form controls, disclosure rows, weekday choices and footer actions meet the 48px target rule.
+
+Task movement uses a dedicated visible grip; the Task body itself always remains normal touch-scroll/open content. Move up/Move down and Date editing remain reliable non-drag alternatives.
+
+### 4.3.1 Historical v1.0.5 narrow/mobile parity correction — superseded where conflicting
+
+This section records v1.0.5 release history only. Its whole-card drag and compact-control details are **not** forward v1.1 authority; §4.3 and the v1.1 composition contract supersede them.
 
 The v1.0.4 published narrow composition did not meet the intended parity standard. v1.0.5 makes the following presentation requirements explicit:
 
@@ -254,7 +293,9 @@ The v1.0.4 published narrow composition did not meet the intended parity standar
 - **Same state vocabulary:** today, Task selection, priority, focus, drag and operational status use the same semantic aliases as desktop.
 - **Same visual legibility:** card/canvas contrast must remain clearly visible in both Light and Dark. The mobile renderer is a reflow, not a separate visual theme.
 
-### 4.3.2 v1.0.5 flat compact header and Task-card legibility
+### 4.3.2 Historical v1.0.5 flat compact header — superseded for v1.1 mobile geometry
+
+This section records the v1.0.5 density target only. The one-row 56px mobile header and `sm` control guidance are superseded by the v1.1 two-row touch geometry in §4.3.
 
 The published v1.0.4 header is visually too tall and too visually heavy. The corrected header is intentionally almost invisible as chrome.
 
@@ -310,9 +351,51 @@ The header brand uses the canonical complete horizontal Jig wordmark asset. Do n
 
 ### 4.4 Shared Task workspace
 
-There is one Task workspace with two open semantic states: **existing Task draft** and **create draft**. Both render the same editable field hierarchy through a right-side non-modal Drawer on desktop and BottomSheet on narrow/mobile. There is no read-only view mode and no Move-to-date mode.
+There is one Task workspace with two open semantic states: **existing Task draft** and **create draft**. Both render one integrated editable form through a right-side non-modal Drawer on desktop and BottomSheet on narrow/mobile. There is no read-only mode, no separate recurrence editor and no second Save workflow.
 
-The field hierarchy is always Title, Date, Context, Priority, Reminder, Reference, Notes. Add inherits date/defaults but shows the same fields. Save/Cancel and persistent validation errors are explicit. Responsive reflow preserves the draft. Permanent Delete uses AlertDialog confirmation.
+The canonical field order is:
+
+1. **Title**
+2. **Date**
+3. **Repeat**
+4. **Reminder**
+5. **Priority**
+6. **Context**
+7. **Reference**
+8. **Notes**
+
+This order keeps schedule-related choices together before descriptive metadata.
+
+#### Repeat progressive disclosure
+
+Repeat initially renders as one ordinary form field/control with three semantic states:
+
+- **Does not repeat**
+- **Weekly**
+- **Monthly**
+
+When **Does not repeat** is selected, no recurrence-detail fields are rendered.
+
+When **Weekly** is selected, reveal directly beneath Repeat:
+- **Every [N] weeks**;
+- weekday choices;
+- **Ends** date.
+
+When **Monthly** is selected, reveal:
+- **Day of month**;
+- **Ends** date.
+
+There is no permanently visible weekly/monthly configuration when repeat is off. On mobile, weekday choices are touchable selection chips/buttons with >=48px targets and clear selected states, not a dense row of small checkboxes.
+
+For an existing recurring Task, the Repeat field resolves the shared series configuration. Choosing **Does not repeat** makes the effect clear in supporting copy: saving will keep this occurrence as a one-off and stop future outstanding occurrences according to the canonical series rule. Do not add a second footer-level **Stop repeating** button unless a later usability review proves the inline choice ambiguous.
+
+#### One Save contract
+
+**Save** is the single primary mutation for the form. It commits the ordinary Task draft and any Repeat change as one user operation. Cancel closes/discards the draft as today. Validation errors remain in the form and no partial save is presented as success.
+
+Completion/reopen and permanent Delete remain independent Task lifecycle commands outside the form's Save semantics. Delete confirmation remains the sole blocking Task dialog.
+
+On mobile, the primary action area remains visible and comfortable at the end of the BottomSheet; Save/Cancel may share one row when the available width preserves >=48px targets and adequate separation. Do not stack ordinary actions into separate full-width rows merely by default. Destructive/lifecycle actions are visually separated from the primary form action without creating button clutter.
 
 ## 5. Interaction and component ownership
 
@@ -324,27 +407,27 @@ The field hierarchy is always Title, Date, Context, Priority, Reminder, Referenc
 | Lists, labels, fields, alerts and semantic theme | Astryx published primitives; reminder delivery itself is browser Notification, not Toast |
 | Desktop Task workspace | Astryx non-modal right Drawer |
 | Narrow Task workspace | Astryx BottomSheet rising from the bottom |
-| Sortable rows/drop zones | @dnd-kit/react only |
+| Task movement mechanics | Jig `ui/src/drag.tsx` adapter over the physically proven current dnd-kit candidate; one owner only, no Pangea/parallel sensors |
 | Planner seven-track composition, narrow seven-section stack, Task workspace content | small Jig React composition |
 | Scheduled date/order/rollover/complete/reopen/delete/identity | pure Jig planning core |
 | Task reads/writes and repository synchronization state | Bun service + SQLite + repository adapter |
 
 Jig CSS owns only the page-centered header grid, seven Planner tracks, narrow composition, drag state and restrained Task priority accent. It consumes public Astryx tokens/roles and must not target private component internals.
 
-Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop and narrow/mobile, the sortable Task card itself is the pointer source across the whole ordinary card surface; completion checkbox, Task action menu, reference and other genuine interactive descendants remain independently operable and must not initiate drag. No title/body-only handle exists.
+Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop and narrow/mobile, **only the dedicated grip is the drag activator**. The Task card body remains normal click/tap/scroll content; completion checkbox, Task action menu, reference and other interactive descendants remain independent. The grip is part of the Task card layout, never an overlay that steals the whole card's pointer surface.
 
 ## 6. Required browser/UX validation
 
 | Case | Acceptance |
 |---|---|
-| Header composition | edge-to-edge flat bar; Jig Home left; centered inline Previous · compact week range · Next · Today temporal group; Add task + adjacent icon-bearing Planner/History/Settings + sync right; no sidebar; active destination clear; desktop <=44px, narrow <=56px, and outer height does not change across Planner/History/Settings |
+| Header composition | desktop remains <=44px; mobile Planner uses one sticky two-row header with each row >=56px and every standalone touch target >=48×48px; History/Settings use one >=56px application row; no overlap/overflow at 320/360/390/414px |
 | Week navigation | Previous/Next shift displayed week exactly seven days; Today restores the current week; no selected-day state and no Task mutation |
 | Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; content-driven heights; open lanes with whitespace/hairline separation rather than boxed panels; full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
 | Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
-| Task workspace | Click selects and opens the directly editable full Task form without changing date/order/destination; no second Edit click exists |
+| Task workspace | Click/tap opens one integrated form ordered Title · Date · Repeat · Reminder · Priority · Context · Reference · Notes; Repeat uses Does not repeat/Weekly/Monthly progressive disclosure; one Save atomically commits Task + recurrence changes; no second recurrence editor/save exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
 | Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
-| Mobile header/menu | compact Jig/sync/Add/hamburger application band; centered week range + grouped controls; seven dated Task sections follow; hamburger menu contains the same Planner/History/Settings destination set as desktop from one semantic owner, uses normalized semantic icons/text, and is not a drawer |
+| Mobile header/menu | Add/sync/menu/temporal/date-add targets are >=48×48px with >=8px separation between standalone controls; menu rows are >=48px, comfortably padded and legible; same Planner/History/Settings owner; no drawer/SideNav |
 | Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
 | Secondary screen measure | History and Settings follow `min(available width, 50rem)` continuously at 1440/1168/1167/1024/900/800/600/390px; no discontinuity at 73rem; Planner remains full-width; Settings column reflow is independent |
 | Secondary destination heading | History/Settings title + governed subtitle exist exactly once in the application header on desktop and narrow/mobile; body contains no duplicate page heading/subtitle and begins with actual destination content |
@@ -352,10 +435,10 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | GitHub authorization UX | One Connect action enters Connecting; GitHub's required 8-character device code is visible with Copy code and Open GitHub fallback; provider page opens when permitted; polling is automatic; no Refresh authorization/access control exists |
 | GitHub repository-access UX | Provider installation/access selection stays on GitHub; return from GitHub does not falsely imply success; Jig re-checks automatically; repository chooser contains the complete paginated accessible set and appears only when a genuine choice remains |
 | GitHub reconnect UX | Reconnect appears only when automatic credential renewal cannot continue; it reuses the bounded device-code/consent presentation and resumes synchronization automatically without repository selection/re-acquisition |
-| Repository synchronization presentation | Primary Settings shows planning-data home plus user-level Local only / Syncing / Up to date / Saved locally · Needs attention semantics; exact Local Git/Remote Git/service/database facts are secondary diagnostics; compact header status agrees with the same underlying state |
+| Settings information design | One content-sized vertical hierarchy: Data & sync combines planning-data home/local safety/continuity/action; Appearance contains only theme/mode; Notifications is separate; Diagnostics is subordinate/collapsed and contains Git/service/database/path/manual sync. No equal dashboard cards/min-height whitespace. |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
-| Same/cross-day drag | desktop and narrow/mobile dedicated-handle drag persist exact chosen position/date; empty destination works; no browser/runtime exception is emitted during drag/drop |
-| Narrow drag/order | touch dedicated-handle drag supports same-date/cross-date/empty-date movement through the same sortable/drop owners as desktop; Move up/down remains a non-drag alternative without a second order representation |
+| Same/cross-day drag | failed Pangea owner is absent; replacement passes desktop + physical Android proof; dedicated grip targets explicit before/between/after slots, empty date index 0, and final persisted date/index equals last visible slot; no floating overlay residue |
+| Narrow drag/order | 48×48 grip initiates touch drag while Task body scrolls normally; pointercancel/outside/app interruption restores; auto-scroll works; Move up/down and Date edit remain non-drag alternatives |
 | Completion/History | completing removes from Planner; History remains inspectable/reopenable |
 | Daily rollover | same canonical Task appears in current-date Planner bucket on desktop and narrow |
 | Delete | cancel is no-op; confirm permanently removes Task; Git round trip preserves absence |
@@ -378,10 +461,13 @@ Implementation plans must link to this document, [Planning workbench functional 
 
 ## v1.1 UI composition
 
-- **Narrow header:** one sticky header region. Planner renders application row (theme-aware Jig wordmark, Planner-only Add, compact sync, Astryx compact Planner/History/Settings menu) plus temporal row (Previous, compact week range, Next, Today). History/Settings render only the application row, with the active destination's title + governed subtitle as the sole page-heading instance. Their body-level reference heading is removed. Each primary row owns >=44 CSS px interaction height; the old <=56px total header budget is removed.
-- **Secondary desktop heading:** History/Settings replace the center temporal navigator with the same compact title + subtitle semantic heading group; the body begins directly with History groups/empty state or Settings sections.
-- **Onboarding:** bootstrap is rendered inside the canonical Jig application frame on desktop and Android. Android presents one Connect GitHub repository intent; desktop adds the genuine alternative of an existing local repository. Automatic work collapses into one connecting state, repository selection appears only when required, and provider-owned consent/access is the only technical boundary allowed to interrupt the flow.
-- **Synchronization transparency:** Settings leads with planning-data home plus user-level local-safety/continuity state. The compact header status is derived from the same structured state. Low-level Local Git, remote, service and database facts are secondary diagnostics; automatic synchronization is not represented by a standing manual-process control.
-- **Reminder attention:** an incomplete current-day Task whose reminder time has passed receives a persistent, accessible reminder-due treatment independent of OS/browser notification success. The treatment uses governed warning semantics plus non-color meaning and composes with selection/focus/priority/drag state rather than replacing them.
-- **Task movement:** every incomplete Task exposes a dedicated visible grip. Dragging leaves Task state uncommitted until drop and displays one exact 2px insertion rule with governed drag color at the destination index. Cross-date targets additionally use the subtle governed drag background. Empty dates expose one index-0 target. Inter-card whitespace must not clear/oscillate intent. Move up/down and date edit remain non-drag alternatives.
-- **Android:** the same Jig application frame runs from first launch through onboarding and configured Planner/History/Settings states inside the native shell. Safe-area padding is owned by the header; onboarding has its own minimal body composition rather than bypassing the shell; Task-body touch scroll remains independent from grip dragging.
+- **Mobile interaction density:** phone/touch presentation uses >=48×48px ordinary interaction targets across header/menu/date controls/Task cards/BottomSheet/Repeat/Settings. Mobile header rows are >=56px; standalone adjacent controls have visible breathing room. `size="sm"` is never a justification for a smaller hit target.
+- **Narrow header:** Planner renders one sticky application row (wordmark, Add, compact sync, menu) plus one temporal row (Previous, range, Next, Today). History/Settings render only the application row with their title/subtitle. Safe-area inset belongs to this owner.
+- **Navigation menu:** remains a popover/menu from the shared destination owner, but menu rows are touch-sized and comfortably padded. If Astryx DropdownMenu cannot satisfy the governed geometry through public API, use the smallest Astryx-Popover/public-leaf composition rather than private CSS.
+- **Secondary desktop heading:** History/Settings replace the center temporal navigator with the same compact title + subtitle heading; body begins with actual content.
+- **Onboarding:** bootstrap remains inside the canonical Jig shell with intent-level GitHub/local-repository choices and automatic protocol work.
+- **Settings:** one vertical reading hierarchy, not a 2×2 dashboard: Data & sync, Appearance, Notifications, then collapsed/subordinate Diagnostics. Data & sync combines repository home, local safety, continuity and recovery; technical mechanics stay under Diagnostics.
+- **Task form / Repeat:** Repeat is an ordinary field beside Date/Reminder in the single Task form. Does not repeat shows no detail; Weekly/Monthly reveal only their required fields. One Save atomically applies Task draft + recurrence change; there is no separate Repeat editor/save.
+- **Task movement:** Pangea is rejected by physical-device evidence. The replacement must pass desktop + physical Android feasibility before adoption, use the dedicated grip only, expose explicit insertion slots including card gaps/empty dates, keep Task body scrolling independent, and always clear overlay/drag state on drop/cancel/pointercancel/interruption.
+- **Reminder attention:** due reminder state remains persistent and independent from OS/browser delivery success.
+- **Android:** the same Jig frame/semantics run from onboarding through Planner/History/Settings; physical-device usability is an implementation gate, not optional visual QA.
