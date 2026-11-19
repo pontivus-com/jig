@@ -1,15 +1,15 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-15 NOT RUN — J110-IMP-09 physical Task movement was completed successfully, but its detailed execution record was not retained. Do not reconstruct unknown device, source/APK identity or per-check results from browser, emulator, hosted CI or generated-APK evidence. This document remains the active evidence record for the remaining J110-IMP-15 physical matrix.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-15 PARTIAL — REMEDIATION BLOCKED — the 2026-11-20 physical session captured real Android synchronization/restart/UI evidence on source `222f2fe…` but also exposed defects governed by J110-IMP-18..21. J110-IMP-15 is not PASS and final certification must use the post-remediation executable candidate. Do not reconstruct unknown IMP-09 evidence.
 
-**Executable source candidate:** `611c8ced6a854a80f24bf727c53d792f5c5d556c`  
-**GitHub Actions APK artifact:** `14541004265`  
+**Partial-session executable source:** `222f2fe0e672b122424042b3fa39747efb991610`  
+**GitHub Actions APK artifact:** not retained in the session record  
 **Artifact file:** `app-debug.apk`  
-**APK SHA-256:** `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`  
+**Physical APK SHA-256:** `b3d134786827dea601f4f3cbd89ad4269578393151efd5dab056812a682c8d4b`  
 **Expected Android application ID:** `com.pontivus.jig`  
 **Governed references:** `../../design/reference/jig-v1.1-application-ux-ui-governed-reference.html`, `../../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html`, `../../design/ui-solution.md`, `../../development/android-v1.1.md`.
 
-Any later executable change invalidates this candidate identity and requires a newly certified source/APK lineage before this form is used.
+IMP-18..20 necessarily establish a later executable candidate. The source/APK above is retained as partial physical evidence only and must not be reused as final certification lineage after those corrections.
 
 ## 1. Physical certification environment
 
@@ -19,15 +19,15 @@ Record the exact device and certification host for the remaining J110-IMP-15 tes
 |---|---|
 | Certification date/time | |
 | Tester | |
-| Source SHA checked | |
-| APK SHA-256 checked | |
-| APK package name from `aapt dump badging` | |
+| Source SHA checked | `222f2fe0e672b122424042b3fa39747efb991610` |
+| APK SHA-256 checked | `b3d134786827dea601f4f3cbd89ad4269578393151efd5dab056812a682c8d4b` |
+| APK package name from `aapt dump badging` | `com.pontivus.jig` |
 | APK versionName | |
 | APK versionCode | |
-| Device manufacturer | |
-| Device model | |
-| Android version | |
-| Android API level | |
+| Device manufacturer | Samsung |
+| Device model | SM-S901E |
+| Android version | 16 |
+| Android API level | 36 |
 | WebView/Chrome version | |
 | adb serial | |
 | Node version | |
@@ -48,8 +48,8 @@ ANDROID_SDK_ROOT="$HOME/Android/Sdk" \
 
 Paste or attach the complete output. The preflight must report exactly one authorized **physical** device, package `com.pontivus.jig`, the package-derived version identity and the APK SHA above.
 
-**Preflight result:** NOT RUN / PASS / FAIL  
-**Evidence location / attachment:**  
+**Preflight result:** **PASS for the 2026-11-20 partial session**  
+**Evidence location / attachment:** session output was observed; formal attachment/path still needs to be recorded during IMP-21 final evidence closure.  
 
 ## 2. J110-IMP-09 — replacement Task-movement physical gate
 
@@ -98,6 +98,17 @@ The completed gate required at least **20 sequential grip drags** across realist
 **Retained execution evidence:** none; do not reconstruct unknown device, APK/source lineage or per-check results.  
 
 The original failure rule remains authoritative for regression handling: any new repeated missed drop, floating-card residue, unstable slot or scroll conflict observed during remaining physical work reopens SD-34/35 on `v1.1`.
+
+## 2.1 2026-11-20 partial IMP-15 session evidence
+
+This session is retained as real-device evidence but **does not close IMP-15**.
+
+- Desktop Secret Service correction was deployed through the normal installer; existing repository/configuration was preserved; `jig.service` remained active on port 47831 and setup status reported configured.
+- Android source `222f2fe…` built/installed on Samsung SM-S901E, Android 16/API 36; device preflight passed for `com.pontivus.jig`; APK SHA-256 is recorded above.
+- Android Git path: local changes committed, remote push completed, Settings showed **Up to date**, restart/relaunch preserved Planner data and synchronization state.
+- UI evidence was captured for Planner, Task form/IME, Repeat states, History, Settings and healthy synchronization.
+- Physical review found blockers: compact Planner has no centered title; History/Settings replace Jig identity; header chrome is taller than needed; interactive button/navigation text is too small in places; grip/checkbox are vertically top-biased; past-date drag rejection has no clear feedback; recurring rollover can accumulate stale outstanding occurrences.
+- These findings are now governed by J110-IMP-18..20 and must be re-tested under J110-IMP-21 on the later corrected APK.
 
 ## 3. J110-IMP-15 — physical mobile UX/runtime certification
 
@@ -197,8 +208,8 @@ Record paths, attachment IDs or URLs for at least:
 
 **Evidence locations:**  
 
-**IMP-15 verdict:** NOT RUN / PASS / FAIL  
-**Blocking defect / issue reference if FAIL:**  
+**IMP-15 verdict:** **IN PROGRESS / BLOCKED pending J110-IMP-18..21**  
+**Blocking findings:** compact header/title/chrome + interactive-label legibility; Task grip/checkbox vertical alignment; past-date scheduling feedback; recurrence rollover non-accumulation.  
 
 ## 4. External acceptance still separate from this device record
 
@@ -212,7 +223,7 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 | Gate | Result |
 |---|---|
 | J110-IMP-09 physical Task movement | **PASS — completed; detailed execution record lost** |
-| J110-IMP-15 physical UX/runtime matrix | NOT RUN |
+| J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS / BLOCKED — partial 2026-11-20 evidence retained; IMP-18..21 open** |
 | Issue #31 live Linux/Desktop GitHub acceptance | NOT RUN |
 
 **Release-candidate promotion authorized:** NO
