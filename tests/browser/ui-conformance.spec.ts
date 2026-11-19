@@ -469,10 +469,13 @@ test("desktop header stays compact while narrow header uses sticky destination-s
     await page.setViewportSize({ width, height: 844 });
     await waitForResponsiveHeader(page, width);
 
-    await page.getByRole("button", { name: "Open navigation menu" }).click();
-    let menu = page.getByRole("menu");
-    await expect(menu.getByRole("menuitem")).toHaveCount(3);
-    await menu.getByRole("menuitem", { name: /^Settings/ }).click();
+    const primaryNavigation = page.getByRole("navigation", {
+      name: "Primary",
+    });
+    await expect(primaryNavigation).toBeVisible();
+    await primaryNavigation
+      .getByRole("button", { name: "Settings", exact: true })
+      .click();
 
     const narrowSettingsHeight = await headerHeight(page);
     expect(narrowSettingsHeight).toBeGreaterThanOrEqual(56);
@@ -499,9 +502,9 @@ test("desktop header stays compact while narrow header uses sticky destination-s
     );
     expect(frameWidth.scroll).toBeLessThanOrEqual(frameWidth.client + 1);
 
-    await page.getByRole("button", { name: "Open navigation menu" }).click();
-    menu = page.getByRole("menu");
-    await menu.getByRole("menuitem", { name: /^Planner/ }).click();
+    await primaryNavigation
+      .getByRole("button", { name: "Planner", exact: true })
+      .click();
 
     await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
     await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(1);
@@ -579,9 +582,21 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       "Today",
     );
     await expectTarget(
-      page.getByRole("button", { name: "Open navigation menu", exact: true }),
-      "Navigation menu trigger",
+      page.locator(".jig-status-indicator"),
+      "Synchronization status",
     );
+    const primaryNavigation = page.getByRole("navigation", {
+      name: "Primary",
+    });
+    for (const destination of ["Planner", "History", "Settings"] as const) {
+      await expectTarget(
+        primaryNavigation.getByRole("button", {
+          name: destination,
+          exact: true,
+        }),
+        `${destination} bottom navigation`,
+      );
+    }
     await expectTarget(
       page.locator(".jig-date-add").first(),
       "Date Add",
@@ -603,37 +618,19 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       "Task reference",
     );
 
-    const mobileActionRects = await page
-      .locator(".jig-header-mobile-actions button")
-      .evaluateAll((elements) =>
-        elements.flatMap((element) => {
-          const rect = element.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0
-            ? [{ left: rect.left, right: rect.right }]
-            : [];
-        }),
-      );
-    for (let index = 1; index < mobileActionRects.length; index += 1) {
-      const previous = mobileActionRects[index - 1];
-      const current = mobileActionRects[index];
-      if (previous === undefined || current === undefined) {
-        throw new Error("Missing mobile header action geometry");
-      }
-      expect(
-        current.left - previous.right,
-        "mobile standalone header action spacing",
-      ).toBeGreaterThanOrEqual(8);
+    const fab = page.getByRole("button", { name: "Add task", exact: true });
+    const fabBox = await fab.boundingBox();
+    const bottomNavBox = await primaryNavigation.boundingBox();
+    if (fabBox === null || bottomNavBox === null) {
+      throw new Error("Compact navigation/FAB geometry unavailable");
     }
+    expect(fabBox.y + fabBox.height).toBeLessThanOrEqual(
+      bottomNavBox.y + 1,
+    );
 
-    await page
-      .getByRole("button", { name: "Open navigation menu", exact: true })
-      .click();
-    const menuItems = page.getByRole("menuitem");
-    await expect(menuItems).toHaveCount(3);
-    for (let index = 0; index < 3; index += 1) {
-      await expectTarget(menuItems.nth(index), `navigation menu row ${index + 1}`);
-    }
-    await page.keyboard.press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Open navigation menu" }),
+    ).toHaveCount(0);
 
     const widthGeometry = await page.locator(".jig-content-frame").evaluate(
       (element) => ({
@@ -735,10 +732,9 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       .getByRole("button", { name: "Close", exact: true })
       .click();
 
-    await page
-      .getByRole("button", { name: "Open navigation menu", exact: true })
+    await primaryNavigation
+      .getByRole("button", { name: "Settings", exact: true })
       .click();
-    await page.getByRole("menuitem", { name: /^Settings/ }).click();
 
     const settingsControls = page
       .locator(".jig-settings-view .jig-mobile-touch-control");
@@ -776,10 +772,9 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       fullPage: true,
     });
 
-    await page
-      .getByRole("button", { name: "Open navigation menu", exact: true })
+    await primaryNavigation
+      .getByRole("button", { name: "Planner", exact: true })
       .click();
-    await page.getByRole("menuitem", { name: /^Planner/ }).click();
   }
 });
 
@@ -810,10 +805,11 @@ test("History and Settings headings exist once in the application header", async
           .click();
       } else {
         await page
-          .getByRole("button", { name: "Open navigation menu" })
-          .click();
-        await page
-          .getByRole("menuitem", { name: new RegExp(`^${item.destination}`) })
+          .getByRole("navigation", { name: "Primary" })
+          .getByRole("button", {
+            name: item.destination,
+            exact: true,
+          })
           .click();
       }
 
@@ -825,9 +821,15 @@ test("History and Settings headings exist once in the application header", async
           exact: true,
         }),
       ).toHaveCount(1);
-      await expect(
-        header.getByText(item.subtitle, { exact: true }),
-      ).toBeVisible();
+      if (width >= 1168) {
+        await expect(
+          header.getByText(item.subtitle, { exact: true }),
+        ).toBeVisible();
+      } else {
+        await expect(
+          header.getByText(item.subtitle, { exact: true }),
+        ).toHaveCount(0);
+      }
       await expect(
         page.getByRole("heading", {
           level: 1,
@@ -896,7 +898,9 @@ test("narrow Planner shows all seven dated sections and preserves the same works
   await expect(page.locator(".jig-week-board .jig-week-column")).toHaveCount(7);
   await expect(page.locator(".jig-planner-narrow")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open navigation menu" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Primary" }),
+  ).toBeVisible();
 
   const labels = await page
     .locator(".jig-week-board .jig-week-date-signifier > strong")
@@ -935,19 +939,25 @@ test("desktop and narrow navigation share the same destinations and semantic ico
   ).toHaveCount(1);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Open navigation menu" }).click();
+  const mobileNavigation = page.getByRole("navigation", {
+    name: "Primary",
+  });
+  await expect(mobileNavigation).toBeVisible();
 
-  const labels = await page.getByRole("menuitem").allTextContents();
-  expect(labels.map((label) => label.trim().replace("Current page", "").trim()))
-    .toEqual(["Planner", "History", "Settings"]);
-
-  for (const label of ["Planner", "History", "Settings"]) {
-    const iconCount = await page
-      .getByRole("menuitem", { name: new RegExp(`^${label}`) })
-      .locator("svg")
-      .count();
-    expect(iconCount).toBeGreaterThanOrEqual(1);
+  for (const label of ["Planner", "History", "Settings"] as const) {
+    const button = mobileNavigation.getByRole("button", {
+      name: label,
+      exact: true,
+    });
+    await expect(button).toBeVisible();
+    expect(await button.locator("svg").count()).toBeGreaterThanOrEqual(1);
   }
+  await expect(
+    mobileNavigation.getByRole("button", {
+      name: "Planner",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-current", "page");
 });
 
 test("outstanding Task action menus are identical at desktop and narrow widths", async ({
@@ -1125,9 +1135,9 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
       if (width >= 1168) {
         await page.getByRole("button", { name: destination, exact: true }).click();
       } else {
-        await page.getByRole("button", { name: "Open navigation menu" }).click();
         await page
-          .getByRole("menuitem", { name: new RegExp(`^${destination}`) })
+          .getByRole("navigation", { name: "Primary" })
+          .getByRole("button", { name: destination, exact: true })
           .click();
       }
 
@@ -1161,8 +1171,10 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
     if (width >= 1168) {
       await page.getByRole("button", { name: "Planner", exact: true }).click();
     } else {
-      await page.getByRole("button", { name: "Open navigation menu" }).click();
-      await page.getByRole("menuitem", { name: /^Planner/ }).click();
+      await page
+        .getByRole("navigation", { name: "Primary" })
+        .getByRole("button", { name: "Planner", exact: true })
+        .click();
     }
     const planner = await page.locator(".jig-week-board").boundingBox();
     expect(planner).not.toBeNull();
