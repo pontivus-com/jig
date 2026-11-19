@@ -265,17 +265,17 @@ export function SettingsView({
                 <SegmentedControlItem
                   value="system"
                   label="System"
-                  className="jig-mobile-touch-control"
+                  style={{ minHeight: "48px" }}
                 />
                 <SegmentedControlItem
                   value="light"
                   label="Light"
-                  className="jig-mobile-touch-control"
+                  style={{ minHeight: "48px" }}
                 />
                 <SegmentedControlItem
                   value="dark"
                   label="Dark"
-                  className="jig-mobile-touch-control"
+                  style={{ minHeight: "48px" }}
                 />
               </SegmentedControl>
             </VStack>
