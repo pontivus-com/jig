@@ -916,6 +916,46 @@ export async function rollForwardOutstandingInDatabase(
   });
 }
 
+export async function adoptEmptyDatasetIdentity(
+  connection: JigSqlConnection,
+  expectedDatasetId: string,
+  nextDatasetId: string,
+): Promise<void> {
+  assertUuid(expectedDatasetId, "expected dataset_id");
+  assertUuid(nextDatasetId, "next dataset_id");
+
+  await withTransaction(connection, async () => {
+    const metadata = await readMetadata(connection);
+    const state = await readCanonicalState(connection);
+    if (metadata.dataset_id !== expectedDatasetId) {
+      throw new PersistenceConfigurationError(
+        "Local dataset identity changed during synchronization",
+      );
+    }
+    if (
+      state.revision !== 0 ||
+      metadata.last_exported_revision !== 0 ||
+      state.tasks.length !== 0 ||
+      state.recurrences.length !== 0
+    ) {
+      throw new PersistenceConfigurationError(
+        "Dataset identity may only change for an empty never-mutated bootstrap",
+      );
+    }
+
+    await connection.execute(
+      `UPDATE app_metadata
+       SET
+         dataset_id = ?,
+         last_exported_head = NULL,
+         last_adopted_head = NULL,
+         pending_sync = 1
+       WHERE singleton = 1`,
+      [nextDatasetId],
+    );
+  });
+}
+
 export async function markExported(
   connection: JigSqlConnection,
   exportedRevision: number,
