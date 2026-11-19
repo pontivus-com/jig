@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Canonical UI solution through v1.1, amended 2026-11-19 for the physical-mobile UX remediation. v1.0.x sections remain release history only; the v1.1 composition and screen specifications below supersede their mobile density, Task movement, Settings and Task-form interaction details.
+**Status:** Canonical UI solution through v1.1, amended 2026-11-19 for the physical-mobile UX remediation and the governed onboarding/Task-form visual authority. v1.0.x sections remain release history only; the v1.1 composition and screen specifications plus the governed v1.1 reference assets below supersede their mobile density, onboarding, Task movement, Settings and Task-form interaction details.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–31.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx ownership, the governed Task-movement proof gate, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop and Android, including v1.1 onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
@@ -15,12 +15,36 @@ The v1.0.3 assets below are retained as historical structural baselines where ex
 |---|---|---|
 | ![Desktop Planner v1.0.3](reference/desktop-planner-v1.0.3.svg) | [Desktop Planner](reference/desktop-planner-v1.0.3.svg) | Historical structural baseline: no sidebar; Jig home at left; page-centered week range above grouped Previous/Today/Next controls; right-side actions/navigation; seven fluid date tracks. v1.0.4 supersedes its heavier chrome and adds explicit Planner navigation. |
 | ![Mobile Planner v1.0.3](reference/mobile-planner-v1.0.3.svg) | [Mobile/narrow Planner](reference/mobile-planner-v1.0.3.svg) | Historical v1.0.3 narrow composition only. v1.0.4 supersedes its selected-date strip/list with seven vertically stacked dated sections; the asset must not be used as authority for day selection. |
-| ![Narrow Task workspace](reference/mobile-editor.svg) | [Narrow Task workspace](reference/mobile-editor.svg) | BottomSheet Task workspace; permanent Delete confirmation remains separate |
+| ![Narrow Task workspace](reference/mobile-editor.svg) | [Narrow Task workspace](reference/mobile-editor.svg) | **Historical v1.0.3 provenance only for v1.1 Task-form presentation.** The governed v1.1 mobile reference below supersedes its form hierarchy, density, touch geometry, Repeat and BottomSheet action placement. |
+| [Governed v1.1 mobile UX/UI reference](reference/jig-v1.1-mobile-ux-ui-governed-reference.html) | [Android/narrow onboarding + complete Task form](reference/jig-v1.1-mobile-ux-ui-governed-reference.html) | **Binding v1.1 authority** for onboarding hierarchy/states and the complete mobile Task form, including ≥48px touch geometry, vertical form language, progressive Repeat disclosure, BottomSheet scrolling and action placement. |
+| [Governed v1.1 desktop onboarding + Task-form reference](reference/jig-v1.1-desktop-onboarding-task-form-governed-reference.html) | [Desktop onboarding + complete Task form](reference/jig-v1.1-desktop-onboarding-task-form-governed-reference.html) | **Binding v1.1 authority** for desktop onboarding composition and the complete Drawer Task form/Repeat interaction. |
 | ![Desktop history](reference/desktop-history.svg) | [Desktop history](reference/desktop-history.svg) | Lightweight completion history; uses the same top application navigation |
 | ![Desktop settings and sync](reference/desktop-settings-sync.svg) | [Desktop settings/sync](reference/desktop-settings-sync.svg) | Appearance, notification and operational status/settings |
 | ![Save and sync states](reference/sync-failure-states.svg) | [Save/sync states](reference/sync-failure-states.svg) | Honest local-save and repository synchronization feedback |
 
 The older `desktop-week.svg`, `desktop-week-task-drawer.svg`, `desktop-day.svg` and `mobile-day.svg` are historical design inputs after this revision. They must not be used to reintroduce a sidebar, Day/Week destinations, a Day completed section, a split date-navigation model, or a right-side mobile Drawer.
+
+### 1.1 v1.1 governed onboarding, Task-form and mobile-form authority
+
+The two v1.1 HTML references above are **normative product-design authority**, not implementation screenshots and not optional inspiration. They govern information hierarchy, user-visible state composition, responsive arrangement, form density, product-level interaction geometry and primary/secondary action hierarchy within their declared scope. Exact reusable component anatomy, theme rendering, accessible primitive behavior and token realization remain Astryx-owned.
+
+Authority precedence inside this scope is:
+
+1. functional requirements define observable behavior and domain semantics;
+2. this UI solution plus the two governed v1.1 references define the user-visible hierarchy, responsive composition and product-level geometry;
+3. pinned Astryx public APIs define reusable component mechanics and semantic styling;
+4. Jig React/CSS supplies only the smallest product-specific composition needed to realize that authority;
+5. current implementation, historical SVGs and screenshots are evidence only.
+
+The **mobile reference is also the default v1.1 mobile form interaction/presentation standard** for onboarding, the Task BottomSheet and directly analogous form surfaces: visible labels, one readable vertical hierarchy, natural scrolling inside the owner, ≥48×48px ordinary touch targets, visibly separated standalone actions, one clear primary action, subordinate secondary actions, semantic iconography, and no process-shaped technical choreography. A more specific canonical surface contract may override that default, but implementation convenience may not.
+
+The complete Task form remains present in every Repeat state:
+
+`Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes`
+
+Repeat progressively discloses its controls **in place** between Date and Reminder. A recurrence-only form, a reference that visually stops after Repeat, or a second recurrence Save is non-conforming. On mobile, weekday controls wrap when necessary to preserve the interaction budget rather than squeezing seven sub-48px targets into one row.
+
+For onboarding, both governed references establish **product story before infrastructure**: Jig identity/value/local-first continuity first, then the genuine repository choice, followed by only the provider mechanics required for the chosen path. Desktop uses a stable value/context region plus bounded setup pane; Android/narrow uses one bounded vertical flow. Neither platform becomes a Git/clone/database setup utility. Successful setup transitions directly to Planner; a zero-Task week may show the governed lightweight `Your week is clear / Add your first task` activation as a normal Planner empty state, not persisted onboarding state.
 
 The original raster provenance recorded in repository history remains useful for traceability, but those images are not production screenshots or current structural authority.
 
@@ -465,9 +489,9 @@ Implementation plans must link to this document, [Planning workbench functional 
 - **Narrow header:** Planner renders one sticky application row (wordmark, Add, compact sync, menu) plus one temporal row (Previous, range, Next, Today). History/Settings render only the application row with their title/subtitle. Safe-area inset belongs to this owner.
 - **Navigation menu:** remains a popover/menu from the shared destination owner, but menu rows are touch-sized and comfortably padded. If Astryx DropdownMenu cannot satisfy the governed geometry through public API, use the smallest Astryx-Popover/public-leaf composition rather than private CSS.
 - **Secondary desktop heading:** History/Settings replace the center temporal navigator with the same compact title + subtitle heading; body begins with actual content.
-- **Onboarding:** bootstrap remains inside the canonical Jig shell with intent-level GitHub/local-repository choices and automatic protocol work.
+- **Onboarding:** bootstrap remains inside the canonical Jig shell and conforms to the governed v1.1 mobile/desktop onboarding references: product-value orientation precedes provider mechanics; Android exposes Connect GitHub only; desktop adds the genuine existing-local-repository path; authorization/repository-selection/finishing/attention retain the bounded reference hierarchy while protocol work remains automatic.
 - **Settings:** one vertical reading hierarchy, not a 2×2 dashboard: Data & sync, Appearance, Notifications, then collapsed/subordinate Diagnostics. Data & sync combines repository home, local safety, continuity and recovery; technical mechanics stay under Diagnostics.
-- **Task form / Repeat:** Repeat is an ordinary field beside Date/Reminder in the single Task form. Does not repeat shows no detail; Weekly/Monthly reveal only their required fields. One Save atomically applies Task draft + recurrence change; there is no separate Repeat editor/save.
+- **Task form / Repeat:** the governed mobile/desktop references define the complete one-form presentation. Repeat is an ordinary field after Date and before Reminder; the entire Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes form remains present/scrollable in every state. Does not repeat shows no detail; Weekly/Monthly reveal only their required fields in place. Mobile weekday controls wrap as needed to preserve ≥48px touch geometry. One Save atomically applies Task draft + recurrence change; there is no separate Repeat editor/save.
 - **Task movement:** Pangea is rejected by physical-device evidence. The replacement must pass desktop + physical Android feasibility before adoption, use the dedicated grip only, expose explicit insertion slots including card gaps/empty dates, keep Task body scrolling independent, and always clear overlay/drag state on drop/cancel/pointercancel/interruption.
 - **Reminder attention:** due reminder state remains persistent and independent from OS/browser delivery success.
 - **Android:** the same Jig frame/semantics run from onboarding through Planner/History/Settings; physical-device usability is an implementation gate, not optional visual QA.
