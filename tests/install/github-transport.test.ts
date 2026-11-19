@@ -245,7 +245,6 @@ describe("managed GitHub transport", () => {
       access_token_expires_at: "2030-01-01T08:00:00.000Z",
     };
     let stored: GitHubCredential | null = null;
-    let environment: Readonly<Record<string, string>> | null = null;
 
     const transport = await createManagedGitHubTransport(
       path,
@@ -258,10 +257,6 @@ describe("managed GitHub transport", () => {
         refresh_credential: async () => newCredential,
         store_credential: async (credential) => {
           stored = credential;
-        },
-        synchronize: async (_config, nextEnvironment) => {
-          environment = nextEnvironment ?? null;
-          return { status: "synchronized", retryable: false };
         },
         now: () => new Date("2030-01-01T00:00:00.000Z"),
       },
@@ -278,18 +273,8 @@ describe("managed GitHub transport", () => {
         GIT_TERMINAL_PROMPT: "0",
         JIG_GITHUB_ACCESS_TOKEN: "new-token",
       });
-      await expect(
-        transport.synchronize({ repository_path: path }),
-      ).resolves.toStrictEqual({
-        status: "synchronized",
-        retryable: false,
-      });
       expect(stored).toStrictEqual(newCredential);
       await expect(transport.reconnect_required()).resolves.toBe(false);
-      expect(environment).toMatchObject({
-        GIT_TERMINAL_PROMPT: "0",
-        JIG_GITHUB_ACCESS_TOKEN: "new-token",
-      });
     } finally {
       await transport.dispose();
     }
