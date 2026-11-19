@@ -42,6 +42,7 @@ import {
 } from "./runtime";
 import { Planner } from "./planner";
 import {
+  CompactApplicationNavigation,
   PlannerHeader,
   type Destination,
 } from "./planner-header";
@@ -635,7 +636,7 @@ function ConfiguredApp({
       size="sm"
       icon={statusIcon}
       onClick={() => navigateDestination("settings")}
-      className={statusClassName}
+      className={`jig-status-indicator jig-status-${repositoryStatus.key}`}
     />
   );
 
@@ -830,6 +831,21 @@ function ConfiguredApp({
             </div>
           </div>
           {workspaceSurface}
+          {layoutMode === "narrow" ? (
+            <CompactApplicationNavigation
+              destination={destination}
+              showAdd={workspacePresentation === null}
+              onAdd={() =>
+                openCreate(
+                  defaultAddDate(
+                    plannerState.displayedWeekStart,
+                    todayCivilDate(),
+                  ),
+                )
+              }
+              onNavigate={navigateDestination}
+            />
+          ) : null}
         </ApplicationShell>
 
         <AlertDialog
