@@ -6,7 +6,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
@@ -14,6 +14,8 @@ import {
   ensurePortableData,
   GitAdapterError,
   inspectSynchronizationRemote,
+  observePortableRemote,
+  pushPortableDataRef,
   readCurrentPortableSnapshot,
   repositorySynchronizationMode,
   runGit,
@@ -44,6 +46,55 @@ async function fixture(): Promise<string> {
   await git(repo, ["add", "document.txt"]);
   await git(repo, ["commit", "-m", "Initial user content"]);
   return repo;
+}
+
+async function writeSnapshotFiles(
+  directory: string,
+  snapshot: ReturnType<typeof serializeSnapshot>,
+): Promise<void> {
+  for (const [path, value] of snapshot.files) {
+    const absolute = join(directory, path);
+    await mkdir(dirname(absolute), { recursive: true });
+    await writeFile(absolute, value, "utf8");
+  }
+}
+
+async function remoteFixture(
+  sourceRepository: string,
+): Promise<string> {
+  const remote = await mkdtemp(join(tmpdir(), "jig-remote-"));
+  roots.push(remote);
+  await git(remote, ["init", "--bare"]);
+  await git(sourceRepository, ["remote", "add", "origin", remote]);
+  await git(sourceRepository, [
+    "push",
+    "origin",
+    "refs/heads/jig-data:refs/heads/jig-data",
+  ]);
+  return remote;
+}
+
+async function cloneDataBranch(
+  remote: string,
+  label: string,
+): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), `jig-${label}-`));
+  roots.push(root);
+  await rm(root, { recursive: true, force: true });
+  await git(tmpdir(), [
+    "clone",
+    "--branch",
+    "jig-data",
+    remote,
+    root,
+  ]);
+  await git(root, ["config", "user.name", "Jig Test"]);
+  await git(root, [
+    "config",
+    "user.email",
+    "jig-test@local.invalid",
+  ]);
+  return root;
 }
 
 function task(): Task {
@@ -233,6 +284,174 @@ describe("isolated jig-data adapter", () => {
         "ssh://git:secret@github.com/pontivus-com/private-planning.git?token=hidden#fragment",
       ),
     ).toBe("ssh://github.com/pontivus-com/private-planning.git");
+  });
+
+  it("observes and validates a remote-only fast-forward before local mutation", async () => {
+    const repo = await fixture();
+    const config = { repository_path: repo } as const;
+    await ensurePortableData(config, DATASET_ID);
+    await writePortableSnapshot(
+      config,
+      serializeSnapshot([], DATASET_ID),
+      0,
+    );
+    const remote = await remoteFixture(repo);
+    const writer = await cloneDataBranch(remote, "writer");
+    const remoteTask = task();
+    await writeSnapshotFiles(
+      writer,
+      serializeSnapshot([remoteTask], DATASET_ID),
+    );
+    await git(writer, ["add", "-A"]);
+    await git(writer, ["commit", "-m", "Remote Jig update"]);
+    await git(writer, ["push", "origin", "jig-data"]);
+    const remoteHead = await git(writer, ["rev-parse", "HEAD"]);
+
+    const before = await git(repo, ["rev-parse", DATA_REF]);
+    const observed = await observePortableRemote(
+      config,
+      DATASET_ID,
+    );
+
+    expect(observed).toMatchObject({
+      remote_state: "present",
+      local_head: before,
+      remote_head: remoteHead,
+      remote_rewritten: false,
+      lineage: "remote-ahead",
+    });
+    expect(observed.remote_snapshot?.tasks).toStrictEqual([
+      remoteTask,
+    ]);
+    expect(await git(repo, ["rev-parse", DATA_REF])).toBe(before);
+  });
+
+  it("retains prior remote-head evidence when the remote branch is deleted or rewritten", async () => {
+    const repo = await fixture();
+    const config = { repository_path: repo } as const;
+    await ensurePortableData(config, DATASET_ID);
+    await writePortableSnapshot(
+      config,
+      serializeSnapshot([], DATASET_ID),
+      0,
+    );
+    const remote = await remoteFixture(repo);
+
+    const first = await observePortableRemote(config, DATASET_ID);
+    expect(first.remote_state).toBe("present");
+    const firstHead = first.remote_head;
+    expect(firstHead).not.toBeNull();
+
+    await git(repo, ["push", "origin", "--delete", "jig-data"]);
+    const deleted = await observePortableRemote(config, DATASET_ID);
+    expect(deleted).toMatchObject({
+      remote_state: "absent",
+      previous_remote_head: firstHead,
+    });
+
+    const writer = await cloneDataBranch(
+      remote,
+      "rewrite-seed",
+    ).catch(async () => {
+      const seed = await mkdtemp(join(tmpdir(), "jig-rewrite-seed-"));
+      roots.push(seed);
+      await git(seed, ["init", "-b", "jig-data"]);
+      await git(seed, ["config", "user.name", "Jig Test"]);
+      await git(seed, ["config", "user.email", "jig-test@local.invalid"]);
+      await writeSnapshotFiles(
+        seed,
+        serializeSnapshot([task()], DATASET_ID),
+      );
+      await git(seed, ["add", "-A"]);
+      await git(seed, ["commit", "-m", "Replacement history"]);
+      await git(seed, ["remote", "add", "origin", remote]);
+      await git(seed, ["push", "origin", "jig-data"]);
+      return seed;
+    });
+    const replacementHead = await git(writer, ["rev-parse", "HEAD"]);
+    const rewritten = await observePortableRemote(
+      config,
+      DATASET_ID,
+    );
+    expect(rewritten.remote_head).toBe(replacementHead);
+    expect(rewritten.remote_rewritten).toBe(true);
+    expect(rewritten.previous_remote_head).toBe(firstHead);
+
+    const repeated = await observePortableRemote(
+      config,
+      DATASET_ID,
+    );
+    expect(repeated.remote_rewritten).toBe(true);
+    expect(repeated.previous_remote_head).toBe(firstHead);
+  });
+
+  it("rejects non-canonical paths on the portable branch before adoption", async () => {
+    const repo = await fixture();
+    const config = { repository_path: repo } as const;
+    await ensurePortableData(config, DATASET_ID);
+    await writePortableSnapshot(
+      config,
+      serializeSnapshot([], DATASET_ID),
+      0,
+    );
+    const remote = await remoteFixture(repo);
+    const writer = await cloneDataBranch(remote, "invalid-tree");
+    await writeFile(
+      join(writer, "unexpected.txt"),
+      "not Jig portable data\n",
+      "utf8",
+    );
+    await git(writer, ["add", "unexpected.txt"]);
+    await git(writer, ["commit", "-m", "Invalid portable tree"]);
+    await git(writer, ["push", "origin", "jig-data"]);
+
+    await expect(
+      observePortableRemote(config, DATASET_ID),
+    ).rejects.toThrow(/non-canonical jig-data tree entry/);
+  });
+
+  it("publishes a missing remote jig-data branch using an ordinary push", async () => {
+    const repo = await fixture();
+    const remote = await mkdtemp(join(tmpdir(), "jig-empty-remote-"));
+    roots.push(remote);
+    await git(remote, ["init", "--bare"]);
+    await git(repo, ["remote", "add", "origin", remote]);
+    const config = { repository_path: repo } as const;
+    await ensurePortableData(config, DATASET_ID);
+    await writePortableSnapshot(
+      config,
+      serializeSnapshot([task()], DATASET_ID),
+      1,
+    );
+
+    const observed = await observePortableRemote(
+      config,
+      DATASET_ID,
+    );
+    expect(observed).toMatchObject({
+      remote_state: "absent",
+      previous_remote_head: null,
+    });
+    await expect(
+      pushPortableDataRef(
+        config,
+        {
+          name: "origin",
+          location: remote,
+        },
+      ),
+    ).resolves.toStrictEqual({
+      status: "synchronized",
+      retryable: false,
+    });
+    expect(
+      await git(remote, [
+        "show-ref",
+        "--verify",
+        "--hash",
+        "refs/heads/jig-data",
+      ]),
+    ).toMatch(/^[0-9a-f]{40}$/);
   });
 
   it("uses the Git common dir for local exclusion from linked worktrees", async () => {
