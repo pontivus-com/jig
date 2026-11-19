@@ -18,9 +18,6 @@ import {
 import {
   discoverSynchronizationRemote,
   runGit,
-  synchronizePortableData,
-  type GitAdapterConfig,
-  type RepositorySynchronizationResult,
 } from "./git";
 import {
   assertSecretServiceAvailable,
@@ -52,14 +49,10 @@ export interface ManagedGitHubTransportDependencies {
   readonly load_credential?: () => Promise<GitHubCredential | null>;
   readonly store_credential?: (credential: GitHubCredential) => Promise<void>;
   readonly refresh_credential?: typeof refreshGitHubCredential;
-  readonly synchronize?: typeof synchronizePortableData;
   readonly now?: () => Date;
 }
 
 export interface ManagedGitHubTransport {
-  readonly synchronize: (
-    config: GitAdapterConfig,
-  ) => Promise<RepositorySynchronizationResult>;
   readonly network_environment: () => Promise<
     Readonly<Record<string, string>> | null
   >;
@@ -291,22 +284,6 @@ export async function createManagedGitHubTransport(
   };
 
   return {
-    synchronize: async (
-      config: GitAdapterConfig,
-    ): Promise<RepositorySynchronizationResult> => {
-      const environment = await networkEnvironment();
-      if (environment === null) {
-        return nonRetryableIssue();
-      }
-      const result = await (
-        dependencies.synchronize ??
-        synchronizePortableData
-      )(config, environment);
-      if (result.status === "synchronized") {
-        reconnectRequired = false;
-      }
-      return result;
-    },
     network_environment: networkEnvironment,
     reconnect_required: async (): Promise<boolean> => {
       if (reconnectRequired) {
