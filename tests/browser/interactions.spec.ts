@@ -797,7 +797,7 @@ test("dedicated-handle drag survives twenty sequential cycles without stranded s
     const source = await dragHandle(page, "Repeated drag source");
     const targetSlot = moveToEnd ? 2 : 0;
     const target = page.locator(
-      \`[data-date="\${today}"] [data-jig-drop-slot="\${targetSlot}"]\`,
+      `[data-date="${today}"] [data-jig-drop-slot="${targetSlot}"]`,
     );
     const intent = await mouseDrag(page, source, target);
     expect(intent).toEqual({
@@ -976,7 +976,7 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
   await page.setViewportSize({ width: 1440, height: 600 });
   const today = await browserCivilDate(page);
   for (let index = 0; index < 24; index += 1) {
-    await createTask(page, \`Auto-scroll task \${index + 1}\`, today);
+    await createTask(page, `Auto-scroll task ${index + 1}`, today);
   }
   await page.reload();
 
@@ -1067,11 +1067,11 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
   const scope = page.locator(".jig-task-drag-scope");
   for (let slotIndex = 0; slotIndex <= 3; slotIndex += 1) {
     const slot = page.locator(
-      \`[data-date="\${destinationDate}"] [data-jig-drop-slot="\${slotIndex}"]\`,
+      `[data-date="${destinationDate}"] [data-jig-drop-slot="${slotIndex}"]`,
     );
     const box = await slot.boundingBox();
     if (box === null) {
-      throw new Error(\`Gap-matrix slot \${slotIndex} geometry unavailable\`);
+      throw new Error(`Gap-matrix slot ${slotIndex} geometry unavailable`);
     }
     await page.mouse.move(
       box.x + box.width / 2,
@@ -1133,21 +1133,21 @@ test("drag persists first middle and last positions within and across dates", as
   for (const scenario of sameDateCases) {
     await resetCanonicalTasks(page);
     if (scenario.sourceFirst) {
-      await createTask(page, \`Same \${scenario.label} source\`, today);
+      await createTask(page, `Same ${scenario.label} source`, today);
     }
-    await createTask(page, \`Same \${scenario.label} peer 1\`, today);
-    await createTask(page, \`Same \${scenario.label} peer 2\`, today);
+    await createTask(page, `Same ${scenario.label} peer 1`, today);
+    await createTask(page, `Same ${scenario.label} peer 2`, today);
     if (!scenario.sourceFirst) {
-      await createTask(page, \`Same \${scenario.label} source\`, today);
+      await createTask(page, `Same ${scenario.label} source`, today);
     }
     await page.reload();
 
-    const sourceTitle = \`Same \${scenario.label} source\`;
+    const sourceTitle = `Same ${scenario.label} source`;
     const intent = await mouseDrag(
       page,
       await dragHandle(page, sourceTitle),
       page.locator(
-        \`[data-date="\${today}"] [data-jig-drop-slot="\${scenario.slot}"]\`,
+        `[data-date="${today}"] [data-jig-drop-slot="${scenario.slot}"]`,
       ),
     );
     expect(intent).toEqual({ date: today, index: scenario.index });
@@ -1164,18 +1164,18 @@ test("drag persists first middle and last positions within and across dates", as
 
   for (const scenario of crossDateCases) {
     await resetCanonicalTasks(page);
-    const sourceTitle = \`Cross \${scenario.label} source\`;
+    const sourceTitle = `Cross ${scenario.label} source`;
     await createTask(page, sourceTitle, today);
-    await createTask(page, \`Cross \${scenario.label} peer 1\`, destinationDate);
-    await createTask(page, \`Cross \${scenario.label} peer 2\`, destinationDate);
-    await createTask(page, \`Cross \${scenario.label} peer 3\`, destinationDate);
+    await createTask(page, `Cross ${scenario.label} peer 1`, destinationDate);
+    await createTask(page, `Cross ${scenario.label} peer 2`, destinationDate);
+    await createTask(page, `Cross ${scenario.label} peer 3`, destinationDate);
     await page.reload();
 
     const intent = await mouseDrag(
       page,
       await dragHandle(page, sourceTitle),
       page.locator(
-        \`[data-date="\${destinationDate}"] [data-jig-drop-slot="\${scenario.slot}"]\`,
+        `[data-date="${destinationDate}"] [data-jig-drop-slot="${scenario.slot}"]`,
       ),
     );
     expect(intent).toEqual({
@@ -1196,7 +1196,7 @@ test("Task-body touch scroll never activates drag", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 600 });
   const today = await browserCivilDate(page);
   for (let index = 0; index < 12; index += 1) {
-    await createTask(page, \`Body-scroll task \${index + 1}\`, today);
+    await createTask(page, `Body-scroll task ${index + 1}`, today);
   }
   await page.reload();
 
