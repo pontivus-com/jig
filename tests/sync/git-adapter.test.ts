@@ -573,6 +573,24 @@ describe("isolated jig-data adapter", () => {
     ).toMatch(/^[0-9a-f]{40}$/);
   });
 
+  it("kills a hung Git subprocess when its shell deadline expires", async () => {
+    const repo = await fixture();
+    const result = await runGit(
+      repo,
+      [
+        "-c",
+        "alias.jig-slow=!sleep 5",
+        "jig-slow",
+      ],
+      undefined,
+      {},
+      20,
+    );
+
+    expect(result.exit_code).not.toBe(0);
+    expect(result.stderr).toBe("Git operation timed out");
+  });
+
   it("uses the Git common dir for local exclusion from linked worktrees", async () => {
     const repo = await fixture();
     const linked = join(repo, "..", `${repo.split("/").at(-1)}-linked`);
