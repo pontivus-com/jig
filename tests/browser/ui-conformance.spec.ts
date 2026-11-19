@@ -394,8 +394,11 @@ test("retains governed synchronization-attention evidence without exposing techn
   await expect(
     page.getByText("/tmp/private/jig-repository", { exact: true }),
   ).toHaveCount(0);
+  const attentionDataSync = page.locator(".jig-settings-section").filter({
+    has: page.getByRole("heading", { name: "Data & sync" }),
+  });
   await expect(
-    page.getByText("Needs attention", { exact: true }),
+    attentionDataSync.getByText("Needs attention", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
@@ -1641,7 +1644,10 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
   });
   const diagnosticsSection = page.locator(".jig-settings-diagnostics");
 
-  await expect(dataSync).toContainText("/tmp/jig-playwright-remote.git");
+  await expect(
+    dataSync.getByText("Connected repository", { exact: true }),
+  ).toBeVisible();
+  await expect(dataSync).not.toContainText("/tmp/jig-playwright-remote.git");
   await expect(
     dataSync.getByText("Syncing", { exact: true }),
   ).toBeVisible();
@@ -1664,6 +1670,7 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
     .toBeVisible();
   await expect(diagnostics.getByText("Remote Git", { exact: true }))
     .toBeVisible();
+  await expect(diagnostics).toContainText("/tmp/jig-playwright-remote.git");
   await expect(
     diagnostics.getByRole("button", { name: "Sync now", exact: true }),
   ).toBeVisible();
