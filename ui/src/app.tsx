@@ -13,6 +13,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import type { ReactNode } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
   addCivilDays,
@@ -69,12 +70,14 @@ import {
 } from "./task-workspace";
 import { useLayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
+import { JigLogo } from "./jig-logo";
 import { installNativeActiveListener } from "./native/app-lifecycle";
 import {
   readGitHubCapabilityStatus,
+  readGitHubReconnectState,
   readSetupStatus,
-  refreshGitHubReconnect,
-  startGitHubReconnect,
+  reconnectGitHub as reconnectGitHubIntent,
+  resumeGitHubReconnect,
   type GitHubReconnectSnapshot,
   type SetupStatus,
 } from "./setup-http";
@@ -91,6 +94,44 @@ function initialPlannerState(): PlannerState {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+interface ApplicationShellProps {
+  readonly topNav: ReactNode;
+  readonly banner?: ReactNode;
+  readonly children: ReactNode;
+}
+
+function ApplicationShell({
+  topNav,
+  banner,
+  children,
+}: ApplicationShellProps): React.ReactElement {
+  return (
+    <AppShell
+      className="jig-app-shell"
+      topNav={topNav}
+      mobileNav={false}
+      banner={banner}
+      contentPadding={0}
+      height="fill"
+      variant="section"
+    >
+      {children}
+    </AppShell>
+  );
+}
+
+function OnboardingHeader(): React.ReactElement {
+  return (
+    <header className="jig-app-header jig-app-header-onboarding">
+      <span className="jig-header-brand">
+        <span className="jig-brand-logo-wrap" aria-hidden="true">
+          <JigLogo />
+        </span>
+      </span>
+    </header>
+  );
 }
 
 function workspaceTaskId(state: TaskWorkspaceState): string | null {
@@ -228,6 +269,7 @@ function ConfiguredApp({
 
     void installNativeActiveListener(() => {
       void Promise.all([
+        resumeGitHubReconnect(),
         refreshCanonical(),
         triggerSync().then((next) => {
           if (!disposed) {
@@ -489,7 +531,7 @@ function ConfiguredApp({
     setIsOperating(true);
     setOperationError(null);
     try {
-      const snapshot = await startGitHubReconnect();
+      const snapshot = await reconnectGitHubIntent();
       setGitHubReconnect(snapshot);
       if (snapshot.error !== null) {
         setOperationError(snapshot.error);
@@ -502,37 +544,42 @@ function ConfiguredApp({
     }
   }, [isOperating]);
 
-  const refreshGitHubReconnectAuthorization =
-    useCallback(async (): Promise<void> => {
-      if (isOperating) {
-        return;
-      }
-      setIsOperating(true);
-      setOperationError(null);
+  useEffect(() => {
+    if (githubReconnect === null) {
+      return;
+    }
+
+    let disposed = false;
+    const observe = async (): Promise<void> => {
       try {
-        const snapshot = await refreshGitHubReconnect();
-        if (snapshot.error !== null) {
-          setGitHubReconnect(null);
-          setOperationError(snapshot.error);
+        const snapshot = await readGitHubReconnectState();
+        if (disposed) {
           return;
         }
-        if (
-          snapshot.phase === "idle" &&
-          snapshot.authorization === null
-        ) {
+        if (snapshot.state === "initial") {
           setGitHubReconnect(null);
-          await triggerSync();
           await refreshOperationalState();
           return;
         }
         setGitHubReconnect(snapshot);
-      } catch (error) {
-        setGitHubReconnect(null);
-        setOperationError(errorMessage(error));
-      } finally {
-        setIsOperating(false);
+        if (snapshot.state === "attention" && snapshot.error !== null) {
+          setOperationError(snapshot.error);
+        }
+      } catch {
+        // The next observation or ordinary status refresh will retry.
       }
-    }, [isOperating, refreshOperationalState]);
+    };
+
+    void observe();
+    const interval = window.setInterval(() => {
+      void observe();
+    }, 1_000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, [githubReconnect !== null, refreshOperationalState]);
 
   const previousWeek = useCallback((): void => {
     setPlannerState((current) => ({
@@ -710,7 +757,6 @@ function ConfiguredApp({
         onAppearanceModeChange={onAppearanceModeChange}
         onSync={syncNow}
         onReconnectGitHub={reconnectGitHub}
-        onRefreshGitHubReconnect={refreshGitHubReconnectAuthorization}
       />
     );
 
@@ -743,8 +789,7 @@ function ConfiguredApp({
 
   return (
     <>
-        <AppShell
-          className="jig-app-shell"
+        <ApplicationShell
           topNav={
             <PlannerHeader
               destination={destination}
@@ -769,11 +814,7 @@ function ConfiguredApp({
               onNavigate={navigateDestination}
             />
           }
-          mobileNav={false}
           banner={durableBanner ?? undefined}
-          contentPadding={0}
-          height="fill"
-          variant="section"
         >
           <div className="jig-content-frame">
             <div
@@ -784,7 +825,7 @@ function ConfiguredApp({
             </div>
           </div>
           {workspaceSurface}
-        </AppShell>
+        </ApplicationShell>
 
         <AlertDialog
           isOpen={deleteTask !== null}
@@ -859,6 +900,33 @@ export function App(): React.ReactElement {
     writeAppearanceMode(value);
   };
 
+  const bootstrapBody =
+    setupStatus?.mode === "bootstrap" ? (
+      <SetupView status={setupStatus} />
+    ) : (
+      <div className="jig-loading">
+        {setupError === null ? (
+          <p>Opening Jig…</p>
+        ) : (
+          <>
+            <Banner
+              status="error"
+              title="Jig could not open"
+              description={setupError}
+              collapsible={false}
+            />
+            <Button
+              label="Retry"
+              variant="primary"
+              onClick={() => {
+                void refreshSetup();
+              }}
+            />
+          </>
+        )}
+      </div>
+    );
+
   return (
     <Theme theme={themeFor(themePreset)} mode={appearanceMode}>
       <LayerProvider>
@@ -869,33 +937,12 @@ export function App(): React.ReactElement {
             onThemePresetChange={changeThemePreset}
             onAppearanceModeChange={changeAppearanceMode}
           />
-        ) : setupStatus?.mode === "bootstrap" ? (
-          <SetupView status={setupStatus} />
         ) : (
-          <main className="jig-setup">
-            <div className="jig-setup-content">
-              <h1>Jig</h1>
-              {setupError === null ? (
-                <p>Checking repository setup…</p>
-              ) : (
-                <>
-                  <Banner
-                    status="error"
-                    title="Jig could not read setup state"
-                    description={setupError}
-                    collapsible={false}
-                  />
-                  <Button
-                    label="Retry"
-                    variant="primary"
-                    onClick={() => {
-                      void refreshSetup();
-                    }}
-                  />
-                </>
-              )}
+          <ApplicationShell topNav={<OnboardingHeader />}>
+            <div className="jig-content-frame">
+              <div className="jig-content">{bootstrapBody}</div>
             </div>
-          </main>
+          </ApplicationShell>
         )}
       </LayerProvider>
     </Theme>
