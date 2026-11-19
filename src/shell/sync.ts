@@ -119,14 +119,13 @@ function observationFacts(
 ): SynchronizationFacts {
   switch (observation.state) {
     case "none":
-      return { kind: "no-remote", local_pending: localPending };
+      return { kind: "no-remote" };
     case "ambiguous":
     case "unsafe":
       return { kind: "unsafe-remote" };
     case "absent":
       return {
         kind: "remote-absent",
-        local_pending: localPending,
         previously_synchronized: observation.previously_synchronized,
       };
     case "present":
