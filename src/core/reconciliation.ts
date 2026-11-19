@@ -15,124 +15,84 @@ export interface CanonicalPlanning {
   readonly recurrences: readonly RecurrenceSeries[];
 }
 
+export interface ReconciliationConflict {
+  readonly kind:
+    | "task"
+    | "recurrence"
+    | "ordering"
+    | "validation";
+  readonly id: string | null;
+  readonly field: string | null;
+  readonly reason: string;
+}
+
 export type CanonicalReconciliation =
-  | {
-      readonly state: "merged";
-      readonly planning: CanonicalPlanning;
-    }
+  | { readonly state: "merged"; readonly planning: CanonicalPlanning }
   | {
       readonly state: "conflict";
+      readonly conflict: ReconciliationConflict;
       readonly reason: string;
     };
 
-type TaskSemanticField =
-  | "title"
-  | "scheduled_date"
-  | "priority"
-  | "context"
-  | "reference"
-  | "note"
-  | "reminder_time"
-  | "recurrence_series_id"
-  | "recurrence_occurrence_date"
-  | "completed_at";
+type Merge<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false };
 
-const TASK_FIELDS: readonly TaskSemanticField[] = [
-  "title",
-  "scheduled_date",
-  "priority",
-  "context",
-  "reference",
-  "note",
-  "reminder_time",
-  "recurrence_series_id",
-  "recurrence_occurrence_date",
-  "completed_at",
-];
-
-type RecurrenceSemanticField =
-  | "effective_from"
-  | "end_date"
-  | "pattern";
-
-const RECURRENCE_FIELDS: readonly RecurrenceSemanticField[] = [
-  "effective_from",
-  "end_date",
-  "pattern",
-];
-
-function sameValue(left: unknown, right: unknown): boolean {
+function same(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function latestInstant(...values: readonly string[]): string {
-  return [...values].sort((left, right) =>
-    left.localeCompare(right),
-  )[values.length - 1] ?? values[0] ?? "";
-}
-
-function taskSemanticallyEqual(
-  left: Task,
-  right: Task,
-): boolean {
-  if (
-    left.id !== right.id ||
-    left.created_at !== right.created_at
-  ) {
-    return false;
-  }
-  return TASK_FIELDS.every((field) =>
-    sameValue(left[field], right[field]),
-  );
-}
-
-function recurrenceSemanticallyEqual(
-  left: RecurrenceSeries,
-  right: RecurrenceSeries,
-): boolean {
-  if (
-    left.id !== right.id ||
-    left.created_at !== right.created_at
-  ) {
-    return false;
-  }
-  return RECURRENCE_FIELDS.every((field) =>
-    sameValue(left[field], right[field]),
-  );
-}
-
-interface MergedValue<T> {
-  readonly state: "merged";
-  readonly value: T;
-}
-
-interface ConflictingValue {
-  readonly state: "conflict";
-  readonly field: string;
-}
-
 function mergeValue<T>(
-  field: string,
   base: T,
   local: T,
   remote: T,
-): MergedValue<T> | ConflictingValue {
-  const localChanged = !sameValue(local, base);
-  const remoteChanged = !sameValue(remote, base);
+): Merge<T> {
+  const localChanged = !same(local, base);
+  const remoteChanged = !same(remote, base);
   if (
     localChanged &&
     remoteChanged &&
-    !sameValue(local, remote)
+    !same(local, remote)
   ) {
-    return { state: "conflict", field };
+    return { ok: false };
   }
   return {
-    state: "merged",
-    value: localChanged
-      ? local
-      : remoteChanged
-        ? remote
-        : base,
+    ok: true,
+    value: localChanged ? local : remoteChanged ? remote : base,
+  };
+}
+
+function latest(...values: readonly string[]): string {
+  return [...values].sort().at(-1) ?? "";
+}
+
+function taskEquivalent(left: Task, right: Task): boolean {
+  return same(
+    { ...left, updated_at: "" },
+    { ...right, updated_at: "" },
+  );
+}
+
+function recurrenceEquivalent(
+  left: RecurrenceSeries,
+  right: RecurrenceSeries,
+): boolean {
+  return same(
+    { ...left, updated_at: "" },
+    { ...right, updated_at: "" },
+  );
+}
+
+function conflict(
+  kind: ReconciliationConflict["kind"],
+  reason: string,
+  id: string | null = null,
+  field: string | null = null,
+): CanonicalReconciliation {
+  return {
+    state: "conflict",
+    conflict: { kind, id, field, reason },
+    reason,
   };
 }
 
@@ -140,160 +100,119 @@ function mergeTask(
   base: Task | undefined,
   local: Task | undefined,
   remote: Task | undefined,
-): Task | null | string {
+): Task | ReconciliationConflict | null {
   if (base === undefined) {
-    if (local === undefined) {
-      return remote ?? null;
+    if (local === undefined || remote === undefined) {
+      return local ?? remote ?? null;
     }
-    if (remote === undefined) {
-      return local;
-    }
-    return taskSemanticallyEqual(local, remote)
+    return taskEquivalent(local, remote)
       ? validateTask({
           ...local,
-          updated_at: latestInstant(
-            local.updated_at,
-            remote.updated_at,
-          ),
+          updated_at: latest(local.updated_at, remote.updated_at),
         })
-      : `Task ${local.id} was independently created with different content`;
+      : {
+          kind: "task",
+          id: local.id,
+          field: null,
+          reason: "UUID collision with different Task content",
+        };
   }
 
-  if (local === undefined && remote === undefined) {
-    return null;
+  if (local === undefined || remote === undefined) {
+    const survivor = local ?? remote;
+    if (survivor === undefined || taskEquivalent(base, survivor)) {
+      return null;
+    }
+    return {
+      kind: "task",
+      id: base.id,
+      field: null,
+      reason: "Task deletion conflicts with modification",
+    };
   }
-  if (local === undefined) {
-    return remote !== undefined &&
-      taskSemanticallyEqual(base, remote)
-      ? null
-      : `Task ${base.id} was deleted locally and modified remotely`;
-  }
-  if (remote === undefined) {
-    return taskSemanticallyEqual(base, local)
-      ? null
-      : `Task ${base.id} was deleted remotely and modified locally`;
+
+  const fields = {
+    title: mergeValue(base.title, local.title, remote.title),
+    scheduled_date: mergeValue(
+      base.scheduled_date,
+      local.scheduled_date,
+      remote.scheduled_date,
+    ),
+    priority: mergeValue(base.priority, local.priority, remote.priority),
+    context: mergeValue(base.context, local.context, remote.context),
+    reference: mergeValue(
+      base.reference,
+      local.reference,
+      remote.reference,
+    ),
+    note: mergeValue(base.note, local.note, remote.note),
+    reminder_time: mergeValue(
+      base.reminder_time,
+      local.reminder_time,
+      remote.reminder_time,
+    ),
+    recurrence_series_id: mergeValue(
+      base.recurrence_series_id,
+      local.recurrence_series_id,
+      remote.recurrence_series_id,
+    ),
+    recurrence_occurrence_date: mergeValue(
+      base.recurrence_occurrence_date,
+      local.recurrence_occurrence_date,
+      remote.recurrence_occurrence_date,
+    ),
+    completed_at: mergeValue(
+      base.completed_at,
+      local.completed_at,
+      remote.completed_at,
+    ),
+  };
+
+  for (const [field, result] of Object.entries(fields)) {
+    if (!result.ok) {
+      return {
+        kind: "task",
+        id: base.id,
+        field,
+        reason: `Task ${base.id} has conflicting ${field} changes`,
+      };
+    }
   }
 
   if (
-    local.created_at !== base.created_at ||
-    remote.created_at !== base.created_at
+    !fields.title.ok ||
+    !fields.scheduled_date.ok ||
+    !fields.priority.ok ||
+    !fields.context.ok ||
+    !fields.reference.ok ||
+    !fields.note.ok ||
+    !fields.reminder_time.ok ||
+    !fields.recurrence_series_id.ok ||
+    !fields.recurrence_occurrence_date.ok ||
+    !fields.completed_at.ok
   ) {
-    return `Task ${base.id} changed immutable created_at metadata`;
-  }
-
-  const title = mergeValue(
-    "title",
-    base.title,
-    local.title,
-    remote.title,
-  );
-  const scheduledDate = mergeValue(
-    "scheduled_date",
-    base.scheduled_date,
-    local.scheduled_date,
-    remote.scheduled_date,
-  );
-  const priority = mergeValue(
-    "priority",
-    base.priority,
-    local.priority,
-    remote.priority,
-  );
-  const context = mergeValue(
-    "context",
-    base.context,
-    local.context,
-    remote.context,
-  );
-  const reference = mergeValue(
-    "reference",
-    base.reference,
-    local.reference,
-    remote.reference,
-  );
-  const note = mergeValue(
-    "note",
-    base.note,
-    local.note,
-    remote.note,
-  );
-  const reminderTime = mergeValue(
-    "reminder_time",
-    base.reminder_time,
-    local.reminder_time,
-    remote.reminder_time,
-  );
-  const recurrenceSeriesId = mergeValue(
-    "recurrence_series_id",
-    base.recurrence_series_id,
-    local.recurrence_series_id,
-    remote.recurrence_series_id,
-  );
-  const recurrenceOccurrenceDate = mergeValue(
-    "recurrence_occurrence_date",
-    base.recurrence_occurrence_date,
-    local.recurrence_occurrence_date,
-    remote.recurrence_occurrence_date,
-  );
-  const completedAt = mergeValue(
-    "completed_at",
-    base.completed_at,
-    local.completed_at,
-    remote.completed_at,
-  );
-
-  const values = [
-    title,
-    scheduledDate,
-    priority,
-    context,
-    reference,
-    note,
-    reminderTime,
-    recurrenceSeriesId,
-    recurrenceOccurrenceDate,
-    completedAt,
-  ];
-  const conflict = values.find(
-    (value): value is ConflictingValue =>
-      value.state === "conflict",
-  );
-  if (conflict !== undefined) {
-    return `Task ${base.id} has conflicting ${conflict.field} changes`;
-  }
-  if (
-    title.state !== "merged" ||
-    scheduledDate.state !== "merged" ||
-    priority.state !== "merged" ||
-    context.state !== "merged" ||
-    reference.state !== "merged" ||
-    note.state !== "merged" ||
-    reminderTime.state !== "merged" ||
-    recurrenceSeriesId.state !== "merged" ||
-    recurrenceOccurrenceDate.state !== "merged" ||
-    completedAt.state !== "merged"
-  ) {
-    return `Task ${base.id} reconciliation did not resolve every field`;
+    throw new Error("Unreachable Task reconciliation state");
   }
 
   return validateTask({
     id: base.id,
-    title: title.value,
-    scheduled_date: scheduledDate.value,
+    title: fields.title.value,
+    scheduled_date: fields.scheduled_date.value,
     position:
-      completedAt.value === null
+      fields.completed_at.value === null
         ? base.position ?? local.position ?? remote.position ?? 0
         : null,
-    priority: priority.value,
-    context: context.value,
-    reference: reference.value,
-    note: note.value,
-    reminder_time: reminderTime.value,
-    recurrence_series_id: recurrenceSeriesId.value,
-    recurrence_occurrence_date: recurrenceOccurrenceDate.value,
-    completed_at: completedAt.value,
+    priority: fields.priority.value,
+    context: fields.context.value,
+    reference: fields.reference.value,
+    note: fields.note.value,
+    reminder_time: fields.reminder_time.value,
+    recurrence_series_id: fields.recurrence_series_id.value,
+    recurrence_occurrence_date:
+      fields.recurrence_occurrence_date.value,
+    completed_at: fields.completed_at.value,
     created_at: base.created_at,
-    updated_at: latestInstant(
+    updated_at: latest(
       base.updated_at,
       local.updated_at,
       remote.updated_at,
@@ -305,79 +224,79 @@ function mergeRecurrence(
   base: RecurrenceSeries | undefined,
   local: RecurrenceSeries | undefined,
   remote: RecurrenceSeries | undefined,
-): RecurrenceSeries | null | string {
+): RecurrenceSeries | ReconciliationConflict | null {
   if (base === undefined) {
-    if (local === undefined) {
-      return remote ?? null;
+    if (local === undefined || remote === undefined) {
+      return local ?? remote ?? null;
     }
-    if (remote === undefined) {
-      return local;
-    }
-    return recurrenceSemanticallyEqual(local, remote)
+    return recurrenceEquivalent(local, remote)
       ? validateRecurrenceSeries({
           ...local,
-          updated_at: latestInstant(
-            local.updated_at,
-            remote.updated_at,
-          ),
+          updated_at: latest(local.updated_at, remote.updated_at),
         })
-      : `Recurrence series ${local.id} was independently created with different content`;
+      : {
+          kind: "recurrence",
+          id: local.id,
+          field: null,
+          reason: "UUID collision with different recurrence content",
+        };
   }
 
-  if (local === undefined && remote === undefined) {
-    return null;
-  }
-  if (local === undefined) {
-    return remote !== undefined &&
-      recurrenceSemanticallyEqual(base, remote)
-      ? null
-      : `Recurrence series ${base.id} was deleted locally and modified remotely`;
-  }
-  if (remote === undefined) {
-    return recurrenceSemanticallyEqual(base, local)
-      ? null
-      : `Recurrence series ${base.id} was deleted remotely and modified locally`;
-  }
-
-  if (
-    local.created_at !== base.created_at ||
-    remote.created_at !== base.created_at
-  ) {
-    return `Recurrence series ${base.id} changed immutable created_at metadata`;
+  if (local === undefined || remote === undefined) {
+    const survivor = local ?? remote;
+    if (
+      survivor === undefined ||
+      recurrenceEquivalent(base, survivor)
+    ) {
+      return null;
+    }
+    return {
+      kind: "recurrence",
+      id: base.id,
+      field: null,
+      reason: "Recurrence deletion conflicts with modification",
+    };
   }
 
   const effectiveFrom = mergeValue(
-    "effective_from",
     base.effective_from,
     local.effective_from,
     remote.effective_from,
   );
   const endDate = mergeValue(
-    "end_date",
     base.end_date,
     local.end_date,
     remote.end_date,
   );
   const pattern = mergeValue(
-    "pattern",
     base.pattern,
     local.pattern,
     remote.pattern,
   );
-  const values = [effectiveFrom, endDate, pattern];
-  const conflict = values.find(
-    (value): value is ConflictingValue =>
-      value.state === "conflict",
-  );
-  if (conflict !== undefined) {
-    return `Recurrence series ${base.id} has conflicting ${conflict.field} changes`;
+
+  if (!effectiveFrom.ok) {
+    return {
+      kind: "recurrence",
+      id: base.id,
+      field: "effective_from",
+      reason: `Recurrence ${base.id} has conflicting effective_from changes`,
+    };
   }
-  if (
-    effectiveFrom.state !== "merged" ||
-    endDate.state !== "merged" ||
-    pattern.state !== "merged"
-  ) {
-    return `Recurrence series ${base.id} reconciliation did not resolve every field`;
+  if (!endDate.ok) {
+    return {
+      kind: "recurrence",
+      id: base.id,
+      field: "end_date",
+      reason: `Recurrence ${base.id} has conflicting end_date changes`,
+    };
+  }
+  if (!pattern.ok) {
+    return {
+      kind: "recurrence",
+      id: base.id,
+      field: "pattern",
+      reason: `Recurrence ${base.id} has conflicting pattern changes`,
+    };
   }
 
   return validateRecurrenceSeries({
@@ -386,7 +305,7 @@ function mergeRecurrence(
     end_date: endDate.value,
     pattern: pattern.value,
     created_at: base.created_at,
-    updated_at: latestInstant(
+    updated_at: latest(
       base.updated_at,
       local.updated_at,
       remote.updated_at,
@@ -394,36 +313,13 @@ function mergeRecurrence(
   });
 }
 
-function taskMap(
-  tasks: readonly Task[],
-): ReadonlyMap<string, Task> {
-  return new Map(tasks.map((task) => [task.id, task] as const));
+function indexById<T extends { readonly id: string }>(
+  values: readonly T[],
+): ReadonlyMap<string, T> {
+  return new Map(values.map((value) => [value.id, value]));
 }
 
-function recurrenceMap(
-  recurrences: readonly RecurrenceSeries[],
-): ReadonlyMap<string, RecurrenceSeries> {
-  return new Map(
-    recurrences.map((series) => [series.id, series] as const),
-  );
-}
-
-type RelativeOrder = -1 | 1;
-
-function orderRelation(
-  sequence: readonly string[],
-  left: string,
-  right: string,
-): RelativeOrder | null {
-  const leftIndex = sequence.indexOf(left);
-  const rightIndex = sequence.indexOf(right);
-  if (leftIndex < 0 || rightIndex < 0) {
-    return null;
-  }
-  return leftIndex < rightIndex ? -1 : 1;
-}
-
-function sequenceForDate(
+function sequence(
   tasks: readonly Task[],
   date: string,
 ): readonly string[] {
@@ -440,155 +336,126 @@ function sequenceForDate(
     .map((task) => task.id);
 }
 
+function relation(
+  ids: readonly string[],
+  left: string,
+  right: string,
+): -1 | 1 | null {
+  const a = ids.indexOf(left);
+  const b = ids.indexOf(right);
+  return a < 0 || b < 0 ? null : a < b ? -1 : 1;
+}
+
 function mergedOrder(
   date: string,
   ids: readonly string[],
   baseTasks: readonly Task[],
   localTasks: readonly Task[],
   remoteTasks: readonly Task[],
-  mergedById: ReadonlyMap<string, Task>,
-): readonly string[] | string {
-  const base = sequenceForDate(baseTasks, date);
-  const local = sequenceForDate(localTasks, date);
-  const remote = sequenceForDate(remoteTasks, date);
+  tasks: ReadonlyMap<string, Task>,
+): readonly string[] | null {
+  const base = sequence(baseTasks, date);
+  const local = sequence(localTasks, date);
+  const remote = sequence(remoteTasks, date);
   const edges = new Map<string, Set<string>>();
-  const indegree = new Map(ids.map((id) => [id, 0] as const));
+  const degree = new Map(ids.map((id) => [id, 0]));
 
   const add = (before: string, after: string): void => {
     const targets = edges.get(before) ?? new Set<string>();
-    if (!targets.has(after)) {
-      targets.add(after);
-      edges.set(before, targets);
-      indegree.set(after, (indegree.get(after) ?? 0) + 1);
-    }
+    if (targets.has(after)) return;
+    targets.add(after);
+    edges.set(before, targets);
+    degree.set(after, (degree.get(after) ?? 0) + 1);
   };
 
-  for (let leftIndex = 0; leftIndex < ids.length; leftIndex += 1) {
-    const left = ids[leftIndex];
-    if (left === undefined) {
-      continue;
-    }
-    for (
-      let rightIndex = leftIndex + 1;
-      rightIndex < ids.length;
-      rightIndex += 1
-    ) {
-      const right = ids[rightIndex];
-      if (right === undefined) {
-        continue;
-      }
-      const baseRelation = orderRelation(base, left, right);
-      const localRelation = orderRelation(local, left, right);
-      const remoteRelation = orderRelation(remote, left, right);
+  for (let i = 0; i < ids.length; i += 1) {
+    const left = ids[i];
+    if (left === undefined) continue;
+    for (let j = i + 1; j < ids.length; j += 1) {
+      const right = ids[j];
+      if (right === undefined) continue;
 
-      let relation: RelativeOrder | null = null;
-      if (baseRelation === null) {
-        if (
-          localRelation !== null &&
-          remoteRelation !== null &&
-          localRelation !== remoteRelation
-        ) {
-          return `Ordering conflict on ${date}: ${left} and ${right}`;
-        }
-        relation = localRelation ?? remoteRelation;
-      } else {
-        const localChanged =
-          localRelation !== null &&
-          localRelation !== baseRelation;
-        const remoteChanged =
-          remoteRelation !== null &&
-          remoteRelation !== baseRelation;
-        if (
-          localChanged &&
-          remoteChanged &&
-          localRelation !== remoteRelation
-        ) {
-          return `Ordering conflict on ${date}: ${left} and ${right}`;
-        }
-        relation = localChanged
-          ? localRelation
-          : remoteChanged
-            ? remoteRelation
-            : baseRelation;
+      const b = relation(base, left, right);
+      const l = relation(local, left, right);
+      const r = relation(remote, left, right);
+      const lChanged = b !== null && l !== null && l !== b;
+      const rChanged = b !== null && r !== null && r !== b;
+
+      if (b === null && l !== null && r !== null && l !== r) {
+        return null;
+      }
+      if (lChanged && rChanged && l !== r) {
+        return null;
       }
 
-      if (relation === -1) {
-        add(left, right);
-      } else if (relation === 1) {
-        add(right, left);
-      }
+      const chosen =
+        b === null
+          ? l ?? r
+          : lChanged
+            ? l
+            : rChanged
+              ? r
+              : b;
+      if (chosen === -1) add(left, right);
+      if (chosen === 1) add(right, left);
     }
   }
 
-  const baseRank = new Map(
-    base.map((id, index) => [id, index] as const),
-  );
+  const baseRank = new Map(base.map((id, i) => [id, i]));
   const compare = (left: string, right: string): number => {
-    const leftBase = baseRank.get(left);
-    const rightBase = baseRank.get(right);
-    if (leftBase !== undefined || rightBase !== undefined) {
-      if (leftBase === undefined) {
-        return 1;
-      }
-      if (rightBase === undefined) {
-        return -1;
-      }
-      if (leftBase !== rightBase) {
-        return leftBase - rightBase;
-      }
+    const a = baseRank.get(left);
+    const b = baseRank.get(right);
+    if (a !== undefined || b !== undefined) {
+      if (a === undefined) return 1;
+      if (b === undefined) return -1;
+      if (a !== b) return a - b;
     }
-    const leftTask = mergedById.get(left);
-    const rightTask = mergedById.get(right);
-    if (leftTask === undefined || rightTask === undefined) {
+    const x = tasks.get(left);
+    const y = tasks.get(right);
+    if (x === undefined || y === undefined) {
       return left.localeCompare(right);
     }
-    const created = leftTask.created_at.localeCompare(
-      rightTask.created_at,
+    return (
+      x.created_at.localeCompare(y.created_at) ||
+      left.localeCompare(right)
     );
-    return created !== 0 ? created : left.localeCompare(right);
   };
 
   const ready = ids
-    .filter((id) => (indegree.get(id) ?? 0) === 0)
+    .filter((id) => (degree.get(id) ?? 0) === 0)
     .sort(compare);
-  const ordered: string[] = [];
+  const result: string[] = [];
 
   while (ready.length > 0) {
-    const next = ready.shift();
-    if (next === undefined) {
-      break;
-    }
-    ordered.push(next);
-    for (const target of edges.get(next) ?? []) {
-      const nextDegree = (indegree.get(target) ?? 0) - 1;
-      indegree.set(target, nextDegree);
-      if (nextDegree === 0) {
-        ready.push(target);
+    const id = ready.shift();
+    if (id === undefined) break;
+    result.push(id);
+    for (const next of edges.get(id) ?? []) {
+      degree.set(next, (degree.get(next) ?? 0) - 1);
+      if (degree.get(next) === 0) {
+        ready.push(next);
         ready.sort(compare);
       }
     }
   }
-
-  return ordered.length === ids.length
-    ? ordered
-    : `Ordering conflict on ${date}: constraints form a cycle`;
+  return result.length === ids.length ? result : null;
 }
 
-function applyMergedOrdering(
+function orderTasks(
   tasks: readonly Task[],
-  baseTasks: readonly Task[],
-  localTasks: readonly Task[],
-  remoteTasks: readonly Task[],
-): readonly Task[] | string {
-  const byId = taskMap(tasks);
+  base: readonly Task[],
+  local: readonly Task[],
+  remote: readonly Task[],
+): readonly Task[] | null {
+  const byId = indexById(tasks);
+  const positions = new Map<string, number>();
   const dates = new Set(
     tasks
       .filter((task) => task.completed_at === null)
       .map((task) => task.scheduled_date),
   );
-  const positions = new Map<string, number>();
 
-  for (const date of [...dates].sort()) {
+  for (const date of dates) {
     const ids = tasks
       .filter(
         (task) =>
@@ -599,29 +466,23 @@ function applyMergedOrdering(
     const order = mergedOrder(
       date,
       ids,
-      baseTasks,
-      localTasks,
-      remoteTasks,
+      base,
+      local,
+      remote,
       byId,
     );
-    if (typeof order === "string") {
-      return order;
-    }
-    order.forEach((id, position) => {
-      positions.set(id, position);
-    });
+    if (order === null) return null;
+    order.forEach((id, position) => positions.set(id, position));
   }
 
   return tasks.map((task) =>
-    task.completed_at === null
-      ? validateTask({
-          ...task,
-          position: positions.get(task.id) ?? 0,
-        })
-      : validateTask({
-          ...task,
-          position: null,
-        }),
+    validateTask({
+      ...task,
+      position:
+        task.completed_at === null
+          ? positions.get(task.id) ?? 0
+          : null,
+    }),
   );
 }
 
@@ -629,17 +490,16 @@ export function canonicalPlanningEqual(
   left: CanonicalPlanning,
   right: CanonicalPlanning,
 ): boolean {
-  const normalizeTasks = (tasks: readonly Task[]): readonly Task[] =>
-    [...tasks].sort((a, b) => a.id.localeCompare(b.id));
-  const normalizeRecurrences = (
-    recurrences: readonly RecurrenceSeries[],
-  ): readonly RecurrenceSeries[] =>
-    [...recurrences].sort((a, b) => a.id.localeCompare(b.id));
+  const tasks = (values: readonly Task[]) =>
+    [...values].sort((a, b) => a.id.localeCompare(b.id));
+  const recurrences = (values: readonly RecurrenceSeries[]) =>
+    [...values].sort((a, b) => a.id.localeCompare(b.id));
   return (
-    JSON.stringify(normalizeTasks(left.tasks)) ===
-      JSON.stringify(normalizeTasks(right.tasks)) &&
-    JSON.stringify(normalizeRecurrences(left.recurrences)) ===
-      JSON.stringify(normalizeRecurrences(right.recurrences))
+    same(tasks(left.tasks), tasks(right.tasks)) &&
+    same(
+      recurrences(left.recurrences),
+      recurrences(right.recurrences),
+    )
   );
 }
 
@@ -649,67 +509,83 @@ export function reconcileCanonicalPlanning(
   remote: CanonicalPlanning,
 ): CanonicalReconciliation {
   try {
-    assertRecurrenceState(base.tasks, base.recurrences);
-    assertRecurrenceState(local.tasks, local.recurrences);
-    assertRecurrenceState(remote.tasks, remote.recurrences);
+    for (const state of [base, local, remote]) {
+      assertRecurrenceState(state.tasks, state.recurrences);
+    }
 
-    const baseTasks = taskMap(base.tasks);
-    const localTasks = taskMap(local.tasks);
-    const remoteTasks = taskMap(remote.tasks);
+    const mergedTasks: Task[] = [];
+    const baseTasks = indexById(base.tasks);
+    const localTasks = indexById(local.tasks);
+    const remoteTasks = indexById(remote.tasks);
     const taskIds = new Set([
       ...baseTasks.keys(),
       ...localTasks.keys(),
       ...remoteTasks.keys(),
     ]);
-    const mergedTasks: Task[] = [];
 
-    for (const id of [...taskIds].sort()) {
-      const merged = mergeTask(
+    for (const id of taskIds) {
+      const result = mergeTask(
         baseTasks.get(id),
         localTasks.get(id),
         remoteTasks.get(id),
       );
-      if (typeof merged === "string") {
-        return { state: "conflict", reason: merged };
+      if (
+        result !== null &&
+        "kind" in result
+      ) {
+        return conflict(
+          result.kind,
+          result.reason,
+          result.id,
+          result.field,
+        );
       }
-      if (merged !== null) {
-        mergedTasks.push(merged);
-      }
+      if (result !== null) mergedTasks.push(result);
     }
 
-    const baseRecurrences = recurrenceMap(base.recurrences);
-    const localRecurrences = recurrenceMap(local.recurrences);
-    const remoteRecurrences = recurrenceMap(remote.recurrences);
+    const mergedRecurrences: RecurrenceSeries[] = [];
+    const baseRecurrences = indexById(base.recurrences);
+    const localRecurrences = indexById(local.recurrences);
+    const remoteRecurrences = indexById(remote.recurrences);
     const recurrenceIds = new Set([
       ...baseRecurrences.keys(),
       ...localRecurrences.keys(),
       ...remoteRecurrences.keys(),
     ]);
-    const mergedRecurrences: RecurrenceSeries[] = [];
 
-    for (const id of [...recurrenceIds].sort()) {
-      const merged = mergeRecurrence(
+    for (const id of recurrenceIds) {
+      const result = mergeRecurrence(
         baseRecurrences.get(id),
         localRecurrences.get(id),
         remoteRecurrences.get(id),
       );
-      if (typeof merged === "string") {
-        return { state: "conflict", reason: merged };
+      if (
+        result !== null &&
+        "kind" in result
+      ) {
+        return conflict(
+          result.kind,
+          result.reason,
+          result.id,
+          result.field,
+        );
       }
-      if (merged !== null) {
-        mergedRecurrences.push(merged);
-      }
+      if (result !== null) mergedRecurrences.push(result);
     }
 
-    const ordered = applyMergedOrdering(
+    const ordered = orderTasks(
       mergedTasks,
       base.tasks,
       local.tasks,
       remote.tasks,
     );
-    if (typeof ordered === "string") {
-      return { state: "conflict", reason: ordered };
+    if (ordered === null) {
+      return conflict(
+        "ordering",
+        "Combined Task ordering constraints conflict",
+      );
     }
+
     assertRecurrenceState(ordered, mergedRecurrences);
     return {
       state: "merged",
@@ -719,13 +595,10 @@ export function reconcileCanonicalPlanning(
       },
     };
   } catch (error) {
-    return {
-      state: "conflict",
-      reason:
-        error instanceof Error
-          ? error.message
-          : "Canonical reconciliation failed validation",
-    };
+    const reason =
+      error instanceof Error
+        ? error.message
+        : "Canonical reconciliation failed validation";
+    return conflict("validation", reason);
   }
 }
-
