@@ -13,6 +13,8 @@ import {
   type PortableRemoteObservation,
   type SynchronizationRemote,
 } from "./git";
+import type { Task } from "../core/task";
+import type { RecurrenceSeries } from "../core/recurrence";
 import type {
   LocalGitSnapshotState,
   RemoteGitSynchronization,
@@ -265,8 +267,8 @@ export function createSyncController(
 
   const applyRemotePlanning = async (
     observation: PortableRemoteObservation,
-    tasks: readonly import("../../src/core/task").Task[],
-    recurrences: readonly import("../../src/core/recurrence").RecurrenceSeries[],
+    tasks: readonly Task[],
+    recurrences: readonly RecurrenceSeries[],
   ): Promise<number> => {
     const state = await readCanonicalState(db);
     if (
