@@ -239,6 +239,7 @@ export function SettingsView({
                 label="Theme"
                 value={themePreset}
                 options={THEME_OPTIONS}
+                controlClassName="jig-mobile-touch-control"
                 onChange={(value) => {
                   if (isThemePreset(value)) {
                     onThemePresetChange(value);
@@ -255,9 +256,21 @@ export function SettingsView({
                 }}
                 layout="fill"
               >
-                <SegmentedControlItem value="system" label="System" />
-                <SegmentedControlItem value="light" label="Light" />
-                <SegmentedControlItem value="dark" label="Dark" />
+                <SegmentedControlItem
+                  value="system"
+                  label="System"
+                  className="jig-mobile-touch-control"
+                />
+                <SegmentedControlItem
+                  value="light"
+                  label="Light"
+                  className="jig-mobile-touch-control"
+                />
+                <SegmentedControlItem
+                  value="dark"
+                  label="Dark"
+                  className="jig-mobile-touch-control"
+                />
               </SegmentedControl>
             </VStack>
           </Section>
