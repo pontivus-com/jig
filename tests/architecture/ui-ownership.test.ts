@@ -379,6 +379,11 @@ describe("UI ownership architecture", () => {
     );
     expect(taskEditor).toContain('presentation="adaptive"');
     expect(taskEditor).toContain("jig-mobile-selector-option");
+    const taskRow = source("ui/src/task-row.tsx");
+    expect(taskRow).toContain("TaskCompletionControl");
+    expect(taskRow).toContain('className="jig-task-completion-target"');
+    expect(taskRow).toContain("<CheckboxInput");
+    expect(taskRow).toContain("inputRef.current?.click()");
     expect(source("ui/src/settings.tsx")).toContain(
       'presentation="adaptive"',
     );
