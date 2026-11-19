@@ -954,6 +954,52 @@ export async function markAdoptedHead(
   );
 }
 
+export async function applySynchronizedCanonicalState(
+  connection: JigSqlConnection,
+  expectedRevision: number,
+  tasks: readonly Task[],
+  recurrences: readonly RecurrenceSeries[],
+  adoptedHead: string,
+): Promise<CanonicalState> {
+  assertRecurrenceState(tasks, recurrences);
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+    throw new PersistenceConfigurationError(
+      "Expected synchronization revision must be a non-negative integer",
+    );
+  }
+
+  return withTransaction(connection, async () => {
+    const current = await readCanonicalState(connection);
+    if (current.revision !== expectedRevision) {
+      throw new StaleRevisionError(current.revision);
+    }
+
+    await persistCanonicalSet(
+      connection,
+      current.tasks,
+      current.recurrences,
+      tasks,
+      recurrences,
+    );
+    const revision = current.revision + 1;
+    await connection.execute(
+      `UPDATE app_metadata
+       SET
+         revision = ?,
+         last_adopted_head = ?,
+         pending_sync = 1
+       WHERE singleton = 1`,
+      [revision, adoptedHead],
+    );
+
+    return {
+      revision,
+      tasks: await readTasks(connection),
+      recurrences: await readRecurrences(connection),
+    };
+  });
+}
+
 export async function adoptCanonicalSnapshot(
   connection: JigSqlConnection,
   tasks: readonly Task[],
