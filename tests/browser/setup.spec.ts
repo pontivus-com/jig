@@ -288,7 +288,7 @@ test("bootstrap keeps invalid repository errors and the entered path", async ({
 
 test("Connect GitHub shows the provider-required code without protocol controls", async ({
   page,
-}) => {
+}, testInfo) => {
   await preventExternalWindows(page);
   await page.route("**/api/v1/setup/status", async (route) => {
     await route.fulfill({
@@ -338,8 +338,12 @@ test("Connect GitHub shows the provider-required code without protocol controls"
     .click();
 
   await expect(page.locator(".jig-setup-value")).toContainText(
-    "Same plan. Different devices.",
+    "Plan your week. Keep the data yours.",
   );
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-authorization-desktop.png"),
+    fullPage: true,
+  });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".jig-setup-value")).toHaveCount(0);
@@ -367,11 +371,15 @@ test("Connect GitHub shows the provider-required code without protocol controls"
   await expect(page.getByText(/Grant repository access/i)).toHaveCount(0);
   await expect(page.getByText(/Manage GitHub access/i)).toHaveCount(0);
   await expect(page.getByText(/client_secret|Redirect URI/i)).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-authorization-mobile-390.png"),
+    fullPage: true,
+  });
 });
 
 test("GitHub access is observed automatically and stops only for a genuine repository choice", async ({
   page,
-}) => {
+}, testInfo) => {
   await preventExternalWindows(page);
   let stateReads = 0;
 
@@ -468,11 +476,15 @@ test("GitHub access is observed automatically and stops only for a genuine repos
     }),
   ).toBeVisible();
   await expect(page.locator(".jig-setup-value")).toContainText(
-    "Choose one repository.",
+    "Plan your week. Keep the data yours.",
   );
   await expect(
     page.getByRole("button", { name: "example/planning" }),
   ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-repository-desktop.png"),
+    fullPage: true,
+  });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".jig-setup-value")).toHaveCount(0);
@@ -485,13 +497,17 @@ test("GitHub access is observed automatically and stops only for a genuine repos
     page.getByRole("button", { name: "example/personal" }),
   ).toBeVisible();
   await expect(page.getByText(/Refresh access/i)).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-repository-mobile-390.png"),
+    fullPage: true,
+  });
 });
 
-test("narrow finishing and recovery remain focused onboarding states", async ({
+test("finishing and recovery preserve governed desktop and narrow hierarchy", async ({
   page,
-}) => {
+}, testInfo) => {
   await preventExternalWindows(page);
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.route("**/api/v1/setup/status", async (route) => {
     await route.fulfill({
@@ -536,7 +552,9 @@ test("narrow finishing and recovery remain focused onboarding states", async ({
     .getByRole("button", { name: "Connect GitHub repository" })
     .click();
 
-  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(page.locator(".jig-setup-value")).toContainText(
+    "Plan your week. Keep the data yours.",
+  );
   await expect(
     page.getByRole("heading", { name: "Getting your plan ready…" }),
   ).toBeVisible();
@@ -546,6 +564,16 @@ test("narrow finishing and recovery remain focused onboarding states", async ({
       { exact: true },
     ),
   ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-finishing-desktop.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-finishing-mobile-390.png"),
+    fullPage: true,
+  });
 
   snapshot = {
     available: true,
@@ -555,20 +583,34 @@ test("narrow finishing and recovery remain focused onboarding states", async ({
     repositories: [],
     error: "GitHub hasn’t made a repository available yet.",
   };
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.reload();
   await page
     .getByRole("button", { name: "Connect GitHub repository" })
     .click();
 
-  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(page.locator(".jig-setup-value")).toContainText(
+    "Plan your week. Keep the data yours.",
+  );
   await expect(
     page.getByRole("heading", { name: "Connection needs attention" }),
   ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-attention-desktop.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
   await expect(
     page.getByText("GitHub hasn’t made a repository available yet.", {
       exact: true,
     }),
   ).toBeVisible();
+
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-attention-mobile-390.png"),
+    fullPage: true,
+  });
 
   for (const label of ["Open GitHub", "Try again"]) {
     const box = await page.getByRole("button", { name: label }).boundingBox();
