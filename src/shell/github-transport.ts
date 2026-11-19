@@ -160,10 +160,6 @@ export async function assertManagedGitHubSynchronizationRemote(
   }
 }
 
-function nonRetryableIssue(): RepositorySynchronizationResult {
-  return { status: "sync-issue", retryable: false };
-}
-
 function refreshAuthorizationFailed(error: unknown): boolean {
   return (
     error instanceof GitHubAuthError &&
