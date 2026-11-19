@@ -822,20 +822,20 @@ test("dedicated-handle drag survives twenty sequential cycles without stranded s
   }
 });
 
-test("outside drop and pointer cancellation restore exactly without mutation", async ({
+test("outside drop restores exactly without mutation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
-  await createTask(page, "Terminal cleanup source", today);
-  await createTask(page, "Terminal cleanup peer", today);
+  await createTask(page, "Outside-drop source", today);
+  await createTask(page, "Outside-drop peer", today);
   await page.reload();
 
-  const before = await taskByTitle(page, "Terminal cleanup source");
-  const source = await dragHandle(page, "Terminal cleanup source");
+  const before = await taskByTitle(page, "Outside-drop source");
+  const source = await dragHandle(page, "Outside-drop source");
   const sourceBox = await source.boundingBox();
   if (sourceBox === null) {
-    throw new Error("Terminal cleanup source geometry unavailable");
+    throw new Error("Outside-drop source geometry unavailable");
   }
 
   await page.mouse.move(
@@ -858,7 +858,11 @@ test("outside drop and pointer cancellation restore exactly without mutation", a
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
   await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
-  let after = await taskByTitle(page, "Terminal cleanup source");
+  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+    "data-jig-drag-active",
+    "false",
+  );
+  const after = await taskByTitle(page, "Outside-drop source");
   expect({
     date: after.scheduled_date,
     position: after.position,
@@ -866,12 +870,24 @@ test("outside drop and pointer cancellation restore exactly without mutation", a
     date: before.scheduled_date,
     position: before.position,
   });
+});
 
-  const touchSource = await dragHandle(page, "Terminal cleanup source");
-  const touchBox = await touchSource.boundingBox();
-  if (touchBox === null) {
+test("pointer cancellation clears touch drag without mutation", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Pointer-cancel source", today);
+  await createTask(page, "Pointer-cancel peer", today);
+  await page.reload();
+
+  const before = await taskByTitle(page, "Pointer-cancel source");
+  const source = await dragHandle(page, "Pointer-cancel source");
+  const sourceBox = await source.boundingBox();
+  if (sourceBox === null) {
     throw new Error("Pointer-cancel source geometry unavailable");
   }
+
   const client = await page.context().newCDPSession(page);
   const point = (x: number, y: number) => ({
     x,
@@ -879,28 +895,21 @@ test("outside drop and pointer cancellation restore exactly without mutation", a
     radiusX: 1,
     radiusY: 1,
     force: 1,
-    id: 57,
+    id: 41,
   });
+  const x = sourceBox.x + sourceBox.width / 2;
+  const y = sourceBox.y + sourceBox.height / 2;
 
   await client.send("Input.dispatchTouchEvent", {
     type: "touchStart",
-    touchPoints: [
-      point(
-        touchBox.x + touchBox.width / 2,
-        touchBox.y + touchBox.height / 2,
-      ),
-    ],
+    touchPoints: [point(x, y)],
   });
   await client.send("Input.dispatchTouchEvent", {
     type: "touchMove",
-    touchPoints: [
-      point(
-        touchBox.x + touchBox.width / 2 + 8,
-        touchBox.y + touchBox.height / 2 + 8,
-      ),
-    ],
+    touchPoints: [point(x + 8, y + 8)],
   });
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
   await client.send("Input.dispatchTouchEvent", {
     type: "touchCancel",
     touchPoints: [],
@@ -913,7 +922,7 @@ test("outside drop and pointer cancellation restore exactly without mutation", a
     "data-jig-drag-active",
     "false",
   );
-  after = await taskByTitle(page, "Terminal cleanup source");
+  const after = await taskByTitle(page, "Pointer-cancel source");
   expect({
     date: after.scheduled_date,
     position: after.position,
@@ -1200,39 +1209,59 @@ test("Task-body touch scroll never activates drag", async ({ page }) => {
   }
   await page.reload();
 
-  const body = (await taskCard(page, "Body-scroll task 1")).locator(
+  const frame = page.locator(".jig-content-frame");
+  const frameGeometry = await frame.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(frameGeometry.scrollHeight).toBeGreaterThan(
+    frameGeometry.clientHeight,
+  );
+
+  const body = (await taskCard(page, "Body-scroll task 2")).locator(
     ".jig-task-body",
   );
+  await body.scrollIntoViewIfNeeded();
   const bodyBox = await body.boundingBox();
   if (bodyBox === null) {
     throw new Error("Task-body scroll geometry unavailable");
   }
 
   const client = await page.context().newCDPSession(page);
+  await client.send("Emulation.setTouchEmulationEnabled", {
+    enabled: true,
+    maxTouchPoints: 1,
+  });
   const point = (x: number, y: number) => ({
     x,
     y,
     radiusX: 1,
     radiusY: 1,
     force: 1,
-    id: 71,
+    id: 1,
   });
   const x = bodyBox.x + bodyBox.width / 2;
-  const startY = bodyBox.y + bodyBox.height / 2;
+  const startY = bodyBox.y + Math.min(bodyBox.height / 2, 24);
 
   await client.send("Input.dispatchTouchEvent", {
     type: "touchStart",
     touchPoints: [point(x, startY)],
   });
-  for (let step = 1; step <= 8; step += 1) {
+  await page.waitForTimeout(40);
+  for (let step = 1; step <= 6; step += 1) {
     await client.send("Input.dispatchTouchEvent", {
       type: "touchMove",
-      touchPoints: [point(x, startY - step * 28)],
+      touchPoints: [point(x, startY - step * 24)],
     });
+    await page.waitForTimeout(40);
   }
   await client.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],
+  });
+  await page.waitForTimeout(80);
+  await client.send("Emulation.setTouchEmulationEnabled", {
+    enabled: false,
   });
   await client.detach();
 
@@ -1242,14 +1271,10 @@ test("Task-body touch scroll never activates drag", async ({ page }) => {
     "false",
   );
   await expect(
-    page.getByRole("dialog", { name: "Body-scroll task 1" }),
+    page.getByRole("dialog", { name: "Body-scroll task 2" }),
   ).toHaveCount(0);
   await expect
-    .poll(async () =>
-      page.locator(".jig-content-frame").evaluate(
-        (element) => element.scrollTop,
-      ),
-    )
+    .poll(async () => frame.evaluate((element) => element.scrollTop))
     .toBeGreaterThan(0);
 });
 
