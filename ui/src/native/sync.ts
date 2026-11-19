@@ -9,6 +9,7 @@ import {
 import type {
   RepositorySynchronizationStatus,
 } from "../../../src/protocol";
+import { serializeSnapshot } from "../../../src/portable";
 import {
   decideSynchronization,
   type SynchronizationFacts,
@@ -60,7 +61,7 @@ function factsForObservation(
   }
 }
 
-function snapshotsEqual(
+function filesEqual(
   left: ReadonlyMap<string, string>,
   right: ReadonlyMap<string, string>,
 ): boolean {
@@ -147,16 +148,13 @@ export function createAndroidSyncController(
         effects,
         metadata.dataset_id,
       );
-      const canonical = JSON.stringify({
-        tasks: state.tasks,
-        recurrences: state.recurrences,
-      });
-      const portable = JSON.stringify({
-        tasks: snapshot.tasks,
-        recurrences: snapshot.recurrences,
-      });
+      const canonical = serializeSnapshot(
+        state.tasks,
+        metadata.dataset_id,
+        state.recurrences,
+      );
 
-      if (canonical === portable) {
+      if (filesEqual(canonical.files, snapshot.files)) {
         if (
           metadata.last_exported_head !== head ||
           metadata.last_exported_revision !== state.revision
@@ -219,20 +217,17 @@ export function createAndroidSyncController(
         return false;
       }
 
-      const snapshot = await reopenAndroidPortableRepository(
-        effects,
+      const canonical = serializeSnapshot(
+        state.tasks,
         metadata.dataset_id,
+        state.recurrences,
       );
-      const canonicalMatchesRemote =
-        JSON.stringify({
-          tasks: state.tasks,
-          recurrences: state.recurrences,
-        }) ===
-        JSON.stringify({
-          tasks: observation.remote_snapshot.tasks,
-          recurrences: observation.remote_snapshot.recurrences,
-        });
-      if (!canonicalMatchesRemote) {
+      if (
+        !filesEqual(
+          canonical.files,
+          observation.remote_snapshot.files,
+        )
+      ) {
         return false;
       }
 
@@ -243,19 +238,7 @@ export function createAndroidSyncController(
         return false;
       }
 
-      const localSnapshotMatchesCanonical =
-        JSON.stringify({
-          tasks: snapshot.tasks,
-          recurrences: snapshot.recurrences,
-        }) ===
-        JSON.stringify({
-          tasks: state.tasks,
-          recurrences: state.recurrences,
-        });
-      if (
-        !localSnapshotMatchesCanonical &&
-        observation.local_head !== observation.remote_head
-      ) {
+      if (observation.local_head !== observation.remote_head) {
         await alignAndroidPortableHead(
           effects,
           observation.local_head,
@@ -341,9 +324,7 @@ export function createAndroidSyncController(
       }
 
       if (!allowPush) {
-        return setRemoteState(
-          (await localPending()) ? "pending" : "sync-issue",
-        );
+        return setRemoteState("sync-issue");
       }
 
       if (await localPending()) {
