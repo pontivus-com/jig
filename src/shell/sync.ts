@@ -3,11 +3,12 @@ import {
   ensurePortableData,
   EXPORT_DEBOUNCE_MS,
   EXPORT_MAX_FLUSH_MS,
-  inspectSynchronizationRemote,
   observePortableRemote,
   pushPortableDataRef,
   readCurrentPortableSnapshot,
+  retryDelayMs,
   serializeSnapshot,
+  SYNC_HEALTHY_POLL_MS,
   writePortableSnapshot,
   type GitAdapterConfig,
   type PortableRemoteObservation,
@@ -19,8 +20,7 @@ import type {
   RepositorySynchronizationStatus,
 } from "../protocol";
 import {
-  adoptEmptyDatasetIdentity,
-  applySynchronizedCanonicalState,
+  adoptCanonicalSnapshot,
   markAdoptedHead,
   markExported,
   readCanonicalState,
@@ -29,10 +29,8 @@ import {
 } from "../persistence/sqlite";
 import {
   decideSynchronization,
-  runSynchronizationRemoteOperation,
-  SYNCHRONIZATION_HEALTHY_POLL_MS,
-  synchronizationRetryDelayMs,
-} from "../synchronization";
+  type SynchronizationFacts,
+} from "../core/synchronization";
 
 export interface SyncConfiguration {
   readonly repository_path: string;
@@ -40,7 +38,7 @@ export interface SyncConfiguration {
 
 export interface SyncController {
   readonly start: () => Promise<void>;
-  readonly stop: () => Promise<void>;
+  readonly stop: () => void;
   readonly notifyMutation: () => void;
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
   readonly status: () => RepositorySynchronizationStatus;
@@ -50,7 +48,6 @@ export interface SyncEffects {
   readonly ensurePortableData: typeof ensurePortableData;
   readonly readCurrentSnapshot: typeof readCurrentPortableSnapshot;
   readonly writeSnapshot: typeof writePortableSnapshot;
-  readonly inspectRemote: typeof inspectSynchronizationRemote;
   readonly observeRemote: typeof observePortableRemote;
   readonly alignLocal: typeof alignPortableDataRef;
   readonly push: typeof pushPortableDataRef;
@@ -63,14 +60,13 @@ const REAL_EFFECTS: SyncEffects = {
   ensurePortableData,
   readCurrentSnapshot: readCurrentPortableSnapshot,
   writeSnapshot: writePortableSnapshot,
-  inspectRemote: inspectSynchronizationRemote,
   observeRemote: observePortableRemote,
   alignLocal: alignPortableDataRef,
   push: pushPortableDataRef,
   networkEnvironment: async () => ({}),
 };
 
-function filesEqual(
+function snapshotsEqual(
   left: ReadonlyMap<string, string>,
   right: ReadonlyMap<string, string>,
 ): boolean {
@@ -102,6 +98,57 @@ function remoteStatus(
       };
 }
 
+function synchronizationStatus(
+  localGit: LocalGitSnapshotState,
+  remote: SynchronizationRemote | null,
+  remoteState: Exclude<RemoteGitSynchronization["state"], "not-configured">,
+): RepositorySynchronizationStatus {
+  return {
+    local_git: localGit,
+    remote: remoteStatus(remote, remoteState),
+  };
+}
+
+function factsForObservation(
+  observation: PortableRemoteObservation,
+  localPending: boolean,
+): SynchronizationFacts {
+  switch (observation.state) {
+    case "none":
+      return {
+        kind: "no-remote",
+        local_pending: localPending,
+      };
+    case "ambiguous":
+    case "unsafe":
+      return { kind: "unsafe-remote" };
+    case "absent":
+      return {
+        kind: "remote-absent",
+        local_pending: localPending,
+        previously_synchronized:
+          observation.previously_synchronized,
+      };
+    case "present":
+      return {
+        kind: "remote-present",
+        local_pending: localPending,
+        remote_rewritten: observation.remote_rewritten,
+        lineage: observation.lineage,
+      };
+  }
+}
+
+function remoteFromObservation(
+  observation: PortableRemoteObservation,
+): SynchronizationRemote | null {
+  return observation.state === "absent" ||
+    observation.state === "present" ||
+    observation.state === "unsafe"
+    ? observation.remote
+    : null;
+}
+
 export function createSyncController(
   db: JigSqlConnection,
   config: SyncConfiguration,
@@ -115,13 +162,13 @@ export function createSyncController(
     repository_path: config.repository_path,
   };
 
-  let remote: SynchronizationRemote | null = null;
-  let currentStatus: RepositorySynchronizationStatus = {
-    local_git: "pending",
-    remote: remoteStatus(null, "pending"),
-  };
-  let running: Promise<RepositorySynchronizationStatus> | null =
-    null;
+  let remoteIdentity: SynchronizationRemote | null = null;
+  let currentStatus = synchronizationStatus(
+    "pending",
+    remoteIdentity,
+    "pending",
+  );
+  let running: Promise<RepositorySynchronizationStatus> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let firstDirtyAt: number | null = null;
   let localFailureCount = 0;
@@ -145,7 +192,7 @@ export function createSyncController(
     }, delayMs);
   };
 
-  const isPending = async (): Promise<boolean> => {
+  const localPending = async (): Promise<boolean> => {
     const metadata = await readMetadata(db);
     return (
       metadata.revision !== metadata.last_exported_revision ||
@@ -155,23 +202,20 @@ export function createSyncController(
   };
 
   const setStatus = async (
-    remoteState:
-      | "pending"
-      | "retrying"
-      | "synchronized"
-      | "sync-issue",
+    remoteState: "pending" | "retrying" | "synchronized" | "sync-issue",
   ): Promise<RepositorySynchronizationStatus> => {
-    currentStatus = {
-      local_git: (await isPending()) ? "pending" : "committed",
-      remote: remoteStatus(remote, remoteState),
-    };
+    currentStatus = synchronizationStatus(
+      (await localPending()) ? "pending" : "committed",
+      remoteIdentity,
+      remoteState,
+    );
     return currentStatus;
   };
 
   const structuralIssue =
     async (): Promise<RepositorySynchronizationStatus> => {
       const status = await setStatus("sync-issue");
-      schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
+      schedule(SYNC_HEALTHY_POLL_MS);
       return status;
     };
 
@@ -181,7 +225,7 @@ export function createSyncController(
       const status = await setStatus(
         remoteFailureCount >= 7 ? "sync-issue" : "retrying",
       );
-      schedule(synchronizationRetryDelayMs(remoteFailureCount));
+      schedule(retryDelayMs(remoteFailureCount));
       return status;
     };
 
@@ -196,12 +240,13 @@ export function createSyncController(
       if (current === null) {
         return;
       }
+
       const expected = serializeSnapshot(
         state.tasks,
         metadata.dataset_id,
         state.recurrences,
       );
-      if (filesEqual(current.snapshot.files, expected.files)) {
+      if (snapshotsEqual(current.snapshot.files, expected.files)) {
         if (
           metadata.last_exported_head !== current.head ||
           metadata.last_exported_revision !== state.revision
@@ -210,32 +255,23 @@ export function createSyncController(
         }
         return;
       }
+
       if (
         state.revision !== metadata.last_exported_revision ||
         metadata.pending_sync
       ) {
         return;
       }
-      await applySynchronizedCanonicalState(
+
+      const adopted = await adoptCanonicalSnapshot(
         db,
-        state.revision,
         current.snapshot.tasks,
         current.snapshot.recurrences,
-        current.head,
+        null,
+        state.revision,
       );
+      await markExported(db, adopted.revision, current.head);
     };
-
-  const localHeadIs = async (
-    expectedHead: string,
-  ): Promise<boolean> => {
-    const metadata = await readMetadata(db);
-    return (
-      await effects.readCurrentSnapshot(
-        adapter,
-        metadata.dataset_id,
-      )
-    )?.head === expectedHead;
-  };
 
   const exportCurrent = async (): Promise<string> => {
     const state = await readCanonicalState(db);
@@ -253,277 +289,278 @@ export function createSyncController(
     return head;
   };
 
+  const observe =
+    async (
+      environment: Readonly<Record<string, string>>,
+    ): Promise<PortableRemoteObservation> => {
+      const metadata = await readMetadata(db);
+      return effects.observeRemote(
+        adapter,
+        metadata.dataset_id,
+        metadata.last_adopted_head,
+        environment,
+      );
+    };
+
+  const finishInterruptedAdoption =
+    async (
+      observation: Extract<
+        PortableRemoteObservation,
+        { readonly state: "present" }
+      >,
+    ): Promise<boolean> => {
+      const state = await readCanonicalState(db);
+      const metadata = await readMetadata(db);
+      if (metadata.last_adopted_head !== observation.remote_head) {
+        return false;
+      }
+
+      const canonical = serializeSnapshot(
+        state.tasks,
+        metadata.dataset_id,
+        state.recurrences,
+      );
+      if (
+        !snapshotsEqual(
+          canonical.files,
+          observation.remote_snapshot.files,
+        )
+      ) {
+        return false;
+      }
+      if (
+        observation.lineage !== "equal" &&
+        observation.lineage !== "remote-ahead"
+      ) {
+        return false;
+      }
+      if (
+        observation.local_head !== null &&
+        observation.local_head !== observation.remote_head
+      ) {
+        await effects.alignLocal(
+          adapter,
+          observation.local_head,
+          observation.remote_head,
+        );
+      }
+      await markExported(
+        db,
+        state.revision,
+        observation.remote_head,
+      );
+      return true;
+    };
+
+  const adoptRemote =
+    async (
+      observation: Extract<
+        PortableRemoteObservation,
+        { readonly state: "present" }
+      >,
+    ): Promise<void> => {
+      if (observation.local_head === null) {
+        throw new Error("Local jig-data head is unavailable");
+      }
+      const state = await readCanonicalState(db);
+      const adopted = await adoptCanonicalSnapshot(
+        db,
+        observation.remote_snapshot.tasks,
+        observation.remote_snapshot.recurrences,
+        observation.remote_head,
+        state.revision,
+      );
+      await effects.alignLocal(
+        adapter,
+        observation.local_head,
+        observation.remote_head,
+      );
+      await markExported(
+        db,
+        adopted.revision,
+        observation.remote_head,
+      );
+    };
+
+  const synchronizeAfterObservation =
+    async (
+      observation: PortableRemoteObservation,
+      environment: Readonly<Record<string, string>>,
+      allowPush: boolean,
+    ): Promise<RepositorySynchronizationStatus | null> => {
+      remoteIdentity = remoteFromObservation(observation);
+      const pending = await localPending();
+      const decision = decideSynchronization(
+        factsForObservation(observation, pending),
+      );
+
+      if (decision.kind === "attention") {
+        return structuralIssue();
+      }
+
+      if (decision.kind === "local-only") {
+        if (pending) {
+          await exportCurrent();
+        }
+        firstDirtyAt = null;
+        remoteFailureCount = 0;
+        remoteIdentity = null;
+        currentStatus = {
+          local_git: "committed",
+          remote: {
+            state: "not-configured",
+            remote_name: null,
+            remote_location: null,
+          },
+        };
+        schedule(SYNC_HEALTHY_POLL_MS);
+        return currentStatus;
+      }
+
+      if (decision.kind === "synchronized") {
+        if (observation.state !== "present") {
+          return structuralIssue();
+        }
+        await markAdoptedHead(db, observation.remote_head);
+        firstDirtyAt = null;
+        remoteFailureCount = 0;
+        const status = await setStatus("synchronized");
+        schedule(SYNC_HEALTHY_POLL_MS);
+        return status;
+      }
+
+      if (decision.kind === "adopt-remote") {
+        if (observation.state !== "present") {
+          return structuralIssue();
+        }
+        try {
+          await adoptRemote(observation);
+        } catch {
+          return structuralIssue();
+        }
+        return null;
+      }
+
+      if (!allowPush) {
+        currentStatus = synchronizationStatus(
+          (await localPending()) ? "pending" : "committed",
+          remoteIdentity,
+          "pending",
+        );
+        schedule(0);
+        return currentStatus;
+      }
+
+      if (remoteIdentity === null) {
+        return structuralIssue();
+      }
+
+      if (await localPending()) {
+        await exportCurrent();
+      }
+
+      const pushResult = await effects.push(
+        adapter,
+        remoteIdentity,
+        environment,
+      );
+
+      let afterPush: PortableRemoteObservation;
+      try {
+        afterPush = await observe(environment);
+      } catch {
+        return transientIssue();
+      }
+      remoteIdentity = remoteFromObservation(afterPush);
+
+      if (pushResult.status === "sync-issue") {
+        const afterDecision = decideSynchronization(
+          factsForObservation(
+            afterPush,
+            await localPending(),
+          ),
+        );
+        if (afterDecision.kind === "push-local") {
+          return pushResult.retryable
+            ? transientIssue()
+            : structuralIssue();
+        }
+      }
+
+      return synchronizeAfterObservation(
+        afterPush,
+        environment,
+        false,
+      );
+    };
+
   const runOnce =
     async (): Promise<RepositorySynchronizationStatus> => {
       try {
-        await effects.ensurePortableData(
-          adapter,
-          (await readMetadata(db)).dataset_id,
-        );
+        const datasetId = (await readMetadata(db)).dataset_id;
+        await effects.ensurePortableData(adapter, datasetId);
         await reconcileConcreteLocalSnapshot();
         localFailureCount = 0;
       } catch {
         localFailureCount += 1;
-        currentStatus = {
-          local_git: "issue",
-          remote: remoteStatus(remote, "pending"),
-        };
-        schedule(synchronizationRetryDelayMs(localFailureCount));
+        currentStatus = synchronizationStatus(
+          "issue",
+          remoteIdentity,
+          "pending",
+        );
+        schedule(retryDelayMs(localFailureCount));
         return currentStatus;
       }
 
+      let environment: Readonly<Record<string, string>> | null;
       try {
-        remote = await effects.inspectRemote(adapter);
+        environment = await effects.networkEnvironment();
       } catch {
         return transientIssue();
       }
-
-      if (remote === null) {
-        try {
-          if (await isPending()) {
-            await exportCurrent();
-          }
-          firstDirtyAt = null;
-          remoteFailureCount = 0;
-          currentStatus = {
-            local_git: "committed",
-            remote: {
-              state: "not-configured",
-              remote_name: null,
-              remote_location: null,
-            },
-          };
-          schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
-          return currentStatus;
-        } catch {
-          localFailureCount += 1;
-          currentStatus = {
-            local_git: "issue",
-            remote: {
-              state: "not-configured",
-              remote_name: null,
-              remote_location: null,
-            },
-          };
-          schedule(synchronizationRetryDelayMs(localFailureCount));
-          return currentStatus;
-        }
-      }
-
-      let networkEnvironment:
-        Readonly<Record<string, string>> | null;
-      try {
-        networkEnvironment =
-          await runSynchronizationRemoteOperation(
-            effects.networkEnvironment,
-          );
-      } catch {
-        return transientIssue();
-      }
-      if (networkEnvironment === null) {
+      if (environment === null) {
         return structuralIssue();
       }
 
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        let observation: PortableRemoteObservation;
-        try {
-          const datasetId = (await readMetadata(db)).dataset_id;
-          observation =
-            await runSynchronizationRemoteOperation(
-              () =>
-                effects.observeRemote(
-                  adapter,
-                  datasetId,
-                  networkEnvironment,
-                ),
-            );
-        } catch {
-          return transientIssue();
-        }
-
-        if (observation.remote_state === "ambiguous") {
-          return structuralIssue();
-        }
-        if (observation.remote_state === "none") {
-          remote = null;
-          return setStatus("pending");
-        }
-        if (observation.authority.state === "selected") {
-          remote = observation.authority.remote;
-        }
-
-        if (observation.remote_state === "absent") {
-          if (observation.previous_remote_head !== null) {
-            return structuralIssue();
-          }
-          try {
-            if (await isPending()) {
-              await exportCurrent();
-            }
-            await runSynchronizationRemoteOperation(
-              () =>
-                effects.push(
-                  adapter,
-                  remote,
-                  networkEnvironment,
-                ),
-            );
-            continue;
-          } catch {
-            continue;
-          }
-        }
-
-        const remoteHead = observation.remote_head;
-        const localHead = observation.local_head;
-        const remoteSnapshot = observation.remote_snapshot;
-        if (
-          remoteHead === null ||
-          localHead === null ||
-          remoteSnapshot === null
-        ) {
-          return structuralIssue();
-        }
-
-        let state = await readCanonicalState(db);
-        let metadata = await readMetadata(db);
-
-        if (remoteSnapshot.dataset_id !== metadata.dataset_id) {
-          const emptyBootstrap =
-            state.revision === 0 &&
-            metadata.last_exported_revision === 0 &&
-            state.tasks.length === 0 &&
-            state.recurrences.length === 0;
-          if (!emptyBootstrap) {
-            return structuralIssue();
-          }
-          try {
-            await adoptEmptyDatasetIdentity(
-              db,
-              metadata.dataset_id,
-              remoteSnapshot.dataset_id,
-            );
-            state = await readCanonicalState(db);
-            const applied =
-              remoteSnapshot.tasks.length === 0 &&
-              remoteSnapshot.recurrences.length === 0
-                ? null
-                : await applySynchronizedCanonicalState(
-                    db,
-                    state.revision,
-                    remoteSnapshot.tasks,
-                    remoteSnapshot.recurrences,
-                    remoteHead,
-                  );
-            await effects.alignLocal(
-              adapter,
-              localHead,
-              remoteHead,
-            );
-            await markAdoptedHead(db, remoteHead);
-            await markExported(
-              db,
-              applied?.revision ?? state.revision,
-              remoteHead,
-            );
-            continue;
-          } catch {
-            return structuralIssue();
-          }
-        }
-
-        const localSnapshot = serializeSnapshot(
-          state.tasks,
-          metadata.dataset_id,
-          state.recurrences,
-        );
-        const pending =
-          state.revision !== metadata.last_exported_revision ||
-          metadata.last_exported_head === null ||
-          metadata.pending_sync;
-        const decision = decideSynchronization({
-          remote_rewritten: observation.remote_rewritten,
-          lineage: observation.lineage,
-          local_pending: pending,
-          canonical_matches_remote: filesEqual(
-            localSnapshot.files,
-            remoteSnapshot.files,
-          ),
-        });
-
-        if (decision === "attention") {
-          return structuralIssue();
-        }
-        if (decision === "synchronized") {
-          remoteFailureCount = 0;
-          firstDirtyAt = null;
-          const status = await setStatus("synchronized");
-          schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
-          return status;
-        }
-        if (decision === "adopt") {
-          try {
-            const representedRevision =
-              filesEqual(
-                localSnapshot.files,
-                remoteSnapshot.files,
-              )
-                ? state.revision
-                : (
-                    await applySynchronizedCanonicalState(
-                      db,
-                      state.revision,
-                      remoteSnapshot.tasks,
-                      remoteSnapshot.recurrences,
-                      remoteHead,
-                    )
-                  ).revision;
-            await effects.alignLocal(
-              adapter,
-              localHead,
-              remoteHead,
-            );
-            await markAdoptedHead(db, remoteHead);
-            await markExported(
-              db,
-              representedRevision,
-              remoteHead,
-            );
-            continue;
-          } catch {
-            continue;
-          }
-        }
-
-        try {
-          if (!(await localHeadIs(localHead))) {
-            continue;
-          }
-          if (await isPending()) {
-            await exportCurrent();
-          }
-          const pushed =
-            await runSynchronizationRemoteOperation(
-              () =>
-                effects.push(
-                  adapter,
-                  remote,
-                  networkEnvironment,
-                ),
-            );
-          if (
-            pushed.status === "sync-issue" &&
-            !pushed.retryable
-          ) {
-            return structuralIssue();
-          }
-          continue;
-        } catch {
-          continue;
-        }
+      let observation: PortableRemoteObservation;
+      try {
+        observation = await observe(environment);
+      } catch {
+        return transientIssue();
       }
 
-      return transientIssue();
+      remoteIdentity = remoteFromObservation(observation);
+
+      if (
+        observation.state === "present" &&
+        await finishInterruptedAdoption(observation)
+      ) {
+        observation = await observe(environment);
+        remoteIdentity = remoteFromObservation(observation);
+      }
+
+      try {
+        const result = await synchronizeAfterObservation(
+          observation,
+          environment,
+          true,
+        );
+        if (result !== null) {
+          return result;
+        }
+
+        const confirmed = await observe(environment);
+        remoteIdentity = remoteFromObservation(confirmed);
+        return (
+          await synchronizeAfterObservation(
+            confirmed,
+            environment,
+            false,
+          )
+        ) ?? structuralIssue();
+      } catch {
+        return transientIssue();
+      }
     };
 
   const trigger =
@@ -541,31 +578,34 @@ export function createSyncController(
   return {
     start: async () => {
       stopped = false;
-      await setStatus("pending");
+      const datasetId = (await readMetadata(db)).dataset_id;
+      await effects.ensurePortableData(adapter, datasetId);
+      await reconcileConcreteLocalSnapshot();
+      currentStatus = synchronizationStatus(
+        (await localPending()) ? "pending" : "committed",
+        remoteIdentity,
+        "pending",
+      );
       schedule(0);
     },
-    stop: async () => {
+    stop: () => {
       stopped = true;
       clearTimer();
-      const active = running;
-      if (active !== null) {
-        await active.catch(() => currentStatus);
-      }
     },
     notifyMutation: () => {
-      currentStatus = {
-        local_git: "pending",
-        remote: remoteStatus(remote, "pending"),
-      };
+      currentStatus = synchronizationStatus(
+        "pending",
+        remoteIdentity,
+        "pending",
+      );
       const now = Date.now();
       firstDirtyAt ??= now;
+      const latestTarget = now + EXPORT_DEBOUNCE_MS;
+      const maximumTarget = firstDirtyAt + EXPORT_MAX_FLUSH_MS;
       schedule(
         Math.max(
           0,
-          Math.min(
-            now + EXPORT_DEBOUNCE_MS,
-            firstDirtyAt + EXPORT_MAX_FLUSH_MS,
-          ) - now,
+          Math.min(latestTarget, maximumTarget) - now,
         ),
       );
     },
