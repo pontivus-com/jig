@@ -761,6 +761,15 @@ export async function observeAndroidPortableRemote(
       expectedDatasetId,
     );
   } catch {
+    if (previousRemoteHead !== null) {
+      await writeRef({
+        fs: effects.fs,
+        dir: effects.dir,
+        ref: trackingRef,
+        value: previousRemoteHead,
+        force: true,
+      });
+    }
     return {
       state: "unsafe",
       local_head: localHead,
