@@ -936,12 +936,14 @@ export async function observePortableRemote(
     };
   }
 
+  const priorRemoteHead =
+    previousRemoteHead ?? lastAdoptedHead;
   const remoteRewritten =
-    previousRemoteHead !== null &&
-    previousRemoteHead !== remoteHead &&
+    priorRemoteHead !== null &&
+    priorRemoteHead !== remoteHead &&
     (await ancestor(
       config.repository_path,
-      previousRemoteHead,
+      priorRemoteHead,
       remoteHead,
     )) !== true;
 
