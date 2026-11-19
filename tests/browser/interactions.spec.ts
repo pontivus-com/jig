@@ -768,6 +768,266 @@ test("desktop drag keeps a stable insertion intent through inter-card whitespace
   await page.mouse.up();
 });
 
+
+test("dedicated-handle drag survives twenty sequential cycles without stranded state", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Repeated drag source", today);
+  await createTask(page, "Repeated drag peer", today);
+  await page.reload();
+
+  const orderedTitles = async (): Promise<readonly string[]> =>
+    (await apiState(page)).tasks
+      .filter(
+        (task) =>
+          task.completed_at === null &&
+          task.scheduled_date === today,
+      )
+      .sort(
+        (left, right) =>
+          (left.position ?? 0) - (right.position ?? 0),
+      )
+      .map((task) => task.title);
+
+  for (let cycle = 0; cycle < 20; cycle += 1) {
+    const moveToEnd = cycle % 2 === 0;
+    const source = await dragHandle(page, "Repeated drag source");
+    const targetSlot = moveToEnd ? 2 : 0;
+    const target = page.locator(
+      \`[data-date="\${today}"] [data-jig-drop-slot="\${targetSlot}"]\`,
+    );
+    const intent = await mouseDrag(page, source, target);
+    expect(intent).toEqual({
+      date: today,
+      index: moveToEnd ? 1 : 0,
+    });
+
+    await expect
+      .poll(orderedTitles)
+      .toEqual(
+        moveToEnd
+          ? ["Repeated drag peer", "Repeated drag source"]
+          : ["Repeated drag source", "Repeated drag peer"],
+      );
+
+    await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+    await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+    await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+      "data-jig-drag-active",
+      "false",
+    );
+  }
+});
+
+test("outside drop and pointer cancellation restore exactly without mutation", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Terminal cleanup source", today);
+  await createTask(page, "Terminal cleanup peer", today);
+  await page.reload();
+
+  const before = await taskByTitle(page, "Terminal cleanup source");
+  const source = await dragHandle(page, "Terminal cleanup source");
+  const sourceBox = await source.boundingBox();
+  if (sourceBox === null) {
+    throw new Error("Terminal cleanup source geometry unavailable");
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 8,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 3 },
+  );
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+  await page.mouse.move(4, 4, { steps: 8 });
+  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+    "data-jig-drop-date",
+    "",
+  );
+  await page.mouse.up();
+
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+  let after = await taskByTitle(page, "Terminal cleanup source");
+  expect({
+    date: after.scheduled_date,
+    position: after.position,
+  }).toEqual({
+    date: before.scheduled_date,
+    position: before.position,
+  });
+
+  const touchSource = await dragHandle(page, "Terminal cleanup source");
+  const touchBox = await touchSource.boundingBox();
+  if (touchBox === null) {
+    throw new Error("Pointer-cancel source geometry unavailable");
+  }
+  const client = await page.context().newCDPSession(page);
+  const point = (x: number, y: number) => ({
+    x,
+    y,
+    radiusX: 1,
+    radiusY: 1,
+    force: 1,
+    id: 57,
+  });
+
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [
+      point(
+        touchBox.x + touchBox.width / 2,
+        touchBox.y + touchBox.height / 2,
+      ),
+    ],
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [
+      point(
+        touchBox.x + touchBox.width / 2 + 8,
+        touchBox.y + touchBox.height / 2 + 8,
+      ),
+    ],
+  });
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchCancel",
+    touchPoints: [],
+  });
+  await client.detach();
+
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+    "data-jig-drag-active",
+    "false",
+  );
+  after = await taskByTitle(page, "Terminal cleanup source");
+  expect({
+    date: after.scheduled_date,
+    position: after.position,
+  }).toEqual({
+    date: before.scheduled_date,
+    position: before.position,
+  });
+});
+
+test("default KeyboardSensor moves from the dedicated grip and commits once", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Keyboard drag source", today);
+  await createTask(page, "Keyboard drag peer", today);
+  await page.reload();
+
+  const handle = await dragHandle(page, "Keyboard drag source");
+  await handle.focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
+  const scope = page.locator(".jig-task-drag-scope");
+  let reachedTarget = false;
+  for (let step = 0; step < 16; step += 1) {
+    await page.keyboard.press("ArrowDown");
+    const date = await scope.getAttribute("data-jig-drop-date");
+    const index = await scope.getAttribute("data-jig-drop-index");
+    if (date === today && index === "1") {
+      reachedTarget = true;
+      break;
+    }
+  }
+  expect(reachedTarget).toBe(true);
+  await page.keyboard.press("Space");
+
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect
+    .poll(async () =>
+      (await apiState(page)).tasks
+        .filter(
+          (task) =>
+            task.completed_at === null &&
+            task.scheduled_date === today,
+        )
+        .sort(
+          (left, right) =>
+            (left.position ?? 0) - (right.position ?? 0),
+        )
+        .map((task) => task.title),
+    )
+    .toEqual(["Keyboard drag peer", "Keyboard drag source"]);
+});
+
+test("long Planner drag auto-scroll preserves a valid explicit insertion target", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1440, height: 600 });
+  const today = await browserCivilDate(page);
+  for (let index = 0; index < 24; index += 1) {
+    await createTask(page, \`Auto-scroll task \${index + 1}\`, today);
+  }
+  await page.reload();
+
+  const source = await dragHandle(page, "Auto-scroll task 1");
+  const sourceBox = await source.boundingBox();
+  if (sourceBox === null) {
+    throw new Error("Auto-scroll source geometry unavailable");
+  }
+  const frame = page.locator(".jig-content-frame");
+  await expect.poll(
+    async () => frame.evaluate((element) => element.scrollTop),
+  ).toBe(0);
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 8,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 3 },
+  );
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    await page.mouse.move(
+      sourceBox.x + sourceBox.width / 2,
+      575,
+      { steps: 4 },
+    );
+    await page.waitForTimeout(100);
+    const scrollTop = await frame.evaluate((element) => element.scrollTop);
+    if (scrollTop > 0) {
+      break;
+    }
+  }
+
+  const scrollTop = await frame.evaluate((element) => element.scrollTop);
+  expect(scrollTop).toBeGreaterThan(0);
+  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+    "data-jig-drop-date",
+    today,
+  );
+  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
+  await page.mouse.up();
+
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+});
+
 test("references stay data-only: HTTP(S) opens and non-HTTP stays copy-only", async ({
   page,
 }) => {
