@@ -119,6 +119,7 @@ async function touchDrag(
   source: Locator,
   target: Locator,
   targetYRatio = 0.5,
+  beforeRelease?: () => Promise<void>,
 ): Promise<{ readonly date: string; readonly index: number }> {
   const sourceBox = await source.boundingBox();
   if (sourceBox === null) {
@@ -193,6 +194,10 @@ async function touchDrag(
     date: element.getAttribute("data-jig-drop-date") ?? "",
     index: Number(element.getAttribute("data-jig-drop-index")),
   }));
+
+  if (beforeRelease !== undefined) {
+    await beforeRelease();
+  }
 
   await client.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
@@ -408,7 +413,7 @@ test("dedicated-handle desktop drag moves exactly once without runtime errors or
 
 test("selection focus and drag preserve the High-priority semantic cue", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
   await createTask(page, "Combined semantic source", today, { priority: "HIGH" });
@@ -518,6 +523,11 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
     targetBox.y + targetBox.height / 2,
     { steps: 8 },
   );
+  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-drag-active-desktop.png"),
+    fullPage: true,
+  });
   await page.mouse.up();
 });
 
@@ -579,7 +589,7 @@ test("dedicated-handle desktop drag reorders within a date at the exact target i
 
 test("narrow touch drag reorders within a date and does not open the workspace", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 390, height: 1600 });
   const today = await browserCivilDate(page);
   await createTask(page, "Touch first", today);
@@ -590,7 +600,18 @@ test("narrow touch drag reorders within a date and does not open the workspace",
   const target = page.locator(
     `[data-date="${today}"] [data-jig-drop-slot="2"]`,
   );
-  const intent = await touchDrag(page, source, target);
+  const intent = await touchDrag(
+    page,
+    source,
+    target,
+    0.5,
+    async () => {
+      await page.screenshot({
+        path: testInfo.outputPath("v1.1-drag-active-mobile-390.png"),
+        clip: { x: 0, y: 0, width: 390, height: 844 },
+      });
+    },
+  );
   expect(intent).toEqual({ date: today, index: 1 });
 
   await expect
