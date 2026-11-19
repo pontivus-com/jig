@@ -91,7 +91,7 @@ function TaskMetadata({
       {task.reference === null ? null : isSafeWebReference(task.reference) ? (
         <Link
           data-jig-drag-excluded="true"
-          className="jig-task-meta-item"
+          className="jig-task-reference-action jig-task-meta-item"
           href={task.reference}
           target="_blank"
           type="inherit"
@@ -110,7 +110,7 @@ function TaskMetadata({
           label="Copy reference"
           variant="ghost"
           icon={<Icon icon="copy" size="xsm" color="inherit" />}
-          className="jig-copy-reference jig-task-meta-item"
+          className="jig-task-reference-action jig-copy-reference jig-task-meta-item"
           onPointerDown={stopPointer}
           onClick={(event) => {
             event.stopPropagation();
