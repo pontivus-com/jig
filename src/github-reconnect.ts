@@ -77,6 +77,9 @@ export class GitHubReconnectController {
       })
       .finally(() => {
         this.worker = null;
+        if (this.state === "connecting") {
+          this.ensureWorker();
+        }
       });
   }
 
