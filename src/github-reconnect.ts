@@ -1,5 +1,8 @@
 import type { GitHubReconnectSnapshot } from "./github";
-import { GitHubDeviceFlowSession } from "./github-device-flow";
+import {
+  GitHubDeviceFlowSession,
+  GitHubFlowWakeup,
+} from "./github-device-flow";
 
 type Sleep = (milliseconds: number) => Promise<void>;
 
@@ -18,6 +21,7 @@ export class GitHubReconnectController {
   private state: GitHubReconnectSnapshot["state"] = "initial";
   private error: string | null = null;
   private worker: Promise<void> | null = null;
+  private readonly wakeup = new GitHubFlowWakeup();
 
   constructor(
     private readonly deviceFlow: GitHubDeviceFlowSession,
@@ -56,6 +60,7 @@ export class GitHubReconnectController {
   }
 
   resume(): void {
+    this.wakeup.resume();
     if (this.state === "connecting") {
       this.ensureWorker();
     }
@@ -77,7 +82,7 @@ export class GitHubReconnectController {
 
   private async run(): Promise<void> {
     const authorization = await this.deviceFlow.runUntilSettled(
-      (milliseconds) => this.sleep(milliseconds),
+      (milliseconds) => this.wait(milliseconds),
     );
     if (this.state !== "connecting") {
       return;
@@ -98,7 +103,10 @@ export class GitHubReconnectController {
     this.error = null;
   }
 
-  private sleep(milliseconds: number): Promise<void> {
-    return (this.dependencies.sleep ?? defaultSleep)(milliseconds);
+  private wait(milliseconds: number): Promise<void> {
+    return this.wakeup.wait(
+      milliseconds,
+      this.dependencies.sleep ?? defaultSleep,
+    );
   }
 }
