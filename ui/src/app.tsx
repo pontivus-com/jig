@@ -649,7 +649,8 @@ function ConfiguredApp({
       container="section"
       collapsible={false}
     />
-  ) : repositoryStatus.key === "sync-issue" ? (
+  ) : repositoryStatus.key === "sync-issue" &&
+    destination !== "settings" ? (
     <Banner
       status="warning"
       title="Sync needs attention"
