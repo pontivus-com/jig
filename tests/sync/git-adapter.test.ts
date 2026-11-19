@@ -198,7 +198,7 @@ describe("isolated jig-data adapter", () => {
 
     const config = { repository_path: repo } as const;
     expect(await repositorySynchronizationMode(config)).toBe(
-      "local-only",
+      "ambiguous",
     );
 
     await git(repo, ["config", "remote.pushDefault", "backup"]);
