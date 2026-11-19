@@ -157,19 +157,37 @@ Visual rules:
 
 ### 4.0 v1.1 onboarding application state
 
-Onboarding uses the same outer application composition on desktop and Android; platform differences change only the genuine choices available inside the body.
+Onboarding uses the same outer application composition and one shared setup semantic owner on desktop and Android. The governed references deliberately recompose the body by platform; this is not permission to create separate onboarding products or state machines.
 
 **Header:** render the canonical theme-aware Jig wordmark/identity in the governed application header from the first frame. The header owns safe-area inset on Android. Do not render Planner temporal controls, Add task, Planner/History/Settings destination navigation or synchronization status before a repository is configured. The header remains product chrome, not an onboarding step indicator.
 
-**Body:** use one quiet, bounded onboarding composition centered within the normal Jig body. It is not a dashboard of setup cards and not a technical checklist. The initial state contains one short orientation and the available user choices. Android has one primary **Connect GitHub repository** action. Desktop has the same primary GitHub action plus **Use an existing local repository** as a secondary alternative.
+#### Initial composition — product story before infrastructure
 
-After Connect, replace the initial controls with one coherent **Connecting repository…** presentation. It has three possible content variants without becoming a stepper:
+The first screen establishes why Jig needs a planning-data home before asking for GitHub authorization. The information hierarchy is:
 
-1. **Authorize with GitHub.** Show the GitHub-generated device code prominently enough to copy accurately, provide **Copy code**, and open GitHub's fixed device-verification page automatically where permitted. If opening is blocked or the user returns before completing authorization, expose one **Open GitHub** action. Supporting copy is concise: the user is completing GitHub authorization, not "step 2 of setup." Jig polls automatically and the user never presses Refresh.
+1. Jig identity / concise welcome;
+2. a short value statement centered on planning continuity and keeping planning data under the user's control;
+3. restrained reassurance for local use, portability through Git and provider-owned authorization;
+4. the genuine setup choice available on the platform;
+5. only then, minimal supporting copy about the provider handoff.
+
+Semantic icons from the Astryx/Jig icon system may reinforce those reassurance concepts. Decorative hero illustration is not required and must not push the primary setup action below the useful initial mobile viewport.
+
+**Android/narrow:** use the governed bounded single-column composition. **Connect GitHub repository** is the one primary setup action. Do not render the desktop local-worktree choice.
+
+**Desktop:** use the governed two-region composition, not a centered phone-width setup card. The left region is a stable value/context region; the right region is a bounded setup pane. The initial setup pane contains primary **Connect GitHub repository** and secondary **Use an existing local repository**. When setup advances, the right pane changes state while the left value/context region remains visually stable.
+
+The desktop local-repository path stays inside that bounded setup pane: one absolute repository-path field, validation/supporting copy, **Use this repository**, and Back/Cancel. It is provider-neutral and does not become a filesystem-browser wizard.
+
+#### GitHub connection presentation
+
+After Connect, the same onboarding owner enters one coherent connecting state. That state has user-facing content variants without becoming a stepper:
+
+1. **Authorize Jig on GitHub.** Show the GitHub-generated device code prominently enough to copy accurately, provide **Copy code**, and open GitHub's fixed device-verification page automatically where permitted. If opening is blocked or the user returns before completing authorization, expose one **Open GitHub** action. Supporting copy explains that Jig continues automatically; there is no Refresh.
 2. **Repository access on GitHub.** If the authorized token cannot see an eligible Jig App installation/repository, explain that repository access must be chosen on GitHub and provide/open the GitHub-owned installation/access page. When the user returns, Jig re-checks automatically. Do not claim installation or approval succeeded until GitHub's API actually exposes the installation/repository.
-3. **Finishing connection.** While clone/validation/adoption/database initialization run, show passive progress only. Do not expose those technical phases individually.
+3. **Getting your plan ready…** While clone/validation/adoption/database initialization run, show passive progress only. Do not expose those technical phases individually.
 
-The authorization code is a provider requirement, not optional developer detail: it must remain visible until GitHub authorizes, denies or expires that Device Flow. Do not substitute a fake one-click "Continue" that conceals a required code-entry action and leaves the user stranded on GitHub.
+The authorization code is a provider requirement, not optional developer detail: it must remain visible until GitHub authorizes, denies or expires that Device Flow. Do not substitute a fake one-click Continue that conceals a required code-entry action and leaves the user stranded on GitHub.
 
 If repository selection is necessary, render one simple chooser using human-readable `owner/repository` identity from the complete authoritative GitHub App-accessible repository set. The list may span multiple accounts/organizations and must represent all paginated results, not only the first API page. If exactly one eligible repository exists, Jig may continue automatically. After an explicit selection, return immediately to the single connecting state.
 
@@ -186,7 +204,7 @@ There is no Jig-owned **Refresh access**, **Grant repository access**, **Manage 
 
 Raw HTTP codes, `authorization_pending`, `slow_down`, installation IDs, filesystem paths, Git commands, transport phases and database terminology belong in diagnostics, not this surface.
 
-Successful setup transitions directly from onboarding into Planner without a completion ceremony or additional Continue button.
+Successful setup transitions directly from onboarding into Planner without a completion ceremony or additional Continue button. When the displayed week has no Tasks, Planner uses the governed lightweight empty-week activation: a quiet empty-state treatment, concise orientation and **Add your first task** action. It is Planner content, not an onboarding destination or persisted onboarding-progress state.
 
 ### 4.1 Desktop Planner
 
@@ -299,7 +317,23 @@ The opened menu:
 
 Use Astryx public DropdownMenu if its public API can meet that geometry. If it cannot, document the public-API incompatibility and compose the smallest Jig-owned menu using Astryx public Popover/Button/list leaves and tokens. Do not target Astryx private DOM/CSS to enlarge a compact menu.
 
-Task create/edit uses a BottomSheet. Existing and new Tasks open directly into the same integrated Task form described in §4.4. All mobile form controls, disclosure rows, weekday choices and footer actions meet the 48px target rule.
+Task create/edit uses a BottomSheet. Existing and new Tasks open directly into the same integrated Task form described in §4.4.
+
+#### v1.1 mobile form interaction standard
+
+The governed mobile reference is the default interaction/presentation language for the Task BottomSheet and directly analogous v1.1 form surfaces:
+
+- one readable vertical field hierarchy with persistent visible labels;
+- ordinary controls/actions have >=48×48px touch targets and standalone actions retain deliberate separation;
+- progressive disclosure expands in document order rather than opening a nested form;
+- the content region scrolls normally while the owning BottomSheet remains stable;
+- any persistent action area must not cover fields, validation or Notes;
+- the software keyboard/IME must not make later fields or Save/Cancel unreachable;
+- one visually clear primary action exists for the active form; secondary actions remain subordinate;
+- semantic icons support comprehension but never replace essential text;
+- exact spacing, component internals and theme rendering remain Astryx-owned unless the governed reference establishes a product-level geometry.
+
+All Task form controls, disclosure rows, weekday choices and footer actions meet that standard. When Weekly/Monthly expands, Reminder, Priority, Context, Reference and Notes remain below Repeat in the same scrollable form.
 
 Task movement uses a dedicated visible grip; the Task body itself always remains normal touch-scroll/open content. Move up/Move down and Date editing remain reliable non-drag alternatives.
 
@@ -409,7 +443,7 @@ When **Monthly** is selected, reveal:
 - **Day of month**;
 - **Ends** date.
 
-There is no permanently visible weekly/monthly configuration when repeat is off. On mobile, weekday choices are touchable selection chips/buttons with >=48px targets and clear selected states, not a dense row of small checkboxes.
+There is no permanently visible weekly/monthly configuration when repeat is off. On mobile, weekday choices are touchable selection chips/buttons with >=48px targets and clear selected states, not a dense row of small checkboxes. They wrap when necessary at 320/360/390/414px rather than shrinking below the interaction budget; Monday-first reading order remains intact.
 
 For an existing recurring Task, the Repeat field resolves the shared series configuration. Choosing **Does not repeat** makes the effect clear in supporting copy: saving will keep this occurrence as a one-off and stop future outstanding occurrences according to the canonical series rule. Do not add a second footer-level **Stop repeating** button unless a later usability review proves the inline choice ambiguous.
 
@@ -419,7 +453,7 @@ For an existing recurring Task, the Repeat field resolves the shared series conf
 
 Completion/reopen and permanent Delete remain independent Task lifecycle commands outside the form's Save semantics. Delete confirmation remains the sole blocking Task dialog.
 
-On mobile, the primary action area remains visible and comfortable at the end of the BottomSheet; Save/Cancel may share one row when the available width preserves >=48px targets and adequate separation. Do not stack ordinary actions into separate full-width rows merely by default. Destructive/lifecycle actions are visually separated from the primary form action without creating button clutter.
+On mobile, the primary action area remains visible and comfortable at the end of the BottomSheet; Save/Cancel may share one row when the available width preserves >=48px targets and adequate separation. The scrollable content receives sufficient end padding/inset so the action area never covers validation, Reference or Notes. Opening the software keyboard/IME must preserve normal scrolling and access to the active field plus Save/Cancel. Do not stack ordinary actions into separate full-width rows merely by default. Destructive/lifecycle actions are visually separated from the primary form action without creating button clutter.
 
 ## 5. Interaction and component ownership
 
