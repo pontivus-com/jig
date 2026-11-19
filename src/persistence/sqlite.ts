@@ -1001,6 +1001,15 @@ export async function adoptCanonicalSnapshot(
          WHERE singleton = 1`,
         [revision, revision, adoptedHead, adoptedHead],
       );
+    } else if (adoptedHead === null) {
+      await connection.execute(
+        `UPDATE app_metadata
+         SET
+           revision = ?,
+           pending_sync = 1
+         WHERE singleton = 1`,
+        [revision],
+      );
     } else {
       await connection.execute(
         `UPDATE app_metadata
