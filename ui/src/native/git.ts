@@ -19,7 +19,6 @@ import {
   remove,
   resolveRef,
   statusMatrix,
-  writeRef,
 } from "isomorphic-git";
 import {
   serializeSnapshot,
@@ -27,7 +26,7 @@ import {
   type PortableSnapshot,
 } from "../../../src/portable";
 import type { CanonicalState } from "../../../src/protocol";
-import type { GitLineage } from "../../../src/synchronization";
+import type { SynchronizationLineage } from "../../../src/core/synchronization";
 import {
   AndroidFsError,
   createAndroidGitFilesystem,
@@ -42,8 +41,6 @@ import { ANDROID_GIT_WORKTREE } from "./paths";
 
 export const ANDROID_DATA_BRANCH = "jig-data";
 const ANDROID_REMOTE = "origin";
-const ANDROID_OBSERVED_REMOTE_REF =
-  "refs/jig/observed/origin/jig-data";
 
 export interface GitCredentialProvider {
   (): Promise<string>;
@@ -330,29 +327,11 @@ export async function acquireAndroidPortableRepository(
       committer: identity,
       disallowEmpty: true,
     });
-    try {
-      await pushAndroidPortableRepository(
-        effects,
-        credential,
-      );
-      return snapshot;
-    } catch (pushError) {
-      // Another fresh Jig installation may have created jig-data
-      // after the server-ref observation above. This checkout still
-      // contains only a generated empty bootstrap, so it is safe to
-      // discard and adopt the winning remote dataset.
-      await removeAndroidManagedCheckout(effects);
-      try {
-        return await cloneAndroidPortableRepository(
-          effects,
-          remoteUrl,
-          credential,
-        );
-      } catch {
-        await removeAndroidManagedCheckout(effects);
-        throw pushError;
-      }
-    }
+    await pushAndroidPortableRepository(
+      effects,
+      credential,
+    );
+    return snapshot;
   } catch (error) {
     await removeAndroidManagedCheckout(effects);
     throw error;
@@ -635,46 +614,35 @@ export async function commitAndroidCanonicalState(
   );
 }
 
-export interface AndroidPortableRemoteObservation {
-  readonly remote_state: "absent" | "present";
-  readonly local_head: string;
-  readonly previous_remote_head: string | null;
-  readonly remote_head: string | null;
-  readonly remote_rewritten: boolean;
-  readonly lineage: GitLineage;
-  readonly remote_snapshot: PortableSnapshot | null;
-}
-
-async function optionalAndroidRef(
-  effects: AndroidGitEffects,
-  ref: string,
-): Promise<string | null> {
-  try {
-    return await resolveRef({
-      fs: effects.fs,
-      dir: effects.dir,
-      ref,
-    });
-  } catch {
-    return null;
-  }
-}
+export type AndroidPortableRemoteObservation =
+  | {
+      readonly state: "absent";
+      readonly local_head: string;
+      readonly previously_synchronized: boolean;
+    }
+  | {
+      readonly state: "unsafe";
+      readonly local_head: string;
+    }
+  | {
+      readonly state: "present";
+      readonly local_head: string;
+      readonly remote_head: string;
+      readonly remote_rewritten: boolean;
+      readonly lineage: SynchronizationLineage;
+      readonly remote_snapshot: PortableSnapshot;
+    };
 
 export async function observeAndroidPortableRemote(
   effects: AndroidGitEffects,
+  expectedDatasetId: string,
+  lastAdoptedHead: string | null,
   credential: GitCredentialProvider,
 ): Promise<AndroidPortableRemoteObservation> {
   await assertDataBranch(effects);
   const localHead = await androidPortableHead(effects);
   const trackingRef =
     `refs/remotes/${ANDROID_REMOTE}/${ANDROID_DATA_BRANCH}`;
-  const durableObservedHead = await optionalAndroidRef(
-    effects,
-    ANDROID_OBSERVED_REMOTE_REF,
-  );
-  const previousRemoteHead =
-    durableObservedHead ??
-    await optionalAndroidRef(effects, trackingRef);
 
   const location = await getConfig({
     fs: effects.fs,
@@ -682,11 +650,13 @@ export async function observeAndroidPortableRemote(
     path: `remote.${ANDROID_REMOTE}.url`,
   });
   if (location === undefined || location.length === 0) {
-    throw new AndroidGitAdapterError(
-      "Android managed repository has no origin remote",
-    );
+    return {
+      state: "unsafe",
+      local_head: localHead,
+    };
   }
   assertCredentialFreeHttpsRemote(location);
+
   const headers = await authenticatedHeaders(credential);
   const refs = await listServerRefs({
     http: effects.http,
@@ -702,20 +672,17 @@ export async function observeAndroidPortableRemote(
   );
   if (advertised === undefined) {
     return {
-      remote_state: "absent",
+      state: "absent",
       local_head: localHead,
-      previous_remote_head: previousRemoteHead,
-      remote_head: null,
-      remote_rewritten: false,
-      lineage: "unknown",
-      remote_snapshot: null,
+      previously_synchronized: lastAdoptedHead !== null,
     };
   }
   const advertisedOid = advertised.oid;
   if (advertisedOid === undefined || advertisedOid.length === 0) {
-    throw new AndroidGitAdapterError(
-      "Android remote advertised jig-data without an object id",
-    );
+    return {
+      state: "unsafe",
+      local_head: localHead,
+    };
   }
 
   await fetch({
@@ -740,15 +707,25 @@ export async function observeAndroidPortableRemote(
       "Android remote changed during observation; retry required",
     );
   }
-  const remoteSnapshot = await readAndroidSnapshotAtOid(
-    effects,
-    remoteHead,
-  );
+
+  let remoteSnapshot: PortableSnapshot;
+  try {
+    remoteSnapshot = await readAndroidSnapshotAtOid(
+      effects,
+      remoteHead,
+      expectedDatasetId,
+    );
+  } catch {
+    return {
+      state: "unsafe",
+      local_head: localHead,
+    };
+  }
 
   let remoteRewritten = false;
   if (
-    previousRemoteHead !== null &&
-    previousRemoteHead !== remoteHead
+    lastAdoptedHead !== null &&
+    lastAdoptedHead !== remoteHead
   ) {
     try {
       remoteRewritten = !(
@@ -756,7 +733,7 @@ export async function observeAndroidPortableRemote(
           fs: effects.fs,
           dir: effects.dir,
           oid: remoteHead,
-          ancestor: previousRemoteHead,
+          ancestor: lastAdoptedHead,
         })
       );
     } catch {
@@ -764,7 +741,7 @@ export async function observeAndroidPortableRemote(
     }
   }
 
-  let lineage: GitLineage = "unknown";
+  let lineage: SynchronizationLineage = "unknown";
   if (localHead === remoteHead) {
     lineage = "equal";
   } else {
@@ -800,56 +777,14 @@ export async function observeAndroidPortableRemote(
     }
   }
 
-  if (!remoteRewritten) {
-    await writeRef({
-      fs: effects.fs,
-      dir: effects.dir,
-      ref: ANDROID_OBSERVED_REMOTE_REF,
-      value: remoteHead,
-      force: previousRemoteHead !== null,
-    });
-  }
-
   return {
-    remote_state: "present",
+    state: "present",
     local_head: localHead,
-    previous_remote_head: previousRemoteHead,
     remote_head: remoteHead,
     remote_rewritten: remoteRewritten,
     lineage,
     remote_snapshot: remoteSnapshot,
   };
-}
-
-export async function normalizeAndroidPortableHead(
-  effects: AndroidGitEffects,
-  expectedHead: string,
-  targetHead: string,
-): Promise<void> {
-  const current = await androidPortableHead(effects);
-  if (current !== expectedHead) {
-    throw new AndroidGitAdapterError(
-      "Android jig-data head changed concurrently; retry required",
-    );
-  }
-  await writeRef({
-    fs: effects.fs,
-    dir: effects.dir,
-    ref: `refs/heads/${ANDROID_DATA_BRANCH}`,
-    value: targetHead,
-    force: true,
-  });
-  await checkout({
-    fs: effects.fs,
-    dir: effects.dir,
-    ref: ANDROID_DATA_BRANCH,
-    force: true,
-  });
-  if ((await androidPortableHead(effects)) !== targetHead) {
-    throw new AndroidGitAdapterError(
-      "Android jig-data normalization did not reach target head",
-    );
-  }
 }
 
 export async function alignAndroidPortableHead(
@@ -899,77 +834,6 @@ export async function alignAndroidPortableHead(
       "Android jig-data head does not match fast-forward target",
     );
   }
-}
-
-export interface AndroidGitSynchronizationResult {
-  readonly state:
-    | "unchanged"
-    | "remote-adopted"
-    | "local-pushed"
-    | "diverged";
-  readonly head: string;
-  readonly snapshot: PortableSnapshot | null;
-}
-
-export async function synchronizeAndroidPortableRepository(
-  effects: AndroidGitEffects,
-  expectedDatasetId: string,
-  credential: GitCredentialProvider,
-): Promise<AndroidGitSynchronizationResult> {
-  const observation = await observeAndroidPortableRemote(
-    effects,
-    credential,
-  );
-  if (
-    observation.remote_state !== "present" ||
-    observation.remote_head === null
-  ) {
-    throw new AndroidGitAdapterError(
-      "Android synchronization remote has no jig-data branch",
-    );
-  }
-  if (observation.remote_rewritten) {
-    return {
-      state: "diverged",
-      head: observation.local_head,
-      snapshot: null,
-    };
-  }
-  if (observation.lineage === "equal") {
-    return {
-      state: "unchanged",
-      head: observation.local_head,
-      snapshot: null,
-    };
-  }
-  if (
-    observation.lineage === "remote-ahead" &&
-    observation.remote_snapshot !== null
-  ) {
-    await alignAndroidPortableHead(
-      effects,
-      observation.local_head,
-      observation.remote_head,
-    );
-    return {
-      state: "remote-adopted",
-      head: observation.remote_head,
-      snapshot: observation.remote_snapshot,
-    };
-  }
-  if (observation.lineage === "local-ahead") {
-    await pushAndroidPortableRepository(effects, credential);
-    return {
-      state: "local-pushed",
-      head: observation.local_head,
-      snapshot: null,
-    };
-  }
-  return {
-    state: "diverged",
-    head: observation.local_head,
-    snapshot: null,
-  };
 }
 
 export async function pushAndroidPortableRepository(
