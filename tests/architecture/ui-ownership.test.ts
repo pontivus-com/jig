@@ -395,9 +395,14 @@ describe("UI ownership architecture", () => {
     expect(styles).toContain("min-width: 48px;");
     expect(styles).toContain("min-height: 48px;");
 
-    expect(styles).toContain(".jig-editor-actions {");
-    expect(styles).toContain("position: sticky;");
-    expect(styles).toContain("inset-block-end: 0;");
+    const workspace = source("ui/src/task-workspace.tsx");
+    expect(workspace).toContain("LayoutFooter");
+    expect(workspace).toContain('showEditorActions={false}');
+    expect(workspace).toContain('form="jig-task-bottom-sheet-form"');
+    expect(workspace).toContain(
+      'editorFormId="jig-task-bottom-sheet-form"',
+    );
+    expect(styles).not.toContain("position: sticky;");
 
     expect(setup).toContain('readonly layoutMode: LayoutMode;');
     expect(setup).toContain('layoutMode === "narrow"');
