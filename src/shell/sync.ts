@@ -21,6 +21,7 @@ import type {
   RepositorySynchronizationStatus,
 } from "../protocol";
 import {
+  adoptEmptyDatasetIdentity,
   applySynchronizedCanonicalState,
   markAdoptedHead,
   markExported,
@@ -429,8 +430,68 @@ export function createSyncController(
         return structuralIssue();
       }
 
-      const state = await readCanonicalState(db);
-      const metadata = await readMetadata(db);
+      let state = await readCanonicalState(db);
+      let metadata = await readMetadata(db);
+
+      if (remoteSnapshot.dataset_id !== metadata.dataset_id) {
+        const emptyBootstrap =
+          state.revision === 0 &&
+          metadata.last_exported_revision === 0 &&
+          state.tasks.length === 0 &&
+          state.recurrences.length === 0;
+        if (!emptyBootstrap) {
+          return structuralIssue();
+        }
+        try {
+          const previousDatasetId = metadata.dataset_id;
+          await adoptEmptyDatasetIdentity(
+            db,
+            previousDatasetId,
+            remoteSnapshot.dataset_id,
+          );
+          state = await readCanonicalState(db);
+          metadata = await readMetadata(db);
+          if (
+            remoteSnapshot.tasks.length > 0 ||
+            remoteSnapshot.recurrences.length > 0
+          ) {
+            const applied =
+              await applySynchronizedCanonicalState(
+                db,
+                state.revision,
+                remoteSnapshot.tasks,
+                remoteSnapshot.recurrences,
+                remoteHead,
+              );
+            await effects.alignLocal(
+              adapter,
+              localHead,
+              remoteHead,
+            );
+            await markExported(
+              db,
+              applied.revision,
+              remoteHead,
+            );
+          } else {
+            await effects.alignLocal(
+              adapter,
+              localHead,
+              remoteHead,
+            );
+            await markAdoptedHead(db, remoteHead);
+            await markExported(
+              db,
+              state.revision,
+              remoteHead,
+            );
+          }
+          continue;
+        } catch {
+          return structuralIssue();
+        }
+      }
+
       const currentSnapshot = serializeSnapshot(
         state.tasks,
         metadata.dataset_id,
