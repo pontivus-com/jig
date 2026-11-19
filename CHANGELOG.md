@@ -17,6 +17,11 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Changed
 
+- Implemented the governed v1.1 onboarding presentation on desktop and Android/narrow: value-first first-run hierarchy, bounded desktop setup pane, provider-level GitHub authorization/access/finishing states, and direct transition into Planner with the normal empty-week activation.
+- Reworked the complete Task editor to keep Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes in one draft and one Save, with Weekly/Monthly progressive disclosure and atomic existing-Task recurrence reconciliation.
+- Replaced the failed Pangea Task movement code with the pinned dnd-kit adapter owned only by `ui/src/drag.tsx`, dedicated grip activation and explicit N+1 insertion-slot drop targets.
+- Replaced the Settings dashboard with the governed Data & sync → Appearance → Notifications → subordinate Diagnostics reading hierarchy and applied the v1.1 mobile touch/form geometry.
+
 - Governed new v1.1 mobile and desktop UX/UI references for onboarding and the complete Task form. The mobile reference is now the binding v1.1 form interaction standard for BottomSheet hierarchy, touch geometry, scrolling, progressive Repeat disclosure and action placement; the old mobile editor reference is historical where superseded.
 - Reopened v1.1 mobile UX/UI after physical Android validation: mobile controls/menu now require >=48px touch targets with deliberate spacing, Settings is redesigned as Data & sync / Appearance / Notifications / subordinate Diagnostics, and Repeat is integrated into the single Task form with progressive disclosure and one atomic Save.
 - Rejected the Pangea Task-movement implementation after physical-device failure and governed a proof-gated current dnd-kit replacement using a dedicated grip, explicit before/between/after insertion slots and mandatory terminal drag-state cleanup.
