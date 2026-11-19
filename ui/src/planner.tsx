@@ -42,6 +42,7 @@ export function Planner(props: PlannerProps): React.ReactElement {
           <Button
             label="Add your first task"
             variant="primary"
+            className="jig-planner-empty-primary"
             onClick={() =>
               props.onAdd(defaultAddDate(firstDate, todayCivilDate()))
             }
