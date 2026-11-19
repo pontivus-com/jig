@@ -348,7 +348,13 @@ export function createSyncController(
       return transientRemoteFailure();
     }
 
-    const networkEnvironment = await effects.networkEnvironment();
+    let networkEnvironment:
+      Readonly<Record<string, string>> | null;
+    try {
+      networkEnvironment = await effects.networkEnvironment();
+    } catch {
+      return transientRemoteFailure();
+    }
     if (networkEnvironment === null) {
       return structuralIssue();
     }
