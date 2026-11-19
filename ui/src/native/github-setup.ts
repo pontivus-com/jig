@@ -26,6 +26,9 @@ import {
   createAndroidGitEffects,
   removeAndroidManagedCheckout,
 } from "./git";
+import {
+  androidManagedGitHubReconnectRequired,
+} from "./github-managed-transport";
 import { createAndroidGitHubFetch } from "./github-fetch";
 import {
   initializeNativeDatabase,
@@ -122,6 +125,12 @@ const onboarding = new GitHubOnboardingController<string>({
 
 const reconnect = new GitHubReconnectController(
   deviceFlow,
+  {
+    on_connected: async () => {
+      const runtime = await import("../runtime-native");
+      await runtime.triggerSync();
+    },
+  },
 );
 
 async function databaseExists(): Promise<boolean> {
@@ -168,18 +177,14 @@ Promise<GitHubCapabilityStatus> {
     onboarding_available: !configured &&
       onboarding.snapshot().available,
     reconnect_available: configured &&
-      reconnect.available(),
+      reconnect.available() &&
+      await androidManagedGitHubReconnectRequired(),
   };
 }
 
-export async function startAndroidGitHubSetup():
+export async function connectAndroidGitHubSetup():
 Promise<GitHubOnboardingSnapshot> {
   return onboarding.start();
-}
-
-export async function refreshAndroidGitHubSetup():
-Promise<GitHubOnboardingSnapshot> {
-  return onboarding.refreshAccess();
 }
 
 export function readAndroidGitHubSetupSnapshot():
@@ -187,18 +192,33 @@ GitHubOnboardingSnapshot {
   return onboarding.snapshot();
 }
 
-export async function acquireAndroidGitHubRepository(
+export async function selectAndroidGitHubRepository(
   repositoryId: number,
-): Promise<string> {
-  return onboarding.acquire(repositoryId);
+): Promise<GitHubOnboardingSnapshot> {
+  return onboarding.selectRepository(repositoryId);
 }
 
-export async function startAndroidGitHubReconnect():
-Promise<GitHubReconnectSnapshot> {
-  return reconnect.start();
+export async function retryAndroidGitHubSetup():
+Promise<GitHubOnboardingSnapshot> {
+  return onboarding.retry();
 }
 
-export async function refreshAndroidGitHubReconnect():
+export function resumeAndroidGitHubSetup(): void {
+  onboarding.resume();
+}
+
+export async function reconnectAndroidGitHub():
 Promise<GitHubReconnectSnapshot> {
-  return reconnect.refresh();
+  return reconnect.snapshot().state === "attention"
+    ? reconnect.retry()
+    : reconnect.start();
+}
+
+export function readAndroidGitHubReconnectSnapshot():
+GitHubReconnectSnapshot {
+  return reconnect.snapshot();
+}
+
+export function resumeAndroidGitHubReconnect(): void {
+  reconnect.resume();
 }

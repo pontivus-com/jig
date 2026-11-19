@@ -27,7 +27,7 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
 A fresh installation starts Jig in bootstrap mode on `127.0.0.1:47831`. Open Jig (or run `jig`) and choose:
 
 - **Use a repository already on this computer** — enter the absolute root path of an existing writable Git worktree;
-- **Connect GitHub** — authorize Jig and select a repository through the governed GitHub onboarding flow.
+- **Connect GitHub repository** — Jig shows GitHub's required device code, opens/offers GitHub authorization, discovers authorized repository access automatically and continues without manual refresh; a repository chooser appears only when more than one genuine eligible repository requires a choice.
 
 Planner, History, Settings, Task commands and repository synchronization are not mounted until repository setup succeeds. A valid local repository does not need a remote; it becomes a healthy **Local only** Jig installation.
 

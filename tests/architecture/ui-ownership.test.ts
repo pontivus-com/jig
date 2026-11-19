@@ -218,6 +218,9 @@ describe("UI ownership architecture", () => {
     const layoutMode = source("ui/src/use-layout-mode.ts");
 
     expect(app).toContain("<AppShell");
+    expect((app.match(/<AppShell\b/g) ?? [])).toHaveLength(1);
+    expect(app).toContain("function ApplicationShell");
+    expect(app).toContain("<ApplicationShell topNav={<OnboardingHeader />}>");
     expect(app).toContain("mobileNav={false}");
     expect(app).not.toContain("<SideNav");
     expect(app).toContain('useState<Destination>("planner")');
@@ -333,6 +336,29 @@ describe("UI ownership architecture", () => {
     expect(css).toContain(".jig-header-destination-heading {");
     expect(css).toContain(".jig-header-destination-subtitle {");
     expect(css).not.toContain(".jig-reference-heading {");
+    expect(settings).toContain("planningDataHomePresentation");
+    expect(settings).toContain("<dt>Local Git</dt>");
+    expect(settings).toContain("<dt>Remote Git</dt>");
+    expect(settings).toContain('label="Sync now"');
+  });
+
+  it("keeps onboarding inside Jig and protocol controls out of presentation", () => {
+    const app = source("ui/src/app.tsx");
+    const setup = source("ui/src/setup.tsx");
+    const deviceFlow = source("ui/src/github-device-flow.tsx");
+
+    expect(app).toContain("<OnboardingHeader />");
+    expect(app).toContain("<SetupView status={setupStatus} />");
+    expect(setup).not.toContain("<main");
+    expect(setup).toContain('label="Connect GitHub repository"');
+    expect(setup).toContain('label="Use an existing local repository"');
+    expect(setup).not.toContain("Refresh access");
+    expect(setup).not.toContain("Grant repository access");
+    expect(setup).not.toContain("Manage GitHub access");
+    expect(deviceFlow).toContain('label="Open GitHub"');
+    expect(deviceFlow).toContain('"Copy code"');
+    expect(deviceFlow).not.toContain("setTimeout");
+    expect(deviceFlow).not.toContain("onRefresh");
   });
 
   it("keeps appearance controls in Settings and reminder delivery browser-native", () => {

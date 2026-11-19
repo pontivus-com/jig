@@ -15,7 +15,10 @@ export type GitHubFetch = (
 ) => Promise<Response>;
 
 export class GitHubAuthError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly status_code: number | null = null,
+  ) {
     super(message);
     this.name = "GitHubAuthError";
   }
@@ -84,7 +87,10 @@ async function jsonResponse(
           : typeof object.error === "string"
             ? object.error
             : `HTTP ${response.status}`;
-    throw new GitHubAuthError(`GitHub ${operation} failed: ${message}`);
+    throw new GitHubAuthError(
+      `GitHub ${operation} failed: ${message}`,
+      response.status,
+    );
   }
   return object;
 }
@@ -196,38 +202,112 @@ export async function refreshGitHubCredential(
   );
 }
 
+function nextGitHubPage(response: Response): string | null {
+  const link = response.headers.get("link");
+  if (link === null) {
+    return null;
+  }
+  for (const part of link.split(",")) {
+    const match = /<([^>]+)>;\s*rel="([^"]+)"/.exec(part.trim());
+    if (match?.[1] === undefined || match[2] !== "next") {
+      continue;
+    }
+    const next = new URL(match[1]);
+    if (next.protocol !== "https:" || next.hostname !== "api.github.com") {
+      throw new GitHubAuthError(
+        "GitHub pagination returned an unexpected continuation URL",
+      );
+    }
+    return next.toString();
+  }
+  return null;
+}
+
+function installationFromUnknown(value: unknown): GitHubInstallation {
+  const installation = objectRecord(
+    value,
+    "GitHub installation entry is invalid",
+  );
+  const account = objectRecord(
+    installation.account,
+    "GitHub installation account is invalid",
+  );
+  return {
+    id: positiveInteger(installation.id, "installation id"),
+    account: {
+      id: positiveInteger(account.id, "account id"),
+      login: nonEmptyString(account.login, "account login"),
+      type: nonEmptyString(account.type, "account type"),
+    },
+  };
+}
+
+function repositoryFromUnknown(value: unknown): GitHubRepository {
+  const repository = objectRecord(
+    value,
+    "GitHub repository entry is invalid",
+  );
+  const owner = objectRecord(
+    repository.owner,
+    "GitHub repository owner is invalid",
+  );
+  return {
+    id: positiveInteger(repository.id, "repository id"),
+    owner: nonEmptyString(owner.login, "repository owner"),
+    name: nonEmptyString(repository.name, "repository name"),
+    clone_url: nonEmptyString(repository.clone_url, "repository clone URL"),
+  };
+}
+
+async function listGitHubPages<T>(
+  initialUrl: string,
+  field: "installations" | "repositories",
+  operation: string,
+  accessToken: string,
+  parseEntry: (value: unknown) => T,
+  fetcher: GitHubFetch,
+): Promise<readonly T[]> {
+  const values: T[] = [];
+  const visited = new Set<string>();
+  let url: string | null = initialUrl;
+
+  while (url !== null) {
+    if (visited.has(url)) {
+      throw new GitHubAuthError(
+        `GitHub ${operation} pagination repeated a page`,
+      );
+    }
+    visited.add(url);
+
+    const response = await fetcher(url, {
+      headers: apiHeaders(accessToken),
+    });
+    const payload = await jsonResponse(response, operation);
+    const entries = payload[field];
+    if (!Array.isArray(entries)) {
+      throw new GitHubAuthError(
+        `GitHub ${operation} has no ${field} array`,
+      );
+    }
+    values.push(...entries.map(parseEntry));
+    url = nextGitHubPage(response);
+  }
+
+  return values;
+}
+
 export async function listGitHubInstallations(
   accessToken: string,
   fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<readonly GitHubInstallation[]> {
-  const response = await fetcher(
+  return listGitHubPages(
     "https://api.github.com/user/installations?per_page=100",
-    { headers: apiHeaders(accessToken) },
+    "installations",
+    "installation listing",
+    accessToken,
+    installationFromUnknown,
+    fetcher,
   );
-  const payload = await jsonResponse(response, "installation listing");
-  if (!Array.isArray(payload.installations)) {
-    throw new GitHubAuthError(
-      "GitHub installation listing has no installations array",
-    );
-  }
-  return payload.installations.map((value) => {
-    const installation = objectRecord(
-      value,
-      "GitHub installation entry is invalid",
-    );
-    const account = objectRecord(
-      installation.account,
-      "GitHub installation account is invalid",
-    );
-    return {
-      id: positiveInteger(installation.id, "installation id"),
-      account: {
-        id: positiveInteger(account.id, "account id"),
-        login: nonEmptyString(account.login, "account login"),
-        type: nonEmptyString(account.type, "account type"),
-      },
-    };
-  });
 }
 
 export async function listGitHubRepositories(
@@ -236,32 +316,14 @@ export async function listGitHubRepositories(
   fetcher: GitHubFetch = (input, init) => fetch(input, init),
 ): Promise<readonly GitHubRepository[]> {
   const id = positiveInteger(installationId, "installation id");
-  const response = await fetcher(
+  return listGitHubPages(
     `https://api.github.com/user/installations/${id}/repositories?per_page=100`,
-    { headers: apiHeaders(accessToken) },
+    "repositories",
+    "repository listing",
+    accessToken,
+    repositoryFromUnknown,
+    fetcher,
   );
-  const payload = await jsonResponse(response, "repository listing");
-  if (!Array.isArray(payload.repositories)) {
-    throw new GitHubAuthError(
-      "GitHub repository listing has no repositories array",
-    );
-  }
-  return payload.repositories.map((value) => {
-    const repository = objectRecord(
-      value,
-      "GitHub repository entry is invalid",
-    );
-    const owner = objectRecord(
-      repository.owner,
-      "GitHub repository owner is invalid",
-    );
-    return {
-      id: positiveInteger(repository.id, "repository id"),
-      owner: nonEmptyString(owner.login, "repository owner"),
-      name: nonEmptyString(repository.name, "repository name"),
-      clone_url: nonEmptyString(repository.clone_url, "repository clone URL"),
-    };
-  });
 }
 
 export async function startGitHubDeviceAuthorization(

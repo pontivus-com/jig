@@ -28,6 +28,11 @@ export interface RemoteRepositoryPresentation
   readonly remoteLocation: string | null;
 }
 
+export interface PlanningDataHomePresentation {
+  readonly label: string;
+  readonly detail: string;
+}
+
 export function localGitStatusPresentation(
   status: ServiceStatus | null,
 ): RepositoryDetailPresentation {
@@ -35,7 +40,8 @@ export function localGitStatusPresentation(
     case "pending":
       return {
         label: "Pending commit",
-        message: "The current Jig revision has not yet reached the local Git snapshot.",
+        message:
+          "The current Jig revision has not yet reached the local Git snapshot.",
       };
     case "committed":
       return {
@@ -63,35 +69,40 @@ export function remoteGitStatusPresentation(
     case "not-configured":
       return {
         label: "No remote configured",
-        message: "This repository is operating locally without a synchronization remote.",
+        message:
+          "This repository is operating locally without a synchronization remote.",
         remoteName: null,
         remoteLocation: null,
       };
     case "pending":
       return {
         label: "Pending",
-        message: "The local Git snapshot is waiting to synchronize with the configured remote.",
+        message:
+          "The local Git snapshot is waiting to synchronize with the configured remote.",
         remoteName: remote.remote_name,
         remoteLocation: remote.remote_location,
       };
     case "retrying":
       return {
         label: "Retrying",
-        message: "Remote synchronization is retrying while local Git remains committed.",
+        message:
+          "Remote synchronization is retrying while local Git remains committed.",
         remoteName: remote.remote_name,
         remoteLocation: remote.remote_location,
       };
     case "synchronized":
       return {
         label: "Synchronized",
-        message: "The current local Git snapshot is synchronized with the configured remote.",
+        message:
+          "The current local Git snapshot is synchronized with the configured remote.",
         remoteName: remote.remote_name,
         remoteLocation: remote.remote_location,
       };
     case "sync-issue":
       return {
         label: "Sync issue",
-        message: "Remote synchronization has an operational issue; local Git remains committed.",
+        message:
+          "Remote synchronization has an operational issue; local Git remains committed.",
         remoteName: remote.remote_name,
         remoteLocation: remote.remote_location,
       };
@@ -105,6 +116,43 @@ export function remoteGitStatusPresentation(
   }
 }
 
+function humanRepositoryIdentity(location: string): string {
+  const githubPrefix = "https://github.com/";
+  if (location.toLowerCase().startsWith(githubPrefix)) {
+    return location
+      .slice(githubPrefix.length)
+      .replace(/\.git$/i, "");
+  }
+  return location;
+}
+
+export function planningDataHomePresentation(
+  status: ServiceStatus | null,
+): PlanningDataHomePresentation {
+  if (status === null) {
+    return {
+      label: "Unavailable",
+      detail: "Jig could not read the current planning-data home.",
+    };
+  }
+
+  const remote = status.repository_status.remote;
+  if (
+    remote.state !== "not-configured" &&
+    remote.remote_location !== null
+  ) {
+    return {
+      label: humanRepositoryIdentity(remote.remote_location),
+      detail: "Repository used for cross-device continuity.",
+    };
+  }
+
+  return {
+    label: "Local only",
+    detail: "Planning data is stored in the selected local repository.",
+  };
+}
+
 export function repositoryStatusPresentation(
   status: ServiceStatus | null,
 ): RepositoryStatusPresentation {
@@ -112,7 +160,7 @@ export function repositoryStatusPresentation(
     return {
       key: "unknown",
       label: "Status",
-      message: "Repository status is unavailable.",
+      message: "Synchronization status is unavailable.",
       icon: "info",
       iconColor: "secondary",
     };
@@ -121,8 +169,9 @@ export function repositoryStatusPresentation(
   if (status.repository_status.local_git === "issue") {
     return {
       key: "sync-issue",
-      label: "Git issue",
-      message: "The current Jig snapshot could not be committed to local Git.",
+      label: "Needs attention",
+      message:
+        "Your current work is saved in Jig, but repository continuity needs attention.",
       icon: "error",
       iconColor: "error",
     };
@@ -131,8 +180,8 @@ export function repositoryStatusPresentation(
   if (status.repository_status.local_git === "pending") {
     return {
       key: "pending",
-      label: "Sync pending",
-      message: "Saved locally. The current Jig snapshot is waiting for its local Git commit.",
+      label: "Syncing",
+      message: "Saved locally. Repository continuity is updating.",
       icon: "warning",
       iconColor: "warning",
     };
@@ -143,39 +192,39 @@ export function repositoryStatusPresentation(
       return {
         key: "local-only",
         label: "Local only",
-        message: "Committed to local Git. No synchronization remote is configured.",
+        message: "Saved locally. No remote synchronization is configured.",
         icon: "success",
         iconColor: "success",
       };
     case "pending":
       return {
         key: "pending",
-        label: "Sync pending",
-        message: "Committed to local Git. Remote synchronization is pending.",
+        label: "Syncing",
+        message: "Saved locally. Remote continuity is updating.",
         icon: "warning",
         iconColor: "warning",
       };
     case "retrying":
       return {
         key: "retrying",
-        label: "Retrying",
-        message: "Committed to local Git. Remote synchronization is retrying.",
+        label: "Syncing",
+        message: "Saved locally. Remote continuity is retrying automatically.",
         icon: "warning",
         iconColor: "warning",
       };
     case "synchronized":
       return {
         key: "synchronized",
-        label: "Synced",
-        message: "The current Jig snapshot is committed locally and synchronized remotely.",
+        label: "Up to date",
+        message: "Saved locally and up to date remotely.",
         icon: "success",
         iconColor: "success",
       };
     case "sync-issue":
       return {
         key: "sync-issue",
-        label: "Sync issue",
-        message: "Committed to local Git. Remote synchronization currently has an operational issue.",
+        label: "Needs attention",
+        message: "Saved locally · Sync needs attention.",
         icon: "error",
         iconColor: "error",
       };

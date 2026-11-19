@@ -1,6 +1,7 @@
 import { addRemote, init, setConfig } from "isomorphic-git";
 import { describe, expect, it } from "vitest";
 import {
+  androidManagedGitHubReconnectRequired,
   createAndroidManagedGitHubCredentialProvider,
 } from "../../ui/src/native/github-managed-transport";
 import {
@@ -113,4 +114,23 @@ describe("Android managed GitHub credential boundary", () => {
       expect(loads).toBe(0);
     }
   });
+  it("marks reconnect required only after GitHub rejects the managed credential", async () => {
+    const effects = await managedEffects(
+      "https://github.com/pontivus-com/jig.git",
+    );
+    const provider = createAndroidManagedGitHubCredentialProvider(
+      effects,
+      async () => "fixture-token",
+    );
+
+    await expect(provider()).resolves.toBe("fixture-token");
+    await expect(androidManagedGitHubReconnectRequired()).resolves.toBe(false);
+
+    await provider.onAuthFailure?.();
+    await expect(androidManagedGitHubReconnectRequired()).resolves.toBe(true);
+
+    await provider.onAuthSuccess?.();
+    await expect(androidManagedGitHubReconnectRequired()).resolves.toBe(false);
+  });
+
 });

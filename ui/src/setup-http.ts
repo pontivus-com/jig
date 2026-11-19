@@ -13,6 +13,7 @@ import {
   fetchJson,
   postJson,
 } from "./http";
+
 export type {
   GitHubOnboardingSnapshot,
   GitHubReconnectSnapshot,
@@ -47,7 +48,8 @@ function nativeSetupUnavailable(operation: string): never {
   );
 }
 
-export async function readGitHubCapabilityStatus(): Promise<GitHubCapabilityStatus> {
+export async function readGitHubCapabilityStatus():
+Promise<GitHubCapabilityStatus> {
   if (Capacitor.isNativePlatform()) {
     return (await androidGitHubSetup()).readAndroidGitHubCapabilityStatus();
   }
@@ -106,67 +108,79 @@ export async function configureLocalRepository(
   return payload.repository_path;
 }
 
-export async function startGitHubSetup(): Promise<GitHubOnboardingSnapshot> {
+export async function connectGitHubSetup():
+Promise<GitHubOnboardingSnapshot> {
   if (Capacitor.isNativePlatform()) {
-    return (await androidGitHubSetup()).startAndroidGitHubSetup();
+    return (await androidGitHubSetup()).connectAndroidGitHubSetup();
   }
   return parseGitHubOnboardingSnapshot(
-    await postJson("/api/v1/setup/github/start", {}),
+    await postJson("/api/v1/setup/github/connect", {}),
   );
 }
 
-export async function refreshGitHubSetup(): Promise<GitHubOnboardingSnapshot> {
-  if (Capacitor.isNativePlatform()) {
-    return (await androidGitHubSetup()).refreshAndroidGitHubSetup();
-  }
-  return parseGitHubOnboardingSnapshot(
-    await postJson("/api/v1/setup/github/refresh-access", {}),
-  );
-}
-
-export async function readGitHubRepositories(): Promise<GitHubOnboardingSnapshot> {
+export async function readGitHubSetupState():
+Promise<GitHubOnboardingSnapshot> {
   if (Capacitor.isNativePlatform()) {
     return (await androidGitHubSetup()).readAndroidGitHubSetupSnapshot();
   }
   return parseGitHubOnboardingSnapshot(
-    await fetchJson("/api/v1/setup/github/repositories"),
+    await fetchJson("/api/v1/setup/github/state"),
   );
 }
 
-export async function startGitHubReconnect(): Promise<GitHubReconnectSnapshot> {
-  if (Capacitor.isNativePlatform()) {
-    return (await androidGitHubSetup()).startAndroidGitHubReconnect();
-  }
-  return parseGitHubReconnectSnapshot(
-    await postJson("/api/v1/github/reconnect/start", {}),
-  );
-}
-
-export async function refreshGitHubReconnect(): Promise<GitHubReconnectSnapshot> {
-  if (Capacitor.isNativePlatform()) {
-    return (await androidGitHubSetup()).refreshAndroidGitHubReconnect();
-  }
-  return parseGitHubReconnectSnapshot(
-    await postJson("/api/v1/github/reconnect/refresh", {}),
-  );
-}
-
-export async function acquireGitHubRepository(
+export async function selectGitHubRepository(
   repositoryId: number,
-): Promise<string> {
+): Promise<GitHubOnboardingSnapshot> {
   if (Capacitor.isNativePlatform()) {
-    return (await androidGitHubSetup()).acquireAndroidGitHubRepository(repositoryId);
+    return (await androidGitHubSetup()).selectAndroidGitHubRepository(
+      repositoryId,
+    );
   }
-  const payload = asObject(
-    await postJson("/api/v1/setup/github/acquire", {
+  return parseGitHubOnboardingSnapshot(
+    await postJson("/api/v1/setup/github/select-repository", {
       repository_id: repositoryId,
     }),
   );
-  if (
-    payload.configured !== true ||
-    typeof payload.repository_path !== "string"
-  ) {
-    throw new TypeError("Jig setup service returned invalid setup completion");
+}
+
+export async function retryGitHubSetup():
+Promise<GitHubOnboardingSnapshot> {
+  if (Capacitor.isNativePlatform()) {
+    return (await androidGitHubSetup()).retryAndroidGitHubSetup();
   }
-  return payload.repository_path;
+  return parseGitHubOnboardingSnapshot(
+    await postJson("/api/v1/setup/github/retry", {}),
+  );
+}
+
+export async function resumeGitHubSetup(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    (await androidGitHubSetup()).resumeAndroidGitHubSetup();
+  }
+}
+
+export async function reconnectGitHub():
+Promise<GitHubReconnectSnapshot> {
+  if (Capacitor.isNativePlatform()) {
+    return (await androidGitHubSetup()).reconnectAndroidGitHub();
+  }
+  return parseGitHubReconnectSnapshot(
+    await postJson("/api/v1/github/reconnect", {}),
+  );
+}
+
+export async function readGitHubReconnectState():
+Promise<GitHubReconnectSnapshot> {
+  if (Capacitor.isNativePlatform()) {
+    return (await androidGitHubSetup()).readAndroidGitHubReconnectSnapshot();
+  }
+  return parseGitHubReconnectSnapshot(
+    await fetchJson("/api/v1/github/reconnect/state"),
+  );
+}
+
+export async function resumeGitHubReconnect(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    (await androidGitHubSetup()).resumeAndroidGitHubReconnect();
+  }
 }

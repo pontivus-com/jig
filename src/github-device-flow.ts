@@ -13,6 +13,38 @@ import {
   startGitHubDeviceAuthorization,
 } from "./github-auth";
 
+export type GitHubFlowSleep = (
+  milliseconds: number,
+) => Promise<void>;
+
+export class GitHubFlowWakeup {
+  private wake: (() => void) | null = null;
+
+  async wait(
+    milliseconds: number,
+    sleep: GitHubFlowSleep,
+  ): Promise<void> {
+    let wakeCurrent: (() => void) | null = null;
+    const wakePromise = new Promise<void>((resolve) => {
+      wakeCurrent = resolve;
+      this.wake = resolve;
+    });
+    await Promise.race([
+      sleep(milliseconds),
+      wakePromise,
+    ]);
+    if (this.wake === wakeCurrent) {
+      this.wake = null;
+    }
+  }
+
+  resume(): void {
+    const wake = this.wake;
+    this.wake = null;
+    wake?.();
+  }
+}
+
 export interface GitHubDeviceFlowDependencies {
   readonly registration: GitHubAppRegistration | null;
   readonly assert_credential_store: () => Promise<void>;
@@ -39,6 +71,20 @@ export class GitHubDeviceFlowSession {
     return this.currentCredential;
   }
 
+  nextPollDelayMs(): number | null {
+    if (this.state === null) {
+      return null;
+    }
+    const decision = githubDevicePollDecision(
+      this.state,
+      this.now().getTime(),
+    );
+    if (decision.status === "expired" || decision.status === "poll") {
+      return 0;
+    }
+    return decision.state.retry_after_seconds * 1000;
+  }
+
   snapshot(): GitHubAuthorizationSnapshot {
     return {
       available: this.available(),
@@ -62,6 +108,19 @@ export class GitHubDeviceFlowSession {
     );
     this.currentCredential = null;
     this.error = null;
+    return this.snapshot();
+  }
+
+  async runUntilSettled(
+    sleep: GitHubFlowSleep,
+  ): Promise<GitHubAuthorizationSnapshot> {
+    while (this.state !== null) {
+      const delay = this.nextPollDelayMs();
+      if (delay !== null && delay > 0) {
+        await sleep(delay);
+      }
+      await this.poll();
+    }
     return this.snapshot();
   }
 

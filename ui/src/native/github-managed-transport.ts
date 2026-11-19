@@ -1,6 +1,10 @@
 import type { AndroidGitEffects, GitCredentialProvider } from "./git";
 import { androidSynchronizationRemote } from "./git";
-import { currentAndroidGitHubToken } from "./github-credential";
+import {
+  AndroidGitHubReauthorizationRequiredError,
+  androidGitHubCredentialNeedsReconnect,
+  currentAndroidGitHubToken,
+} from "./github-credential";
 
 export class AndroidManagedGitHubTransportError extends Error {
   constructor(message: string) {
@@ -8,6 +12,8 @@ export class AndroidManagedGitHubTransportError extends Error {
     this.name = "AndroidManagedGitHubTransportError";
   }
 }
+
+let reconnectRequired = false;
 
 function assertManagedGitHubRemote(location: string): void {
   let remote: URL;
@@ -41,9 +47,40 @@ export function createAndroidManagedGitHubCredentialProvider(
   effects: AndroidGitEffects,
   loadToken: () => Promise<string> = currentAndroidGitHubToken,
 ): GitCredentialProvider {
-  return async () => {
-    const remote = await androidSynchronizationRemote(effects);
-    assertManagedGitHubRemote(remote.location);
-    return loadToken();
-  };
+  return Object.assign(
+    async (): Promise<string> => {
+      const remote = await androidSynchronizationRemote(effects);
+      assertManagedGitHubRemote(remote.location);
+      try {
+        const token = await loadToken();
+        reconnectRequired = false;
+        return token;
+      } catch (error) {
+        if (error instanceof AndroidGitHubReauthorizationRequiredError) {
+          reconnectRequired = true;
+        }
+        throw error;
+      }
+    },
+    {
+      onAuthFailure: (): void => {
+        reconnectRequired = true;
+      },
+      onAuthSuccess: (): void => {
+        reconnectRequired = false;
+      },
+    },
+  );
+}
+
+export async function androidManagedGitHubReconnectRequired():
+Promise<boolean> {
+  if (reconnectRequired) {
+    return true;
+  }
+  try {
+    return await androidGitHubCredentialNeedsReconnect();
+  } catch {
+    return false;
+  }
 }

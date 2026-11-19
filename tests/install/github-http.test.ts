@@ -37,6 +37,10 @@ function postRequest(
   });
 }
 
+function getRequest(path: string): Request {
+  return new Request(`http://127.0.0.1:47831${path}`);
+}
+
 function deviceFlow(
   now: () => Date,
   store: (credential: GitHubCredential) => Promise<void>,
@@ -60,10 +64,49 @@ function deviceFlow(
   });
 }
 
+async function waitFor(
+  predicate: () => boolean,
+): Promise<void> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (predicate()) {
+      return;
+    }
+    await Promise.resolve();
+  }
+  throw new Error("Timed out waiting for GitHub integration");
+}
+
 describe("GitHub HTTP boundary", () => {
-  it("owns configured reconnect admission and Device Flow routes", async () => {
+  it("hides reconnect when managed GitHub authorization does not need user action", async () => {
+    const reconnect = new GitHubReconnectController(
+      deviceFlow(
+        () => new Date("2030-01-01T00:00:00.000Z"),
+        async () => undefined,
+      ),
+    );
+    const handler = createGitHubHttpHandler({
+      write_token: TOKEN,
+      reconnect,
+      reconnect_required: async () => false,
+      is_configured: () => true,
+    });
+
+    const status = await handler(getRequest("/api/v1/github/status"));
+    expect(await status?.json()).toStrictEqual({
+      onboarding_available: false,
+      reconnect_available: false,
+    });
+
+    const reconnectRequest = await handler(
+      postRequest("/api/v1/github/reconnect"),
+    );
+    expect(reconnectRequest?.status).toBe(409);
+  });
+
+  it("owns one configured reconnect intent and read-only state", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
     let stored: GitHubCredential | null = null;
+    let syncRetries = 0;
     const reconnect = new GitHubReconnectController(
       deviceFlow(
         () => new Date(nowMs),
@@ -71,6 +114,14 @@ describe("GitHub HTTP boundary", () => {
           stored = credential;
         },
       ),
+      {
+        sleep: async (delay) => {
+          nowMs += delay;
+        },
+        on_connected: async () => {
+          syncRetries += 1;
+        },
+      },
     );
     const handler = createGitHubHttpHandler({
       write_token: TOKEN,
@@ -78,50 +129,53 @@ describe("GitHub HTTP boundary", () => {
       is_configured: () => true,
     });
 
-    const status = await handler(
-      new Request("http://127.0.0.1:47831/api/v1/github/status"),
-    );
-    expect(status).not.toBeNull();
+    const status = await handler(getRequest("/api/v1/github/status"));
     expect(await status?.json()).toStrictEqual({
       onboarding_available: false,
       reconnect_available: true,
     });
 
     const unauthorized = await handler(
-      postRequest("/api/v1/github/reconnect/start", {}, null),
+      postRequest("/api/v1/github/reconnect", {}, null),
     );
     expect(unauthorized?.status).toBe(403);
 
     const started = await handler(
-      postRequest("/api/v1/github/reconnect/start"),
+      postRequest("/api/v1/github/reconnect"),
     );
     expect(await started?.json()).toMatchObject({
-      phase: "authorizing",
+      state: "connecting",
       authorization: { user_code: "ABCD-EFGH" },
     });
 
-    nowMs += 5_000;
-    const refreshed = await handler(
-      postRequest("/api/v1/github/reconnect/refresh"),
+    await waitFor(() => reconnect.snapshot().state === "initial");
+
+    const observed = await handler(
+      getRequest("/api/v1/github/reconnect/state"),
     );
-    expect(await refreshed?.json()).toStrictEqual({
+    expect(await observed?.json()).toStrictEqual({
       available: true,
-      phase: "idle",
+      state: "initial",
       authorization: null,
       error: null,
     });
     expect(stored).toStrictEqual(CREDENTIAL);
+    expect(syncRetries).toBe(1);
   });
 
-  it("owns GitHub setup routes and delegates configuration completion", async () => {
+  it("exposes Connect and repository selection without protocol progression endpoints", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
     let configuredPath: string | null = null;
+    let acquiredRepositoryId: number | null = null;
     const onboarding = new GitHubOnboardingController({
       registration: REGISTRATION,
       device_flow: deviceFlow(
         () => new Date(nowMs),
         async () => undefined,
       ),
+      sleep: async (delay) => {
+        nowMs += delay;
+      },
       list_installations: async () => [
         {
           id: 7,
@@ -139,49 +193,74 @@ describe("GitHub HTTP boundary", () => {
           name: "planning",
           clone_url: "https://github.com/pontivus-com/planning.git",
         },
+        {
+          id: 100,
+          owner: "pontivus-com",
+          name: "personal-planning",
+          clone_url:
+            "https://github.com/pontivus-com/personal-planning.git",
+        },
       ],
-      acquire_repository: async () => ({
-        version: 1 as const,
-        repository_path: "/tmp/jig-managed/pontivus-com/planning",
-        http_port: 47831,
-      }),
+      acquire_repository: async (repository) => {
+        acquiredRepositoryId = repository.id;
+        return {
+          version: 1 as const,
+          repository_path:
+            `/tmp/jig-managed/pontivus-com/${repository.name}`,
+          http_port: 47831,
+        };
+      },
+      on_acquired: async (config) => {
+        configuredPath = config.repository_path;
+      },
     });
     const handler = createGitHubHttpHandler({
       write_token: TOKEN,
       onboarding,
       is_configured: () => configuredPath !== null,
-      on_configured: (config) => {
-        configuredPath = config.repository_path;
-      },
     });
 
     const started = await handler(
-      postRequest("/api/v1/setup/github/start"),
+      postRequest("/api/v1/setup/github/connect"),
     );
     expect(await started?.json()).toMatchObject({
-      phase: "authorizing",
+      state: "connecting",
+      authorization: { user_code: "ABCD-EFGH" },
     });
 
-    nowMs += 5_000;
-    const access = await handler(
-      postRequest("/api/v1/setup/github/refresh-access"),
+    await waitFor(
+      () => onboarding.snapshot().state === "repository-selection",
     );
-    expect(await access?.json()).toMatchObject({
-      phase: "repository-selection",
-      repositories: [{ id: 99 }],
+
+    const observed = await handler(
+      getRequest("/api/v1/setup/github/state"),
+    );
+    expect(await observed?.json()).toMatchObject({
+      state: "repository-selection",
+      repositories: [{ id: 100 }, { id: 99 }],
     });
 
-    const acquired = await handler(
-      postRequest("/api/v1/setup/github/acquire", {
+    const selected = await handler(
+      postRequest("/api/v1/setup/github/select-repository", {
         repository_id: 99,
       }),
     );
-    expect(await acquired?.json()).toStrictEqual({
-      configured: true,
-      repository_path: "/tmp/jig-managed/pontivus-com/planning",
+    expect(await selected?.json()).toMatchObject({
+      state: "connecting",
     });
+
+    await waitFor(() => configuredPath !== null);
+    expect(acquiredRepositoryId).toBe(99);
     expect(configuredPath).toBe(
       "/tmp/jig-managed/pontivus-com/planning",
     );
+
+    for (const obsoletePath of [
+      "/api/v1/setup/github/refresh-access",
+      "/api/v1/setup/github/acquire",
+      "/api/v1/github/reconnect/refresh",
+    ]) {
+      expect(await handler(postRequest(obsoletePath))).toBeNull();
+    }
   });
 });

@@ -5,6 +5,7 @@ import type {
 } from "../../src/protocol";
 import {
   localGitStatusPresentation,
+  planningDataHomePresentation,
   remoteGitStatusPresentation,
   repositoryStatusPresentation,
 } from "../../ui/src/repository-status";
@@ -47,61 +48,72 @@ function localOnly(
 }
 
 describe("repository status presentation", () => {
-  it("treats committed local-only and synchronized as healthy but distinct", () => {
-    const local = repositoryStatusPresentation(localOnly());
-    const synced = repositoryStatusPresentation(
-      configured("synchronized"),
-    );
-
-    expect(local).toMatchObject({
+  it("projects healthy repository continuity into user-level states", () => {
+    expect(repositoryStatusPresentation(localOnly())).toMatchObject({
       key: "local-only",
       label: "Local only",
       icon: "success",
       iconColor: "success",
     });
-    expect(synced).toMatchObject({
+    expect(
+      repositoryStatusPresentation(configured("synchronized")),
+    ).toMatchObject({
       key: "synchronized",
-      label: "Synced",
+      label: "Up to date",
       icon: "success",
       iconColor: "success",
     });
   });
 
-  it("keeps local Git and remote synchronization meanings independent", () => {
-    expect(localGitStatusPresentation(configured("sync-issue"))).toMatchObject({
+  it("keeps exact local and remote Git facts available for diagnostics", () => {
+    expect(
+      localGitStatusPresentation(configured("sync-issue")),
+    ).toMatchObject({
       label: "Committed",
     });
-    expect(remoteGitStatusPresentation(configured("sync-issue"))).toMatchObject({
+    expect(
+      remoteGitStatusPresentation(configured("sync-issue")),
+    ).toMatchObject({
       label: "Sync issue",
       remoteName: "origin",
       remoteLocation: "https://github.com/example/planning.git",
     });
-    expect(repositoryStatusPresentation(configured("sync-issue"))).toMatchObject({
+    expect(
+      repositoryStatusPresentation(configured("sync-issue")),
+    ).toMatchObject({
       key: "sync-issue",
-      label: "Sync issue",
+      label: "Needs attention",
+      message: "Saved locally · Sync needs attention.",
     });
   });
 
-  it("makes a local Git commit failure stronger than remote state", () => {
-    expect(repositoryStatusPresentation(configured("pending", "issue")))
-      .toMatchObject({
-        key: "sync-issue",
-        label: "Git issue",
-        iconColor: "error",
-      });
-    expect(localGitStatusPresentation(configured("pending", "issue")))
-      .toMatchObject({
-        label: "Local Git issue",
-      });
+  it("projects local repository snapshot failure without Git vocabulary", () => {
+    expect(
+      repositoryStatusPresentation(configured("pending", "issue")),
+    ).toMatchObject({
+      key: "sync-issue",
+      label: "Needs attention",
+      iconColor: "error",
+    });
+    expect(
+      localGitStatusPresentation(configured("pending", "issue")),
+    ).toMatchObject({
+      label: "Local Git issue",
+    });
   });
 
-  it("keeps pending retry error and unknown operational meanings distinct", () => {
-    expect(repositoryStatusPresentation(configured("pending")).iconColor)
-      .toBe("warning");
-    expect(repositoryStatusPresentation(configured("retrying")).iconColor)
-      .toBe("warning");
-    expect(repositoryStatusPresentation(configured("sync-issue")).iconColor)
-      .toBe("error");
+  it("uses one Syncing state while retaining exact pending/retrying diagnostics", () => {
+    expect(repositoryStatusPresentation(configured("pending"))).toMatchObject({
+      key: "pending",
+      label: "Syncing",
+    });
+    expect(repositoryStatusPresentation(configured("retrying"))).toMatchObject({
+      key: "retrying",
+      label: "Syncing",
+    });
+    expect(remoteGitStatusPresentation(configured("retrying"))).toMatchObject({
+      label: "Retrying",
+    });
     expect(repositoryStatusPresentation(null)).toMatchObject({
       key: "unknown",
       label: "Status",
@@ -109,11 +121,18 @@ describe("repository status presentation", () => {
     });
   });
 
-  it("renders no remote as an explicit healthy local-only fact", () => {
-    expect(remoteGitStatusPresentation(localOnly())).toStrictEqual({
+  it("derives a human-readable planning-data home separately from diagnostics", () => {
+    expect(planningDataHomePresentation(configured("synchronized")))
+      .toStrictEqual({
+        label: "example/planning",
+        detail: "Repository used for cross-device continuity.",
+      });
+    expect(planningDataHomePresentation(localOnly())).toStrictEqual({
+      label: "Local only",
+      detail: "Planning data is stored in the selected local repository.",
+    });
+    expect(remoteGitStatusPresentation(localOnly())).toMatchObject({
       label: "No remote configured",
-      message:
-        "This repository is operating locally without a synchronization remote.",
       remoteName: null,
       remoteLocation: null,
     });

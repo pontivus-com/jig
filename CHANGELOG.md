@@ -13,22 +13,26 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - Added a repository-owned Android physical-device preflight that verifies the pinned source/build contract, local SDK/toolchain, authorized physical device, APK identity and APK hash before certification.
 - Added the pinned browser `buffer` runtime dependency required for native `isomorphic-git` onboarding to mount correctly in the Android WebView.
 - Fresh Linux installation now supports a no-repository bootstrap mode with in-application local-repository or GitHub onboarding while retaining existing `--repo` and `--repo-url` automation.
-- Settings now presents the current local Jig Git commit state separately from remote synchronization and shows the actual configured synchronization remote through a credential-free read-only identity.
+- Settings now presents the planning-data home, local safety and continuity in user language; exact Local Git, Remote Git, service, database, repository-path and manual synchronization facts remain available as secondary diagnostics.
 
 ### Changed
 
 - History and Settings use the application header as the single title/subtitle owner; their content surfaces begin directly with destination content instead of repeating page headings.
-- Repository status is one structured provider-neutral contract: local Git pending/committed/issue and remote not-configured/pending/retrying/synchronized/sync-issue remain distinct, while the compact header status is derived from those facts.
+- Repository status remains one structured provider-neutral technical contract, while the header and primary Settings projection use Local only, Syncing, Up to date and Needs attention instead of exposing Git mechanics as product workflow.
+- GitHub onboarding/reconnect now exposes one product intent, the provider-required device code and genuine repository choice only; polling, provider-access discovery/recheck, repository acquisition/adoption and reconnect continuation are automatic.
+- Fresh onboarding/loading/error states now render inside the same canonical Jig AppShell/header/body used by configured Planner rather than a standalone setup application.
 
 ### Fixed
 
-- Remote synchronization failure no longer obscures a successful local Jig Git commit; Settings and operational feedback preserve the committed local state while reporting the remote problem separately.
+- Remote synchronization failure no longer obscures a successful local snapshot; primary feedback states that work is saved locally while exact Git commit/remote failure detail remains available in Diagnostics.
 - CLI status/sync output and browser/native runtime adapters consume the same structured repository status rather than rendering or maintaining a parallel scalar status.
+- GitHub installation/repository discovery now consumes every API page instead of silently truncating authorized choices at the first 100 results.
+- Returning from GitHub authorization/access no longer requires a manual Refresh action; desktop and Android orchestration resume/recheck automatically, and configured reconnect retries synchronization without re-running repository setup.
 
 ### Documentation
 
 - Canonicalized product, functional, technical, UI/theme and repository-governance authorities for v1.1 while retaining v1.0.6 clauses as historical release provenance where superseded.
-- Closed the v1.1 non-device implementation audit: permanent hosted verification is the authoritative CI gate, local `act` is optional developer preflight, and live interactive GitHub authorization is tracked as external acceptance rather than unfinished repository implementation.
+- Reopened the v1.1 onboarding/reconnect/Settings implementation against the corrected intent-first authority and made all non-device implementation/certification complete before the final physical-device wave; permanent hosted verification remains the authoritative CI gate and local `act` remains optional preflight.
 
 ## [1.0.6] - 2026-11-18
 

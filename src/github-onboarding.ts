@@ -2,15 +2,35 @@ import type {
   GitHubAppRegistration,
   GitHubCredential,
   GitHubInstallation,
-  GitHubOnboardingPhase,
   GitHubOnboardingSnapshot,
+  GitHubRepository,
   GitHubRepositoryChoice,
 } from "./github";
 import {
+  GitHubAuthError,
   listGitHubInstallations,
   listGitHubRepositories,
 } from "./github-auth";
-import { GitHubDeviceFlowSession } from "./github-device-flow";
+import {
+  GitHubDeviceFlowSession,
+  GitHubFlowWakeup,
+} from "./github-device-flow";
+
+type GitHubOnboardingPhase =
+  | "idle"
+  | "authorizing"
+  | "repository-access"
+  | "repository-selection"
+  | "acquiring"
+  | "attention"
+  | "configured";
+
+type GitHubOnboardingRecovery =
+  | "authorization"
+  | "repository-access"
+  | "acquisition";
+
+type Sleep = (milliseconds: number) => Promise<void>;
 
 export interface GitHubOnboardingDependencies<TAcquired> {
   readonly registration: GitHubAppRegistration | null;
@@ -19,17 +39,46 @@ export interface GitHubOnboardingDependencies<TAcquired> {
     repository: GitHubRepositoryChoice,
     credential: GitHubCredential,
   ) => Promise<TAcquired>;
+  readonly on_acquired?: (acquired: TAcquired) => Promise<void> | void;
   readonly list_installations?: typeof listGitHubInstallations;
   readonly list_repositories?: typeof listGitHubRepositories;
+  readonly sleep?: Sleep;
+}
+
+const INITIAL_ACCESS_RETRY_MS = 5_000;
+const MAX_ACCESS_RETRY_MS = 30_000;
+const MAX_TRANSIENT_ACCESS_FAILURES = 5;
+
+function defaultSleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+function accessProviderUrl(
+  registration: GitHubAppRegistration,
+  installations: readonly GitHubInstallation[],
+): string {
+  if (installations.length === 0) {
+    return `https://github.com/apps/${registration.app_slug}/installations/new`;
+  }
+  if (installations.length === 1) {
+    return `https://github.com/settings/installations/${installations[0]?.id ?? ""}`;
+  }
+  return "https://github.com/settings/installations";
 }
 
 export class GitHubOnboardingController<TAcquired> {
   private phase: GitHubOnboardingPhase = "idle";
-  private grantAccessUrl: string | null = null;
-  private manageAccess: GitHubOnboardingSnapshot["manage_access"] = [];
-  private installations: readonly GitHubInstallation[] = [];
+  private providerUrl: string | null = null;
   private repositories: readonly GitHubRepositoryChoice[] = [];
+  private selectedRepository: GitHubRepositoryChoice | null = null;
   private error: string | null = null;
+  private worker: Promise<void> | null = null;
+  private accessRetryMs = INITIAL_ACCESS_RETRY_MS;
+  private transientAccessFailures = 0;
+  private recovery: GitHubOnboardingRecovery = "authorization";
+  private readonly wakeup = new GitHubFlowWakeup();
 
   constructor(
     private readonly dependencies: GitHubOnboardingDependencies<TAcquired>,
@@ -37,54 +86,51 @@ export class GitHubOnboardingController<TAcquired> {
 
   snapshot(): GitHubOnboardingSnapshot {
     const authorization = this.dependencies.device_flow.snapshot();
+    const state =
+      this.phase === "idle"
+        ? "initial"
+        : this.phase === "repository-selection"
+          ? "repository-selection"
+          : this.phase === "attention"
+            ? "attention"
+            : "connecting";
+
     return {
       available:
         this.dependencies.registration !== null &&
         authorization.available,
-      phase:
+      state,
+      authorization:
         this.phase === "authorizing"
-          ? authorization.phase
-          : this.phase,
-      authorization: authorization.authorization,
-      grant_access_url: this.grantAccessUrl,
-      manage_access: this.manageAccess,
-      installations: this.installations,
-      repositories: this.repositories,
-      error: this.error ?? authorization.error,
+          ? authorization.authorization
+          : null,
+      provider_url: this.providerUrl,
+      repositories:
+        this.phase === "repository-selection"
+          ? this.repositories
+          : [],
+      error: this.error ?? (
+        this.phase === "authorizing"
+          ? authorization.error
+          : null
+      ),
     };
   }
 
   async start(): Promise<GitHubOnboardingSnapshot> {
     this.requireRegistration();
-    this.resetRepositoryState();
+    this.reset();
     this.phase = "authorizing";
     await this.dependencies.device_flow.start();
+    this.ensureWorker();
     return this.snapshot();
   }
 
-  async refreshAccess(): Promise<GitHubOnboardingSnapshot> {
-    if (this.phase === "authorizing") {
-      const authorization = await this.dependencies.device_flow.poll();
-      if (this.dependencies.device_flow.credential() === null) {
-        if (authorization.phase === "idle") {
-          this.phase = "idle";
-        }
-        return this.snapshot();
-      }
-    }
-
-    if (this.dependencies.device_flow.credential() === null) {
-      throw new Error("GitHub authorization has not completed");
-    }
-
-    await this.loadRepositoryAccess();
-    return this.snapshot();
-  }
-
-  async acquire(repositoryId: number): Promise<TAcquired> {
-    const credential = this.dependencies.device_flow.credential();
-    if (credential === null) {
-      throw new Error("GitHub authorization has not completed");
+  async selectRepository(
+    repositoryId: number,
+  ): Promise<GitHubOnboardingSnapshot> {
+    if (this.phase !== "repository-selection") {
+      throw new Error("GitHub repository selection is not currently required");
     }
     const repository = this.repositories.find(
       (candidate) => candidate.id === repositoryId,
@@ -93,18 +139,275 @@ export class GitHubOnboardingController<TAcquired> {
       throw new Error("Selected GitHub repository is not authorized");
     }
 
+    this.selectedRepository = repository;
     this.phase = "acquiring";
+    this.providerUrl = null;
     this.error = null;
+    this.ensureWorker();
+    return this.snapshot();
+  }
+
+  async retry(): Promise<GitHubOnboardingSnapshot> {
+    if (this.phase !== "attention") {
+      return this.snapshot();
+    }
+
+    this.error = null;
+    if (this.recovery === "authorization") {
+      return this.start();
+    }
+    if (this.recovery === "repository-access") {
+      this.phase = "repository-access";
+      this.accessRetryMs = INITIAL_ACCESS_RETRY_MS;
+      this.transientAccessFailures = 0;
+      this.ensureWorker();
+      return this.snapshot();
+    }
+
+    if (this.selectedRepository === null) {
+      this.phase = "repository-selection";
+      return this.snapshot();
+    }
+    this.phase = "acquiring";
+    this.ensureWorker();
+    return this.snapshot();
+  }
+
+  resume(): void {
+    this.wakeup.resume();
+    if (
+      this.phase === "authorizing" ||
+      this.phase === "repository-access" ||
+      this.phase === "acquiring"
+    ) {
+      this.ensureWorker();
+    }
+  }
+
+  private ensureWorker(): void {
+    if (this.worker !== null) {
+      return;
+    }
+    this.worker = this.run()
+      .catch((error: unknown) => {
+        this.fail(error);
+      })
+      .finally(() => {
+        this.worker = null;
+        if (
+          this.phase === "authorizing" ||
+          this.phase === "repository-access" ||
+          this.phase === "acquiring"
+        ) {
+          this.ensureWorker();
+        }
+      });
+  }
+
+  private async run(): Promise<void> {
+    while (true) {
+      if (this.phase === "authorizing") {
+        await this.continueAuthorization();
+        continue;
+      }
+
+      if (this.phase === "repository-access") {
+        const next = await this.continueRepositoryAccess();
+        if (next === "wait") {
+          await this.wait(this.accessRetryMs);
+          this.accessRetryMs = Math.min(
+            MAX_ACCESS_RETRY_MS,
+            this.accessRetryMs * 2,
+          );
+          continue;
+        }
+        continue;
+      }
+
+      if (this.phase === "acquiring") {
+        await this.acquireSelectedRepository();
+      }
+      return;
+    }
+  }
+
+  private async continueAuthorization(): Promise<void> {
+    const authorization =
+      await this.dependencies.device_flow.runUntilSettled(
+        (milliseconds) => this.wait(milliseconds),
+      );
+    if (this.phase !== "authorizing") {
+      return;
+    }
+
+    const credential = this.dependencies.device_flow.credential();
+    if (credential !== null) {
+      this.phase = "repository-access";
+      this.error = null;
+      this.accessRetryMs = INITIAL_ACCESS_RETRY_MS;
+      this.transientAccessFailures = 0;
+      return;
+    }
+
+    this.phase = "attention";
+    this.recovery = "authorization";
+    this.error =
+      authorization.error ??
+      "GitHub authorization did not complete. Try GitHub authorization again.";
+  }
+
+  private async continueRepositoryAccess():
+  Promise<"continue" | "wait"> {
+    const credential = this.dependencies.device_flow.credential();
+    if (credential === null) {
+      this.phase = "attention";
+      this.recovery = "authorization";
+      this.error =
+        "GitHub authorization is no longer available. Try GitHub authorization again.";
+      return "continue";
+    }
+
     try {
-      return await this.dependencies.acquire_repository(
+      const registration = this.requireRegistration();
+      const installations = await (
+        this.dependencies.list_installations ??
+        listGitHubInstallations
+      )(credential.access_token);
+
+      const choices = new Map<number, GitHubRepositoryChoice>();
+      let restrictedProviderUrl: string | null = null;
+      for (const installation of installations) {
+        let repositories: readonly GitHubRepository[];
+        try {
+          repositories = await (
+            this.dependencies.list_repositories ??
+            listGitHubRepositories
+          )(credential.access_token, installation.id);
+        } catch (error) {
+          if (
+            error instanceof GitHubAuthError &&
+            (error.status_code === 403 || error.status_code === 404)
+          ) {
+            restrictedProviderUrl ??=
+              `https://github.com/settings/installations/${installation.id}`;
+            continue;
+          }
+          throw error;
+        }
+        for (const repository of repositories) {
+          choices.set(repository.id, {
+            ...repository,
+            installation_id: installation.id,
+            account_login: installation.account.login,
+            account_type: installation.account.type,
+          });
+        }
+      }
+
+      this.repositories = [...choices.values()].sort((left, right) =>
+        `${left.owner}/${left.name}`.localeCompare(
+          `${right.owner}/${right.name}`,
+        ),
+      );
+      this.providerUrl =
+        restrictedProviderUrl ??
+        accessProviderUrl(registration, installations);
+      this.error = null;
+      this.transientAccessFailures = 0;
+
+      if (this.repositories.length === 0) {
+        this.phase = "repository-access";
+        return "wait";
+      }
+
+      if (
+        this.repositories.length === 1 &&
+        restrictedProviderUrl === null
+      ) {
+        this.selectedRepository = this.repositories[0] ?? null;
+        this.providerUrl = null;
+        this.phase = "acquiring";
+        return "continue";
+      }
+
+      this.phase = "repository-selection";
+      return "continue";
+    } catch (error) {
+      if (
+        error instanceof GitHubAuthError &&
+        error.status_code === 401
+      ) {
+        this.phase = "attention";
+        this.recovery = "authorization";
+        this.error =
+          "GitHub authorization is no longer valid. Try GitHub authorization again.";
+        return "continue";
+      }
+
+      if (
+        error instanceof GitHubAuthError &&
+        (error.status_code === 403 || error.status_code === 404)
+      ) {
+        const registration = this.requireRegistration();
+        this.providerUrl =
+          `https://github.com/apps/${registration.app_slug}/installations/new`;
+        this.phase = "repository-access";
+        this.error = null;
+        return "wait";
+      }
+
+      this.transientAccessFailures += 1;
+      if (
+        this.transientAccessFailures >=
+        MAX_TRANSIENT_ACCESS_FAILURES
+      ) {
+        this.phase = "attention";
+        this.recovery = "repository-access";
+        this.error =
+          "Jig could not confirm repository access with GitHub. Try again when the connection is available.";
+        return "continue";
+      }
+      return "wait";
+    }
+  }
+
+  private async acquireSelectedRepository(): Promise<void> {
+    const credential = this.dependencies.device_flow.credential();
+    const repository = this.selectedRepository;
+    if (credential === null || repository === null) {
+      this.phase = "attention";
+      this.error = "GitHub repository acquisition cannot continue.";
+      return;
+    }
+
+    try {
+      const acquired = await this.dependencies.acquire_repository(
         repository,
         credential,
       );
-    } catch (error) {
-      this.phase = "repository-selection";
-      this.error = error instanceof Error ? error.message : String(error);
-      throw error;
+      if (this.dependencies.on_acquired !== undefined) {
+        await this.dependencies.on_acquired(acquired);
+      }
+      this.phase = "configured";
+      this.error = null;
+    } catch {
+      this.phase = "attention";
+      this.recovery = "acquisition";
+      this.error =
+        "Jig could not finish connecting this repository. Try again.";
     }
+  }
+
+  private fail(_error: unknown): void {
+    this.recovery =
+      this.phase === "repository-access"
+        ? "repository-access"
+        : this.phase === "acquiring"
+          ? "acquisition"
+          : "authorization";
+    this.phase = "attention";
+    this.error =
+      "Jig could not continue connecting this repository. Try again.";
   }
 
   private requireRegistration(): GitHubAppRegistration {
@@ -116,64 +419,21 @@ export class GitHubOnboardingController<TAcquired> {
     return this.dependencies.registration;
   }
 
-  private resetRepositoryState(): void {
+  private reset(): void {
     this.phase = "idle";
-    this.grantAccessUrl = null;
-    this.manageAccess = [];
-    this.installations = [];
+    this.providerUrl = null;
     this.repositories = [];
+    this.selectedRepository = null;
     this.error = null;
+    this.accessRetryMs = INITIAL_ACCESS_RETRY_MS;
+    this.transientAccessFailures = 0;
+    this.recovery = "authorization";
   }
 
-  private async loadRepositoryAccess(): Promise<void> {
-    const credential = this.dependencies.device_flow.credential();
-    if (credential === null) {
-      throw new Error("GitHub credential is unavailable");
-    }
-    const registration = this.requireRegistration();
-    try {
-      const installations = await (
-        this.dependencies.list_installations ??
-        listGitHubInstallations
-      )(credential.access_token);
-
-      const choices: GitHubRepositoryChoice[] = [];
-      for (const installation of installations) {
-        const repositories = await (
-          this.dependencies.list_repositories ??
-          listGitHubRepositories
-        )(credential.access_token, installation.id);
-        for (const repository of repositories) {
-          choices.push({
-            ...repository,
-            installation_id: installation.id,
-            account_login: installation.account.login,
-            account_type: installation.account.type,
-          });
-        }
-      }
-
-      this.installations = installations;
-      this.repositories = choices;
-      this.grantAccessUrl =
-        installations.length === 0
-          ? `https://github.com/apps/${registration.app_slug}/installations/new`
-          : null;
-      this.manageAccess = installations.map((installation) => ({
-        installation_id: installation.id,
-        account_login: installation.account.login,
-        manage_url:
-          `https://github.com/settings/installations/${installation.id}`,
-      }));
-      this.phase =
-        choices.length === 0
-          ? "repository-access"
-          : "repository-selection";
-      this.error = null;
-    } catch (error) {
-      this.phase = "repository-access";
-      this.error = error instanceof Error ? error.message : String(error);
-      throw error;
-    }
+  private wait(milliseconds: number): Promise<void> {
+    return this.wakeup.wait(
+      milliseconds,
+      this.dependencies.sleep ?? defaultSleep,
+    );
   }
 }

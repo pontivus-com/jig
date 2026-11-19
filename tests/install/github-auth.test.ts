@@ -264,4 +264,89 @@ describe("GitHub App Device Flow primitives", () => {
       },
     ]);
   });
+  it("consumes every installation and repository page before returning", async () => {
+    const installationPageOne = Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1,
+      account: {
+        id: 1_000 + index,
+        login: `org-${index + 1}`,
+        type: "Organization",
+      },
+    }));
+    const repositoryPageOne = Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1,
+      name: `planning-${index + 1}`,
+      clone_url: `https://github.com/example/planning-${index + 1}.git`,
+      owner: { login: "example" },
+    }));
+
+    const fetcher: GitHubFetch = async (input) => {
+      const url = String(input);
+      if (url === "https://api.github.com/user/installations?per_page=100") {
+        return Response.json(
+          { installations: installationPageOne },
+          {
+            headers: {
+              link:
+                '<https://api.github.com/user/installations?per_page=100&page=2>; rel="next"',
+            },
+          },
+        );
+      }
+      if (url.endsWith("/user/installations?per_page=100&page=2")) {
+        return Response.json({
+          installations: [
+            {
+              id: 101,
+              account: {
+                id: 1_101,
+                login: "org-101",
+                type: "Organization",
+              },
+            },
+          ],
+        });
+      }
+      if (
+        url ===
+        "https://api.github.com/user/installations/10/repositories?per_page=100"
+      ) {
+        return Response.json(
+          { repositories: repositoryPageOne },
+          {
+            headers: {
+              link:
+                '<https://api.github.com/user/installations/10/repositories?per_page=100&page=2>; rel="next"',
+            },
+          },
+        );
+      }
+      if (url.endsWith("/repositories?per_page=100&page=2")) {
+        return Response.json({
+          repositories: [
+            {
+              id: 101,
+              name: "planning-101",
+              clone_url: "https://github.com/example/planning-101.git",
+              owner: { login: "example" },
+            },
+          ],
+        });
+      }
+      throw new Error("Unexpected fetch " + url);
+    };
+
+    const installations = await listGitHubInstallations("access", fetcher);
+    expect(installations).toHaveLength(101);
+    expect(installations[100]?.id).toBe(101);
+
+    const repositories = await listGitHubRepositories("access", 10, fetcher);
+    expect(repositories).toHaveLength(101);
+    expect(repositories[100]).toMatchObject({
+      id: 101,
+      owner: "example",
+      name: "planning-101",
+    });
+  });
+
 });

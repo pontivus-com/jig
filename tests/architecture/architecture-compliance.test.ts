@@ -166,6 +166,8 @@ describe("architecture compliance", () => {
     const setup = source("ui/src/setup.tsx");
     const app = source("ui/src/app.tsx");
     const deviceFlowUi = source("ui/src/github-device-flow.tsx");
+    const githubHttp = source("src/shell/github-http.ts");
+    const setupHttp = source("ui/src/setup-http.ts");
 
     for (const [path, content] of production.filter(([path]) =>
       path.startsWith("src/core/") || path.startsWith("src/persistence/"),
@@ -208,6 +210,9 @@ describe("architecture compliance", () => {
 
     expect(deviceFlow).toContain("startGitHubDeviceAuthorization");
     expect(deviceFlow).toContain("pollGitHubDeviceAuthorization");
+    expect(deviceFlow).toContain("runUntilSettled");
+    expect(onboarding).toContain("runUntilSettled");
+    expect(reconnect).toContain("runUntilSettled");
     expect(deviceFlow).not.toMatch(/node:|bun:|Bun\.|@capacitor/);
     expect(onboarding).not.toMatch(/node:|bun:|Bun\.|@capacitor|\.\/shell\//);
     expect(reconnect).not.toMatch(/node:|bun:|Bun\.|@capacitor/);
@@ -215,7 +220,18 @@ describe("architecture compliance", () => {
 
     expect(setup).not.toContain("retry_after_seconds");
     expect(app).not.toContain("retry_after_seconds");
-    expect(deviceFlowUi).toContain("retry_after_seconds");
+    expect(deviceFlowUi).not.toContain("retry_after_seconds");
+    expect(deviceFlowUi).not.toContain("onRefresh");
+    expect(setup).not.toContain("Refresh access");
+    expect(setup).not.toContain("Grant repository access");
+    expect(setup).not.toContain("Manage GitHub access");
+    expect(setupHttp).not.toContain("refreshGitHubSetup");
+    expect(setupHttp).not.toContain("acquireGitHubRepository");
+    expect(githubHttp).not.toContain("/api/v1/setup/github/refresh-access");
+    expect(githubHttp).not.toContain("/api/v1/setup/github/acquire");
+    expect(githubHttp).toContain("/api/v1/setup/github/connect");
+    expect(githubHttp).toContain("/api/v1/setup/github/state");
+    expect(githubHttp).toContain("/api/v1/setup/github/select-repository");
 
     for (const ownerPath of [
       "src/github-auth.ts",
@@ -279,6 +295,11 @@ describe("architecture compliance", () => {
     expect(androidSetup).not.toMatch(
       /interface\s+GitHubAuthorizationSnapshot\b|interface\s+GitHubDeviceAuthorization\b/,
     );
+    expect(androidSetup).not.toContain("refreshAndroidGitHubSetup");
+    expect(androidSetup).not.toContain("refreshAndroidGitHubReconnect");
+    expect(androidSetup).not.toContain("acquireAndroidGitHubRepository");
+    expect(androidSetup).toContain("resumeAndroidGitHubSetup");
+    expect(androidSetup).toContain("resumeAndroidGitHubReconnect");
 
     expect(registration).toContain(
       'app_slug: "jig-desktop-mobile"',
@@ -320,7 +341,9 @@ describe("architecture compliance", () => {
     expect(nativeGit.toLowerCase()).not.toContain("github");
     expect(nativeGit).not.toContain("client_id");
     expect(nativeGit).not.toContain("device flow");
-    expect(nativeGit).toContain("onAuth: authCallback(credential)");
+    expect(nativeGit).toContain("...authenticationCallbacks(credential)");
+    expect(nativeGit).toContain("onAuthFailure");
+    expect(nativeGit).toContain("onAuthSuccess");
     expect(nativeGit).not.toMatch(
       /https?:\/\/[^"']*(?:token|password|secret)@/i,
     );

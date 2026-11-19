@@ -63,7 +63,7 @@ describe("GitHub Device Flow session", () => {
     ).toStrictEqual({ status: "expired" });
   });
 
-  it("wraps protocol and credential effects around the pure session", async () => {
+  it("owns automatic polling while exposing only provider-required presentation", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
     let stored: GitHubCredential | null = null;
     let polls = 0;
@@ -76,26 +76,29 @@ describe("GitHub Device Flow session", () => {
       start_device_authorization: async () => AUTHORIZATION,
       poll_device_authorization: async () => {
         polls += 1;
-        return { status: "authorized" as const, credential: CREDENTIAL };
+        return polls === 1
+          ? { status: "pending" as const, retry_after_seconds: 7 }
+          : { status: "authorized" as const, credential: CREDENTIAL };
       },
       now: () => new Date(nowMs),
     });
 
-    const started = await session.start();
-    expect(started).toMatchObject({
+    expect(await session.start()).toStrictEqual({
+      available: true,
       phase: "authorizing",
       authorization: {
+        mode: "device",
+        verification_uri: "https://github.com/login/device",
         user_code: "ABCD-EFGH",
-        retry_after_seconds: 5,
       },
+      error: null,
     });
 
-    await session.poll();
-    expect(polls).toBe(0);
+    const completed = await session.runUntilSettled(async (delay) => {
+      nowMs += delay;
+    });
 
-    nowMs += 5_000;
-    const completed = await session.poll();
-    expect(polls).toBe(1);
+    expect(polls).toBe(2);
     expect(stored).toStrictEqual(CREDENTIAL);
     expect(session.credential()).toStrictEqual(CREDENTIAL);
     expect(completed).toStrictEqual({
