@@ -459,12 +459,18 @@ function ConfiguredApp({
 
   const selectTask = useCallback((task: Task): void => {
     setOperationError(null);
+    const recurrenceSeries =
+      task.recurrence_series_id === null
+        ? null
+        : canonical?.recurrences.find(
+            (series) => series.id === task.recurrence_series_id,
+          ) ?? null;
     setWorkspace({
       mode: "task",
       taskId: task.id,
-      draft: draftFor(task, task.scheduled_date),
+      draft: draftFor(task, task.scheduled_date, recurrenceSeries),
     });
-  }, []);
+  }, [canonical?.recurrences]);
 
   const openCreate = useCallback((date: string): void => {
     setOperationError(null);
@@ -481,11 +487,14 @@ function ConfiguredApp({
       if (result === null || !("task" in result)) {
         return false;
       }
-      setWorkspace({
+      setWorkspace((current) => ({
         mode: "task",
         taskId: result.task.id,
-        draft: draftFor(result.task, result.task.scheduled_date),
-      });
+        draft:
+          current.mode === "task" || current.mode === "create"
+            ? current.draft
+            : draftFor(result.task, result.task.scheduled_date),
+      }));
       return true;
     },
     [runCommand],
@@ -717,6 +726,7 @@ function ConfiguredApp({
     ) : destination === "planner" ? (
       <Planner
         tasks={tasks}
+        recurrences={canonical.recurrences}
         now={reminderNow}
         displayedDates={displayedDates}
         selectedTask={selectedTask}
