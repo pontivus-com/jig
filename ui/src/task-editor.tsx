@@ -1,7 +1,6 @@
 import {
   Banner,
   Button,
-  CheckboxInput,
   DateInput,
   SegmentedControl,
   SegmentedControlItem,
@@ -9,6 +8,7 @@ import {
   TextArea,
   TextInput,
   TimeInput,
+  ToggleButton,
 } from "@astryxdesign/core";
 import { FieldLabel } from "@astryxdesign/core/Field";
 import { useId, useState } from "react";
@@ -486,13 +486,13 @@ export function TaskEditor({
                   aria-labelledby={weekdayLabelId}
                 >
                   {WEEKDAYS.map((weekday) => (
-                    <div className="jig-repeat-weekday" key={weekday}>
-                      <CheckboxInput
-                        label={WEEKDAY_LABELS[weekday]}
-                        value={draft.repeatWeekdays.includes(weekday)}
-                        onChange={() => toggleWeekday(weekday)}
-                      />
-                    </div>
+                    <ToggleButton
+                      key={weekday}
+                      className="jig-repeat-weekday"
+                      label={WEEKDAY_LABELS[weekday]}
+                      isPressed={draft.repeatWeekdays.includes(weekday)}
+                      onPressedChange={() => toggleWeekday(weekday)}
+                    />
                   ))}
                 </div>
               </div>
