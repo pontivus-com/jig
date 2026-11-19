@@ -130,6 +130,7 @@ body {
   }
 
   .jig-navigation-menu-item {
+    height: 48px;
     min-height: 48px;
   }
 
