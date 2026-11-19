@@ -130,14 +130,21 @@ Any repeated missed drop, floating-card residue, unstable slot or scroll conflic
 
 ### Broader mobile UX observations for J110-IMP-15
 
-On the same candidate, physically inspect:
+Use `../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html` as the binding Android/narrow presentation target. On the same candidate, physically inspect:
+
+- onboarding welcome, GitHub authorization, repository-selection, finishing/attention and first-empty-Planner states preserve the governed hierarchy and remain usable at device width;
 - header/menu/date/Task/BottomSheet/Repeat/Settings hit targets and adjacent-target spacing;
 - menu row size/readability and mis-tap risk;
-- integrated Repeat progressive disclosure and one-Save flow;
+- the **complete** Task BottomSheet remains one scrollable form ordered Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes;
+- Weekly and Monthly progressive disclosure does not hide or make Reminder/Priority/Context/Reference/Notes unreachable;
+- weekday controls are physically usable, wrap without overlap and preserve the >=48px target contract;
+- the fixed/sticky Task action area never obscures required controls, validation or Notes;
+- opening the software keyboard/IME while editing Title, Context, Reference or Notes still permits normal scrolling and access to Save/Cancel;
+- Stop repeating shows its governed consequence before Save and remains a one-Save flow;
 - Settings Data & sync / Appearance / Notifications / Diagnostics hierarchy and scanability;
 - safe-area/sticky behavior and normal vertical scrolling.
 
-Browser geometry is necessary but does not replace this physical usability evidence.
+Browser geometry is necessary but does not replace this physical usability evidence. Screenshots/notes for the governed onboarding and complete-form states are part of the J110-IMP-15 evidence packet.
 
 ### Gate outcome
 

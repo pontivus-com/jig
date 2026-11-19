@@ -17,6 +17,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Changed
 
+- Governed new v1.1 mobile and desktop UX/UI references for onboarding and the complete Task form. The mobile reference is now the binding v1.1 form interaction standard for BottomSheet hierarchy, touch geometry, scrolling, progressive Repeat disclosure and action placement; the old mobile editor reference is historical where superseded.
 - Reopened v1.1 mobile UX/UI after physical Android validation: mobile controls/menu now require >=48px touch targets with deliberate spacing, Settings is redesigned as Data & sync / Appearance / Notifications / subordinate Diagnostics, and Repeat is integrated into the single Task form with progressive disclosure and one atomic Save.
 - Rejected the Pangea Task-movement implementation after physical-device failure and governed a proof-gated current dnd-kit replacement using a dedicated grip, explicit before/between/after insertion slots and mandatory terminal drag-state cleanup.
 
@@ -36,6 +37,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Documentation
 
+- Added binding v1.1 HTML reference authority for Android/narrow onboarding + complete Task form and desktop onboarding + complete Task form, and traced those references through AGENTS, functional/technical design, implementation, Android certification and evidence.
 - Reconciled the functional, UI, technical, repository-governance, implementation-plan and evidence authorities around the reopened mobile UX remediation; the previous green hosted candidate is no longer closure evidence for the amended mobile interaction/Settings/Repeat/drag contracts.
 
 - Canonicalized product, functional, technical, UI/theme and repository-governance authorities for v1.1 while retaining v1.0.6 clauses as historical release provenance where superseded.

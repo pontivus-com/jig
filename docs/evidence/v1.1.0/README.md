@@ -15,6 +15,8 @@
 
 This candidate is retained as historical pre-remediation evidence. A new product/test candidate and permanent Verify run are required after the reopened UX work. Do not cite run 44450324316 as proof that the amended FR-03/FR-28/FR-29/FR-31 UX contracts pass.
 
+The current presentation target for the reopened candidate is now explicit: `../../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html` and `../../design/reference/jig-v1.1-desktop-onboarding-task-form-governed-reference.html` are binding UX/UI authority for onboarding and the complete Task form/Repeat presentation. Historical `mobile-editor.svg` and the pre-remediation implementation are not closure targets in that scope.
+
 ## Hosted non-device evidence ledger
 
 | Gate | Evidence state |
@@ -77,7 +79,9 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 ## Still required before release-candidate closure
 
 1. Implement the reopened non-device UX remediation in the order governed by `docs/implementation/v1.1-complete-implementation-plan.md`.
-2. Establish a **new** combined product/test candidate and permanent hosted Verify evidence after mobile geometry/menu, Settings IA, Repeat integration/atomic save and replacement drag code are complete.
+2. Establish a **new** combined product/test candidate and permanent hosted Verify evidence after mobile geometry/menu, Settings IA, governed onboarding presentation, complete Task-form/Repeat integration/atomic save and replacement drag code are complete.
+3. Record desktop screenshots for governed onboarding and complete Task-form states, browser geometry screenshots/assertions at 320/360/390/414px, and physical Android screenshots/notes covering onboarding, Weekly/Monthly expanded form scrolling, IME access, Stop repeating consequence and first-empty-Planner activation.
+4. Explicitly prove that the sibling recurrence editor/secondary recurrence Save no longer exists and that the complete Task form remains reachable beneath expanded Repeat controls.
 3. Run J110-IMP-09 on the exact new candidate APK. The old Pangea APK/result cannot close this gate.
 4. Run the remaining J110-IMP-15 physical/native matrix, including the complete mobile touch/menu/Task form/Settings usability audit plus native Git/reminder/lifecycle/interoperability checks.
 5. Complete the external live Linux/Desktop GitHub acceptance tracked by issue #31.
