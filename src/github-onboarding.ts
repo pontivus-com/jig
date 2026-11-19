@@ -10,7 +10,10 @@ import {
   listGitHubInstallations,
   listGitHubRepositories,
 } from "./github-auth";
-import { GitHubDeviceFlowSession } from "./github-device-flow";
+import {
+  GitHubDeviceFlowSession,
+  GitHubFlowWakeup,
+} from "./github-device-flow";
 
 type GitHubOnboardingPhase =
   | "idle"
@@ -68,6 +71,7 @@ export class GitHubOnboardingController<TAcquired> {
   private worker: Promise<void> | null = null;
   private accessRetryMs = INITIAL_ACCESS_RETRY_MS;
   private transientAccessFailures = 0;
+  private readonly wakeup = new GitHubFlowWakeup();
 
   constructor(
     private readonly dependencies: GitHubOnboardingDependencies<TAcquired>,
@@ -144,6 +148,7 @@ export class GitHubOnboardingController<TAcquired> {
   }
 
   resume(): void {
+    this.wakeup.resume();
     if (
       this.phase === "authorizing" ||
       this.phase === "repository-access" ||
@@ -176,7 +181,7 @@ export class GitHubOnboardingController<TAcquired> {
       if (this.phase === "repository-access") {
         const next = await this.continueRepositoryAccess();
         if (next === "wait") {
-          await this.sleep(this.accessRetryMs);
+          await this.wait(this.accessRetryMs);
           this.accessRetryMs = Math.min(
             MAX_ACCESS_RETRY_MS,
             this.accessRetryMs * 2,
@@ -196,7 +201,7 @@ export class GitHubOnboardingController<TAcquired> {
   private async continueAuthorization(): Promise<void> {
     const authorization =
       await this.dependencies.device_flow.runUntilSettled(
-        (milliseconds) => this.sleep(milliseconds),
+        (milliseconds) => this.wait(milliseconds),
       );
     if (this.phase !== "authorizing") {
       return;
@@ -358,7 +363,10 @@ export class GitHubOnboardingController<TAcquired> {
     this.transientAccessFailures = 0;
   }
 
-  private sleep(milliseconds: number): Promise<void> {
-    return (this.dependencies.sleep ?? defaultSleep)(milliseconds);
+  private wait(milliseconds: number): Promise<void> {
+    return this.wakeup.wait(
+      milliseconds,
+      this.dependencies.sleep ?? defaultSleep,
+    );
   }
 }
