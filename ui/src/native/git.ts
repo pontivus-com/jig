@@ -874,7 +874,8 @@ export async function alignAndroidPortableHead(
     fs: effects.fs,
     dir: effects.dir,
     ours: ANDROID_DATA_BRANCH,
-    theirs: targetHead,
+    theirs:
+      `refs/remotes/${ANDROID_REMOTE}/${ANDROID_DATA_BRANCH}`,
     fastForwardOnly: true,
   });
   if (result.fastForward !== true && result.alreadyMerged !== true) {
