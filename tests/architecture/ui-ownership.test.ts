@@ -400,6 +400,7 @@ describe("UI ownership architecture", () => {
     const workspace = source("ui/src/task-workspace.tsx");
     const editor = source("ui/src/task-editor.tsx");
     const taskRow = source("ui/src/task-row.tsx");
+    const drag = source("ui/src/drag.tsx");
     const history = source("ui/src/history.tsx");
 
     expect(app).toContain("interface PlannerState");
@@ -430,7 +431,8 @@ describe("UI ownership architecture", () => {
     expect(list).toContain("<DraggableTaskRow");
     expect(list).not.toContain("<SortableTaskRow");
     expect(list).not.toContain("isSortable");
-    expect(list).toContain("useTaskDragState");
+    expect(list).toContain("<TaskInsertionSlot");
+    expect(list).not.toContain("@dnd-kit/");
 
     expect(editor).not.toContain("optionalText");
     expect(editor).not.toContain("normalizeOptionalText");
@@ -440,13 +442,18 @@ describe("UI ownership architecture", () => {
     expect(history).toContain("<TaskActionMenu");
     expect(taskRow).toContain('icon="moreHorizontal"');
     expect(taskRow).toContain('icon="clock"');
-    expect(taskRow).toContain('import {\n  Draggable,');
-    expect(taskRow).toContain("dragProvided.dragHandleProps");
     expect(taskRow).toContain('className="jig-task-drag-handle"');
     expect(taskRow).toContain('<JigIcon name="drag"');
     expect(taskRow).not.toContain("@dnd-kit/");
     expect(taskRow).not.toContain("PointerSensor");
-    expect(taskRow).not.toContain("preventTaskDragActivation");
+
+    expect(drag).toContain('from "@dnd-kit/react"');
+    expect(drag).toContain('from "@dnd-kit/dom"');
+    expect(drag).toContain("useDraggable");
+    expect(drag).toContain("draggable.handleRef");
+    expect(drag).toContain('type: "jig-insertion-slot"');
+    expect(drag).toContain("PointerActivationConstraints.Distance");
+    expect(drag).not.toContain("@hello-pangea/dnd");
 
     expect(existsSync("ui/src/date-strip.tsx")).toBe(false);
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
