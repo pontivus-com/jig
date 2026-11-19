@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1.0.6 brand and application-theme contract v0.19, 2026-11-18. v1.0.5 remains the default Jig palette/identity baseline; v1.0.6 adds the curated multi-theme application catalogue, independent System/Light/Dark appearance, palette-independent Jig product-state semantics and theme-aware in-application wordmark paint.
+**Status:** Canonical brand and application-theme contract v0.20, amended 2026-11-20 for v1.1 Android icon derivation. v1.0.6 remains the published theme baseline; v1.1 preserves the same Jig identity and requires every app/launcher icon to derive from the one canonical standalone J-mark geometry rather than carrying a platform-specific redraw.
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, default Jig brand palette, multi-theme Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -503,8 +503,8 @@ The horizontal wordmark uses the canonical J mark as the actual first letter and
 | `jig-icon.svg` | 64×64 | transparent | canonical icon alias |
 | `jig-symbol-mono-dark.svg` | 64×64 | transparent | one-color dark mark |
 | `jig-symbol-mono-light.svg` | 64×64 | transparent | one-color light mark |
-| `jig-app-icon.svg` | 512×512, viewBox 64×64 | Ink 950 tile | app/product icon master |
-| `jig-favicon.svg` | 32×32, viewBox 64×64 | Ink 950 tile | browser favicon |
+| `jig-app-icon.svg` | 512×512, viewBox 64×64 | Ink 950 tile | app/product icon master; fixed-color derivative of canonical `jig-icon.svg` geometry |
+| `jig-favicon.svg` | 32×32, viewBox 64×64 | Ink 950 tile | browser favicon; fixed-color derivative of canonical `jig-icon.svg` geometry |
 | `jig-logo.svg` | 112×68 | transparent | horizontal lockup on light surfaces |
 | `jig-logo-on-dark.svg` | 112×68 | transparent | horizontal lockup on dark surfaces |
 | `jig-logo-mono-dark.svg` | 112×68 | transparent | one-color horizontal dark |
@@ -524,7 +524,8 @@ The README plate is 192×96, adding exactly 40 units horizontal and 14 units ver
 ### Application integration
 
 - **Application header/app shell:** render one canonical inline SVG/React wordmark geometry copied from the approved lockup. Its guide/wordmark foreground consumes `--jig-brand-primary`; its alignment pin consumes `--jig-brand-accent`. Desktop and narrow use this same semantic component. Do not switch fixed Light/Dark image files in application chrome and do not compose the standalone J icon beside live “Jig” text.
-- **Browser/app icon contexts:** use the standalone J-only `jig-app-icon.svg` / `jig-favicon.svg`; these fixed Ink-tile assets are intentionally theme-independent.
+- **Browser/app icon contexts:** use the standalone J-only `jig-app-icon.svg` / `jig-favicon.svg`; these fixed Ink-tile assets are intentionally theme-independent. Their J path, stroke width, alignment-pin center/radius and internal placement must remain identical to the canonical `jig-icon.svg` mark geometry; only context-specific foreground/background paint and canvas size may differ.
+- **Android launcher icon:** `android/app/src/main/res/drawable/ic_launcher.xml` is a platform translation of that same canonical standalone J mark. It must use the same J path/stroke and amber alignment-pin geometry, with the fixed app-icon treatment of white guide + Brand Amber `#F59E0B` on Ink 950 `#0B1426`. Android may own the outer launcher mask/silhouette; Jig must not redraw, simplify, substitute or independently tune the mark for Android.
 - **README / unknown viewer theme:** use `jig-logo-plate-dark.svg`.
 - **External/light branded surfaces:** `jig-logo.svg` or `jig-logo-light.svg` remain valid fixed Jig-palette assets.
 - **External/dark branded surfaces:** `jig-logo-on-dark.svg` or `jig-logo-dark.svg` remain valid fixed Jig-palette assets.
