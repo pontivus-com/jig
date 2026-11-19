@@ -1,64 +1,85 @@
 import { Button } from "@astryxdesign/core";
-import { useEffect, useRef } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { GitHubAuthorizationPresentation } from "../../src/github";
 
 export interface GitHubDeviceFlowPanelProps {
   readonly authorization: GitHubAuthorizationPresentation | null;
-  readonly isOperating: boolean;
   readonly purpose: "continue" | "reconnect";
-  readonly refreshLabel: string;
-  readonly onRefresh: () => Promise<void>;
 }
 
 export function GitHubDeviceFlowPanel({
   authorization,
-  isOperating,
   purpose,
-  refreshLabel,
-  onRefresh,
 }: GitHubDeviceFlowPanelProps): React.ReactElement | null {
-  const refreshRef = useRef(onRefresh);
-  refreshRef.current = onRefresh;
+  const openedCode = useRef<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authorization === null) {
+    if (
+      authorization === null ||
+      openedCode.current === authorization.user_code
+    ) {
       return;
     }
-    const timer = window.setTimeout(() => {
-      void refreshRef.current();
-    }, authorization.retry_after_seconds * 1000);
-    return () => window.clearTimeout(timer);
+    openedCode.current = authorization.user_code;
+    window.open(
+      authorization.verification_uri,
+      "_blank",
+      "noopener,noreferrer",
+    );
   }, [authorization]);
 
   if (authorization === null) {
     return null;
   }
 
+  const copyCode = async (): Promise<void> => {
+    await navigator.clipboard.writeText(authorization.user_code);
+    setCopiedCode(authorization.user_code);
+  };
+
   return (
     <div className="jig-setup-github-state">
       <p>
-        Enter code <strong>{authorization.user_code}</strong>{" "}
-        at GitHub&apos;s device authorization page to {purpose}.
+        {purpose === "reconnect"
+          ? "Reconnect Jig on GitHub using this code."
+          : "Connect Jig on GitHub using this code."}
       </p>
-      <Button
-        label="Open GitHub device authorization"
-        variant="secondary"
-        onClick={() => {
-          window.open(
-            authorization.verification_uri,
-            "_blank",
-            "noopener,noreferrer",
-          );
-        }}
-      />
-      <Button
-        label={refreshLabel}
-        variant="secondary"
-        isLoading={isOperating}
-        onClick={() => {
-          void onRefresh();
-        }}
-      />
+      <strong className="jig-github-device-code">
+        {authorization.user_code}
+      </strong>
+      <div className="jig-setup-github-actions">
+        <Button
+          label={
+            copiedCode === authorization.user_code
+              ? "Code copied"
+              : "Copy code"
+          }
+          variant="secondary"
+          onClick={() => {
+            void copyCode();
+          }}
+        />
+        <Button
+          label="Open GitHub"
+          variant="secondary"
+          onClick={() => {
+            window.open(
+              authorization.verification_uri,
+              "_blank",
+              "noopener,noreferrer",
+            );
+          }}
+        />
+      </div>
+      <small>
+        Enter the code on GitHub. Jig continues automatically after GitHub
+        authorizes this connection.
+      </small>
     </div>
   );
 }
