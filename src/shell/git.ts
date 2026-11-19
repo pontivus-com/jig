@@ -51,11 +51,6 @@ export interface GitCommandResult {
   readonly stderr: string;
 }
 
-export type RepositoryPushStatus =
-  | "not-configured"
-  | "synchronized"
-  | "sync-issue";
-
 export interface RepositorySynchronizationResult {
   readonly status: RepositoryPushStatus;
   readonly retryable: boolean;
@@ -1004,32 +999,6 @@ export async function pushPortableDataRef(
   };
 }
 
-async function pushJigDataRef(
-  config: GitAdapterConfig,
-  networkEnvironment: Readonly<Record<string, string>> = {},
-): Promise<RepositoryPushStatus> {
-  assertAdapterPaths(config);
-  const remoteName = await discoverSynchronizationRemote(
-    config.repository_path,
-  );
-  if (remoteName === null) {
-    return "not-configured";
-  }
-
-  const result = await runGit(
-    config.repository_path,
-    [
-      "push",
-      remoteName,
-      `${DATA_REF}:refs/heads/jig-data`,
-    ],
-    undefined,
-    networkEnvironment,
-  );
-
-  return result.exit_code === 0 ? "synchronized" : "sync-issue";
-}
-
 export async function ensurePortableData(
   config: GitAdapterConfig,
   datasetId: string,
@@ -1044,17 +1013,6 @@ export async function writePortableSnapshot(
 ): Promise<string> {
   await ensureJigDataWorktree(config, snapshot.dataset_id);
   return commitSnapshot(config, snapshot, revision);
-}
-
-export async function synchronizePortableData(
-  config: GitAdapterConfig,
-  networkEnvironment: Readonly<Record<string, string>> = {},
-): Promise<RepositorySynchronizationResult> {
-  const status = await pushJigDataRef(config, networkEnvironment);
-  return {
-    status,
-    retryable: status === "sync-issue",
-  };
 }
 
 export function retryDelayMs(failureCount: number): number {
