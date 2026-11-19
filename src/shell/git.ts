@@ -806,15 +806,6 @@ async function ancestor(
 export async function observePortableRemote(
   config: GitAdapterConfig,
   expectedDatasetId: string,
-  environment: Readonly<Record<string, string>> = {},
-): Promise<PortableRemoteObservation> {
-  const authority = await inspectSynchronizationAuthority(config);
-  const localHead = await refHead(config.repository_path, DATA_REF);
-  const empty = (
-    remote_state: "none" | "ambiguous",
-  export async function observePortableRemote(
-  config: GitAdapterConfig,
-  expectedDatasetId: string,
   lastAdoptedHead: string | null,
   environment: Readonly<Record<string, string>> = {},
 ): Promise<PortableRemoteObservation> {
