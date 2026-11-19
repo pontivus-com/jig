@@ -77,6 +77,32 @@ async function waitFor(
 }
 
 describe("GitHub HTTP boundary", () => {
+  it("hides reconnect when managed GitHub authorization does not need user action", async () => {
+    const reconnect = new GitHubReconnectController(
+      deviceFlow(
+        () => new Date("2030-01-01T00:00:00.000Z"),
+        async () => undefined,
+      ),
+    );
+    const handler = createGitHubHttpHandler({
+      write_token: TOKEN,
+      reconnect,
+      reconnect_required: async () => false,
+      is_configured: () => true,
+    });
+
+    const status = await handler(getRequest("/api/v1/github/status"));
+    expect(await status?.json()).toStrictEqual({
+      onboarding_available: false,
+      reconnect_available: false,
+    });
+
+    const reconnectRequest = await handler(
+      postRequest("/api/v1/github/reconnect"),
+    );
+    expect(reconnectRequest?.status).toBe(409);
+  });
+
   it("owns one configured reconnect intent and read-only state", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
     let stored: GitHubCredential | null = null;
