@@ -737,6 +737,18 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       "Diagnostics disclosure",
     );
 
+    const themeSelector = page.getByRole("combobox", { name: "Theme" });
+    await themeSelector.click();
+    const themeOptions = page.getByRole("option");
+    await expect(themeOptions).toHaveCount(13);
+    for (let index = 0; index < 13; index += 1) {
+      await expectTarget(
+        themeOptions.nth(index),
+        `Theme option ${index + 1}`,
+      );
+    }
+    await page.keyboard.press("Escape");
+
     await page
       .getByRole("button", { name: "Open navigation menu", exact: true })
       .click();
