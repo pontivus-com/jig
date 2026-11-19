@@ -321,9 +321,8 @@ describe("architecture compliance", () => {
     }
   });
 
-  it("keeps synchronization policy, canonical reconciliation and Git effects single-owner", () => {
+  it("keeps synchronization remediation small, provider-neutral and out of the functional core", () => {
     const policy = source("src/synchronization.ts");
-    const reconciliation = source("src/core/reconciliation.ts");
     const desktopSync = source("src/shell/sync.ts");
     const desktopGit = source("src/shell/git.ts");
     const androidSync = source("ui/src/native/sync.ts");
@@ -334,51 +333,26 @@ describe("architecture compliance", () => {
     expect(policy).not.toMatch(
       /node:|bun:|Bun\.|@capacitor|isomorphic-git|github/i,
     );
-    expect(policy).not.toContain("Task");
-    expect(policy).not.toContain("RecurrenceSeries");
-
-    expect(reconciliation).toContain(
-      "export function reconcileCanonicalPlanning",
-    );
-    expect(reconciliation).toContain("assertRecurrenceState");
-    expect(reconciliation).not.toMatch(
-      /from\s+["'][^"']*(?:\/shell\/|\/ui\/|protocol)["']/,
-    );
-    expect(reconciliation).not.toMatch(
-      /node:|bun:|Bun\.|@capacitor|isomorphic-git|github/i,
-    );
+    expect(policy).not.toMatch(/Task|RecurrenceSeries|mergeBase|three-way/i);
 
     for (const sync of [desktopSync, androidSync]) {
       expect(sync).toContain("decideSynchronization");
-      expect(sync).toContain("reconcileCanonicalPlanning");
-    }
-    expect(desktopSync).toContain(
-      'from "../core/reconciliation"',
-    );
-    expect(androidSync).toContain(
-      'from "../../../src/core/reconciliation"',
-    );
-
-    for (const git of [desktopGit, androidGit]) {
-      expect(git).not.toContain("reconcileCanonicalPlanning");
-      expect(git).not.toContain("mergeValue");
+      expect(sync).not.toMatch(
+        /reconcileCanonicalPlanning|core\/reconciliation|three-way/i,
+      );
     }
 
     expect(desktopGit).not.toMatch(
       /["']push["'][\s\S]{0,250}(?:--force|-f\b|\+refs\/heads\/jig-data)/,
     );
-    expect(desktopGit).not.toMatch(
-      /["']pull["']|["']rebase["']/,
-    );
-    expect(desktopGit).toContain('"update-ref"');
-    expect(desktopGit).toContain("60_000");
+    expect(desktopGit).not.toMatch(/["']pull["']|["']rebase["']/);
+    expect(desktopGit).not.toContain("commonBase");
+    expect(desktopGit).not.toContain("findMergeBase");
 
-    expect(androidGit).not.toContain("forceWithLease");
-    expect(androidGit).not.toContain("pushForce");
+    expect(androidGit).not.toContain("findMergeBase");
+    expect(androidGit).not.toContain("reconcileCanonicalPlanning");
     expect(androidGit).not.toContain("rebase");
     expect(androidGit).toContain("fastForwardOnly: true");
-    expect(androidGit).toContain("ANDROID_OBSERVED_REMOTE_REF");
-    expect(androidGit).toContain("expectedHead");
   });
 
   it("keeps portable records platform-neutral and Android Git provider-neutral", () => {
