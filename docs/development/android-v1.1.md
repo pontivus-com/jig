@@ -108,6 +108,8 @@ J110-IMP-08 closes on the governed deterministic Android shell/debug-APK build a
 
 ## 5. J110-IMP-09 replacement Task-movement physical gate
 
+Record all device facts, checks, screenshots/recordings and PASS/FAIL outcomes in `../evidence/v1.1.0/physical-android-certification.md`. That file is the canonical physical evidence record for both IMP-09 and IMP-15.
+
 The previous Pangea implementation is a recorded **FAIL** and must not be retested as the release candidate.
 
 Using the exact certified post-UX replacement candidate source/APK from IMP-04 — currently source `611c8ced6a854a80f24bf727c53d792f5c5d556c` and GitHub Actions APK artifact `14541004265` unless a later executable change establishes a newly certified lineage. The downloaded artifact contains `app-debug.apk` with SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`.
