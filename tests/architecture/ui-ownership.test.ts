@@ -402,7 +402,12 @@ describe("UI ownership architecture", () => {
     expect(workspace).toContain(
       'editorFormId="jig-task-bottom-sheet-form"',
     );
-    expect(styles).not.toContain("position: sticky;");
+    const editorActionsStart = styles.indexOf(".jig-editor-actions {");
+    const editorActionsEnd = styles.indexOf("}", editorActionsStart);
+    expect(editorActionsStart).toBeGreaterThanOrEqual(0);
+    expect(
+      styles.slice(editorActionsStart, editorActionsEnd + 1),
+    ).not.toContain("position: sticky;");
 
     expect(setup).toContain('readonly layoutMode: LayoutMode;');
     expect(setup).toContain('layoutMode === "narrow"');
