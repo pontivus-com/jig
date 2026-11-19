@@ -1028,6 +1028,169 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
   await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
 });
 
+
+test("explicit insertion slots cover every gap without pre-release mutation", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  const dayOfWeek = await page.evaluate(() => new Date().getDay());
+  const destinationDate = await browserCivilDate(
+    page,
+    dayOfWeek === 0 ? -1 : 1,
+  );
+
+  await createTask(page, "Gap-matrix source", today);
+  await createTask(page, "Gap-matrix destination 1", destinationDate);
+  await createTask(page, "Gap-matrix destination 2", destinationDate);
+  await createTask(page, "Gap-matrix destination 3", destinationDate);
+  await page.reload();
+
+  const source = await dragHandle(page, "Gap-matrix source");
+  const sourceBox = await source.boundingBox();
+  if (sourceBox === null) {
+    throw new Error("Gap-matrix source geometry unavailable");
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 8,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 3 },
+  );
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
+  const scope = page.locator(".jig-task-drag-scope");
+  for (let slotIndex = 0; slotIndex <= 3; slotIndex += 1) {
+    const slot = page.locator(
+      \`[data-date="\${destinationDate}"] [data-jig-drop-slot="\${slotIndex}"]\`,
+    );
+    const box = await slot.boundingBox();
+    if (box === null) {
+      throw new Error(\`Gap-matrix slot \${slotIndex} geometry unavailable\`);
+    }
+    await page.mouse.move(
+      box.x + box.width / 2,
+      box.y + box.height / 2,
+      { steps: 6 },
+    );
+    await expect(scope).toHaveAttribute(
+      "data-jig-drop-date",
+      destinationDate,
+    );
+    await expect(scope).toHaveAttribute(
+      "data-jig-drop-index",
+      String(slotIndex),
+    );
+    expect(
+      (await taskByTitle(page, "Gap-matrix source")).scheduled_date,
+    ).toBe(today);
+  }
+
+  await page.mouse.move(4, 4, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  expect(
+    (await taskByTitle(page, "Gap-matrix source")).scheduled_date,
+  ).toBe(today);
+});
+
+test("drag persists first middle and last positions within and across dates", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  const dayOfWeek = await page.evaluate(() => new Date().getDay());
+  const destinationDate = await browserCivilDate(
+    page,
+    dayOfWeek === 0 ? -1 : 1,
+  );
+
+  const orderedTitles = async (date: string): Promise<readonly string[]> =>
+    (await apiState(page)).tasks
+      .filter(
+        (task) =>
+          task.completed_at === null &&
+          task.scheduled_date === date,
+      )
+      .sort(
+        (left, right) =>
+          (left.position ?? 0) - (right.position ?? 0),
+      )
+      .map((task) => task.title);
+
+  const sameDateCases = [
+    { label: "first", sourceFirst: false, slot: 0, index: 0 },
+    { label: "middle", sourceFirst: true, slot: 2, index: 1 },
+    { label: "last", sourceFirst: true, slot: 3, index: 2 },
+  ] as const;
+
+  for (const scenario of sameDateCases) {
+    await resetCanonicalTasks(page);
+    if (scenario.sourceFirst) {
+      await createTask(page, \`Same \${scenario.label} source\`, today);
+    }
+    await createTask(page, \`Same \${scenario.label} peer 1\`, today);
+    await createTask(page, \`Same \${scenario.label} peer 2\`, today);
+    if (!scenario.sourceFirst) {
+      await createTask(page, \`Same \${scenario.label} source\`, today);
+    }
+    await page.reload();
+
+    const sourceTitle = \`Same \${scenario.label} source\`;
+    const intent = await mouseDrag(
+      page,
+      await dragHandle(page, sourceTitle),
+      page.locator(
+        \`[data-date="\${today}"] [data-jig-drop-slot="\${scenario.slot}"]\`,
+      ),
+    );
+    expect(intent).toEqual({ date: today, index: scenario.index });
+    await expect
+      .poll(async () => (await orderedTitles(today))[scenario.index])
+      .toBe(sourceTitle);
+  }
+
+  const crossDateCases = [
+    { label: "first", slot: 0, index: 0 },
+    { label: "middle", slot: 1, index: 1 },
+    { label: "last", slot: 3, index: 3 },
+  ] as const;
+
+  for (const scenario of crossDateCases) {
+    await resetCanonicalTasks(page);
+    const sourceTitle = \`Cross \${scenario.label} source\`;
+    await createTask(page, sourceTitle, today);
+    await createTask(page, \`Cross \${scenario.label} peer 1\`, destinationDate);
+    await createTask(page, \`Cross \${scenario.label} peer 2\`, destinationDate);
+    await createTask(page, \`Cross \${scenario.label} peer 3\`, destinationDate);
+    await page.reload();
+
+    const intent = await mouseDrag(
+      page,
+      await dragHandle(page, sourceTitle),
+      page.locator(
+        \`[data-date="\${destinationDate}"] [data-jig-drop-slot="\${scenario.slot}"]\`,
+      ),
+    );
+    expect(intent).toEqual({
+      date: destinationDate,
+      index: scenario.index,
+    });
+    await expect
+      .poll(async () => (await orderedTitles(destinationDate))[scenario.index])
+      .toBe(sourceTitle);
+    expect((await taskByTitle(page, sourceTitle)).scheduled_date).toBe(
+      destinationDate,
+    );
+  }
+});
+
 test("references stay data-only: HTTP(S) opens and non-HTTP stays copy-only", async ({
   page,
 }) => {
