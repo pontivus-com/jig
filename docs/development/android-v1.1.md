@@ -1,8 +1,8 @@
 # Android v1.1 development and physical-device certification
 
-**Status:** v1.1 implementation support document, amended after the 2026-11-19 physical UX failure. The previous Pangea drag candidate failed J110-IMP-09. This document now governs proof of the replacement Task-movement candidate plus the broader physical mobile UX audit required by J110-IMP-15.
+**Status:** v1.1 implementation support document, amended after the 2026-11-19 physical UX failure and subsequent replacement Task-movement completion. The previous Pangea drag candidate failed; the replacement J110-IMP-09 physical Task-movement gate was later completed successfully, but its detailed execution record was not retained. This document now governs the remaining J110-IMP-15 physical mobile UX/runtime audit and preserves the historical IMP-09 checklist without reconstructing missing evidence.
 
-**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-24, SD-34 and SD-35; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08 and J110-IMP-09.
+**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-24, SD-34 and SD-35; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09 and J110-IMP-15.
 
 ## 1. Governed Android baseline
 
@@ -106,15 +106,15 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 
 J110-IMP-08 closes on the governed deterministic Android shell/debug-APK build and its non-device verification. A real physical-phone launch of the candidate APK is deferred to J110-IMP-15 and must not be used as an IMP-08 prerequisite.
 
-## 5. J110-IMP-09 replacement Task-movement physical gate
+## 5. J110-IMP-09 replacement Task-movement physical gate — COMPLETE
 
-Record all device facts, checks, screenshots/recordings and PASS/FAIL outcomes in `../evidence/v1.1.0/physical-android-certification.md`. That file is the canonical physical evidence record for both IMP-09 and IMP-15.
+J110-IMP-09 was completed successfully on physical Android, but the detailed device/check/screenshot record was not retained. `../evidence/v1.1.0/physical-android-certification.md` now records that correction explicitly and remains the canonical evidence record for the still-open IMP-15 matrix. Do not reconstruct unknown IMP-09 facts.
 
-The previous Pangea implementation is a recorded **FAIL** and must not be retested as the release candidate.
+The previous Pangea implementation is a recorded **FAIL**. The replacement dnd-kit implementation subsequently passed the physical Task-movement gate and must not be rerun solely to reconstruct the lost detailed record.
 
-Using the exact certified post-UX replacement candidate source/APK from IMP-04 — currently source `611c8ced6a854a80f24bf727c53d792f5c5d556c` and GitHub Actions APK artifact `14541004265` unless a later executable change establishes a newly certified lineage. The downloaded artifact contains `app-debug.apk` with SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`.
+The current retained post-UX source/APK lineage is source `611c8ced6a854a80f24bf727c53d792f5c5d556c` and GitHub Actions APK artifact `14541004265`; the downloaded artifact contains `app-debug.apk` with SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`. These are the governed inputs for the remaining IMP-15 work. The lost IMP-09 record does not support reconstructing an exact historical source/APK claim.
 
-The repository package authority expects application ID `com.pontivus.jig`; the governed preflight must still prove package/version badging with Build Tools 36.0.0 `aapt` on the certification host.
+The repository package authority expects application ID `com.pontivus.jig`; the governed preflight must prove package/version badging with Build Tools 36.0.0 `aapt` for the remaining IMP-15 certification host.
 
 1. record source SHA, APK SHA-256, device model, Android version and WebView/Chrome version;
 2. run at least 20 sequential grip drags with no stranded overlay/floating card;
@@ -130,7 +130,7 @@ The repository package authority expects application ID `com.pontivus.jig`; the 
 12. verify checkbox/menu/reference/card-open independence;
 13. repeat after scrolling and after opening/closing the BottomSheet.
 
-Any repeated missed drop, floating-card residue, unstable slot or scroll conflict is **FAIL**. Return to SD-34/35. Do not add Pangea, another drag library or a platform-only sensor stack.
+The checklist above is retained as the historical IMP-09 gate definition. Its detailed execution results were not retained. If new physical evidence during IMP-15 shows a repeated missed drop, floating-card residue, unstable slot or scroll conflict, reopen SD-34/35 from that new evidence. Do not add Pangea, another drag library or a platform-only sensor stack.
 
 ### Broader mobile UX observations for J110-IMP-15
 
@@ -154,17 +154,17 @@ Browser geometry is necessary but does not replace this physical usability evide
 
 ### Gate outcome
 
-- **PASS:** the exact replacement drag matrix passes and is eligible to proceed into full J110-IMP-15.
-- **FAIL:** record concrete device/WebView behavior and return to SD-34/35.
-- **NOT RUN:** implementation remains open.
+- **PASS / COMPLETE:** J110-IMP-09 physical Task movement was completed successfully.
+- **Evidence retention:** the detailed execution record was lost; device identity, exact source/APK lineage and individual checklist results remain unknown and must not be reconstructed.
+- **Regression rule:** new physical movement failures observed during IMP-15 reopen SD-34/35.
 
 
-## 6. Gate outcome
+## 6. Remaining physical certification outcome
 
-Only explicit physical-device evidence can close the gate:
+J110-IMP-09 is closed. Release-candidate closure now depends on explicit physical-device evidence for J110-IMP-15 plus the separate live Linux/Desktop acceptance gate.
 
-- **PASS:** the J110-IMP-09 drag/drop matrix passes on the recorded phone and the J110-IMP-15 physical-device certification records the governed candidate APK launch/runtime evidence.
-- **FAIL:** record the concrete device/WebView behavior and return to the governing design/task gate before release-candidate closure.
-- **NOT RUN:** browser/emulator/build evidence may remain useful, but J110-IMP-09 and the physical-device portions of J110-IMP-15 remain open.
+- **PASS:** the J110-IMP-15 physical-device certification records the governed current candidate launch/runtime, onboarding, reminder, lifecycle, Git/reconnect and interoperability evidence.
+- **FAIL:** record the concrete device/WebView behavior and return only the affected governing design/task contract for correction.
+- **NOT RUN:** browser/emulator/build evidence may remain useful, but the physical-device portions of J110-IMP-15 remain open.
 
-J110-IMP-10/11/12/13 and final v1.1 certification must not use this document as a substitute for the required physical result.
+J110-IMP-10/11/12/13 and final v1.1 certification must not use this document as a substitute for the required remaining physical result.
