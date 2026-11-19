@@ -179,6 +179,8 @@ Semantic icons from the Astryx/Jig icon system may reinforce those reassurance c
 
 **Desktop:** use the governed two-region composition, not a centered phone-width setup card. The left region is a stable value/context region; the right region is a bounded setup pane. The initial setup pane contains primary **Connect GitHub repository** and secondary **Use an existing local repository**. When setup advances, the right pane changes state while the left value/context region remains visually stable.
 
+Desktop onboarding must not show an idle/persistent page scrollbar when the governed two-region composition fits the available AppShell body. The onboarding content must size against the **remaining application viewport below the 44px header**, rather than creating a second 100%-height scroll surface inside that body. If a genuinely short viewport or a taller onboarding state requires overflow, the existing application content owner may scroll so all controls remain reachable; do not globally disable scrolling or clip setup content merely to hide scroll chrome.
+
 The desktop local-repository path stays inside that bounded setup pane: one absolute repository-path field, validation/supporting copy, **Use this repository**, and Back/Cancel. It is provider-neutral and does not become a filesystem-browser wizard.
 
 #### GitHub connection presentation
