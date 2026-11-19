@@ -252,7 +252,7 @@ describe("loopback HTTP admission", () => {
     });
   });
 
-  it("admits the canonical set_recurrence command and rejects widened recurrence shapes", async () => {
+  it("admits recurrence on the canonical edit command and rejects widened recurrence shapes", async () => {
     const ids = [
       "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2001",
       "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2002",
@@ -307,8 +307,9 @@ describe("loopback HTTP admission", () => {
       postRequest("/api/v1/commands", {
         expected_revision: 1,
         command: {
-          type: "set_recurrence",
+          type: "edit",
           task_id: ids[0],
+          changes: {},
           recurrence: {
             pattern: {
               kind: "weekly",
@@ -336,8 +337,9 @@ describe("loopback HTTP admission", () => {
       postRequest("/api/v1/commands", {
         expected_revision: 2,
         command: {
-          type: "set_recurrence",
+          type: "edit",
           task_id: ids[0],
+          changes: {},
           recurrence: {
             pattern: {
               kind: "weekly",
