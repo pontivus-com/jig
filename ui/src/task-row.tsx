@@ -12,13 +12,16 @@ import {
   type DraggableProvided,
 } from "@hello-pangea/dnd";
 import type { Ref } from "react";
+import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { isReminderDue } from "../../src/core/reminder";
 import { formatReminderTime } from "./dates";
 import { JigIcon } from "./jig-icons";
+import { recurrenceSummary } from "./task-editor";
 
 export interface TaskRowProps {
   readonly task: Task;
+  readonly recurrenceSeries?: RecurrenceSeries | null;
   readonly now: Date;
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
@@ -49,7 +52,11 @@ function stopPointer(event: React.PointerEvent): void {
 
 function TaskMetadata({
   task,
-}: Readonly<{ task: Task }>): React.ReactElement {
+  recurrenceSeries = null,
+}: Readonly<{
+  task: Task;
+  recurrenceSeries?: RecurrenceSeries | null;
+}>): React.ReactElement {
   return (
     <div className="jig-task-meta">
       {task.context === null ? null : (
@@ -64,9 +71,15 @@ function TaskMetadata({
       {task.recurrence_series_id === null ? null : (
         <span
           className="jig-task-meta-item jig-repeat-indicator"
-          aria-label="Recurring task"
+          aria-label={
+            recurrenceSeries === null
+              ? "Recurring task"
+              : `Recurring task: ${recurrenceSummary(recurrenceSeries)}`
+          }
         >
-          Repeats
+          {recurrenceSeries === null
+            ? "Repeats"
+            : recurrenceSummary(recurrenceSeries)}
         </span>
       )}
       {task.priority === "NORMAL" ? null : (
@@ -101,7 +114,6 @@ function TaskMetadata({
           data-jig-drag-excluded="true"
           label="Copy reference"
           variant="ghost"
-          size="sm"
           icon={<Icon icon="copy" size="xsm" color="inherit" />}
           className="jig-copy-reference jig-task-meta-item"
           onPointerDown={stopPointer}
@@ -219,7 +231,6 @@ export function TaskActionMenu(
           icon: <Icon icon="moreHorizontal" color="inherit" />,
           isIconOnly: true,
           variant: "ghost",
-          size: "sm",
           className: "jig-task-menu-trigger",
         }}
         items={items}
@@ -243,13 +254,14 @@ export function TaskCardPreview({
         <span className="jig-task-title">{task.title}</span>
         <Icon icon="moreHorizontal" color="secondary" />
       </div>
-      <TaskMetadata task={task} />
+      <TaskMetadata task={task} recurrenceSeries={recurrenceSeries} />
     </div>
   );
 }
 
 export function TaskRow({
   task,
+  recurrenceSeries = null,
   now,
   isSelected = false,
   rowRef,
@@ -307,7 +319,6 @@ export function TaskRow({
             isLabelHidden
             value={completed}
             onChange={onToggleComplete}
-            size="sm"
           />
         </span>
       }
