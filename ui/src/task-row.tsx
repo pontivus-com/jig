@@ -7,7 +7,6 @@ import {
   ListItem,
 } from "@astryxdesign/core";
 import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
-import { useDraggable } from "@dnd-kit/react";
 import type { Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
@@ -349,46 +348,6 @@ export function TaskRow({
           {...(onMoveDown === undefined ? {} : { onMoveDown })}
         />
       }
-    />
-  );
-}
-
-export interface DraggableTaskRowProps
-  extends Omit<
-    TaskRowProps,
-    "rowRef" | "dragHandleRef" | "isDragging"
-  > {
-  readonly index: number;
-}
-
-export function DraggableTaskRow({
-  task,
-  index,
-  ...rowProps
-}: DraggableTaskRowProps): React.ReactElement {
-  const draggable = useDraggable({
-    id: task.id,
-    type: "jig-task",
-    data: {
-      date: task.scheduled_date,
-      index,
-    },
-  });
-
-  const rowRef = (element: HTMLLIElement | null): void => {
-    draggable.ref(element);
-  };
-  const dragHandleRef = (element: HTMLSpanElement | null): void => {
-    draggable.handleRef(element);
-  };
-
-  return (
-    <TaskRow
-      {...rowProps}
-      task={task}
-      rowRef={rowRef}
-      dragHandleRef={dragHandleRef}
-      isDragging={draggable.isDragging}
     />
   );
 }
