@@ -235,13 +235,15 @@ describe("UI ownership architecture", () => {
     expect(header).toContain("type Destination = (typeof DESTINATIONS)[number]");
     expect(header).toContain("IconName");
     expect(header).toContain("NamespacedIconName");
-    expect(header).toContain("function NarrowDestinationMenu");
-    expect(header).toContain("<Popover");
-    expect(header).toContain('presentation="popover"');
+    expect(header).toContain("function NarrowHeader");
+    expect(header).toContain("export function CompactApplicationNavigation");
+    expect(header).toContain('className="jig-mobile-bottom-navigation"');
+    expect(header).toContain('className="jig-mobile-add-fab"');
     expect(header).toContain("DESTINATIONS.map((item)");
-    expect(header).toContain('role="menuitem"');
-    expect(header).toContain('className="jig-navigation-menu-item"');
-    expect(header).not.toContain("<DropdownMenu");
+    expect(header).toContain('aria-label="Primary"');
+    expect(header).not.toContain("function NarrowDestinationMenu");
+    expect(header).not.toContain("<Popover");
+    expect(header).not.toContain("<SideNav");
 
     expect(layoutMode).toContain(
       'DESKTOP_LAYOUT_MEDIA_QUERY = "(min-width: 73rem)"',
