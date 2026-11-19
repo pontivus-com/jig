@@ -6,9 +6,9 @@
 
 ## Current combined non-device candidate
 
-- Integration branch: `work/v1.1-complete-non-device-remediation-20261119`, tracked by PR #41 into `v1.1`.
-- Certified executable/product source candidate: `305b2cd8f14f8f6ac791e3d5d07340b9d5e45efd`.
-- Permanent Verify workflow: run `44516299671` / run number `1460`, triggered through CI-only PR #42.
+- Final integration branch: `work/v1.1-final-non-device-candidate-20261119`, tracked by PR #43 into `v1.1`. It freezes the completed tree directly on the current `v1.1` authority tip; the superseded work branch remains audit history only.
+- Certified executable/product source candidate: `305b2cd8f14f8f6ac791e3d5d07340b9d5e45efd`. Subsequent changes before the final branch freeze are documentation/evidence reconciliation only.
+- Permanent executable-candidate Verify workflow: run `44516299671` / run number `1460`. The final authority-aligned branch is revalidated through CI-only PR #44 before physical certification.
 - Workflow result: **PASS** — Linux/browser Verify, Android deterministic build/F-Droid certification and Android API-24 runtime all completed successfully on the same candidate.
 - Linux/browser evidence: 41/41 test files and 250/250 core/integration/architecture tests passed; production build passed; browser bootstrap smoke passed; 77/77 real-browser tests passed; shell syntax and installer/lifecycle smoke passed.
 - Governed browser screenshots: artifact `14525538706`, `jig-v1.1-browser-evidence-4acbe0926e8409b01668a829f90dc4b96d778298`, ZIP digest `sha256:7b3cdc34b75fb8c89cb1df1dcd14f8843303c4b639895f83ba62d4d2d91a3314`.
