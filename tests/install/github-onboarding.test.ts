@@ -50,8 +50,8 @@ function deviceFlow(options: {
   });
 }
 
-async function waitForSnapshot(
-  controller: GitHubOnboardingController<unknown>,
+async function waitForSnapshot<T>(
+  controller: GitHubOnboardingController<T>,
   predicate: (snapshot: GitHubOnboardingSnapshot) => boolean,
 ): Promise<GitHubOnboardingSnapshot> {
   for (let attempt = 0; attempt < 40; attempt += 1) {
