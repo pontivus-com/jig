@@ -105,6 +105,7 @@ interface FakeRepository {
 
 interface FakeOptions {
   readonly alignFailure?: boolean;
+  readonly observeFailure?: boolean;
   readonly pushRace?: {
     readonly head: string;
     readonly snapshot: PortableSnapshot;
@@ -202,6 +203,9 @@ function fakeEffects(
       },
       observeRemote: async () => {
         observes.count += 1;
+        if (options.observeFailure === true) {
+          throw new Error("synthetic transport outage");
+        }
         return observation(repo);
       },
       alignLocal: async (
@@ -626,6 +630,52 @@ describe("cross-installation synchronization worker", () => {
       revision: 1,
       last_exported_revision: 0,
       pending_sync: true,
+    });
+  });
+
+  it("SYNC-E4 exports accepted local planning before retrying a transport outage", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    await markExported(db, 0, BASE_HEAD);
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Transport-outage safe",
+        scheduled_date: "2026-11-19",
+      },
+      0,
+      "2026-11-19T02:05:00.000Z",
+      () =>
+        "018f47f0-7b5c-7d4d-8e2b-000000000209",
+    );
+
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: BASE_HEAD,
+      remoteSnapshot: base,
+      remoteRewritten: false,
+      lineage: "equal",
+      previouslySynchronized: true,
+    };
+    const fake = fakeEffects(repo, { observeFailure: true });
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      fake.effects,
+    );
+
+    expect(await controller.trigger()).toMatchObject({
+      local_git: "committed",
+      remote: { state: "retrying" },
+    });
+    expect(fake.writes.count).toBe(1);
+    expect(fake.pushes.count).toBe(0);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 1,
+      last_exported_revision: 1,
+      pending_sync: false,
     });
   });
 
