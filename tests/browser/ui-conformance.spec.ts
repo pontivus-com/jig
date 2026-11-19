@@ -662,9 +662,17 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     );
 
     const baseControls = workspace.locator(".jig-mobile-touch-control");
-    await expect(baseControls).toHaveCount(10);
-    for (let index = 0; index < 10; index += 1) {
+    await expect(baseControls).toHaveCount(7);
+    for (let index = 0; index < 7; index += 1) {
       await expectTarget(baseControls.nth(index), `Task form control ${index + 1}`);
+    }
+    const priorityControls = workspace.getByRole("radio");
+    await expect(priorityControls).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expectTarget(
+        priorityControls.nth(index),
+        `Priority segment ${index + 1}`,
+      );
     }
 
     const repeat = workspace.getByRole("combobox", { name: "Repeat" });
@@ -677,8 +685,8 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await page.getByRole("option", { name: "Weekly", exact: true }).click();
 
     const weeklyControls = workspace.locator(".jig-mobile-touch-control");
-    await expect(weeklyControls).toHaveCount(12);
-    for (let index = 0; index < 12; index += 1) {
+    await expect(weeklyControls).toHaveCount(9);
+    for (let index = 0; index < 9; index += 1) {
       await expectTarget(
         weeklyControls.nth(index),
         `Expanded weekly control ${index + 1}`,
@@ -723,11 +731,17 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
 
     const settingsControls = page
       .locator(".jig-settings-view .jig-mobile-touch-control");
-    await expect(settingsControls).toHaveCount(4);
-    for (let index = 0; index < 4; index += 1) {
+    await expect(settingsControls).toHaveCount(1);
+    await expectTarget(settingsControls.first(), "Theme selector");
+
+    const appearanceControls = page
+      .locator(".jig-settings-view")
+      .getByRole("radio");
+    await expect(appearanceControls).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
       await expectTarget(
-        settingsControls.nth(index),
-        `Settings control ${index + 1}`,
+        appearanceControls.nth(index),
+        `Appearance segment ${index + 1}`,
       );
     }
     await expectTarget(
