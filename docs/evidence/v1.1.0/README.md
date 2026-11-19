@@ -7,8 +7,8 @@
 ## Certified product/test candidate
 
 - Branch: `v1.1`
-- Product/test candidate commit: `bf305695ef06839e8f1e7d5fca803cd8e3e9aaf3`
-- Permanent Verify workflow: run `44424575242` / run number `1322`
+- Product/test candidate commit: `1d01a641786d4fe81953c0ebd96df3aeb5477fb0`
+- Permanent Verify workflow: run `44426368627` / run number `1324`
 - Workflow result: **PASS** — Linux/browser Verify, Android deterministic build certification and Android API-24 runtime all completed successfully.
 - `package.json.version` remains `1.0.6` by design; the `1.1.0` version transition remains owned by the later `release/v1.1.0` metadata PR.
 
@@ -18,9 +18,9 @@ The product/test candidate is the source state certified by the hosted run. Late
 
 | Gate | Evidence state |
 | --- | --- |
-| Linux/browser permanent Verify | **PASS** — run `44424575242`; 39 test files / 209 core-integration tests passed; production build passed; browser bootstrap smoke passed; 66/66 real-browser tests passed; shell syntax and installer/lifecycle smoke passed. |
+| Linux/browser permanent Verify | **PASS** — run `44426368627`; 40 test files / 210 core-integration tests passed; production build passed; browser bootstrap smoke passed; 66/66 real-browser tests passed; shell syntax and installer/lifecycle smoke passed. |
 | Browser/native platform isolation | **PASS** — permanent architecture tests require lazy native-runtime/native-GitHub loading; hosted browser bootstrap smoke proves Android Git/isomorphic-git is no longer evaluated in the browser entrypoint. |
-| Android deterministic build certification | **PASS** — Gradle dependency-lock verification, Android unit/static checks, FLOSS dependency boundary, Android version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention all passed in run `44424575242`. |
+| Android deterministic build certification | **PASS** — Gradle dependency-lock verification, Android unit/static checks, FLOSS dependency boundary, Android version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention all passed in run `44426368627`. |
 | Android API-24 instrumentation | **PASS** — Android 7.0 / API 24 x86_64 emulator; 5 instrumentation tests completed successfully; Gradle `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`. |
 | Android bundled SQLite transaction/restart proof | **PASS at the native-driver/API-24 boundary** — covered by the committed API-24 instrumentation. Cross-platform physical-device continuity remains part of J110-IMP-15. |
 | Android Git native HTTP transport | **PASS at the native-transport/API-24 boundary** — committed instrumentation passed; host smart-HTTP/portable interoperability coverage is included in the 209-test core/integration result. Live private-repository acquisition remains external/physical evidence. |
@@ -35,13 +35,13 @@ The product/test candidate is the source state certified by the hosted run. Late
 
 ## Development APK identity
 
-The development APK retained by permanent Verify run `44424575242` is certification input only; it is not a GitHub Release asset or public Android distribution channel.
+The development APK retained by permanent Verify run `44426368627` is certification input only; it is not a GitHub Release asset or public Android distribution channel.
 
-- GitHub Actions artifact id: `14483202906`
-- Artifact archive digest: `sha256:6df9d696b67d5fdc88b91274b60bd51deb35b5b4d97bdf9a301eac309c7c9cd3`
+- GitHub Actions artifact id: `14485360187`
+- Artifact archive digest: `sha256:76e56db72e5724192a8bcf1b7bab639fd90c58c12929b2efd2e34572b8980fbe`
 - APK file: `app-debug.apk`
 - APK size: `9,755,768` bytes
-- APK SHA-256: `d6455972c08477a4e305790466cde1aa224020bdcaf9f58a06d52db6f85d485e`
+- APK SHA-256: `19ef11e9e00ee6d62f4f093f3109c93dc9f39600416aa545b70e51e804192dd1`
 
 Any physical-device certification must identify the exact APK/source candidate it uses. A later executable change invalidates this APK identity for that later candidate.
 
