@@ -177,9 +177,12 @@ async function runConfigured(config: JigConfig): Promise<void> {
   const githubHandler = createGitHubHttpHandler({
     write_token: token,
     is_configured: () => true,
-    ...(githubReconnect === undefined
+    ...(githubReconnect === undefined || managedGitHub === null
       ? {}
-      : { reconnect: githubReconnect }),
+      : {
+          reconnect: githubReconnect,
+          reconnect_required: managedGitHub.reconnect_required,
+        }),
   });
 
   Bun.serve({
