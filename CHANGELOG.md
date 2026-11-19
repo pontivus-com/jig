@@ -43,6 +43,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 - Canonicalized product, functional, technical, UI/theme and repository-governance authorities for v1.1 while retaining v1.0.6 clauses as historical release provenance where superseded.
 - Reopened the v1.1 onboarding/reconnect/Settings implementation against the corrected intent-first authority and made all non-device implementation/certification complete before the final physical-device wave; permanent hosted verification remains the authoritative CI gate and local `act` remains optional preflight.
+- Consolidated all v1.1 implementation, evidence and certification state onto the single authoritative `v1.1` integration branch; temporary work/CI branches are non-authoritative and physical failures are corrected on `v1.1` before final promotion to `master`.
 - Closed the repository/host/emulator v1.1 remediation gate on source candidate `305b2cd8f14f8f6ac791e3d5d07340b9d5e45efd` with permanent Verify run `44516299671`: 41/41 test files and 250/250 core/integration/architecture tests, 77/77 browser tests, deterministic Android build/F-Droid certification, API-24 instrumentation and retained governed browser screenshots all passed.
 
 ## [1.0.6] - 2026-11-18
