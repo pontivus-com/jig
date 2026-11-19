@@ -5,6 +5,7 @@ import type {
   GitHubOnboardingSnapshot,
 } from "../../src/github";
 import { GitHubDeviceFlowSession } from "../../src/github-device-flow";
+import { GitHubAuthError } from "../../src/github-auth";
 import { GitHubOnboardingController } from "../../src/github-onboarding";
 
 const REGISTRATION: GitHubAppRegistration = {
@@ -206,6 +207,52 @@ describe("GitHub onboarding orchestration", () => {
       () => acquiredRepositoryId === 99,
     );
     expect(acquiredRepositoryId).toBe(99);
+  });
+
+  it("routes a restricted installation to its GitHub-owned access surface", async () => {
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      device_flow: deviceFlow({
+        now: () => new Date(nowMs),
+      }),
+      sleep: async (delay) => {
+        nowMs += delay;
+        await new Promise<void>(() => undefined);
+      },
+      list_installations: async () => [
+        {
+          id: 23,
+          account: {
+            id: 31,
+            login: "example-org",
+            type: "Organization",
+          },
+        },
+      ],
+      list_repositories: async () => {
+        throw new GitHubAuthError(
+          "GitHub repository listing failed: Forbidden",
+          403,
+        );
+      },
+      acquire_repository: async () => {
+        throw new Error("Acquisition must not start");
+      },
+    });
+
+    await controller.start();
+    const restricted = await waitForSnapshot(
+      controller,
+      (snapshot) => snapshot.provider_url !== null,
+    );
+
+    expect(restricted).toMatchObject({
+      state: "connecting",
+      provider_url: "https://github.com/settings/installations/23",
+      repositories: [],
+      error: null,
+    });
   });
 
   it("rechecks provider access immediately when the app resumes", async () => {
