@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type {
   GitHubAppRegistration,
   GitHubCredential,
+  GitHubOnboardingSnapshot,
 } from "../../src/github";
 import { GitHubDeviceFlowSession } from "../../src/github-device-flow";
 import { GitHubOnboardingController } from "../../src/github-onboarding";
@@ -31,10 +32,6 @@ function deviceFlow(options: {
   readonly registration?: GitHubAppRegistration | null;
   readonly now: () => Date;
   readonly store?: (credential: GitHubCredential) => Promise<void>;
-  readonly poll?: () => Promise<
-    | { readonly status: "authorized"; readonly credential: GitHubCredential }
-    | { readonly status: "pending"; readonly retry_after_seconds: number }
-  >;
 }): GitHubDeviceFlowSession {
   return new GitHubDeviceFlowSession({
     registration:
@@ -45,14 +42,26 @@ function deviceFlow(options: {
     store_credential:
       options.store ?? (async () => undefined),
     start_device_authorization: async () => DEVICE_AUTHORIZATION,
-    poll_device_authorization:
-      options.poll ??
-      (async () => ({
-        status: "authorized" as const,
-        credential: CREDENTIAL,
-      })),
+    poll_device_authorization: async () => ({
+      status: "authorized" as const,
+      credential: CREDENTIAL,
+    }),
     now: options.now,
   });
+}
+
+async function waitForSnapshot(
+  controller: GitHubOnboardingController<unknown>,
+  predicate: (snapshot: GitHubOnboardingSnapshot) => boolean,
+): Promise<GitHubOnboardingSnapshot> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const snapshot = controller.snapshot();
+    if (predicate(snapshot)) {
+      return snapshot;
+    }
+    await Promise.resolve();
+  }
+  throw new Error("Timed out waiting for GitHub onboarding state");
 }
 
 describe("GitHub onboarding orchestration", () => {
@@ -70,7 +79,7 @@ describe("GitHub onboarding orchestration", () => {
 
     expect(controller.snapshot()).toMatchObject({
       available: false,
-      phase: "idle",
+      state: "initial",
       repositories: [],
     });
     await expect(controller.start()).rejects.toThrow(
@@ -78,11 +87,11 @@ describe("GitHub onboarding orchestration", () => {
     );
   });
 
-  it("continues from shared Device Flow into repository selection and canonical adoption", async () => {
+  it("automatically acquires an unambiguous repository after authorization", async () => {
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
     let stored: GitHubCredential | null = null;
     let acquiredRepositoryId: number | null = null;
-    let installationListCount = 0;
-    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    let completed = false;
 
     const controller = new GitHubOnboardingController({
       registration: REGISTRATION,
@@ -92,19 +101,19 @@ describe("GitHub onboarding orchestration", () => {
           stored = credential;
         },
       }),
-      list_installations: async () => {
-        installationListCount += 1;
-        return [
-          {
-            id: 7,
-            account: {
-              id: 11,
-              login: "pontivus-com",
-              type: "Organization",
-            },
-          },
-        ];
+      sleep: async (delay) => {
+        nowMs += delay;
       },
+      list_installations: async () => [
+        {
+          id: 7,
+          account: {
+            id: 11,
+            login: "pontivus-com",
+            type: "Organization",
+          },
+        },
+      ],
       list_repositories: async (_token, installationId) => {
         expect(installationId).toBe(7);
         return [
@@ -118,97 +127,151 @@ describe("GitHub onboarding orchestration", () => {
       },
       acquire_repository: async (selection) => {
         acquiredRepositoryId = selection.id;
-        return {
-          version: 1 as const,
-          repository_path: "/tmp/jig-managed/pontivus-com/planning",
-          http_port: 47831,
-        };
+        return "/tmp/jig-managed/pontivus-com/planning";
+      },
+      on_acquired: async () => {
+        completed = true;
       },
     });
 
     expect(await controller.start()).toMatchObject({
-      phase: "authorizing",
-      authorization: {
-        user_code: "ABCD-EFGH",
-        retry_after_seconds: 5,
-      },
+      state: "connecting",
+      authorization: { user_code: "ABCD-EFGH" },
     });
 
-    nowMs += DEVICE_AUTHORIZATION.interval * 1000;
-    expect(await controller.refreshAccess()).toMatchObject({
-      phase: "repository-selection",
-      repositories: [
-        {
-          id: 99,
-          installation_id: 7,
-          account_login: "pontivus-com",
-          owner: "pontivus-com",
-          name: "planning",
-        },
-      ],
-    });
+    await waitForSnapshot(controller, () => completed);
 
     expect(stored).toStrictEqual(CREDENTIAL);
-    expect(installationListCount).toBe(1);
-
-    const config = await controller.acquire(99);
     expect(acquiredRepositoryId).toBe(99);
-    expect(config.repository_path).toBe(
-      "/tmp/jig-managed/pontivus-com/planning",
-    );
+    expect(
+      controller.snapshot().repositories,
+    ).toStrictEqual([]);
   });
 
-  it("exposes grant and manage access after authorization without changing Device Flow ownership", async () => {
+  it("stops only for a genuine multiple-repository choice", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    let acquiredRepositoryId: number | null = null;
 
-    const grantController = new GitHubOnboardingController({
+    const controller = new GitHubOnboardingController({
       registration: REGISTRATION,
-      device_flow: deviceFlow({ now: () => new Date(nowMs) }),
-      list_installations: async () => [],
-      list_repositories: async () => [],
-      acquire_repository: async () => "",
-    });
-
-    await grantController.start();
-    nowMs += DEVICE_AUTHORIZATION.interval * 1000;
-    expect(await grantController.refreshAccess()).toMatchObject({
-      phase: "repository-access",
-      grant_access_url:
-        "https://github.com/apps/jig-desktop-mobile-test/installations/new",
-      repositories: [],
-    });
-
-    nowMs += 60_000;
-    const manageController = new GitHubOnboardingController({
-      registration: REGISTRATION,
-      device_flow: deviceFlow({ now: () => new Date(nowMs) }),
+      device_flow: deviceFlow({
+        now: () => new Date(nowMs),
+      }),
+      sleep: async (delay) => {
+        nowMs += delay;
+      },
       list_installations: async () => [
         {
-          id: 23,
+          id: 7,
           account: {
-            id: 31,
-            login: "example-org",
+            id: 11,
+            login: "pontivus-com",
             type: "Organization",
           },
         },
       ],
-      list_repositories: async () => [],
-      acquire_repository: async () => "",
-    });
-
-    await manageController.start();
-    nowMs += DEVICE_AUTHORIZATION.interval * 1000;
-    expect(await manageController.refreshAccess()).toMatchObject({
-      phase: "repository-access",
-      grant_access_url: null,
-      repositories: [],
-      manage_access: [
+      list_repositories: async () => [
         {
-          installation_id: 23,
-          account_login: "example-org",
-          manage_url: "https://github.com/settings/installations/23",
+          id: 99,
+          owner: "pontivus-com",
+          name: "planning",
+          clone_url: "https://github.com/pontivus-com/planning.git",
+        },
+        {
+          id: 100,
+          owner: "pontivus-com",
+          name: "personal-planning",
+          clone_url:
+            "https://github.com/pontivus-com/personal-planning.git",
         },
       ],
+      acquire_repository: async (selection) => {
+        acquiredRepositoryId = selection.id;
+        return selection.id;
+      },
     });
+
+    await controller.start();
+    const selection = await waitForSnapshot(
+      controller,
+      (snapshot) => snapshot.state === "repository-selection",
+    );
+
+    expect(selection.repositories.map((repository) => repository.id))
+      .toStrictEqual([100, 99]);
+
+    await controller.selectRepository(99);
+    await waitForSnapshot(
+      controller,
+      () => acquiredRepositoryId === 99,
+    );
+    expect(acquiredRepositoryId).toBe(99);
+  });
+
+  it("rechecks provider access immediately when the app resumes", async () => {
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    let installationReads = 0;
+    let acquired = false;
+    let sleepCalls = 0;
+
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      device_flow: deviceFlow({
+        now: () => new Date(nowMs),
+      }),
+      sleep: async (delay) => {
+        sleepCalls += 1;
+        if (sleepCalls === 1) {
+          nowMs += delay;
+          return;
+        }
+        await new Promise<void>(() => undefined);
+      },
+      list_installations: async () => {
+        installationReads += 1;
+        return installationReads === 1
+          ? []
+          : [
+              {
+                id: 23,
+                account: {
+                  id: 31,
+                  login: "example-org",
+                  type: "Organization",
+                },
+              },
+            ];
+      },
+      list_repositories: async () => [
+        {
+          id: 101,
+          owner: "example-org",
+          name: "planning",
+          clone_url: "https://github.com/example-org/planning.git",
+        },
+      ],
+      acquire_repository: async () => {
+        acquired = true;
+        return "configured";
+      },
+    });
+
+    await controller.start();
+    const waitingForAccess = await waitForSnapshot(
+      controller,
+      (snapshot) => snapshot.provider_url !== null,
+    );
+    expect(waitingForAccess).toMatchObject({
+      state: "connecting",
+      provider_url:
+        "https://github.com/apps/jig-desktop-mobile-test/installations/new",
+    });
+    expect(installationReads).toBe(1);
+
+    controller.resume();
+    await waitForSnapshot(controller, () => acquired);
+
+    expect(installationReads).toBe(2);
+    expect(acquired).toBe(true);
   });
 });
