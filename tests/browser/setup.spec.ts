@@ -487,6 +487,6 @@ test("configured managed repository reconnects automatically without repository 
     page.getByRole("button", { name: "Reconnect GitHub" }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "Choose a repository" }),
+    page.getByRole("heading", { name: "Choose your planning repository" }),
   ).toHaveCount(0);
 });
