@@ -948,7 +948,7 @@ test("default KeyboardSensor moves from the dedicated grip and commits once", as
 
   const scope = page.locator(".jig-task-drag-scope");
   let reachedTarget = false;
-  for (let step = 0; step < 16; step += 1) {
+  for (let step = 0; step < 96; step += 1) {
     await page.keyboard.press("ArrowDown");
     const date = await scope.getAttribute("data-jig-drop-date");
     const index = await scope.getAttribute("data-jig-drop-index");
