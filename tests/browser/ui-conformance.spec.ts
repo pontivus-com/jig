@@ -669,12 +669,6 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       await expectTarget(baseControls.nth(index), `Task form control ${index + 1}`);
     }
 
-    const actionRegion = workspace.locator(".jig-editor-actions");
-    const actionBefore = await actionRegion.boundingBox();
-    if (actionBefore === null) {
-      throw new Error("Task action region geometry unavailable");
-    }
-
     const repeat = workspace.getByRole("combobox", { name: "Repeat" });
     await repeat.click();
     const repeatOptions = page.getByRole("option");
@@ -697,6 +691,12 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await expect(weekdays).toHaveCount(7);
     for (let index = 0; index < 7; index += 1) {
       await expectTarget(weekdays.nth(index), `Repeat weekday ${index + 1}`);
+    }
+
+    const actionRegion = workspace.locator(".jig-editor-actions");
+    const actionBefore = await actionRegion.boundingBox();
+    if (actionBefore === null) {
+      throw new Error("Task action region geometry unavailable");
     }
 
     const notes = workspace.getByLabel("Notes");
