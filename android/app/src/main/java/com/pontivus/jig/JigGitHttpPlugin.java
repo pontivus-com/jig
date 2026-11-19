@@ -1,5 +1,6 @@
 package com.pontivus.jig;
 
+import android.util.Log;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -122,7 +123,14 @@ public final class JigGitHttpPlugin extends Plugin {
                 JigGitHttpCodec.encode(result.data)
             );
             call.resolve(response);
-        } catch (Exception ignored) {
+        } catch (Exception error) {
+            Log.e(
+                "JigGitHttp",
+                "Native Git HTTP request failed: " +
+                    error.getClass().getName() + ": " +
+                    error.getMessage(),
+                error
+            );
             call.reject(
                 "Native Git HTTP request failed",
                 "GIT_HTTP_FAILED"

@@ -151,6 +151,73 @@ describe("GitHub onboarding orchestration", () => {
     ).toStrictEqual([]);
   });
 
+  it("keeps Device Flow alive across transient background transport failures", async () => {
+    let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
+    let deviceAuthorizationCalls = 0;
+    let pollCalls = 0;
+    let sleepCalls = 0;
+    let acquired = false;
+
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      device_flow: new GitHubDeviceFlowSession({
+        registration: REGISTRATION,
+        assert_credential_store: async () => undefined,
+        load_credential: async () => null,
+        store_credential: async () => undefined,
+        start_device_authorization: async () => {
+          deviceAuthorizationCalls += 1;
+          return DEVICE_AUTHORIZATION;
+        },
+        poll_device_authorization: async () => {
+          pollCalls += 1;
+          if (pollCalls === 1) {
+            throw new Error("UnknownHostException");
+          }
+          return {
+            status: "authorized" as const,
+            credential: CREDENTIAL,
+          };
+        },
+        now: () => new Date(nowMs),
+      }),
+      sleep: async (delay) => {
+        sleepCalls += 1;
+        nowMs += delay;
+      },
+      list_installations: async () => [
+        {
+          id: 7,
+          account: {
+            id: 11,
+            login: "pontivus-com",
+            type: "Organization",
+          },
+        },
+      ],
+      list_repositories: async () => [
+        {
+          id: 99,
+          owner: "pontivus-com",
+          name: "planning",
+          clone_url: "https://github.com/pontivus-com/planning.git",
+        },
+      ],
+      acquire_repository: async () => {
+        acquired = true;
+        return "configured";
+      },
+    });
+
+    await controller.start();
+    await waitForSnapshot(controller, () => acquired);
+
+    expect(deviceAuthorizationCalls).toBe(1);
+    expect(pollCalls).toBe(2);
+    expect(sleepCalls).toBeGreaterThanOrEqual(2);
+    expect(controller.snapshot().state).toBe("connecting");
+  });
+
   it("reuses stored authorization instead of presenting Device Flow again", async () => {
     let deviceAuthorizationCalls = 0;
     let acquired = false;

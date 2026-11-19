@@ -1,5 +1,6 @@
 import type {
   GitHubAppRegistration,
+  GitHubAuthorizationSnapshot,
   GitHubCredential,
   GitHubInstallation,
   GitHubOnboardingSnapshot,
@@ -76,6 +77,7 @@ export class GitHubOnboardingController<TAcquired> {
   private error: string | null = null;
   private worker: Promise<void> | null = null;
   private accessRetryMs = INITIAL_ACCESS_RETRY_MS;
+  private authorizationRetryMs = INITIAL_ACCESS_RETRY_MS;
   private transientAccessFailures = 0;
   private recovery: GitHubOnboardingRecovery = "authorization";
   private readonly wakeup = new GitHubFlowWakeup();
@@ -263,16 +265,33 @@ export class GitHubOnboardingController<TAcquired> {
   }
 
   private async continueAuthorization(): Promise<void> {
-    const authorization =
-      await this.dependencies.device_flow.runUntilSettled(
-        (milliseconds) => this.wait(milliseconds),
+    let authorization: GitHubAuthorizationSnapshot;
+    try {
+      authorization =
+        await this.dependencies.device_flow.runUntilSettled(
+          (milliseconds) => this.wait(milliseconds),
+        );
+    } catch (error) {
+      // Android may temporarily block a backgrounded app's DNS/network path
+      // while GitHub is in the browser. Keep the active Device Flow alive and
+      // let resume() wake the retry instead of forcing a second authorization.
+      if (error instanceof GitHubAuthError) {
+        throw error;
+      }
+      await this.wait(this.authorizationRetryMs);
+      this.authorizationRetryMs = Math.min(
+        MAX_ACCESS_RETRY_MS,
+        this.authorizationRetryMs * 2,
       );
+      return;
+    }
     if (this.phase !== "authorizing") {
       return;
     }
 
     const credential = this.dependencies.device_flow.credential();
     if (credential !== null) {
+      this.authorizationRetryMs = INITIAL_ACCESS_RETRY_MS;
       this.phase = "repository-access";
       this.error = null;
       this.accessRetryMs = INITIAL_ACCESS_RETRY_MS;
@@ -458,6 +477,7 @@ export class GitHubOnboardingController<TAcquired> {
     this.error = null;
     this.accessRetryMs = INITIAL_ACCESS_RETRY_MS;
     this.transientAccessFailures = 0;
+    this.authorizationRetryMs = INITIAL_ACCESS_RETRY_MS;
     this.recovery = "authorization";
   }
 

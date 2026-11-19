@@ -3,8 +3,12 @@ import {
   GitHubDeviceFlowSession,
   GitHubFlowWakeup,
 } from "./github-device-flow";
+import { GitHubAuthError } from "./github-auth";
 
 type Sleep = (milliseconds: number) => Promise<void>;
+
+const INITIAL_AUTHORIZATION_RETRY_MS = 5_000;
+const MAX_AUTHORIZATION_RETRY_MS = 30_000;
 
 export interface GitHubReconnectDependencies {
   readonly sleep?: Sleep;
@@ -21,6 +25,7 @@ export class GitHubReconnectController {
   private state: GitHubReconnectSnapshot["state"] = "initial";
   private error: string | null = null;
   private worker: Promise<void> | null = null;
+  private authorizationRetryMs = INITIAL_AUTHORIZATION_RETRY_MS;
   private readonly wakeup = new GitHubFlowWakeup();
 
   constructor(
@@ -47,6 +52,7 @@ export class GitHubReconnectController {
   async start(): Promise<GitHubReconnectSnapshot> {
     this.state = "connecting";
     this.error = null;
+    this.authorizationRetryMs = INITIAL_AUTHORIZATION_RETRY_MS;
     await this.deviceFlow.start();
     this.ensureWorker();
     return this.snapshot();
@@ -84,26 +90,40 @@ export class GitHubReconnectController {
   }
 
   private async run(): Promise<void> {
-    const authorization = await this.deviceFlow.runUntilSettled(
-      (milliseconds) => this.wait(milliseconds),
-    );
-    if (this.state !== "connecting") {
-      return;
-    }
+    while (this.state === "connecting") {
+      try {
+        const authorization = await this.deviceFlow.runUntilSettled(
+          (milliseconds) => this.wait(milliseconds),
+        );
+        if (this.state !== "connecting") {
+          return;
+        }
 
-    if (this.deviceFlow.credential() === null) {
-      this.state = "attention";
-      this.error =
-        authorization.error ??
-        "GitHub authorization did not complete. Try reconnecting GitHub.";
-      return;
-    }
+        if (this.deviceFlow.credential() === null) {
+          this.state = "attention";
+          this.error =
+            authorization.error ??
+            "GitHub authorization did not complete. Try reconnecting GitHub.";
+          return;
+        }
 
-    if (this.dependencies.on_connected !== undefined) {
-      await this.dependencies.on_connected();
+        if (this.dependencies.on_connected !== undefined) {
+          await this.dependencies.on_connected();
+        }
+        this.state = "initial";
+        this.error = null;
+        return;
+      } catch (error) {
+        if (error instanceof GitHubAuthError) {
+          throw error;
+        }
+        await this.wait(this.authorizationRetryMs);
+        this.authorizationRetryMs = Math.min(
+          MAX_AUTHORIZATION_RETRY_MS,
+          this.authorizationRetryMs * 2,
+        );
+      }
     }
-    this.state = "initial";
-    this.error = null;
   }
 
   private wait(milliseconds: number): Promise<void> {
