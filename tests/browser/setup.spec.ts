@@ -192,6 +192,9 @@ test("governed onboarding adapts from desktop to narrow touch geometry", async (
   await expect(
     page.getByRole("button", { name: "Use an existing local repository" }),
   ).toHaveCount(0);
+  await expect(page.locator(".jig-setup-benefit")).toHaveCount(3);
+  await expect(page.locator(".jig-setup-benefit-icon svg")).toHaveCount(3);
+  await expect(page.locator(".jig-setup-choice-desktop")).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("v1.1-onboarding-desktop.png"),
     fullPage: true,
@@ -217,6 +220,14 @@ test("governed onboarding adapts from desktop to narrow touch geometry", async (
       (element) => getComputedStyle(element).gridTemplateColumns,
     );
     expect(narrowColumns.split(" ")).toHaveLength(1);
+    await expect(page.locator(".jig-setup-benefit")).toHaveCount(3);
+    await expect(page.locator(".jig-setup-benefit-icon svg")).toHaveCount(3);
+    await expect(page.locator(".jig-setup-choice-narrow")).toBeVisible();
+    await expect(page.locator(".jig-setup-card")).toHaveCount(0);
+
+    const connectBottom = connectBox.y + connectBox.height;
+    expect(connectBottom, "mobile initial Connect CTA remains in first viewport")
+      .toBeLessThanOrEqual(844);
 
     const geometry = await page.locator(".jig-setup").evaluate((element) => ({
       clientWidth: element.clientWidth,
