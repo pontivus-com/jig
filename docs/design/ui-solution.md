@@ -1,9 +1,9 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Canonical UI solution through v1.1, amended 2026-11-18. v1.0.x sections below remain release history; the v1.1 composition section supersedes affected narrow-header, reminder and drag/drop interactions.
+**Status:** Canonical UI solution through v1.1, amended 2026-11-19. v1.0.x sections below remain release history; the v1.1 composition section supersedes affected onboarding, synchronization, narrow-header, reminder and drag/drop interactions.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–31.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx/dnd-kit ownership, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
-**Purpose:** Govern the approved v1.0.3 Planner composition and preserve useful earlier visual evidence without allowing superseded Day/Week/sidebar structures to remain authoritative.
+**Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop and Android, including v1.1 onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
 
 ## 1. Source mockups and governed reference assets
 
@@ -40,9 +40,23 @@ Planner owns one temporal presentation state: the displayed week. Desktop render
 
 ### Onboarding and installed lifecycle
 
-The app's first interaction remains the one-script installer described in the technical solution. After installation, `jig` opens the Planner on the current local date/current week. No repeated onboarding wizard is introduced.
+A fresh Jig installation may open before a planning-data repository is configured. Onboarding is therefore a first-class **Jig application state**, not a separate installer-like utility and not a multi-step technical wizard.
 
-A compact always-available synchronization indicator truthfully distinguishes synchronized, pending/retrying, local-only and sync-issue outcomes. The UI never exposes Git topology as Planner state. `Local only` uses a restrained success/green cue because local persistence is healthy while retaining the explicit label; `Synced` is the distinct remote-synchronized outcome. Unknown status alone is neutral grey.
+From the first rendered frame on desktop and Android, onboarding uses the same governed Jig application frame, active theme, brand/header ownership, safe-area behavior, body background, typography, spacing language and Astryx component system as configured Jig. Planner/History/Settings navigation is not shown as available before configuration, but the product must remain visually and structurally identifiable as Jig.
+
+The onboarding body is deliberately distinct from Planner content and intentionally minimal:
+- one concise orientation explaining that Jig needs a planning-data home;
+- on Android, one primary **Connect GitHub repository** action;
+- on desktop, **Connect GitHub repository** plus the secondary genuine choice **Use an existing local repository**;
+- one passive connecting/progress presentation while Jig performs automatic work;
+- one repository chooser only when multiple eligible repositories require a real user choice;
+- one bounded needs-attention/error presentation when Jig cannot continue without user involvement.
+
+The UI must never expose provider/Git implementation sequencing as a succession of controls. Authorization polling, access discovery, clone/fetch, checkout placement, validation, adoption, SQLite initialization and initial synchronization remain behind the connecting state. Provider-owned identity/consent/access surfaces may interrupt the flow when GitHub requires them; Jig resumes automatically afterward.
+
+There is no normal-flow **Refresh access**, **Grant repository access**, **Manage GitHub access**, manual authorization polling, checkout-path choice or separate adoption action. Reconnect follows the same rule: one Jig recovery intent, provider-owned consent when required, then automatic continuation.
+
+A compact always-available synchronization indicator truthfully communicates the user-level outcome: **Local only**, **Syncing**, **Up to date** or **Needs attention**. When remote continuity has a problem but current work is safe locally, the user-facing copy says so directly. Low-level Git/service/database facts remain available only as secondary diagnostics.
 
 ## 3. Visual language
 
@@ -75,11 +89,12 @@ The desktop header is one Jig-owned three-zone composition: Jig Home at left, th
 CSS may set the governed product-level dimensions needed to reproduce the structural references, but must not reshape Astryx internals. No Jig rule may rely on an undocumented/private Astryx selector, DOM child structure, StyleX detail or private custom property. Do not use an application-owned high-priority cascade layer, `!important`, or selector escalation to win against the library. The application must also not synthesize Astryx compiler/runtime markers such as `__built` or manually replace the documented theme-build pipeline; those belong only to Astryx-generated artifacts. If a public Astryx primitive cannot realize a governed requirement, document that incompatibility and use the smallest Jig-owned semantic composition built from public Astryx leaves/tokens.
 
 Visual rules:
-1. **Compact, low-chrome and scan-oriented.** The week is an open canvas, not seven boxed panels. Prefer whitespace, typography and at most hairline separators to heavy outlines. Task cards remain discrete interactive units but use restrained borders/shadows. Avoid nested frames, thick lane borders, gratuitous shadows/gradients and repeated decorative lines.
-2. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
-3. **One primary mutation per active form.** Add task is prominent at Planner level. The editable Task workspace has Save as its primary form action; completion/reopen and Delete remain independent Task commands rather than alternate form modes.
-4. **Distinct state vocabulary.** Current day, selected Task, drag target, priority, focus and operational status are different semantics and must not collapse onto one visual treatment. The default Jig palette currently renders these as teal/info/Amber/status families, but v1.0.6 theme families may change the literal hues. Their semantic roles, precedence and non-color cues remain invariant.
-5. **Brand restraint.** The default Jig theme retains Ink/Paper/Amber identity. Other theme families may use their own governed palette. The application must never force Jig Ink/White/Amber onto product states or in-application wordmark paint when another theme is active.
+1. **Intent-first, not process-first.** Controls represent user goals, genuine choices and actionable recovery. Internal protocol/state-machine phases never become a row of buttons merely because the implementation has separate operations. Passive progress replaces technical choreography.
+2. **Compact, low-chrome and scan-oriented.** The week is an open canvas, not seven boxed panels. Prefer whitespace, typography and at most hairline separators to heavy outlines. Task cards remain discrete interactive units but use restrained borders/shadows. Avoid nested frames, thick lane borders, gratuitous shadows/gradients and repeated decorative lines.
+3. **Dates and task titles first.** Priority is secondary: default Normal requires no loud badge; High/Low remain explicit but restrained. Reminders are labeled with a time and are not mistaken for event/time allocations.
+4. **One primary mutation per active form.** Add task is prominent at Planner level. The editable Task workspace has Save as its primary form action; completion/reopen and Delete remain independent Task commands rather than alternate form modes.
+5. **Distinct state vocabulary.** Current day, selected Task, drag target, priority, focus and operational status are different semantics and must not collapse onto one visual treatment. The default Jig palette currently renders these as teal/info/Amber/status families, but v1.0.6 theme families may change the literal hues. Their semantic roles, precedence and non-color cues remain invariant.
+6. **Brand restraint.** The default Jig theme retains Ink/Paper/Amber identity. Other theme families may use their own governed palette. The application must never force Jig Ink/White/Amber onto product states or in-application wordmark paint when another theme is active.
 
 #### v1.0.4 state appearance matrix
 
@@ -96,21 +111,39 @@ Visual rules:
 | Drag source/target | transient Amber/accent outline/overlay only during direct manipulation |
 | Keyboard focus | Amber focus ring only; does not change the persistent state color |
 | Active History/Settings destination | quiet neutral active treatment, not the selected-Task or drag-target treatment |
-| Local Git committed | restrained success family with explicit `Committed` text |
-| Local Git pending/issue | warning/error family respectively; never presented as remote state |
-| Remote synchronized / Local only | restrained success family, distinguished by explicit remote label/state |
-| Remote pending/retrying | warning family |
-| Remote sync issue / local-save issue | error family, with the failing layer named |
+| Current work safe locally | restrained success semantics when this fact needs explicit communication |
+| Synchronization in progress | restrained neutral/progress or warning semantics; no Git transport terminology required |
+| Up to date / Local only | restrained success family, distinguished by explicit user-level label/state |
+| Synchronization needs attention | error/warning family with direct copy stating whether work remains safe locally |
+| Technical Git/service/database detail | secondary Diagnostics only; never the primary status vocabulary |
 | Unknown status | neutral grey |
 
-6. **Theme and appearance parity.** Theme family and appearance are independent. Every one of the thirteen v1.0.6 Theme presets supports System, Light and Dark; System follows browser/platform preference changes while explicit Light/Dark stays explicit. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics remain clear without relying on color alone.
-7. **Settings-only configuration.** Theme family is selected through one bounded Theme selector and appearance through one System/Light/Dark segmented control in Settings → Appearance. No theme or mode control appears in Planner, the header, Task cards/workspace, History actions or contextual menus.
-8. **Theme-aware brand.** The compact header uses one canonical Jig wordmark geometry. Its foreground and alignment pin consume the active theme's semantic brand roles; changing theme/mode never changes logo geometry or product identity.
-9. **Reminder presentation.** Due reminders use browser/OS Notification only while Jig is open and permission is granted. Page visibility/focus does not change channel. There is no reminder Toast fallback or duplicate.
-10. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, displayed week, selected Task or pending form draft changes as a side effect of a breakpoint or appearance change.
-11. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable; production palette/brand paint is resolved by the active semantic theme. No duplicate structural mockup set is required for each theme.
+7. **Theme and appearance parity.** Theme family and appearance are independent. Every one of the thirteen v1.0.6 Theme presets supports System, Light and Dark; System follows browser/platform preference changes while explicit Light/Dark stays explicit. The same structure, hierarchy, spacing, focus, selection, priority, completion, save and sync semantics remain clear without relying on color alone.
+8. **Settings-only configuration.** Theme family is selected through one bounded Theme selector and appearance through one System/Light/Dark segmented control in Settings → Appearance. No theme or mode control appears in Planner, the header, Task cards/workspace, History actions or contextual menus.
+9. **Theme-aware brand.** The compact header uses one canonical Jig wordmark geometry. Its foreground and alignment pin consume the active theme's semantic brand roles; changing theme/mode never changes logo geometry or product identity.
+10. **Reminder presentation.** Due reminders use browser/OS Notification only while Jig is open and permission is granted. Page visibility/focus does not change channel. There is no reminder Toast fallback or duplicate.
+11. **Mobile-first semantics, desktop-first completeness.** Layout may recompose, but no Task value, displayed week, selected Task or pending form draft changes as a side effect of a breakpoint or appearance change.
+12. **Reference SVGs remain structural.** Their wording, geometry and density are reviewable; production palette/brand paint is resolved by the active semantic theme. No duplicate structural mockup set is required for each theme.
 
 ## 4. Screen specifications
+
+### 4.0 v1.1 onboarding application state
+
+Onboarding uses the same outer application composition on desktop and Android; platform differences change only the genuine choices available inside the body.
+
+**Header:** render the canonical theme-aware Jig wordmark/identity in the governed application header from the first frame. The header owns safe-area inset on Android. Do not render Planner temporal controls, Add task, Planner/History/Settings destination navigation or synchronization status before a repository is configured. The header remains product chrome, not an onboarding step indicator.
+
+**Body:** use one quiet, bounded onboarding composition centered within the normal Jig body. It is not a dashboard of setup cards and not a technical checklist. The initial state contains one short orientation and the available user choices. Android has one primary **Connect GitHub repository** action. Desktop has the same primary GitHub action plus **Use an existing local repository** as a secondary alternative.
+
+After Connect, replace the initial controls with one coherent **Connecting repository…** presentation. Progress may use a compact spinner/progress indicator and short outcome-oriented copy; it must not enumerate authorization, polling, installation, cloning, validating, adopting or database phases.
+
+If repository selection is necessary, render one simple repository chooser using human-readable owner/repository identity. After selection, return to the single connecting state automatically.
+
+If external consent/access is required, Jig may open or foreground GitHub's provider-owned surface. The Jig body remains a waiting/continuation state and resumes automatically when the app regains focus/activation or the provider flow completes. There is no Jig-owned **Refresh access**, **Grant repository access**, **Manage access** or manual poll control.
+
+**Needs attention:** show one concise explanation of the user-impacting problem and only the minimum action that can actually resolve it, for example **Reconnect GitHub**, **Try again** or returning to the repository chooser. Raw provider responses, filesystem paths, Git commands, transport phases and database terminology belong in diagnostics, not this surface.
+
+Successful setup transitions directly from onboarding into Planner without a completion ceremony or additional Continue button.
 
 ### 4.1 Desktop Planner
 
@@ -151,14 +184,16 @@ Unlike Planner's seven-track canvas, History and Settings are reading/configurat
 
 Settings keeps its internal two-column grouping inside that bounded measure using two equal fluid columns rather than fixed 560px/580px tracks. Its internal grid may reflow to one column at the existing 73rem layout boundary without removing or changing the outer 50rem content measure.
 
-The Settings **Synchronization** section presents one ordered two-stage state:
+The Settings **Synchronization** section leads with user-level continuity rather than Git topology. It shows:
+- the selected planning-data home as a human-readable repository identity when available, or **Local only**;
+- one concise state such as **Up to date**, **Syncing**, **Saved locally · Sync needs attention** or **Needs attention**;
+- a recovery action only when the user can materially resolve the condition.
 
-1. **Local Git** — `Committed`, `Pending commit` or `Local Git issue` for the current canonical Jig revision.
-2. **Remote Git** — the credential-free identity of the configured synchronization remote plus `Synchronized`, `Pending`, `Retrying`, `Sync issue`, or `No remote configured`.
+Automatic synchronization is the normal behavior, so **Sync now** is not a standing primary Settings control. Reconnect/retry appears only when synchronization actually needs user intervention.
 
-A remote failure never changes a successfully committed Local Git row back to pending/error. When no remote is configured, Local Git may still be committed and healthy. The existing compact header status remains a concise projection of these same facts; it is not a separate state store.
+A secondary **Diagnostics / technical details** region may show Local Git snapshot state, configured remote name/location, service health, database health and other engineering facts. That region is explicitly diagnostic and visually subordinate. It does not determine the primary Settings hierarchy and does not expose credentials, access tokens, raw askpass material or provider-specific internal IDs.
 
-The remote identity is rendered as informational text such as the Git remote name plus a sanitized host/repository locator. Do not show credentials, access tokens, query secrets, raw askpass material or provider-specific internal IDs. Do not offer remote editing from this surface.
+The compact header status is the concise projection of the same underlying synchronization state; it is not a separate state store. When the remote has a problem while current work is durable locally, both header/Settings messaging preserve that truth without requiring Git vocabulary.
 
 On History, selecting a completed Task opens the same right-side Task workspace while History remains active. Settings has no Planner week navigator because week controls operate only on Planner state. Clicking Jig returns to Planner and preserves the session's Planner date/week state.
 
@@ -320,7 +355,8 @@ Implementation plans must link to this document, [Planning workbench functional 
 
 - **Narrow header:** one sticky header region. Planner renders application row (theme-aware Jig wordmark, Planner-only Add, compact sync, Astryx compact Planner/History/Settings menu) plus temporal row (Previous, compact week range, Next, Today). History/Settings render only the application row, with the active destination's title + governed subtitle as the sole page-heading instance. Their body-level reference heading is removed. Each primary row owns >=44 CSS px interaction height; the old <=56px total header budget is removed.
 - **Secondary desktop heading:** History/Settings replace the center temporal navigator with the same compact title + subtitle semantic heading group; the body begins directly with History groups/empty state or Settings sections.
-- **Synchronization transparency:** Settings presents Local Git commit state separately from Remote Git identity/synchronization state. The compact header status is derived from this structured state. Remote identity is sanitized, informational and read-only; it is never persisted as Jig configuration.
+- **Onboarding:** bootstrap is rendered inside the canonical Jig application frame on desktop and Android. Android presents one Connect GitHub repository intent; desktop adds the genuine alternative of an existing local repository. Automatic work collapses into one connecting state, repository selection appears only when required, and provider-owned consent/access is the only technical boundary allowed to interrupt the flow.
+- **Synchronization transparency:** Settings leads with planning-data home plus user-level local-safety/continuity state. The compact header status is derived from the same structured state. Low-level Local Git, remote, service and database facts are secondary diagnostics; automatic synchronization is not represented by a standing manual-process control.
 - **Reminder attention:** an incomplete current-day Task whose reminder time has passed receives a persistent, accessible reminder-due treatment independent of OS/browser notification success. The treatment uses governed warning semantics plus non-color meaning and composes with selection/focus/priority/drag state rather than replacing them.
 - **Task movement:** every incomplete Task exposes a dedicated visible grip. Dragging leaves Task state uncommitted until drop and displays one exact 2px insertion rule with governed drag color at the destination index. Cross-date targets additionally use the subtle governed drag background. Empty dates expose one index-0 target. Inter-card whitespace must not clear/oscillate intent. Move up/down and date edit remain non-drag alternatives.
-- **Android:** the same Planner/History/Settings React composition runs inside the native shell. Safe-area padding is owned by the sticky header; Task-body touch scroll remains independent from grip dragging.
+- **Android:** the same Jig application frame runs from first launch through onboarding and configured Planner/History/Settings states inside the native shell. Safe-area padding is owned by the header; onboarding has its own minimal body composition rather than bypassing the shell; Task-body touch scroll remains independent from grip dragging.
