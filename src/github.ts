@@ -33,12 +33,6 @@ export interface GitHubRepositoryChoice extends GitHubRepository {
   readonly account_type: string;
 }
 
-export interface GitHubManageAccess {
-  readonly installation_id: number;
-  readonly account_login: string;
-  readonly manage_url: string;
-}
-
 export interface GitHubDeviceAuthorization {
   readonly device_code: string;
   readonly user_code: string;
@@ -85,7 +79,6 @@ export interface GitHubAuthorizationPresentation {
   readonly mode: "device";
   readonly verification_uri: string;
   readonly user_code: string;
-  readonly retry_after_seconds: number;
 }
 
 export interface GitHubAuthorizationSnapshot {
@@ -95,24 +88,32 @@ export interface GitHubAuthorizationSnapshot {
   readonly error: string | null;
 }
 
-export type GitHubOnboardingPhase =
-  | GitHubAuthorizationSnapshot["phase"]
-  | "repository-access"
+export type GitHubOnboardingState =
+  | "initial"
+  | "connecting"
   | "repository-selection"
-  | "acquiring";
+  | "attention";
 
 export interface GitHubOnboardingSnapshot {
   readonly available: boolean;
-  readonly phase: GitHubOnboardingPhase;
+  readonly state: GitHubOnboardingState;
   readonly authorization: GitHubAuthorizationPresentation | null;
-  readonly grant_access_url: string | null;
-  readonly manage_access: readonly GitHubManageAccess[];
-  readonly installations: readonly GitHubInstallation[];
+  readonly provider_url: string | null;
   readonly repositories: readonly GitHubRepositoryChoice[];
   readonly error: string | null;
 }
 
-export type GitHubReconnectSnapshot = GitHubAuthorizationSnapshot;
+export type GitHubReconnectState =
+  | "initial"
+  | "connecting"
+  | "attention";
+
+export interface GitHubReconnectSnapshot {
+  readonly available: boolean;
+  readonly state: GitHubReconnectState;
+  readonly authorization: GitHubAuthorizationPresentation | null;
+  readonly error: string | null;
+}
 
 export interface GitHubCapabilityStatus {
   readonly onboarding_available: boolean;
@@ -191,7 +192,6 @@ export function githubAuthorizationPresentation(
         mode: "device",
         verification_uri: state.authorization.verification_uri,
         user_code: state.authorization.user_code,
-        retry_after_seconds: state.retry_after_seconds,
       };
 }
 
@@ -210,7 +210,7 @@ function requiredString(
   key: string,
 ): string {
   const value = object[key];
-  if (typeof value !== "string") {
+  if (typeof value !== "string" || value.length === 0) {
     throw new TypeError(`GitHub integration field ${key} must be a string`);
   }
   return value;
@@ -233,6 +233,22 @@ function requiredPositiveInteger(
   return value;
 }
 
+function nullableString(
+  object: Record<string, unknown>,
+  key: string,
+): string | null {
+  const value = object[key];
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== "string" || value.length === 0) {
+    throw new TypeError(
+      `GitHub integration field ${key} must be a string or null`,
+    );
+  }
+  return value;
+}
+
 function parseAuthorizationPresentation(
   value: unknown,
 ): GitHubAuthorizationPresentation | null {
@@ -243,48 +259,59 @@ function parseAuthorizationPresentation(
     value,
     "GitHub authorization state must be an object or null",
   );
-  if (
-    object.mode !== "device" ||
-    typeof object.retry_after_seconds !== "number" ||
-    !Number.isInteger(object.retry_after_seconds) ||
-    object.retry_after_seconds <= 0
-  ) {
+  if (object.mode !== "device") {
     throw new TypeError("GitHub authorization state is invalid");
   }
   return {
     mode: "device",
     verification_uri: requiredString(object, "verification_uri"),
     user_code: requiredString(object, "user_code"),
-    retry_after_seconds: object.retry_after_seconds,
   };
 }
 
-function parseAuthorizationBase(
-  value: unknown,
-): GitHubAuthorizationSnapshot {
-  const object = objectRecord(
+function parseRepositoryChoice(value: unknown): GitHubRepositoryChoice {
+  const repository = objectRecord(
     value,
-    "GitHub authorization snapshot must be an object",
+    "GitHub repository choice is invalid",
   );
-  if (
-    typeof object.available !== "boolean" ||
-    (object.phase !== "idle" && object.phase !== "authorizing") ||
-    (object.error !== null && typeof object.error !== "string")
-  ) {
-    throw new TypeError("GitHub authorization snapshot is invalid");
-  }
   return {
-    available: object.available,
-    phase: object.phase,
-    authorization: parseAuthorizationPresentation(object.authorization),
-    error: typeof object.error === "string" ? object.error : null,
+    id: requiredPositiveInteger(repository, "id"),
+    owner: requiredString(repository, "owner"),
+    name: requiredString(repository, "name"),
+    clone_url: requiredString(repository, "clone_url"),
+    installation_id: requiredPositiveInteger(
+      repository,
+      "installation_id",
+    ),
+    account_login: requiredString(repository, "account_login"),
+    account_type: requiredString(repository, "account_type"),
   };
 }
 
 export function parseGitHubReconnectSnapshot(
   value: unknown,
 ): GitHubReconnectSnapshot {
-  return parseAuthorizationBase(value);
+  const object = objectRecord(
+    value,
+    "GitHub reconnect snapshot must be an object",
+  );
+  if (
+    typeof object.available !== "boolean" ||
+    (
+      object.state !== "initial" &&
+      object.state !== "connecting" &&
+      object.state !== "attention"
+    ) ||
+    (object.error !== null && typeof object.error !== "string")
+  ) {
+    throw new TypeError("GitHub reconnect snapshot is invalid");
+  }
+  return {
+    available: object.available,
+    state: object.state,
+    authorization: parseAuthorizationPresentation(object.authorization),
+    error: typeof object.error === "string" ? object.error : null,
+  };
 }
 
 export function parseGitHubOnboardingSnapshot(
@@ -294,92 +321,26 @@ export function parseGitHubOnboardingSnapshot(
     value,
     "GitHub onboarding snapshot must be an object",
   );
-  const phase = object.phase;
-  if (
-    phase !== "idle" &&
-    phase !== "authorizing" &&
-    phase !== "repository-access" &&
-    phase !== "repository-selection" &&
-    phase !== "acquiring"
-  ) {
-    throw new TypeError("GitHub onboarding phase is invalid");
-  }
   if (
     typeof object.available !== "boolean" ||
-    !Array.isArray(object.manage_access) ||
-    !Array.isArray(object.installations) ||
+    (
+      object.state !== "initial" &&
+      object.state !== "connecting" &&
+      object.state !== "repository-selection" &&
+      object.state !== "attention"
+    ) ||
     !Array.isArray(object.repositories) ||
-    (object.grant_access_url !== null &&
-      typeof object.grant_access_url !== "string") ||
     (object.error !== null && typeof object.error !== "string")
   ) {
     throw new TypeError("GitHub onboarding snapshot is invalid");
   }
 
-  const manageAccess = object.manage_access.map((entry) => {
-    const access = objectRecord(
-      entry,
-      "GitHub manage-access entry is invalid",
-    );
-    return {
-      installation_id: requiredPositiveInteger(
-        access,
-        "installation_id",
-      ),
-      account_login: requiredString(access, "account_login"),
-      manage_url: requiredString(access, "manage_url"),
-    };
-  });
-
-  const installations = object.installations.map((entry) => {
-    const installation = objectRecord(
-      entry,
-      "GitHub installation entry is invalid",
-    );
-    const account = objectRecord(
-      installation.account,
-      "GitHub installation account is invalid",
-    );
-    return {
-      id: requiredPositiveInteger(installation, "id"),
-      account: {
-        id: requiredPositiveInteger(account, "id"),
-        login: requiredString(account, "login"),
-        type: requiredString(account, "type"),
-      },
-    };
-  });
-
-  const repositories = object.repositories.map((entry) => {
-    const repository = objectRecord(
-      entry,
-      "GitHub repository choice is invalid",
-    );
-    return {
-      id: requiredPositiveInteger(repository, "id"),
-      owner: requiredString(repository, "owner"),
-      name: requiredString(repository, "name"),
-      clone_url: requiredString(repository, "clone_url"),
-      installation_id: requiredPositiveInteger(
-        repository,
-        "installation_id",
-      ),
-      account_login: requiredString(repository, "account_login"),
-      account_type: requiredString(repository, "account_type"),
-    };
-  });
-
   return {
     available: object.available,
-    phase,
+    state: object.state,
     authorization: parseAuthorizationPresentation(object.authorization),
-    grant_access_url:
-      typeof object.grant_access_url === "string"
-        ? object.grant_access_url
-        : null,
-    manage_access: manageAccess,
-    installations,
-    repositories,
+    provider_url: nullableString(object, "provider_url"),
+    repositories: object.repositories.map(parseRepositoryChoice),
     error: typeof object.error === "string" ? object.error : null,
   };
 }
