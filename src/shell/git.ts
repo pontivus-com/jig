@@ -819,6 +819,13 @@ export async function observePortableRemote(
     return { state: "ambiguous", local_head: localHead };
   }
 
+  const trackingRef =
+    `refs/remotes/${authority.remote.name}/jig-data`;
+  const previousRemoteHead = await refHead(
+    config.repository_path,
+    trackingRef,
+  );
+
   const advertised = await runGit(
     config.repository_path,
     [
@@ -841,7 +848,9 @@ export async function observePortableRemote(
       state: "absent",
       remote: authority.remote,
       local_head: localHead,
-      previously_synchronized: lastAdoptedHead !== null,
+      previously_synchronized:
+        previousRemoteHead !== null ||
+        lastAdoptedHead !== null,
     };
   }
 
@@ -858,7 +867,7 @@ export async function observePortableRemote(
       "fetch",
       "--no-tags",
       authority.remote.name,
-      "refs/heads/jig-data",
+      `+refs/heads/jig-data:${trackingRef}`,
     ],
     undefined,
     environment,
@@ -867,6 +876,16 @@ export async function observePortableRemote(
   if (fetched.exit_code !== 0) {
     throw new GitAdapterError(
       fetched.stderr || "Unable to fetch remote jig-data",
+    );
+  }
+
+  const fetchedHead = await refHead(
+    config.repository_path,
+    trackingRef,
+  );
+  if (fetchedHead !== remoteHead) {
+    throw new GitAdapterError(
+      "Remote jig-data changed during observation",
     );
   }
 
@@ -886,11 +905,11 @@ export async function observePortableRemote(
   }
 
   const remoteRewritten =
-    lastAdoptedHead !== null &&
-    lastAdoptedHead !== remoteHead &&
+    previousRemoteHead !== null &&
+    previousRemoteHead !== remoteHead &&
     (await ancestor(
       config.repository_path,
-      lastAdoptedHead,
+      previousRemoteHead,
       remoteHead,
     )) !== true;
 
