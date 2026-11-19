@@ -19,10 +19,23 @@ const CREDENTIAL: GitHubCredential = {
   refresh_token_expires_at: "2030-07-01T00:00:00.000Z",
 };
 
+async function waitFor(
+  predicate: () => boolean,
+): Promise<void> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (predicate()) {
+      return;
+    }
+    await Promise.resolve();
+  }
+  throw new Error("Timed out waiting for GitHub reconnect state");
+}
+
 describe("GitHub reconnect orchestration", () => {
-  it("replaces only the credential through the shared Device Flow owner", async () => {
+  it("replaces only the credential and continues synchronization automatically", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
     let stored: GitHubCredential | null = null;
+    let syncRetries = 0;
     const reconnect = new GitHubReconnectController(
       new GitHubDeviceFlowSession({
         registration: REGISTRATION,
@@ -43,20 +56,36 @@ describe("GitHub reconnect orchestration", () => {
         }),
         now: () => new Date(nowMs),
       }),
+      {
+        sleep: async (delay) => {
+          nowMs += delay;
+        },
+        on_connected: async () => {
+          syncRetries += 1;
+        },
+      },
     );
 
-    expect(await reconnect.start()).toMatchObject({
-      phase: "authorizing",
-      authorization: { user_code: "ABCD-EFGH" },
+    expect(await reconnect.start()).toStrictEqual({
+      available: true,
+      state: "connecting",
+      authorization: {
+        mode: "device",
+        verification_uri: "https://github.com/login/device",
+        user_code: "ABCD-EFGH",
+      },
+      error: null,
     });
 
-    nowMs += 5_000;
-    expect(await reconnect.refresh()).toStrictEqual({
+    await waitFor(() => reconnect.snapshot().state === "initial");
+
+    expect(reconnect.snapshot()).toStrictEqual({
       available: true,
-      phase: "idle",
+      state: "initial",
       authorization: null,
       error: null,
     });
     expect(stored).toStrictEqual(CREDENTIAL);
+    expect(syncRetries).toBe(1);
   });
 });
