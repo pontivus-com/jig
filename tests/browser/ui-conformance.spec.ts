@@ -1018,7 +1018,7 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
 
   await expect(planningData).toContainText("/tmp/jig-playwright-remote.git");
   await expect(
-    synchronization.getByText("Up to date", { exact: true }),
+    synchronization.getByText("Syncing", { exact: true }),
   ).toBeVisible();
   await expect(synchronization.getByText("Local Git", { exact: true }))
     .toHaveCount(0);
@@ -1057,6 +1057,10 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
       return (await remoteGit.textContent())?.trim() ?? "";
     }, { timeout: 10_000 })
     .toBe("Synchronized");
+
+  await expect(
+    synchronization.getByText("Up to date", { exact: true }),
+  ).toBeVisible();
 
   const remoteRepository = diagnostics
     .locator("dt", { hasText: "Remote repository" })
