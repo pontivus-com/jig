@@ -906,7 +906,7 @@ export function App(): React.ReactElement {
 
   const bootstrapBody =
     setupStatus?.mode === "bootstrap" ? (
-      <SetupView status={setupStatus} />
+      <SetupView status={setupStatus} layoutMode={layoutMode} />
     ) : (
       <div className="jig-loading">
         {setupError === null ? (
