@@ -45,6 +45,16 @@ export interface SyncController {
   readonly status: () => RepositorySynchronizationStatus;
 }
 
+interface ObservedPortableRemote {
+  readonly revision: number;
+  readonly observation: PortableRemoteObservation;
+}
+
+type InterruptedAdoptionResult =
+  | "not-applicable"
+  | "finished"
+  | "unsafe";
+
 export interface SyncEffects {
   readonly ensurePortableData: typeof ensurePortableData;
   readonly readCurrentSnapshot: typeof readCurrentPortableSnapshot;
@@ -271,14 +281,17 @@ export function createSyncController(
 
   const observe = async (
     environment: Readonly<Record<string, string>>,
-  ): Promise<PortableRemoteObservation> => {
+  ): Promise<ObservedPortableRemote> => {
     const metadata = await readMetadata(db);
-    return effects.observeRemote(
-      adapter,
-      metadata.dataset_id,
-      metadata.last_adopted_head,
-      environment,
-    );
+    return {
+      revision: metadata.revision,
+      observation: await effects.observeRemote(
+        adapter,
+        metadata.dataset_id,
+        metadata.last_adopted_head,
+        environment,
+      ),
+    };
   };
 
   const finishInterruptedAdoption = async (
@@ -286,18 +299,11 @@ export function createSyncController(
       PortableRemoteObservation,
       { readonly state: "present" }
     >,
-  ): Promise<boolean> => {
+  ): Promise<InterruptedAdoptionResult> => {
     const state = await readCanonicalState(db);
     const metadata = await readMetadata(db);
-    if (
-      observation.local_head === null ||
-      metadata.last_adopted_head !== observation.remote_head ||
-      (
-        observation.lineage !== "equal" &&
-        observation.lineage !== "remote-ahead"
-      )
-    ) {
-      return false;
+    if (metadata.last_adopted_head !== observation.remote_head) {
+      return "not-applicable";
     }
 
     const canonical = serializeSnapshot(
@@ -311,18 +317,32 @@ export function createSyncController(
         observation.remote_snapshot,
       )
     ) {
-      return false;
+      return "not-applicable";
+    }
+
+    if (
+      observation.local_head === null ||
+      (
+        observation.lineage !== "equal" &&
+        observation.lineage !== "remote-ahead"
+      )
+    ) {
+      return "unsafe";
     }
 
     if (observation.local_head !== observation.remote_head) {
-      await effects.alignLocal(
-        adapter,
-        observation.local_head,
-        observation.remote_head,
-      );
+      try {
+        await effects.alignLocal(
+          adapter,
+          observation.local_head,
+          observation.remote_head,
+        );
+      } catch {
+        return "unsafe";
+      }
     }
     await markExported(db, state.revision, observation.remote_head);
-    return true;
+    return "finished";
   };
 
   const adoptRemote = async (
@@ -330,17 +350,17 @@ export function createSyncController(
       PortableRemoteObservation,
       { readonly state: "present" }
     >,
+    expectedRevision: number,
   ): Promise<void> => {
     if (observation.local_head === null) {
       throw new Error("Local jig-data head is unavailable");
     }
-    const state = await readCanonicalState(db);
     const adopted = await adoptCanonicalSnapshot(
       db,
       observation.remote_snapshot.tasks,
       observation.remote_snapshot.recurrences,
       observation.remote_head,
-      state.revision,
+      expectedRevision,
     );
     await effects.alignLocal(
       adapter,
@@ -351,10 +371,11 @@ export function createSyncController(
   };
 
   const processObservation = async (
-    observation: PortableRemoteObservation,
+    observed: ObservedPortableRemote,
     environment: Readonly<Record<string, string>>,
     mayPush: boolean,
   ): Promise<RepositorySynchronizationStatus | null> => {
+    const { observation } = observed;
     remoteIdentity = observationRemote(observation);
     const decision = decideSynchronization(
       observationFacts(observation, await isPending()),
@@ -398,7 +419,7 @@ export function createSyncController(
     if (decision.kind === "adopt-remote") {
       if (observation.state !== "present") return remoteIssue(false);
       try {
-        await adoptRemote(observation);
+        await adoptRemote(observation, observed.revision);
       } catch {
         return remoteIssue(false);
       }
@@ -432,7 +453,7 @@ export function createSyncController(
       pushed = { status: "sync-issue", retryable: true } as const;
     }
 
-    let afterPush: PortableRemoteObservation;
+    let afterPush: ObservedPortableRemote;
     try {
       afterPush = await observe(environment);
     } catch {
@@ -442,7 +463,10 @@ export function createSyncController(
 
     if (pushed.status === "sync-issue") {
       const afterDecision = decideSynchronization(
-        observationFacts(afterPush, await isPending()),
+        observationFacts(
+          afterPush.observation,
+          await isPending(),
+        ),
       );
       if (afterDecision.kind === "push-local") {
         return remoteIssue(pushed.retryable);
@@ -474,28 +498,32 @@ export function createSyncController(
       return remoteIssue(false);
     }
 
-    let observation: PortableRemoteObservation;
+    let observed: ObservedPortableRemote;
     try {
-      observation = await observe(environment);
+      observed = await observe(environment);
     } catch {
       remoteIdentity ??= UNRESOLVED_REMOTE;
       return remoteIssue(true);
     }
-    remoteIdentity = observationRemote(observation);
+    remoteIdentity = observationRemote(observed.observation);
 
-    if (
-      observation.state === "present" &&
-      await finishInterruptedAdoption(observation)
-    ) {
-      try {
-        observation = await observe(environment);
-      } catch {
-        return remoteIssue(true);
+    if (observed.observation.state === "present") {
+      const interrupted =
+        await finishInterruptedAdoption(observed.observation);
+      if (interrupted === "unsafe") {
+        return remoteIssue(false);
+      }
+      if (interrupted === "finished") {
+        try {
+          observed = await observe(environment);
+        } catch {
+          return remoteIssue(true);
+        }
       }
     }
 
     const result = await processObservation(
-      observation,
+      observed,
       environment,
       true,
     );
