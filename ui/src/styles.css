@@ -712,7 +712,6 @@ body {
     min-height: 8px;
     list-style: none;
     opacity: 0;
-    transition: opacity 120ms ease;
   }
 
   .jig-task-drag-scope[data-jig-drag-active="true"] .jig-task-insertion-slot {
