@@ -79,6 +79,19 @@ export class GitHubDeviceFlowSession {
     return this.snapshot();
   }
 
+  async runUntilSettled(
+    sleep: (milliseconds: number) => Promise<void>,
+  ): Promise<GitHubAuthorizationSnapshot> {
+    while (this.state !== null) {
+      const delay = this.nextPollDelayMs();
+      if (delay !== null && delay > 0) {
+        await sleep(delay);
+      }
+      await this.poll();
+    }
+    return this.snapshot();
+  }
+
   async poll(): Promise<GitHubAuthorizationSnapshot> {
     const registration = this.requireRegistration();
     if (this.state === null) {
