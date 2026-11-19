@@ -7,9 +7,7 @@ import {
   observePortableRemote,
   pushPortableDataRef,
   readCurrentPortableSnapshot,
-  retryDelayMs,
   serializeSnapshot,
-  SYNC_HEALTHY_POLL_MS,
   writePortableSnapshot,
   type GitAdapterConfig,
   type PortableRemoteObservation,
@@ -34,6 +32,8 @@ import {
   decideSynchronization,
   planningFromState,
   reconcileCanonicalPlanning,
+  SYNCHRONIZATION_HEALTHY_POLL_MS,
+  synchronizationRetryDelayMs,
 } from "../synchronization";
 
 export interface SyncConfiguration {
@@ -302,7 +302,7 @@ export function createSyncController(
       remote,
       remoteFailureCount >= 7 ? "sync-issue" : "retrying",
     );
-    schedule(retryDelayMs(remoteFailureCount));
+    schedule(synchronizationRetryDelayMs(remoteFailureCount));
     return currentStatus;
   };
 
@@ -318,7 +318,7 @@ export function createSyncController(
           remote,
           "sync-issue",
         );
-    schedule(SYNC_HEALTHY_POLL_MS);
+    schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
     return currentStatus;
   };
 
@@ -335,7 +335,7 @@ export function createSyncController(
         remote,
         "pending",
       );
-      schedule(retryDelayMs(localFailureCount));
+      schedule(synchronizationRetryDelayMs(localFailureCount));
       return currentStatus;
     }
 
@@ -377,7 +377,7 @@ export function createSyncController(
             null,
             "pending",
           );
-          schedule(SYNC_HEALTHY_POLL_MS);
+          schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
           return currentStatus;
         } catch {
           localFailureCount += 1;
@@ -386,7 +386,7 @@ export function createSyncController(
             null,
             "pending",
           );
-          schedule(retryDelayMs(localFailureCount));
+          schedule(synchronizationRetryDelayMs(localFailureCount));
           return currentStatus;
         }
       }
@@ -528,7 +528,7 @@ export function createSyncController(
           remote,
           "synchronized",
         );
-        schedule(SYNC_HEALTHY_POLL_MS);
+        schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
         return currentStatus;
       }
 
