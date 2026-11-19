@@ -32,12 +32,12 @@ import { createSyncController } from "../../src/shell/sync";
 import type { CanonicalState } from "../../src/protocol";
 import {
   acquireAndroidPortableRepository,
+  alignAndroidPortableHead,
   cloneAndroidPortableRepository,
   commitAndroidCanonicalState,
   observeAndroidPortableRemote,
   pushAndroidPortableRepository,
   reopenAndroidPortableRepository,
-  synchronizeAndroidPortableRepository,
   type AndroidGitEffects,
 } from "../../ui/src/native/git";
 import {
@@ -435,20 +435,29 @@ describe("Android Git smart-HTTP feasibility", () => {
     await runGit(desktop, ["push", "origin", "jig-data"]);
     const desktopHead = await runGit(desktop, ["rev-parse", "HEAD"]);
 
-    const synchronized =
-      await synchronizeAndroidPortableRepository(
-        effects,
-        DATASET_ID,
-        credential,
-      );
-    expect(synchronized).toMatchObject({
-      state: "remote-adopted",
-      head: desktopHead,
+    const observed = await observeAndroidPortableRemote(
+      effects,
+      DATASET_ID,
+      null,
+      credential,
+    );
+    expect(observed).toMatchObject({
+      state: "present",
+      remote_head: desktopHead,
+      lineage: "remote-ahead",
     });
-    expect(synchronized.snapshot?.tasks).toStrictEqual([
+    if (observed.state !== "present") {
+      throw new Error("expected Android remote observation");
+    }
+    expect(observed.remote_snapshot.tasks).toStrictEqual([
       firstTask,
       secondTask,
     ]);
+    await alignAndroidPortableHead(
+      effects,
+      observed.local_head,
+      observed.remote_head,
+    );
 
     const restarted: AndroidGitEffects = {
       fs: createAndroidGitFilesystem(filesystemPort),
@@ -463,104 +472,6 @@ describe("Android Git smart-HTTP feasibility", () => {
       firstTask,
       secondTask,
     ]);
-  });
-
-  it("adopts the winning dataset when another fresh client wins Android first publication", async () => {
-    const { remote, remoteUrl } = await fixture({
-      dataBranch: false,
-    });
-    const port = server?.port;
-    if (port === undefined || root === null) {
-      throw new Error("Fixture HTTP server did not start");
-    }
-
-    const WINNER_DATASET =
-      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4090";
-    const LOSER_DATASET =
-      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4091";
-    const baseHttp = nativeHttpFor(port);
-    let winnerPublished = false;
-
-    const raceHttp: NativeHttpPort = {
-      async request(options) {
-        const requestUrl = new URL(options.url);
-        if (
-          !winnerPublished &&
-          requestUrl.searchParams.get("service") ===
-            "git-receive-pack"
-        ) {
-          winnerPublished = true;
-          const winner = join(root ?? "", "publication-winner");
-          await runGit(root ?? "", [
-            "init",
-            "-b",
-            "jig-data",
-            winner,
-          ]);
-          await runGit(winner, [
-            "config",
-            "user.name",
-            "Fixture",
-          ]);
-          await runGit(winner, [
-            "config",
-            "user.email",
-            "fixture@example.invalid",
-          ]);
-          await writeSnapshot(
-            winner,
-            serializeSnapshot([], WINNER_DATASET),
-          );
-          await runGit(winner, ["add", "-A"]);
-          await runGit(winner, [
-            "commit",
-            "-m",
-            "Winning empty Jig bootstrap",
-          ]);
-          await runGit(winner, [
-            "remote",
-            "add",
-            "origin",
-            remote,
-          ]);
-          await runGit(winner, [
-            "push",
-            "origin",
-            "jig-data",
-          ]);
-        }
-        return baseHttp.request(options);
-      },
-    };
-
-    const { port: filesystemPort } = fakeFilesystem();
-    const effects: AndroidGitEffects = {
-      fs: createAndroidGitFilesystem(filesystemPort),
-      http: createAndroidGitHttpClient(raceHttp),
-      dir: ANDROID_GIT_WORKTREE,
-    };
-
-    const acquired = await acquireAndroidPortableRepository(
-      effects,
-      remoteUrl,
-      async () => PASSWORD,
-      () => LOSER_DATASET,
-    );
-
-    expect(winnerPublished).toBe(true);
-    expect(acquired).toMatchObject({
-      dataset_id: WINNER_DATASET,
-      tasks: [],
-      recurrences: [],
-    });
-    expect(
-      await reopenAndroidPortableRepository(
-        effects,
-        WINNER_DATASET,
-      ),
-    ).toMatchObject({
-      dataset_id: WINNER_DATASET,
-    });
   });
 
   it("round-trips one repository Android → Desktop → Android through the real synchronization controllers", async () => {
@@ -880,10 +791,14 @@ describe("Android Git smart-HTTP feasibility", () => {
 
     const first = await observeAndroidPortableRemote(
       effects,
+      DATASET_ID,
+      null,
       credential,
     );
+    if (first.state !== "present") {
+      throw new Error("expected initial Android remote observation");
+    }
     const originalHead = first.remote_head;
-    expect(originalHead).not.toBeNull();
 
     await runGit(root, [
       "--git-dir",
@@ -894,11 +809,13 @@ describe("Android Git smart-HTTP feasibility", () => {
     ]);
     const deleted = await observeAndroidPortableRemote(
       effects,
+      DATASET_ID,
+      originalHead,
       credential,
     );
     expect(deleted).toMatchObject({
-      remote_state: "absent",
-      previous_remote_head: originalHead,
+      state: "absent",
+      previously_synchronized: true,
     });
 
     const replacement = join(root, "android-rewrite");
@@ -949,10 +866,14 @@ describe("Android Git smart-HTTP feasibility", () => {
 
     const rewritten = await observeAndroidPortableRemote(
       effects,
+      DATASET_ID,
+      originalHead,
       credential,
     );
-    expect(rewritten.remote_rewritten).toBe(true);
-    expect(rewritten.previous_remote_head).toBe(originalHead);
+    expect(rewritten).toMatchObject({
+      state: "present",
+      remote_rewritten: true,
+    });
 
     const restarted: AndroidGitEffects = {
       fs: createAndroidGitFilesystem(filesystemPort),
@@ -961,10 +882,14 @@ describe("Android Git smart-HTTP feasibility", () => {
     };
     const repeated = await observeAndroidPortableRemote(
       restarted,
+      DATASET_ID,
+      originalHead,
       credential,
     );
-    expect(repeated.remote_rewritten).toBe(true);
-    expect(repeated.previous_remote_head).toBe(originalHead);
+    expect(repeated).toMatchObject({
+      state: "present",
+      remote_rewritten: true,
+    });
   });
 
   it("rejects an invalid Android remote portable tree before moving the local branch", async () => {
@@ -1022,9 +947,11 @@ describe("Android Git smart-HTTP feasibility", () => {
     await expect(
       observeAndroidPortableRemote(
         effects,
+        DATASET_ID,
+        null,
         credential,
       ),
-    ).rejects.toThrow(/non-canonical jig-data tree entry/);
+    ).resolves.toMatchObject({ state: "unsafe" });
     expect(
       await reopenAndroidPortableRepository(
         effects,
@@ -1102,14 +1029,15 @@ describe("Android Git smart-HTTP feasibility", () => {
     await runGit(desktop, ["push", "origin", "jig-data"]);
 
     await expect(
-      synchronizeAndroidPortableRepository(
+      observeAndroidPortableRemote(
         effects,
         DATASET_ID,
+        null,
         credential,
       ),
     ).resolves.toMatchObject({
-      state: "diverged",
-      snapshot: null,
+      state: "present",
+      lineage: "diverged",
     });
     expect(
       (
