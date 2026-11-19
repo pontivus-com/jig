@@ -1008,15 +1008,13 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
 
-  const planningData = page
-    .getByRole("heading", { name: "Planning data", exact: true })
-    .locator("xpath=following-sibling::*[1]");
-  const synchronization = page
-    .getByRole("heading", { name: "Synchronization", exact: true })
-    .locator("xpath=following-sibling::*[1]");
-  const diagnostics = page
-    .getByRole("heading", { name: "Diagnostics", exact: true })
-    .locator("xpath=following-sibling::*[1]");
+  const planningData = page.locator(
+    ".jig-settings-planning .jig-settings-card",
+  );
+  const synchronization = page.locator(".jig-settings-sync-card");
+  const diagnostics = page.locator(
+    ".jig-settings-diagnostics .jig-settings-card",
+  );
 
   await expect(planningData).toContainText("/tmp/jig-playwright-remote.git");
   await expect(
