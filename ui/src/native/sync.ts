@@ -9,7 +9,10 @@ import {
 import type {
   RepositorySynchronizationStatus,
 } from "../../../src/protocol";
-import { serializeSnapshot } from "../../../src/portable";
+import {
+  portableSnapshotsEqual,
+  serializeSnapshot,
+} from "../../../src/portable";
 import {
   decideSynchronization,
   type SynchronizationFacts,
@@ -35,17 +38,6 @@ export interface AndroidSyncController {
   readonly status: () => RepositorySynchronizationStatus;
   readonly notifyMutation: () => void;
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
-}
-
-function filesEqual(
-  left: ReadonlyMap<string, string>,
-  right: ReadonlyMap<string, string>,
-): boolean {
-  if (left.size !== right.size) return false;
-  for (const [path, content] of left) {
-    if (right.get(path) !== content) return false;
-  }
-  return true;
 }
 
 function observationFacts(
@@ -148,7 +140,7 @@ export function createAndroidSyncController(
       state.recurrences,
     );
 
-    if (filesEqual(canonical.files, snapshot.files)) {
+    if (portableSnapshotsEqual(canonical, snapshot)) {
       if (
         metadata.last_exported_head !== head ||
         metadata.last_exported_revision !== state.revision
@@ -220,9 +212,9 @@ export function createAndroidSyncController(
       state.recurrences,
     );
     if (
-      !filesEqual(
-        canonical.files,
-        observation.remote_snapshot.files,
+      !portableSnapshotsEqual(
+        canonical,
+        observation.remote_snapshot,
       )
     ) {
       return false;
