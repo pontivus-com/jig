@@ -795,6 +795,143 @@ describe("Android Git smart-HTTP feasibility", () => {
     }
   });
 
+  it("preserves both sides and stops safely on a real cross-runtime semantic conflict", async () => {
+    const { remote, remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+
+    const desktop = join(root, "conflict-desktop");
+    await runGit(root, ["clone", remote, desktop]);
+    const installed = await initializeRepositoryInstallation({
+      repository_path: desktop,
+      http_port: 47831,
+      config_path: join(root, "conflict-desktop-config.json"),
+    });
+    const desktopDb = await openDatabase(installed.sqlite_path);
+    const desktopSync = createSyncController(
+      desktopDb,
+      { repository_path: desktop },
+    );
+
+    const { port: filesystemPort } = fakeFilesystem();
+    const androidEffects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const credential = async (): Promise<string> => PASSWORD;
+    await cloneAndroidPortableRepository(
+      androidEffects,
+      remoteUrl,
+      credential,
+    );
+    const androidDb = await initializeDatabase(
+      join(root, "conflict-android.sqlite"),
+      DATASET_ID,
+    );
+    const androidSync = createAndroidSyncController(
+      androidDb,
+      androidEffects,
+      credential,
+    );
+    const taskId =
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4050";
+
+    try {
+      await desktopSync.start();
+      await androidSync.start();
+      await desktopSync.trigger();
+      await androidSync.trigger();
+
+      await applyTaskCommand(
+        desktopDb,
+        {
+          type: "create",
+          title: "Shared base",
+          scheduled_date: "2026-11-18",
+        },
+        (await readCanonicalState(desktopDb)).revision,
+        "2026-11-18T06:00:00.000Z",
+        () => taskId,
+      );
+      desktopSync.notifyMutation();
+      await desktopSync.trigger();
+      await androidSync.trigger();
+
+      const desktopBaseRevision =
+        (await readCanonicalState(desktopDb)).revision;
+      const androidBaseRevision =
+        (await readCanonicalState(androidDb)).revision;
+      await applyTaskCommand(
+        desktopDb,
+        {
+          type: "edit",
+          task_id: taskId,
+          changes: { title: "Desktop conflict" },
+        },
+        desktopBaseRevision,
+        "2026-11-18T06:01:00.000Z",
+      );
+      desktopSync.notifyMutation();
+      await applyTaskCommand(
+        androidDb,
+        {
+          type: "edit",
+          task_id: taskId,
+          changes: { title: "Android conflict" },
+        },
+        androidBaseRevision,
+        "2026-11-18T06:02:00.000Z",
+      );
+      androidSync.notifyMutation();
+
+      await expect(desktopSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
+      const remoteHeadBeforeConflict = await runGit(root, [
+        "--git-dir",
+        remote,
+        "rev-parse",
+        "jig-data",
+      ]);
+
+      await expect(androidSync.trigger()).resolves.toMatchObject({
+        local_git: "pending",
+        remote: { state: "sync-issue" },
+      });
+
+      expect(
+        (await readCanonicalState(androidDb)).tasks[0],
+      ).toMatchObject({ title: "Android conflict" });
+      expect(
+        (await readCanonicalState(desktopDb)).tasks[0],
+      ).toMatchObject({ title: "Desktop conflict" });
+      expect(
+        await runGit(root, [
+          "--git-dir",
+          remote,
+          "rev-parse",
+          "jig-data",
+        ]),
+      ).toBe(remoteHeadBeforeConflict);
+      expect(
+        await runGit(root, [
+          "--git-dir",
+          remote,
+          "show",
+          `jig-data:tasks/${taskId}.json`,
+        ]),
+      ).toContain('"title": "Desktop conflict"');
+    } finally {
+      desktopSync.stop();
+      androidSync.stop();
+      await desktopDb.close();
+      await androidDb.close();
+    }
+  });
+
   it("initializes only jig-data when the selected repository has no portable branch", async () => {
     const { remote, remoteUrl } = await fixture({
       dataBranch: false,
