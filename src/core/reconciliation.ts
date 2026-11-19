@@ -1,4 +1,3 @@
-import type { CanonicalState } from "../protocol";
 import {
   assertRecurrenceState,
 } from "./recurrence-planning";
@@ -730,11 +729,3 @@ export function reconcileCanonicalPlanning(
   }
 }
 
-export function planningFromState(
-  state: Pick<CanonicalState, "tasks" | "recurrences">,
-): CanonicalPlanning {
-  return {
-    tasks: state.tasks,
-    recurrences: state.recurrences,
-  };
-}
