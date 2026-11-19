@@ -1,4 +1,5 @@
 import {
+  adoptEmptyDatasetIdentity,
   applySynchronizedCanonicalState,
   markAdoptedHead,
   markExported,
@@ -236,6 +237,72 @@ export function createAndroidSyncController(
 
       const remoteHead = observation.remote_head;
       const remoteSnapshot = observation.remote_snapshot;
+
+      if (remoteSnapshot.dataset_id !== metadata.dataset_id) {
+        const emptyBootstrap =
+          state.revision === 0 &&
+          metadata.last_exported_revision === 0 &&
+          state.tasks.length === 0 &&
+          state.recurrences.length === 0;
+        if (!emptyBootstrap) {
+          return structuralIssue();
+        }
+        try {
+          await adoptEmptyDatasetIdentity(
+            database,
+            metadata.dataset_id,
+            remoteSnapshot.dataset_id,
+          );
+          const switched = await readCanonicalState(database);
+          if (
+            remoteSnapshot.tasks.length > 0 ||
+            remoteSnapshot.recurrences.length > 0
+          ) {
+            const applied =
+              await applySynchronizedCanonicalState(
+                database,
+                switched.revision,
+                remoteSnapshot.tasks,
+                remoteSnapshot.recurrences,
+                remoteHead,
+              );
+            await normalizeAndroidPortableHead(
+              effects,
+              observation.local_head,
+              remoteHead,
+            );
+            await acknowledgeAndroidRemoteHead(
+              effects,
+              remoteHead,
+            );
+            await markExported(
+              database,
+              applied.revision,
+              remoteHead,
+            );
+          } else {
+            await normalizeAndroidPortableHead(
+              effects,
+              observation.local_head,
+              remoteHead,
+            );
+            await acknowledgeAndroidRemoteHead(
+              effects,
+              remoteHead,
+            );
+            await markAdoptedHead(database, remoteHead);
+            await markExported(
+              database,
+              switched.revision,
+              remoteHead,
+            );
+          }
+          continue;
+        } catch {
+          return structuralIssue();
+        }
+      }
+
       const currentPlanning = planningFromState(state);
       const remotePlanning = {
         tasks: remoteSnapshot.tasks,
