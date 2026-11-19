@@ -3,6 +3,7 @@ import {
   ensurePortableData,
   EXPORT_DEBOUNCE_MS,
   EXPORT_MAX_FLUSH_MS,
+  inspectSynchronizationRemote,
   observePortableRemote,
   pushPortableDataRef,
   readCurrentPortableSnapshot,
@@ -50,6 +51,7 @@ export interface SyncEffects {
   readonly ensurePortableData: typeof ensurePortableData;
   readonly readCurrentSnapshot: typeof readCurrentPortableSnapshot;
   readonly writeSnapshot: typeof writePortableSnapshot;
+  readonly inspectRemote: typeof inspectSynchronizationRemote;
   readonly observeRemote: typeof observePortableRemote;
   readonly alignLocal: typeof alignPortableDataRef;
   readonly push: typeof pushPortableDataRef;
@@ -62,6 +64,7 @@ const REAL_EFFECTS: SyncEffects = {
   ensurePortableData,
   readCurrentSnapshot: readCurrentPortableSnapshot,
   writeSnapshot: writePortableSnapshot,
+  inspectRemote: inspectSynchronizationRemote,
   observeRemote: observePortableRemote,
   alignLocal: alignPortableDataRef,
   push: pushPortableDataRef,
@@ -333,6 +336,12 @@ export function createSyncController(
       );
       schedule(retryDelayMs(localFailureCount));
       return currentStatus;
+    }
+
+    try {
+      remote = await effects.inspectRemote(adapter);
+    } catch {
+      return transientRemoteFailure();
     }
 
     const networkEnvironment = await effects.networkEnvironment();
