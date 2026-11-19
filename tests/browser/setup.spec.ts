@@ -474,7 +474,12 @@ test("configured managed repository reconnects automatically without repository 
 
   await expect.poll(() => reconnectReads, { timeout: 5_000 })
     .toBeGreaterThan(1);
-  await expect(page.getByText("Up to date", { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".jig-settings-sync-card").getByText(
+      "Up to date",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Reconnect GitHub" }),
   ).toHaveCount(0);
