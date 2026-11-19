@@ -68,7 +68,7 @@ import {
   type TaskWorkspacePresentation,
   type TaskWorkspaceState,
 } from "./task-workspace";
-import { useLayoutMode } from "./use-layout-mode";
+import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
 import { installNativeActiveListener } from "./native/app-lifecycle";
