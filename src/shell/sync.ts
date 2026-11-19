@@ -56,6 +56,11 @@ export interface SyncEffects {
   >;
 }
 
+const AMBIGUOUS_REMOTE: SynchronizationRemote = {
+  name: "unresolved",
+  location: "Configured Git synchronization destination is ambiguous",
+};
+
 const REAL_EFFECTS: SyncEffects = {
   ensurePortableData,
   readCurrentSnapshot: readCurrentPortableSnapshot,
@@ -142,6 +147,9 @@ function factsForObservation(
 function remoteFromObservation(
   observation: PortableRemoteObservation,
 ): SynchronizationRemote | null {
+  if (observation.state === "ambiguous") {
+    return AMBIGUOUS_REMOTE;
+  }
   return observation.state === "absent" ||
     observation.state === "present" ||
     observation.state === "unsafe"
@@ -329,15 +337,15 @@ export function createSyncController(
         return false;
       }
       if (
-        observation.lineage !== "equal" &&
-        observation.lineage !== "remote-ahead"
+        observation.local_head === null ||
+        (
+          observation.lineage !== "equal" &&
+          observation.lineage !== "remote-ahead"
+        )
       ) {
         return false;
       }
-      if (
-        observation.local_head !== null &&
-        observation.local_head !== observation.remote_head
-      ) {
+      if (observation.local_head !== observation.remote_head) {
         await effects.alignLocal(
           adapter,
           observation.local_head,
