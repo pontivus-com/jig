@@ -27,7 +27,7 @@ export interface PlannerTaskListProps {
 }
 
 interface PlannerSequenceRowProps
-  extends Omit<PlannerTaskListProps, "tasks" | "date" | "selectedTask"> {
+  extends Omit<PlannerTaskListProps, "tasks" | "recurrences" | "date" | "selectedTask"> {
   readonly task: Task;
   readonly recurrenceSeries: RecurrenceSeries | null;
   readonly index: number;
