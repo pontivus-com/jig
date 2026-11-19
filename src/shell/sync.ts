@@ -29,7 +29,6 @@ import {
 } from "../persistence/sqlite";
 import {
   canonicalPlanningEqual,
-  planningFromState,
   reconcileCanonicalPlanning,
 } from "../core/reconciliation";
 import {
@@ -266,13 +265,13 @@ export function createSyncController(
 
   const applyRemotePlanning = async (
     observation: PortableRemoteObservation,
-    tasks: ReturnType<typeof planningFromState>["tasks"],
-    recurrences: ReturnType<typeof planningFromState>["recurrences"],
+    tasks: readonly import("../../src/core/task").Task[],
+    recurrences: readonly import("../../src/core/recurrence").RecurrenceSeries[],
   ): Promise<number> => {
     const state = await readCanonicalState(db);
     if (
       canonicalPlanningEqual(
-        planningFromState(state),
+        { tasks: state.tasks, recurrences: state.recurrences },
         { tasks, recurrences },
       )
     ) {
@@ -585,7 +584,7 @@ export function createSyncController(
             tasks: base.snapshot.tasks,
             recurrences: base.snapshot.recurrences,
           },
-          planningFromState(state),
+          { tasks: state.tasks, recurrences: state.recurrences },
           {
             tasks: remoteSnapshot.tasks,
             recurrences: remoteSnapshot.recurrences,
