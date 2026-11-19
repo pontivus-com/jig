@@ -502,6 +502,14 @@ export function createSyncController(
       observed = await observe(environment);
     } catch {
       remoteIdentity ??= UNRESOLVED_REMOTE;
+      try {
+        if (await isPending()) {
+          await exportCurrent();
+        }
+        localFailureCount = 0;
+      } catch {
+        return localIssue();
+      }
       return remoteIssue(true);
     }
     remoteIdentity = observationRemote(observed.observation);
