@@ -1281,6 +1281,10 @@ body {
       gap: var(--spacing-3);
     }
 
+    .jig-mobile-touch-control {
+      min-height: 48px;
+    }
+
     .jig-app-header-narrow button,
     .jig-app-header-narrow [role="button"],
     .jig-date-add,
