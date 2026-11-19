@@ -272,20 +272,26 @@ export function createSyncController(
 
   const applyRemotePlanning = async (
     observation: PortableRemoteObservation,
+    expectedRevision: number,
     tasks: readonly Task[],
     recurrences: readonly RecurrenceSeries[],
   ): Promise<number> => {
-    const state = await readCanonicalState(db);
+    const current = await readCanonicalState(db);
+    if (current.revision !== expectedRevision) {
+      throw new Error(
+        "Canonical revision changed during synchronization; re-observation required",
+      );
+    }
     if (
       canonicalPlanningEqual(
-        { tasks: state.tasks, recurrences: state.recurrences },
+        { tasks: current.tasks, recurrences: current.recurrences },
         { tasks, recurrences },
       )
     ) {
       if (observation.remote_head !== null) {
         await markAdoptedHead(db, observation.remote_head);
       }
-      return state.revision;
+      return current.revision;
     }
     if (observation.remote_head === null) {
       throw new Error("Remote head is required to apply synchronized state");
@@ -293,7 +299,7 @@ export function createSyncController(
     return (
       await applySynchronizedCanonicalState(
         db,
-        state.revision,
+        expectedRevision,
         tasks,
         recurrences,
         observation.remote_head,
@@ -626,6 +632,7 @@ export function createSyncController(
         try {
           const appliedRevision = await applyRemotePlanning(
             observation,
+            state.revision,
             reconciled.planning.tasks,
             reconciled.planning.recurrences,
           );
