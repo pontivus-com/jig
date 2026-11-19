@@ -1,6 +1,5 @@
 import {
-  adoptEmptyDatasetIdentity,
-  applySynchronizedCanonicalState,
+  adoptCanonicalSnapshot,
   markAdoptedHead,
   markExported,
   readCanonicalState,
@@ -12,20 +11,18 @@ import type {
 } from "../../../src/protocol";
 import {
   decideSynchronization,
-  runSynchronizationRemoteOperation,
-  SYNCHRONIZATION_HEALTHY_POLL_MS,
-  synchronizationRetryDelayMs,
-} from "../../../src/synchronization";
+  type SynchronizationFacts,
+} from "../../../src/core/synchronization";
 import {
   alignAndroidPortableHead,
   androidPortableHead,
   androidSynchronizationRemote,
   commitAndroidCanonicalState,
-  normalizeAndroidPortableHead,
   observeAndroidPortableRemote,
   pushAndroidPortableRepository,
   reopenAndroidPortableRepository,
   type AndroidGitEffects,
+  type AndroidPortableRemoteObservation,
   type GitCredentialProvider,
 } from "./git";
 
@@ -33,10 +30,49 @@ const MUTATION_DEBOUNCE_MS = 3_000;
 
 export interface AndroidSyncController {
   readonly start: () => Promise<void>;
-  readonly stop: () => Promise<void>;
+  readonly stop: () => void;
   readonly status: () => RepositorySynchronizationStatus;
   readonly notifyMutation: () => void;
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
+}
+
+function factsForObservation(
+  observation: AndroidPortableRemoteObservation,
+  localPending: boolean,
+): SynchronizationFacts {
+  switch (observation.state) {
+    case "absent":
+      return {
+        kind: "remote-absent",
+        local_pending: localPending,
+        previously_synchronized:
+          observation.previously_synchronized,
+      };
+    case "unsafe":
+      return { kind: "unsafe-remote" };
+    case "present":
+      return {
+        kind: "remote-present",
+        local_pending: localPending,
+        remote_rewritten: observation.remote_rewritten,
+        lineage: observation.lineage,
+      };
+  }
+}
+
+function snapshotsEqual(
+  left: ReadonlyMap<string, string>,
+  right: ReadonlyMap<string, string>,
+): boolean {
+  if (left.size !== right.size) {
+    return false;
+  }
+  for (const [path, content] of left) {
+    if (right.get(path) !== content) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function createAndroidSyncController(
@@ -56,7 +92,6 @@ export function createAndroidSyncController(
     Promise<RepositorySynchronizationStatus> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
-  let remoteFailureCount = 0;
 
   const clearTimer = (): void => {
     if (timer !== null) {
@@ -65,17 +100,7 @@ export function createAndroidSyncController(
     }
   };
 
-  const schedule = (delayMs: number): void => {
-    if (stopped) {
-      return;
-    }
-    clearTimer();
-    timer = setTimeout(() => {
-      void trigger();
-    }, delayMs);
-  };
-
-  const isPending = async (): Promise<boolean> => {
+  const localPending = async (): Promise<boolean> => {
     const metadata = await readMetadata(database);
     return (
       metadata.revision !== metadata.last_exported_revision ||
@@ -84,14 +109,10 @@ export function createAndroidSyncController(
     );
   };
 
-  const setStatus = async (
-    state:
-      | "pending"
-      | "retrying"
-      | "synchronized"
-      | "sync-issue",
+  const setRemoteState = async (
+    state: "pending" | "synchronized" | "sync-issue",
   ): Promise<RepositorySynchronizationStatus> => {
-    const localGit = (await isPending())
+    const localGit = (await localPending())
       ? "pending"
       : "committed";
     try {
@@ -117,23 +138,6 @@ export function createAndroidSyncController(
     return current;
   };
 
-  const structuralIssue =
-    async (): Promise<RepositorySynchronizationStatus> => {
-      const status = await setStatus("sync-issue");
-      schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
-      return status;
-    };
-
-  const transientIssue =
-    async (): Promise<RepositorySynchronizationStatus> => {
-      remoteFailureCount += 1;
-      const status = await setStatus(
-        remoteFailureCount >= 7 ? "sync-issue" : "retrying",
-      );
-      schedule(synchronizationRetryDelayMs(remoteFailureCount));
-      return status;
-    };
-
   const reconcileConcreteLocalSnapshot =
     async (): Promise<void> => {
       const metadata = await readMetadata(database);
@@ -143,15 +147,16 @@ export function createAndroidSyncController(
         effects,
         metadata.dataset_id,
       );
-      const currentJson = JSON.stringify({
+      const canonical = JSON.stringify({
         tasks: state.tasks,
         recurrences: state.recurrences,
       });
-      const snapshotJson = JSON.stringify({
+      const portable = JSON.stringify({
         tasks: snapshot.tasks,
         recurrences: snapshot.recurrences,
       });
-      if (currentJson === snapshotJson) {
+
+      if (canonical === portable) {
         if (
           metadata.last_exported_head !== head ||
           metadata.last_exported_revision !== state.revision
@@ -160,19 +165,22 @@ export function createAndroidSyncController(
         }
         return;
       }
+
       if (
         state.revision !== metadata.last_exported_revision ||
         metadata.pending_sync
       ) {
         return;
       }
-      await applySynchronizedCanonicalState(
+
+      const adopted = await adoptCanonicalSnapshot(
         database,
-        state.revision,
         snapshot.tasks,
         snapshot.recurrences,
-        head,
+        null,
+        state.revision,
       );
+      await markExported(database, adopted.revision, head);
     };
 
   const exportCurrent = async (): Promise<string> => {
@@ -187,178 +195,240 @@ export function createAndroidSyncController(
     return head;
   };
 
+  const observe =
+    async (): Promise<AndroidPortableRemoteObservation> => {
+      const metadata = await readMetadata(database);
+      return observeAndroidPortableRemote(
+        effects,
+        metadata.dataset_id,
+        metadata.last_adopted_head,
+        credential,
+      );
+    };
+
+  const finishInterruptedAdoption =
+    async (
+      observation: Extract<
+        AndroidPortableRemoteObservation,
+        { readonly state: "present" }
+      >,
+    ): Promise<boolean> => {
+      const state = await readCanonicalState(database);
+      const metadata = await readMetadata(database);
+      if (metadata.last_adopted_head !== observation.remote_head) {
+        return false;
+      }
+
+      const snapshot = await reopenAndroidPortableRepository(
+        effects,
+        metadata.dataset_id,
+      );
+      const canonicalMatchesRemote =
+        JSON.stringify({
+          tasks: state.tasks,
+          recurrences: state.recurrences,
+        }) ===
+        JSON.stringify({
+          tasks: observation.remote_snapshot.tasks,
+          recurrences: observation.remote_snapshot.recurrences,
+        });
+      if (!canonicalMatchesRemote) {
+        return false;
+      }
+
+      if (
+        observation.lineage !== "equal" &&
+        observation.lineage !== "remote-ahead"
+      ) {
+        return false;
+      }
+
+      const localSnapshotMatchesCanonical =
+        JSON.stringify({
+          tasks: snapshot.tasks,
+          recurrences: snapshot.recurrences,
+        }) ===
+        JSON.stringify({
+          tasks: state.tasks,
+          recurrences: state.recurrences,
+        });
+      if (
+        !localSnapshotMatchesCanonical &&
+        observation.local_head !== observation.remote_head
+      ) {
+        await alignAndroidPortableHead(
+          effects,
+          observation.local_head,
+          observation.remote_head,
+        );
+      }
+      await markExported(
+        database,
+        state.revision,
+        observation.remote_head,
+      );
+      return true;
+    };
+
+  const adoptRemote =
+    async (
+      observation: Extract<
+        AndroidPortableRemoteObservation,
+        { readonly state: "present" }
+      >,
+    ): Promise<void> => {
+      const state = await readCanonicalState(database);
+      const adopted = await adoptCanonicalSnapshot(
+        database,
+        observation.remote_snapshot.tasks,
+        observation.remote_snapshot.recurrences,
+        observation.remote_head,
+        state.revision,
+      );
+      await alignAndroidPortableHead(
+        effects,
+        observation.local_head,
+        observation.remote_head,
+      );
+      await markExported(
+        database,
+        adopted.revision,
+        observation.remote_head,
+      );
+    };
+
+  const afterObservation =
+    async (
+      observation: AndroidPortableRemoteObservation,
+      allowPush: boolean,
+    ): Promise<RepositorySynchronizationStatus | null> => {
+      const decision = decideSynchronization(
+        factsForObservation(
+          observation,
+          await localPending(),
+        ),
+      );
+
+      if (decision.kind === "attention") {
+        return setRemoteState("sync-issue");
+      }
+
+      if (decision.kind === "synchronized") {
+        if (observation.state !== "present") {
+          return setRemoteState("sync-issue");
+        }
+        await markAdoptedHead(
+          database,
+          observation.remote_head,
+        );
+        return setRemoteState("synchronized");
+      }
+
+      if (decision.kind === "adopt-remote") {
+        if (observation.state !== "present") {
+          return setRemoteState("sync-issue");
+        }
+        try {
+          await adoptRemote(observation);
+        } catch {
+          return setRemoteState("sync-issue");
+        }
+        return null;
+      }
+
+      if (decision.kind === "local-only") {
+        return setRemoteState("sync-issue");
+      }
+
+      if (!allowPush) {
+        return setRemoteState(
+          (await localPending()) ? "pending" : "sync-issue",
+        );
+      }
+
+      if (await localPending()) {
+        await exportCurrent();
+      }
+
+      try {
+        await pushAndroidPortableRepository(
+          effects,
+          credential,
+        );
+      } catch {
+        let afterFailure: AndroidPortableRemoteObservation;
+        try {
+          afterFailure = await observe();
+        } catch {
+          return setRemoteState("sync-issue");
+        }
+        const failureDecision = decideSynchronization(
+          factsForObservation(
+            afterFailure,
+            await localPending(),
+          ),
+        );
+        if (failureDecision.kind === "push-local") {
+          return setRemoteState("sync-issue");
+        }
+        return afterObservation(afterFailure, false);
+      }
+
+      let confirmed: AndroidPortableRemoteObservation;
+      try {
+        confirmed = await observe();
+      } catch {
+        return setRemoteState("sync-issue");
+      }
+      return afterObservation(confirmed, false);
+    };
+
   const runOnce =
     async (): Promise<RepositorySynchronizationStatus> => {
       try {
         await reconcileConcreteLocalSnapshot();
       } catch {
         current = {
+          ...current,
           local_git: "issue",
-          remote: current.remote,
         };
-        schedule(synchronizationRetryDelayMs(1));
         return current;
       }
 
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        const state = await readCanonicalState(database);
-        const metadata = await readMetadata(database);
+      let observation: AndroidPortableRemoteObservation;
+      try {
+        observation = await observe();
+      } catch {
+        return setRemoteState("sync-issue");
+      }
 
-        let observation:
-          Awaited<ReturnType<typeof observeAndroidPortableRemote>>;
+      if (
+        observation.state === "present" &&
+        await finishInterruptedAdoption(observation)
+      ) {
         try {
-          observation =
-            await runSynchronizationRemoteOperation(
-              () =>
-                observeAndroidPortableRemote(
-                  effects,
-                  metadata.dataset_id,
-                  credential,
-                ),
-            );
+          observation = await observe();
         } catch {
-          return transientIssue();
-        }
-
-        if (
-          observation.remote_state !== "present" ||
-          observation.remote_head === null ||
-          observation.remote_snapshot === null
-        ) {
-          return structuralIssue();
-        }
-
-        const remoteHead = observation.remote_head;
-        const remoteSnapshot = observation.remote_snapshot;
-
-        if (remoteSnapshot.dataset_id !== metadata.dataset_id) {
-          const emptyBootstrap =
-            state.revision === 0 &&
-            metadata.last_exported_revision === 0 &&
-            state.tasks.length === 0 &&
-            state.recurrences.length === 0;
-          if (!emptyBootstrap) {
-            return structuralIssue();
-          }
-          try {
-            await adoptEmptyDatasetIdentity(
-              database,
-              metadata.dataset_id,
-              remoteSnapshot.dataset_id,
-            );
-            const switched = await readCanonicalState(database);
-            const applied =
-              remoteSnapshot.tasks.length === 0 &&
-              remoteSnapshot.recurrences.length === 0
-                ? null
-                : await applySynchronizedCanonicalState(
-                    database,
-                    switched.revision,
-                    remoteSnapshot.tasks,
-                    remoteSnapshot.recurrences,
-                    remoteHead,
-                  );
-            await normalizeAndroidPortableHead(
-              effects,
-              observation.local_head,
-              remoteHead,
-            );
-            await markAdoptedHead(database, remoteHead);
-            await markExported(
-              database,
-              applied?.revision ?? switched.revision,
-              remoteHead,
-            );
-            continue;
-          } catch {
-            return structuralIssue();
-          }
-        }
-
-        const localMatchesRemote =
-          JSON.stringify({
-            tasks: state.tasks,
-            recurrences: state.recurrences,
-          }) ===
-          JSON.stringify({
-            tasks: remoteSnapshot.tasks,
-            recurrences: remoteSnapshot.recurrences,
-          });
-        const pending =
-          state.revision !== metadata.last_exported_revision ||
-          metadata.last_exported_head === null ||
-          metadata.pending_sync;
-        const decision = decideSynchronization({
-          remote_rewritten: observation.remote_rewritten,
-          lineage: observation.lineage,
-          local_pending: pending,
-          canonical_matches_remote: localMatchesRemote,
-        });
-
-        if (decision === "attention") {
-          return structuralIssue();
-        }
-        if (decision === "synchronized") {
-          remoteFailureCount = 0;
-          const status = await setStatus("synchronized");
-          schedule(SYNCHRONIZATION_HEALTHY_POLL_MS);
-          return status;
-        }
-        if (decision === "adopt") {
-          try {
-            const representedRevision =
-              localMatchesRemote
-                ? state.revision
-                : (
-                    await applySynchronizedCanonicalState(
-                      database,
-                      state.revision,
-                      remoteSnapshot.tasks,
-                      remoteSnapshot.recurrences,
-                      remoteHead,
-                    )
-                  ).revision;
-            await alignAndroidPortableHead(
-              effects,
-              observation.local_head,
-              remoteHead,
-            );
-            await markAdoptedHead(database, remoteHead);
-            await markExported(
-              database,
-              representedRevision,
-              remoteHead,
-            );
-            continue;
-          } catch {
-            continue;
-          }
-        }
-
-        try {
-          if (
-            (await androidPortableHead(effects)) !==
-            observation.local_head
-          ) {
-            continue;
-          }
-          if (await isPending()) {
-            await exportCurrent();
-          }
-          await runSynchronizationRemoteOperation(
-            () =>
-              pushAndroidPortableRepository(
-                effects,
-                credential,
-              ),
-          );
-          continue;
-        } catch {
-          continue;
+          return setRemoteState("sync-issue");
         }
       }
 
-      return transientIssue();
+      try {
+        const result = await afterObservation(
+          observation,
+          true,
+        );
+        if (result !== null) {
+          return result;
+        }
+
+        const confirmed = await observe();
+        return (
+          await afterObservation(confirmed, false)
+        ) ?? setRemoteState("sync-issue");
+      } catch {
+        return setRemoteState("sync-issue");
+      }
     };
 
   const trigger =
@@ -376,29 +446,16 @@ export function createAndroidSyncController(
   return {
     start: async () => {
       stopped = false;
-      await setStatus("pending");
-      schedule(0);
+      await reconcileConcreteLocalSnapshot();
+      await setRemoteState("pending");
     },
-    stop: async () => {
+    stop: () => {
       stopped = true;
       clearTimer();
-      const active = running;
-      if (active !== null) {
-        await active.catch(() => current);
-      }
     },
     status: () => current,
     notifyMutation: () => {
-      current = {
-        local_git: "pending",
-        remote: {
-          ...current.remote,
-          state:
-            current.remote.state === "not-configured"
-              ? "not-configured"
-              : "pending",
-        },
-      };
+      void setRemoteState("pending");
       if (stopped) {
         return;
       }
