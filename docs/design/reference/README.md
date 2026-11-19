@@ -1,5 +1,15 @@
 # Jig canonical UI reference set
 
+## v1.1 governing references
+
+The current forward v1.1 visual authority is:
+
+- `jig-v1.1-application-ux-ui-governed-reference.html` — configured desktop/mobile application shell, compact bottom navigation + Planner FAB, temporal hierarchy, Planner density, History and Settings. This supersedes the old compact hamburger primary-navigation pattern.
+- `jig-v1.1-mobile-ux-ui-governed-reference.html` — Android/narrow onboarding states and complete Task BottomSheet/Repeat composition.
+- `jig-v1.1-desktop-onboarding-task-form-governed-reference.html` — desktop onboarding states and complete Drawer Task-form/Repeat composition.
+
+Use these together with `../ui-solution.md`, `../brand-and-theme.md` and the UX-F0 fidelity audit. Current implementation screenshots are evidence only.
+
 This directory contains the structural reference-design baseline for the current Jig product/functional/UI contracts.
 
 ## v1.0.3 governing references
@@ -37,6 +47,8 @@ They must not be used to reintroduce:
 - Desktop drag owns exact same-date/cross-date movement; Edit scheduled date owns non-drag rescheduling.
 - Desktop Task workspace uses a non-modal right Drawer that overlays without reflowing the Planner.
 - Narrow/mobile uses BottomSheet rising from the bottom.
+- Configured narrow/mobile primary navigation is persistent bottom navigation for Planner/History/Settings; the historical hamburger primary-navigation model is superseded for v1.1.
+- Configured narrow/mobile Planner Add is one bottom-end FAB above the navigation; healthy sync is visually subordinate in the top application bar.
 - Add task initially requests title only and inherits selected/originating date/defaults.
 - Completed Tasks leave Planner and live in History.
 - Priority may use a restrained leading color accent for scanning, but priority remains non-color-readable and Normal is not visually dominant.
@@ -44,4 +56,4 @@ They must not be used to reintroduce:
 
 These SVGs govern product structure, hierarchy, density and genuine structural dimensions; they do not authorize overriding Astryx. Implementation must use pinned Astryx public shell/control/layout/workspace APIs first, then the smallest Jig-owned composition/CSS required for the Planner header, seven tracks, narrow composition and other product-specific geometry.
 
-System/Light/Dark support remains mandatory through the governed Jig/Astryx theme. Final implementation is certified with browser interaction and screenshot evidence, not SVG pixel matching alone.
+System/Light/Dark support remains mandatory through the governed Jig/Astryx theme. Final implementation requires browser interaction/geometry evidence **and explicit reviewed visual-fidelity evidence** against the current v1.1 references; screenshot capture by itself is not certification.
