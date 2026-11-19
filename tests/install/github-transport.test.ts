@@ -191,6 +191,7 @@ describe("managed GitHub transport", () => {
 
     try {
       await expect(transport.reconnect_required()).resolves.toBe(true);
+      await expect(transport.network_environment()).resolves.toBeNull();
 
       credential = {
         user_id: 42,
@@ -200,6 +201,10 @@ describe("managed GitHub transport", () => {
         refresh_token_expires_at: "2030-07-01T00:00:00.000Z",
       };
       await expect(transport.reconnect_required()).resolves.toBe(false);
+      await expect(transport.network_environment()).resolves.toMatchObject({
+        GIT_TERMINAL_PROMPT: "0",
+        JIG_GITHUB_ACCESS_TOKEN: "access-token",
+      });
     } finally {
       await transport.dispose();
     }
@@ -267,6 +272,12 @@ describe("managed GitHub transport", () => {
     }
 
     try {
+      await expect(
+        transport.network_environment(),
+      ).resolves.toMatchObject({
+        GIT_TERMINAL_PROMPT: "0",
+        JIG_GITHUB_ACCESS_TOKEN: "new-token",
+      });
       await expect(
         transport.synchronize({ repository_path: path }),
       ).resolves.toStrictEqual({
