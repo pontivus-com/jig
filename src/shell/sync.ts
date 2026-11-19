@@ -327,12 +327,13 @@ export function createSyncController(
       for (let attempt = 0; attempt < 3; attempt += 1) {
         let observation: PortableRemoteObservation;
         try {
+          const datasetId = (await readMetadata(db)).dataset_id;
           observation =
             await runSynchronizationRemoteOperation(
               () =>
                 effects.observeRemote(
                   adapter,
-                  (await readMetadata(db)).dataset_id,
+                  datasetId,
                   networkEnvironment,
                 ),
             );
