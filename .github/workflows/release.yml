@@ -175,6 +175,8 @@ jobs:
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Verify governed Android source/device contract
+        run: bash scripts/verify-android-device-prerequisites.sh --source-only
 
       - name: Synchronize governed Android project
         run: bun run android:sync
@@ -293,7 +295,7 @@ jobs:
           bun run typecheck
           bun run test
           bun run build
-          bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/release-bundle-smoke.sh scripts/verify-android-dependencies.sh
+          bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/release-bundle-smoke.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh
           bash tests/install/installer-smoke.sh
 
       - name: Package and smoke certified arm64 bundle
@@ -372,7 +374,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/release-bundle-smoke.sh scripts/verify-android-dependencies.sh
+          bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/release-bundle-smoke.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh
           bash tests/install/installer-smoke.sh
 
       - name: Build release assets

@@ -19,7 +19,10 @@ The repository must retain:
 - Node.js 22+ for Capacitor tooling;
 - Android Studio 2025.2.1 or newer compatible tooling with SDK Platform 36;
 - Android `versionName` derived from root `package.json.version`;
-- Android `versionCode = major * 1_000_000 + minor * 1_000 + patch`.
+- Android `versionCode = major * 1_000_000 + minor * 1_000 + patch`;
+- JDK 21 or newer for the pinned Gradle/Android plugin and Capacitor plugin
+  toolchain; hosted certification uses JDK 21;
+- Bun `1.4.4` for the frozen JavaScript/Capacitor build loop.
 
 Do not add Google Services, Firebase, Play Services, proprietary analytics/crash SDKs, a second Android Task model or a second native release-version authority.
 
@@ -47,6 +50,25 @@ Also record:
 - WebView/Chrome version used by the Capacitor runtime.
 
 The recorded environment must satisfy the governed baseline above. Do not infer a physical-device pass from emulator/browser results.
+
+The repository-owned prerequisite check is:
+
+```bash
+ANDROID_SDK_ROOT="$HOME/Android/Sdk" bash scripts/verify-android-device-prerequisites.sh --apk android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+It verifies the pinned source contract, Node/Bun/Java/Gradle versions, SDK
+Platform 36 and Build Tools 36.0.0, one authorized **physical** adb device at
+API 24 or newer, the stable package identity, the derived version metadata and
+the exact APK SHA-256. It does not install or mutate the device. Android Studio
+may be used for inspection, but this CLI check is the certification authority
+for the repeatable prerequisite state.
+
+For source/CI validation without a device:
+
+```bash
+bash scripts/verify-android-device-prerequisites.sh --source-only
+```
 
 ## 3. Deterministic version and debug-APK build
 
