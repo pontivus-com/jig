@@ -268,6 +268,53 @@ test("desktop uses explicit Planner navigation with one seven-date open canvas",
   expect(chrome.shadow).toBe("none");
 });
 
+test("retains governed desktop Planner History and Settings evidence", async ({
+  page,
+}, testInfo) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Desktop planner evidence", today, "HIGH");
+  await createTask(page, "Desktop completed evidence", today);
+  const completedTask = (await apiState(page)).tasks.find(
+    (task) => task.title === "Desktop completed evidence",
+  );
+  if (completedTask === undefined) {
+    throw new Error("Desktop History evidence task unavailable");
+  }
+  await apiCommand(page, {
+    type: "complete",
+    task_id: completedTask.id,
+  });
+  await page.reload();
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-planner-desktop.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(
+    page.getByText("Desktop completed evidence", { exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-history-desktop.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-settings-desktop.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Show diagnostics", exact: true })
+    .click();
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-settings-diagnostics-desktop.png"),
+    fullPage: true,
+  });
+});
+
 test("temporal group stays page-centered in one row and navigation has no selected-day state", async ({
   page,
 }) => {
@@ -527,6 +574,17 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     reference: "https://example.com/mobile-geometry",
     note: null,
     reminder_time: null,
+  });
+  await createTask(page, "Mobile completed evidence", today);
+  const mobileCompleted = (await apiState(page)).tasks.find(
+    (task) => task.title === "Mobile completed evidence",
+  );
+  if (mobileCompleted === undefined) {
+    throw new Error("Mobile History evidence task unavailable");
+  }
+  await apiCommand(page, {
+    type: "complete",
+    task_id: mobileCompleted.id,
   });
   await page.reload();
 
@@ -799,6 +857,17 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await page.keyboard.press("Escape");
     await page.screenshot({
       path: testInfo.outputPath(`v1.1-settings-mobile-${width}.png`),
+      fullPage: true,
+    });
+
+    await primaryNavigation
+      .getByRole("button", { name: "History", exact: true })
+      .click();
+    await expect(
+      page.getByText("Mobile completed evidence", { exact: true }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-history-mobile-${width}.png`),
       fullPage: true,
     });
 
