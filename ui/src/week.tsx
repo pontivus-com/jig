@@ -1,4 +1,5 @@
 import { IconButton } from "@astryxdesign/core";
+import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
@@ -12,6 +13,7 @@ import { JigIcon } from "./jig-icons";
 
 export interface WeekViewProps {
   readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
   readonly now: Date;
   readonly displayedDates: readonly string[];
   readonly selectedTask: Task | null;
@@ -35,6 +37,7 @@ interface DatedSectionProps extends Omit<WeekViewProps, "displayedDates"> {
 
 function DatedSection({
   tasks,
+  recurrences,
   now,
   date,
   isToday,
@@ -70,7 +73,6 @@ function DatedSection({
             })}`}
             icon={<JigIcon name="add" color="inherit" />}
             variant="ghost"
-            size="sm"
             className="jig-date-add"
             onClick={() => onAdd(date)}
           />
@@ -85,11 +87,11 @@ function DatedSection({
 
       <DateDropZone
         date={date}
-        tasks={tasks}
         className="jig-week-task-area"
       >
         <PlannerTaskList
           tasks={tasks}
+          recurrences={recurrences}
           now={now}
           date={date}
           selectedTask={selectedTask}
