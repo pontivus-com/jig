@@ -235,10 +235,13 @@ describe("UI ownership architecture", () => {
     expect(header).toContain("type Destination = (typeof DESTINATIONS)[number]");
     expect(header).toContain("IconName");
     expect(header).toContain("NamespacedIconName");
-    expect(header).toContain("destinationMenuItems");
+    expect(header).toContain("function NarrowDestinationMenu");
+    expect(header).toContain("<Popover");
     expect(header).toContain('presentation="popover"');
-    expect(header).toContain("items={destinationMenuItems(destination, onNavigate)}");
-    expect(header).not.toContain('items={[\n              {\n                id: "history"');
+    expect(header).toContain("DESTINATIONS.map((item)");
+    expect(header).toContain('role="menuitem"');
+    expect(header).toContain('className="jig-navigation-menu-item"');
+    expect(header).not.toContain("<DropdownMenu");
 
     expect(layoutMode).toContain(
       'DESKTOP_LAYOUT_MEDIA_QUERY = "(min-width: 73rem)"',
@@ -295,7 +298,7 @@ describe("UI ownership architecture", () => {
     expect(css).toContain("padding: env(safe-area-inset-top, 0px) 0 0;");
     expect(css).toContain(".jig-header-mobile-application-row {");
     expect(css).toContain(".jig-header-mobile-temporal-row {");
-    expect(css).toContain("min-height: 44px;");
+    expect(css).toContain("min-height: 56px;");
     expect(css).not.toContain("height: 3.5rem;");
     expect(css).toContain("@media (max-width: 72.999rem)");
     expect(css).not.toContain("@media (max-width: 75.999rem)");
@@ -311,7 +314,8 @@ describe("UI ownership architecture", () => {
     expect(css).toContain(".jig-settings-view {");
     expect(css).toContain("max-width: 50rem;");
     expect(css).toContain("margin-inline: auto;");
-    expect(css).toContain("grid-template-columns: repeat(2, minmax(0, 1fr));");
+    expect(css).toContain(".jig-settings-sections {");
+    expect(css).not.toContain(".jig-settings-grid {");
     expect(css).not.toContain("grid-template-columns: 560px minmax(0, 580px);");
     expect(css).not.toMatch(
       /\.jig-history-view,\s*\n\s*\.jig-settings-view\s*\{[^}]*max-width:\s*none/s,
@@ -348,7 +352,7 @@ describe("UI ownership architecture", () => {
     const deviceFlow = source("ui/src/github-device-flow.tsx");
 
     expect(app).toContain("<OnboardingHeader />");
-    expect(app).toContain("<SetupView status={setupStatus} />");
+    expect(app).toContain("<SetupView status={setupStatus} layoutMode={layoutMode} />");
     expect(setup).not.toContain("<main");
     expect(setup).toContain('label="Connect GitHub repository"');
     expect(setup).toContain('label="Use an existing local repository"');
@@ -359,6 +363,59 @@ describe("UI ownership architecture", () => {
     expect(deviceFlow).toContain('"Copy code"');
     expect(deviceFlow).not.toContain("setTimeout");
     expect(deviceFlow).not.toContain("onRefresh");
+  });
+
+  it("keeps v1.1 mobile form and onboarding composition on governed public owners", () => {
+    const taskEditor = source("ui/src/task-editor.tsx");
+    const setup = source("ui/src/setup.tsx");
+    const app = source("ui/src/app.tsx");
+    const styles = source("ui/src/styles.css");
+
+    expect(taskEditor).toContain("ToggleButton");
+    expect(taskEditor).toContain('className="jig-repeat-weekday"');
+    expect(taskEditor).not.toContain("<CheckboxInput");
+    expect(taskEditor).toContain(
+      'controlClassName="jig-mobile-touch-control"',
+    );
+    expect(taskEditor).toContain('presentation="adaptive"');
+    expect(taskEditor).toContain("jig-mobile-selector-option");
+    expect(taskEditor).toContain('style={{ minHeight: "48px" }}');
+    expect(source("ui/src/settings.tsx")).toContain(
+      'style={{ minHeight: "48px" }}',
+    );
+    const taskRow = source("ui/src/task-row.tsx");
+    expect(taskRow).toContain("TaskCompletionControl");
+    expect(taskRow).toContain('className="jig-task-completion-target"');
+    expect(taskRow).toContain("<CheckboxInput");
+    expect(taskRow).toContain("inputRef.current?.click()");
+    expect(source("ui/src/settings.tsx")).toContain(
+      'presentation="adaptive"',
+    );
+    expect(styles).toContain(".jig-mobile-touch-control {");
+    expect(styles).toContain("min-width: 48px;");
+    expect(styles).toContain("min-height: 48px;");
+
+    const workspace = source("ui/src/task-workspace.tsx");
+    expect(workspace).toContain("LayoutFooter");
+    expect(workspace).toContain('showEditorActions={false}');
+    expect(workspace).toContain('form="jig-task-bottom-sheet-form"');
+    expect(workspace).toContain(
+      'editorFormId="jig-task-bottom-sheet-form"',
+    );
+    const editorActionsStart = styles.indexOf(".jig-editor-actions {");
+    const editorActionsEnd = styles.indexOf("}", editorActionsStart);
+    expect(editorActionsStart).toBeGreaterThanOrEqual(0);
+    expect(
+      styles.slice(editorActionsStart, editorActionsEnd + 1),
+    ).not.toContain("position: sticky;");
+
+    expect(setup).toContain('readonly layoutMode: LayoutMode;');
+    expect(setup).toContain('layoutMode === "narrow"');
+    expect(setup).toContain("Same plan. Different devices.");
+    expect(setup).toContain("Choose one repository.");
+    expect(app).toContain(
+      "<SetupView status={setupStatus} layoutMode={layoutMode} />",
+    );
   });
 
   it("keeps appearance controls in Settings and reminder delivery browser-native", () => {
@@ -399,6 +456,7 @@ describe("UI ownership architecture", () => {
     const workspace = source("ui/src/task-workspace.tsx");
     const editor = source("ui/src/task-editor.tsx");
     const taskRow = source("ui/src/task-row.tsx");
+    const drag = source("ui/src/drag.tsx");
     const history = source("ui/src/history.tsx");
 
     expect(app).toContain("interface PlannerState");
@@ -429,7 +487,8 @@ describe("UI ownership architecture", () => {
     expect(list).toContain("<DraggableTaskRow");
     expect(list).not.toContain("<SortableTaskRow");
     expect(list).not.toContain("isSortable");
-    expect(list).toContain("useTaskDragState");
+    expect(list).toContain("<TaskInsertionSlot");
+    expect(list).not.toContain("@dnd-kit/");
 
     expect(editor).not.toContain("optionalText");
     expect(editor).not.toContain("normalizeOptionalText");
@@ -439,13 +498,18 @@ describe("UI ownership architecture", () => {
     expect(history).toContain("<TaskActionMenu");
     expect(taskRow).toContain('icon="moreHorizontal"');
     expect(taskRow).toContain('icon="clock"');
-    expect(taskRow).toContain('import {\n  Draggable,');
-    expect(taskRow).toContain("dragProvided.dragHandleProps");
     expect(taskRow).toContain('className="jig-task-drag-handle"');
     expect(taskRow).toContain('<JigIcon name="drag"');
     expect(taskRow).not.toContain("@dnd-kit/");
     expect(taskRow).not.toContain("PointerSensor");
-    expect(taskRow).not.toContain("preventTaskDragActivation");
+
+    expect(drag).toContain('from "@dnd-kit/react"');
+    expect(drag).toContain('from "@dnd-kit/dom"');
+    expect(drag).toContain("useDraggable");
+    expect(drag).toContain("draggable.handleRef");
+    expect(drag).toContain('type: "jig-insertion-slot"');
+    expect(drag).toContain("PointerActivationConstraints.Distance");
+    expect(drag).not.toContain("@hello-pangea/dnd");
 
     expect(existsSync("ui/src/date-strip.tsx")).toBe(false);
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
