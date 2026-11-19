@@ -7,7 +7,7 @@ import {
   ListItem,
 } from "@astryxdesign/core";
 import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
-import type { Ref } from "react";
+import { useRef, type Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { isReminderDue } from "../../src/core/reminder";
@@ -121,6 +121,46 @@ function TaskMetadata({
         </Button>
       )}
     </div>
+  );
+}
+
+function TaskCompletionControl({
+  task,
+  completed,
+  onToggleComplete,
+}: Readonly<{
+  task: Task;
+  completed: boolean;
+  onToggleComplete: () => void;
+}>): React.ReactElement {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <span
+      className="jig-task-completion-target"
+      data-jig-drag-excluded="true"
+      onClick={(event) => {
+        // Astryx CheckboxInput intentionally keeps a label-hidden checkbox as
+        // a 24px marker and exposes no public control-class hook. The Task row
+        // cannot own that checkbox's hit area because the independent drag
+        // grip shares the same leading region. This wrapper is therefore the
+        // smallest Jig-owned semantic fallback: it retains Astryx's checkbox
+        // and native input semantics while forwarding only otherwise-empty
+        // 48px target space through the component's public input ref.
+        if (event.target === event.currentTarget) {
+          inputRef.current?.click();
+        }
+        event.stopPropagation();
+      }}
+    >
+      <CheckboxInput
+        ref={inputRef}
+        label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
+        isLabelHidden
+        value={completed}
+        onChange={onToggleComplete}
+      />
+    </span>
   );
 }
 
@@ -307,11 +347,10 @@ export function TaskRow({
               <JigIcon name="drag" color="inherit" size="sm" />
             </span>
           )}
-          <CheckboxInput
-            label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
-            isLabelHidden
-            value={completed}
-            onChange={onToggleComplete}
+          <TaskCompletionControl
+            task={task}
+            completed={completed}
+            onToggleComplete={onToggleComplete}
           />
         </span>
       }
