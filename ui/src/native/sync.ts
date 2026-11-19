@@ -12,7 +12,6 @@ import type {
 } from "../../../src/protocol";
 import {
   canonicalPlanningEqual,
-  planningFromState,
   reconcileCanonicalPlanning,
 } from "../../../src/core/reconciliation";
 import {
@@ -135,7 +134,7 @@ export function createAndroidSyncController(
       );
       if (
         canonicalPlanningEqual(
-          planningFromState(state),
+          { tasks: state.tasks, recurrences: state.recurrences },
           {
             tasks: snapshot.tasks,
             recurrences: snapshot.recurrences,
@@ -305,7 +304,7 @@ export function createAndroidSyncController(
         }
       }
 
-      const currentPlanning = planningFromState(state);
+      const currentPlanning = { tasks: state.tasks, recurrences: state.recurrences };
       const remotePlanning = {
         tasks: remoteSnapshot.tasks,
         recurrences: remoteSnapshot.recurrences,
