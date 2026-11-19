@@ -376,6 +376,28 @@ describe("architecture compliance", () => {
     );
   });
 
+  it("keeps synchronization retry and timeout ownership in the existing platform shells", () => {
+    const policy = source("src/core/synchronization.ts");
+    const desktopSync = source("src/shell/sync.ts");
+    const androidSync = source("ui/src/native/sync.ts");
+    const nativeTransport = source(
+      "android/app/src/main/java/com/pontivus/jig/JigGitHttpTransport.java",
+    );
+
+    expect(policy).not.toMatch(/retry|timeout|poll|setTimeout/i);
+    expect(desktopSync).toContain("retryDelayMs");
+    expect(desktopSync).toContain("SYNC_HEALTHY_POLL_MS");
+    expect(androidSync).not.toMatch(
+      /retryDelayMs|SYNC_RETRY|Promise\.race/,
+    );
+    expect(nativeTransport).toContain(
+      "CONNECT_TIMEOUT_MS = 15_000",
+    );
+    expect(nativeTransport).toContain(
+      "READ_TIMEOUT_MS = 30_000",
+    );
+  });
+
   it("keeps portable records platform-neutral and Android Git provider-neutral", () => {
     const portable = source("src/portable.ts");
     const desktopGit = source("src/shell/git.ts");
