@@ -110,7 +110,9 @@ J110-IMP-08 closes on the governed deterministic Android shell/debug-APK build a
 
 The previous Pangea implementation is a recorded **FAIL** and must not be retested as the release candidate.
 
-Using the exact certified post-UX replacement candidate source/APK from IMP-04 — currently source `611c8ced6a854a80f24bf727c53d792f5c5d556c` and GitHub Actions APK artifact `14541004265` unless a later executable change establishes a newly certified lineage:
+Using the exact certified post-UX replacement candidate source/APK from IMP-04 — currently source `611c8ced6a854a80f24bf727c53d792f5c5d556c` and GitHub Actions APK artifact `14541004265` unless a later executable change establishes a newly certified lineage. The downloaded artifact contains `app-debug.apk` with SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`.
+
+The repository package authority expects application ID `com.pontivus.jig`; the governed preflight must still prove package/version badging with Build Tools 36.0.0 `aapt` on the certification host.
 
 1. record source SHA, APK SHA-256, device model, Android version and WebView/Chrome version;
 2. run at least 20 sequential grip drags with no stranded overlay/floating card;
