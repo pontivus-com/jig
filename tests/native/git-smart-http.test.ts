@@ -464,6 +464,104 @@ describe("Android Git smart-HTTP feasibility", () => {
     ]);
   });
 
+  it("adopts the winning dataset when another fresh client wins Android first publication", async () => {
+    const { remote, remoteUrl } = await fixture({
+      dataBranch: false,
+    });
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+
+    const WINNER_DATASET =
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4090";
+    const LOSER_DATASET =
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4091";
+    const baseHttp = nativeHttpFor(port);
+    let winnerPublished = false;
+
+    const raceHttp: NativeHttpPort = {
+      async request(options) {
+        const requestUrl = new URL(options.url);
+        if (
+          !winnerPublished &&
+          requestUrl.searchParams.get("service") ===
+            "git-receive-pack"
+        ) {
+          winnerPublished = true;
+          const winner = join(root ?? "", "publication-winner");
+          await runGit(root ?? "", [
+            "init",
+            "-b",
+            "jig-data",
+            winner,
+          ]);
+          await runGit(winner, [
+            "config",
+            "user.name",
+            "Fixture",
+          ]);
+          await runGit(winner, [
+            "config",
+            "user.email",
+            "fixture@example.invalid",
+          ]);
+          await writeSnapshot(
+            winner,
+            serializeSnapshot([], WINNER_DATASET),
+          );
+          await runGit(winner, ["add", "-A"]);
+          await runGit(winner, [
+            "commit",
+            "-m",
+            "Winning empty Jig bootstrap",
+          ]);
+          await runGit(winner, [
+            "remote",
+            "add",
+            "origin",
+            remote,
+          ]);
+          await runGit(winner, [
+            "push",
+            "origin",
+            "jig-data",
+          ]);
+        }
+        return baseHttp.request(options);
+      },
+    };
+
+    const { port: filesystemPort } = fakeFilesystem();
+    const effects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(raceHttp),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+
+    const acquired = await acquireAndroidPortableRepository(
+      effects,
+      remoteUrl,
+      async () => PASSWORD,
+      () => LOSER_DATASET,
+    );
+
+    expect(winnerPublished).toBe(true);
+    expect(acquired).toMatchObject({
+      dataset_id: WINNER_DATASET,
+      tasks: [],
+      recurrences: [],
+    });
+    expect(
+      await reopenAndroidPortableRepository(
+        effects,
+        WINNER_DATASET,
+      ),
+    ).toMatchObject({
+      dataset_id: WINNER_DATASET,
+    });
+  });
+
   it("round-trips one repository Android → Desktop → Android through the real synchronization controllers", async () => {
     const { remote, remoteUrl } = await fixture();
     const port = server?.port;
