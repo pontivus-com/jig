@@ -1319,12 +1319,13 @@ body {
     .jig-week-board {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      gap: var(--spacing-4);
+      gap: 0;
+      padding-block-end: var(--spacing-1);
     }
 
     .jig-week-board .jig-week-column {
       min-height: 0;
-      padding-block: var(--spacing-1) var(--spacing-3);
+      padding-block: 0;
       border-inline-start: 0;
     }
 
@@ -1336,16 +1337,27 @@ body {
       min-height: 0;
     }
 
+    .jig-week-board .jig-week-column-header {
+      min-height: 52px;
+      padding: var(--spacing-1) var(--spacing-2);
+    }
+
     .jig-week-board .jig-week-task-area {
-      min-height: var(--spacing-8);
+      min-height: 0;
     }
 
     .jig-task-card-list {
-      padding: var(--spacing-2) 0;
+      gap: var(--spacing-1);
+      padding: 0 0 var(--spacing-2);
     }
 
     .jig-task-card {
-      min-height: 88px;
+      min-height: 72px;
+    }
+
+    .jig-task-card-leading {
+      flex-direction: row;
+      gap: 0;
     }
 
     .jig-task-drag-handle,
