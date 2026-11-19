@@ -1,6 +1,6 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** NOT RUN — this document is the required evidence record for J110-IMP-09 and J110-IMP-15. Do not mark a row PASS from browser, emulator, hosted CI or generated-APK evidence.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-15 NOT RUN — J110-IMP-09 physical Task movement was completed successfully, but its detailed execution record was not retained. Do not reconstruct unknown device, source/APK identity or per-check results from browser, emulator, hosted CI or generated-APK evidence. This document remains the active evidence record for the remaining J110-IMP-15 physical matrix.
 
 **Executable source candidate:** `611c8ced6a854a80f24bf727c53d792f5c5d556c`  
 **GitHub Actions APK artifact:** `14541004265`  
@@ -13,7 +13,7 @@ Any later executable change invalidates this candidate identity and requires a n
 
 ## 1. Physical certification environment
 
-Record the exact device and certification host before testing.
+Record the exact device and certification host for the remaining J110-IMP-15 testing. The historical J110-IMP-09 device/toolchain metadata was not retained and remains explicitly unknown.
 
 | Fact | Recorded value |
 |---|---|
@@ -53,55 +53,55 @@ Paste or attach the complete output. The preflight must report exactly one autho
 
 ## 2. J110-IMP-09 — replacement Task-movement physical gate
 
-The previous Pangea result is a recorded FAIL and is not retested. Exercise the current dnd-kit dedicated-grip / explicit-insertion-slot implementation on the exact APK above.
+The previous Pangea result is a recorded FAIL. The replacement dnd-kit dedicated-grip / explicit-insertion-slot implementation was subsequently exercised successfully on physical Android and J110-IMP-09 is complete. The detailed execution record was lost; the checklist below records the required gate shape but its individual historical results are not retained and must not be reconstructed.
 
 ### Repeated drag stability
 
-Perform at least **20 sequential grip drags** across realistic populated Planner dates.
+The completed gate required at least **20 sequential grip drags** across realistic populated Planner dates. The individual execution evidence is not retained.
 
 | Check | Result | Evidence / notes |
 |---|---|---|
-| 20 sequential grip drags completed | NOT RUN | |
-| No stranded overlay / floating Task after any drag | NOT RUN | |
-| Grip initiates directly; no long press required | NOT RUN | |
-| Task-body vertical swipe scroll never starts drag | NOT RUN | |
+| 20 sequential grip drags completed | NOT RETAINED | |
+| No stranded overlay / floating Task after any drag | NOT RETAINED | |
+| Grip initiates directly; no long press required | NOT RETAINED | |
+| Task-body vertical swipe scroll never starts drag | NOT RETAINED | |
 
 ### Placement matrix
 
 | Placement | Result | Evidence / notes |
 |---|---|---|
-| Same date → first | NOT RUN | |
-| Same date → middle | NOT RUN | |
-| Same date → last | NOT RUN | |
-| Cross date → first | NOT RUN | |
-| Cross date → middle | NOT RUN | |
-| Cross date → last | NOT RUN | |
-| Move into empty date | NOT RUN | |
-| Target every visible before/between/after insertion slot | NOT RUN | |
-| Visible slot equals persisted date/index after reload | NOT RUN | |
-| Long-list auto-scroll retains the intended target | NOT RUN | |
+| Same date → first | NOT RETAINED | |
+| Same date → middle | NOT RETAINED | |
+| Same date → last | NOT RETAINED | |
+| Cross date → first | NOT RETAINED | |
+| Cross date → middle | NOT RETAINED | |
+| Cross date → last | NOT RETAINED | |
+| Move into empty date | NOT RETAINED | |
+| Target every visible before/between/after insertion slot | NOT RETAINED | |
+| Visible slot equals persisted date/index after reload | NOT RETAINED | |
+| Long-list auto-scroll retains the intended target | NOT RETAINED | |
 
 ### Cancellation and control independence
 
 | Check | Result | Evidence / notes |
 |---|---|---|
-| Outside drop restores cleanly | NOT RUN | |
-| Pointer/system cancellation restores cleanly | NOT RUN | |
-| Checkbox remains independent from drag | NOT RUN | |
-| Overflow menu remains independent from drag | NOT RUN | |
-| Reference action remains independent from drag | NOT RUN | |
-| Task-card open/edit remains independent from drag | NOT RUN | |
-| Drag remains correct after Planner scrolling | NOT RUN | |
-| Drag remains correct after opening/closing Task BottomSheet | NOT RUN | |
+| Outside drop restores cleanly | NOT RETAINED | |
+| Pointer/system cancellation restores cleanly | NOT RETAINED | |
+| Checkbox remains independent from drag | NOT RETAINED | |
+| Overflow menu remains independent from drag | NOT RETAINED | |
+| Reference action remains independent from drag | NOT RETAINED | |
+| Task-card open/edit remains independent from drag | NOT RETAINED | |
+| Drag remains correct after Planner scrolling | NOT RETAINED | |
+| Drag remains correct after opening/closing Task BottomSheet | NOT RETAINED | |
 
-**IMP-09 verdict:** NOT RUN / PASS / FAIL  
-**Blocking defect / issue reference if FAIL:**  
+**IMP-09 verdict:** **PASS — operator-confirmed physical completion; detailed execution record lost.**  
+**Retained execution evidence:** none; do not reconstruct unknown device, APK/source lineage or per-check results.  
 
-A repeated missed drop, floating-card residue, unstable slot or scroll conflict is **FAIL** and reopens SD-34/35 on `v1.1`.
+The original failure rule remains authoritative for regression handling: any new repeated missed drop, floating-card residue, unstable slot or scroll conflict observed during remaining physical work reopens SD-34/35 on `v1.1`.
 
 ## 3. J110-IMP-15 — physical mobile UX/runtime certification
 
-Run this section only after IMP-09 passes on the same source/APK lineage.
+J110-IMP-09 is already complete. Run the remaining J110-IMP-15 matrix on the governed current candidate lineage; do not rerun IMP-09 solely to reconstruct its lost detailed record.
 
 ### Configured shell and Planner
 
@@ -193,7 +193,7 @@ Record paths, attachment IDs or URLs for at least:
 - Task form Off + Weekly + Monthly + Stop repeating;
 - History;
 - Settings default + Diagnostics;
-- one successful repeated-drag sequence and one exact insertion-slot placement.
+- no new IMP-09 recording is required solely to reconstruct the lost historical record; if a movement regression is observed during IMP-15, capture that new evidence and reopen SD-34/35.
 
 **Evidence locations:**  
 
@@ -211,7 +211,7 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 
 | Gate | Result |
 |---|---|
-| J110-IMP-09 physical Task movement | NOT RUN |
+| J110-IMP-09 physical Task movement | **PASS — completed; detailed execution record lost** |
 | J110-IMP-15 physical UX/runtime matrix | NOT RUN |
 | Issue #31 live Linux/Desktop GitHub acceptance | NOT RUN |
 
