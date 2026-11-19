@@ -426,27 +426,6 @@ describe("convergence-first synchronization worker", () => {
   it("settles a semantic conflict into a quiescent sync issue without writing", async () => {
     const baseTask = task("206", "Base");
     const base = serializeSnapshot([baseTask], DATASET_ID);
-    await markExported(db, 0, BASE_HEAD);
-    await applyTaskCommand(
-      db,
-      {
-        type: "edit",
-        task_id: baseTask.id,
-        changes: { title: "Local title" },
-      },
-      0,
-      "2026-11-19T02:00:00.000Z",
-    ).catch(() => undefined);
-
-    // Seed canonical SQLite with the base first, then create the local edit.
-    const seededDb = db;
-    await seededDb.close();
-    await rm(root, { recursive: true, force: true });
-    root = await mkdtemp(join(tmpdir(), "jig-worker-conflict-"));
-    db = await initializeDatabase(
-      join(root, "jig.sqlite"),
-      DATASET_ID,
-    );
     await applyTaskCommand(
       db,
       {
