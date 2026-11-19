@@ -37,7 +37,11 @@ import { ANDROID_GIT_WORKTREE } from "./paths";
 export const ANDROID_DATA_BRANCH = "jig-data";
 const ANDROID_REMOTE = "origin";
 
-export type GitCredentialProvider = () => Promise<string>;
+export interface GitCredentialProvider {
+  (): Promise<string>;
+  readonly onAuthFailure?: () => void | Promise<void>;
+  readonly onAuthSuccess?: () => void | Promise<void>;
+}
 
 export interface AndroidGitEffects {
   readonly fs: IsomorphicGitPromiseFs;
@@ -81,15 +85,27 @@ function assertCredentialFreeHttpsRemote(remoteUrl: string): void {
   }
 }
 
-function authCallback(provider: GitCredentialProvider) {
-  return async (): Promise<Readonly<{ username: string; password: string }>> => {
-    const token = (await provider()).trim();
-    if (token.length === 0) {
-      throw new AndroidGitAdapterError(
-        "Android Git credential provider returned an empty token",
-      );
-    }
-    return { username: "x-access-token", password: token };
+function authenticationCallbacks(
+  provider: GitCredentialProvider,
+) {
+  return {
+    onAuth: async (): Promise<
+      Readonly<{ username: string; password: string }>
+    > => {
+      const token = (await provider()).trim();
+      if (token.length === 0) {
+        throw new AndroidGitAdapterError(
+          "Android Git credential provider returned an empty token",
+        );
+      }
+      return { username: "x-access-token", password: token };
+    },
+    onAuthFailure: async (): Promise<void> => {
+      await provider.onAuthFailure?.();
+    },
+    onAuthSuccess: async (): Promise<void> => {
+      await provider.onAuthSuccess?.();
+    },
   };
 }
 
@@ -227,7 +243,7 @@ export async function acquireAndroidPortableRepository(
     http: effects.http,
     url: remoteUrl,
     forPush: false,
-    onAuth: authCallback(credential),
+    ...authenticationCallbacks(credential),
   });
   const hasDataBranch = refs.some(
     (candidate) =>
@@ -316,7 +332,7 @@ export async function cloneAndroidPortableRepository(
     remote: ANDROID_REMOTE,
     singleBranch: true,
     noTags: true,
-    onAuth: authCallback(credential),
+    ...authenticationCallbacks(credential),
   });
 
   await assertDataBranch(effects);
@@ -358,7 +374,7 @@ export async function fetchAndroidPortableRepository(
     ref: ANDROID_DATA_BRANCH,
     singleBranch: true,
     tags: false,
-    onAuth: authCallback(credential),
+    ...authenticationCallbacks(credential),
   });
   return resolveRef({
     fs: effects.fs,
@@ -639,7 +655,7 @@ export async function pushAndroidPortableRepository(
     remote: ANDROID_REMOTE,
     ref: ANDROID_DATA_BRANCH,
     remoteRef: ANDROID_DATA_BRANCH,
-    onAuth: authCallback(credential),
+    ...authenticationCallbacks(credential),
   });
   if (!result.ok) {
     throw new AndroidGitAdapterError(
