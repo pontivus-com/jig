@@ -48,6 +48,7 @@ export class GitHubFlowWakeup {
 export interface GitHubDeviceFlowDependencies {
   readonly registration: GitHubAppRegistration | null;
   readonly assert_credential_store: () => Promise<void>;
+  readonly load_credential: () => Promise<GitHubCredential | null>;
   readonly store_credential: (credential: GitHubCredential) => Promise<void>;
   readonly start_device_authorization?: typeof startGitHubDeviceAuthorization;
   readonly poll_device_authorization?: typeof pollGitHubDeviceAuthorization;
@@ -69,6 +70,15 @@ export class GitHubDeviceFlowSession {
 
   credential(): GitHubCredential | null {
     return this.currentCredential;
+  }
+
+  async restoreCredential(): Promise<boolean> {
+    await this.dependencies.assert_credential_store();
+    const credential = await this.dependencies.load_credential();
+    this.state = null;
+    this.error = null;
+    this.currentCredential = credential;
+    return credential !== null;
   }
 
   nextPollDelayMs(): number | null {

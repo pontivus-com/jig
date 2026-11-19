@@ -39,6 +39,7 @@ import {
 } from "./paths";
 import {
   assertAndroidCredentialStore,
+  loadAndroidGitHubCredential,
   storeAndroidGitHubCredential,
 } from "./secure-credentials";
 
@@ -47,6 +48,7 @@ const githubFetch = createAndroidGitHubFetch();
 const deviceFlow = new GitHubDeviceFlowSession({
   registration: GITHUB_APP_REGISTRATION,
   assert_credential_store: assertAndroidCredentialStore,
+  load_credential: loadAndroidGitHubCredential,
   store_credential: storeAndroidGitHubCredential,
   start_device_authorization: (registration) =>
     startGitHubDeviceAuthorization(

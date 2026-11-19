@@ -48,6 +48,7 @@ function deviceFlow(
   return new GitHubDeviceFlowSession({
     registration: REGISTRATION,
     assert_credential_store: async () => undefined,
+    load_credential: async () => null,
     store_credential: store,
     start_device_authorization: async () => ({
       device_code: "device-code",

@@ -4,10 +4,12 @@ import type {
   GitHubAppRegistration,
   GitHubCredential,
 } from "../github";
+import { GitHubDeviceFlowSession } from "../github-device-flow";
 import {
   GitHubAuthError,
   refreshGitHubCredential,
 } from "../github-auth";
+import { GITHUB_APP_REGISTRATION } from "../github-registration";
 import {
   createGitHubAskpassHelper,
   githubGitEnvironment,
@@ -21,6 +23,7 @@ import {
   type RepositorySynchronizationResult,
 } from "./git";
 import {
+  assertSecretServiceAvailable,
   loadCurrentGitHubCredential,
   SecretServiceError,
   storeGitHubCredential,
@@ -33,6 +36,15 @@ import {
 interface ManagedGitHubRepositoryIdentity {
   readonly owner: string;
   readonly name: string;
+}
+
+export function createShellGitHubDeviceFlow(): GitHubDeviceFlowSession {
+  return new GitHubDeviceFlowSession({
+    registration: GITHUB_APP_REGISTRATION,
+    assert_credential_store: assertSecretServiceAvailable,
+    load_credential: loadCurrentGitHubCredential,
+    store_credential: storeGitHubCredential,
+  });
 }
 
 export interface ManagedGitHubTransportDependencies {

@@ -40,7 +40,7 @@ describe("Android isomorphic-git native HTTP adapter", () => {
         return response({
           data: "ECAwQA==",
           headers: {
-            "content-type":
+            "Content-Type":
               "application/x-git-upload-pack-result",
           },
         });

@@ -119,17 +119,48 @@ export class GitHubOnboardingController<TAcquired> {
 
   async start(): Promise<GitHubOnboardingSnapshot> {
     this.requireRegistration();
+
+    // The connect intent is safe to repeat. A second request must not throw
+    // away an active Device Flow or repository-selection state and start a
+    // second authorization session.
+    if (this.phase !== "idle" && this.phase !== "attention") {
+      return this.snapshot();
+    }
+
     this.reset();
+    // Claim the intent before awaiting secure-storage I/O. This closes the
+    // concurrent-request window in which two callers could both observe the
+    // idle phase and start separate authorization sessions.
     this.phase = "authorizing";
-    await this.dependencies.device_flow.start();
-    this.ensureWorker();
-    return this.snapshot();
+
+    try {
+      if (await this.dependencies.device_flow.restoreCredential()) {
+        this.phase = "repository-access";
+        this.accessRetryMs = INITIAL_ACCESS_RETRY_MS;
+        this.transientAccessFailures = 0;
+        this.ensureWorker();
+        return this.snapshot();
+      }
+
+      await this.dependencies.device_flow.start();
+      this.ensureWorker();
+      return this.snapshot();
+    } catch (error) {
+      this.fail(error);
+      throw error;
+    }
   }
 
   async selectRepository(
     repositoryId: number,
   ): Promise<GitHubOnboardingSnapshot> {
     if (this.phase !== "repository-selection") {
+      // A retried request can arrive after the first selection has already
+      // claimed the acquisition phase. Treat the same selection as a safe
+      // continuation instead of surfacing an internal state error.
+      if (this.selectedRepository?.id === repositoryId) {
+        return this.snapshot();
+      }
       throw new Error("GitHub repository selection is not currently required");
     }
     const repository = this.repositories.find(

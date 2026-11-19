@@ -12,18 +12,16 @@ import {
   type ServiceStatus,
 } from "./http";
 import { createBootstrapHttpHandler } from "./bootstrap-http";
-import { GitHubDeviceFlowSession } from "../github-device-flow";
 import { GitHubOnboardingController } from "../github-onboarding";
 import { GitHubReconnectController } from "../github-reconnect";
 import { GITHUB_APP_REGISTRATION } from "../github-registration";
 import { createGitHubHttpHandler } from "./github-http";
 import { acquireManagedGitHubRepository } from "./github-managed-checkout";
-import { createManagedGitHubTransport } from "./github-transport";
-import { initializeRepositoryInstallation } from "./setup";
 import {
-  assertSecretServiceAvailable,
-  storeGitHubCredential,
-} from "./secret-service";
+  createManagedGitHubTransport,
+  createShellGitHubDeviceFlow,
+} from "./github-transport";
+import { initializeRepositoryInstallation } from "./setup";
 import { createSyncController } from "./sync";
 import {
   defaultConfigPath,
@@ -93,11 +91,7 @@ async function runConfigured(config: JigConfig): Promise<void> {
     managedGitHub === null
       ? undefined
       : new GitHubReconnectController(
-          new GitHubDeviceFlowSession({
-            registration: GITHUB_APP_REGISTRATION,
-            assert_credential_store: assertSecretServiceAvailable,
-            store_credential: storeGitHubCredential,
-          }),
+          createShellGitHubDeviceFlow(),
           {
             on_connected: async () => {
               await sync.trigger();
@@ -207,11 +201,7 @@ async function runBootstrap(): Promise<void> {
     resolveConfigured = null;
   };
 
-  const deviceFlow = new GitHubDeviceFlowSession({
-    registration: GITHUB_APP_REGISTRATION,
-    assert_credential_store: assertSecretServiceAvailable,
-    store_credential: storeGitHubCredential,
-  });
+  const deviceFlow = createShellGitHubDeviceFlow();
   const githubOnboarding = new GitHubOnboardingController<JigConfig>({
     registration: GITHUB_APP_REGISTRATION,
     device_flow: deviceFlow,

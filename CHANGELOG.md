@@ -24,6 +24,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Fixed
 
+- Android GitHub acquisition now applies the stored credential to every managed Git smart-HTTP operation, normalizes native response-header casing and provides the browser Buffer boundary required by isomorphic-git, so an already-authorized repository reaches Planner instead of the generic connection error.
+- Stored GitHub authorization is now restored from the governed secure-credential adapter before onboarding can start Device Flow; repeated or concurrent Connect requests continue repository discovery/acquisition instead of re-presenting authorization or resetting an active selection.
 - Remote synchronization failure no longer obscures a successful local snapshot; primary feedback states that work is saved locally while exact Git commit/remote failure detail remains available in Diagnostics.
 - CLI status/sync output and browser/native runtime adapters consume the same structured repository status rather than rendering or maintaining a parallel scalar status.
 - GitHub installation/repository discovery now consumes every API page instead of silently truncating authorized choices at the first 100 results.

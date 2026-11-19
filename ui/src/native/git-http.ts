@@ -47,7 +47,7 @@ function normalizedHeaders(
 ): Record<string, string> {
   return Object.fromEntries(
     Object.entries(headers ?? {}).map(([key, value]) => [
-      key,
+      key.toLowerCase(),
       value,
     ]),
   );

@@ -40,6 +40,7 @@ describe("GitHub reconnect orchestration", () => {
       new GitHubDeviceFlowSession({
         registration: REGISTRATION,
         assert_credential_store: async () => undefined,
+        load_credential: async () => null,
         store_credential: async (credential) => {
           stored = credential;
         },

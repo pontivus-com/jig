@@ -70,6 +70,7 @@ describe("GitHub Device Flow session", () => {
     const session = new GitHubDeviceFlowSession({
       registration: REGISTRATION,
       assert_credential_store: async () => undefined,
+      load_credential: async () => null,
       store_credential: async (credential) => {
         stored = credential;
       },
@@ -107,5 +108,30 @@ describe("GitHub Device Flow session", () => {
       authorization: null,
       error: null,
     });
+  });
+
+  it("restores a stored credential without starting Device Flow", async () => {
+    let deviceAuthorizationCalls = 0;
+    const session = new GitHubDeviceFlowSession({
+      registration: REGISTRATION,
+      assert_credential_store: async () => undefined,
+      load_credential: async () => CREDENTIAL,
+      store_credential: async () => undefined,
+      start_device_authorization: async () => {
+        deviceAuthorizationCalls += 1;
+        return AUTHORIZATION;
+      },
+      now: () => new Date("2030-01-01T00:00:00.000Z"),
+    });
+
+    await expect(session.restoreCredential()).resolves.toBe(true);
+    expect(session.credential()).toStrictEqual(CREDENTIAL);
+    expect(session.snapshot()).toStrictEqual({
+      available: true,
+      phase: "idle",
+      authorization: null,
+      error: null,
+    });
+    expect(deviceAuthorizationCalls).toBe(0);
   });
 });

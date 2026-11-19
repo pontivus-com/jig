@@ -32,6 +32,7 @@ const CREDENTIAL: GitHubCredential = {
 function deviceFlow(options: {
   readonly registration?: GitHubAppRegistration | null;
   readonly now: () => Date;
+  readonly load?: () => Promise<GitHubCredential | null>;
   readonly store?: (credential: GitHubCredential) => Promise<void>;
 }): GitHubDeviceFlowSession {
   return new GitHubDeviceFlowSession({
@@ -40,6 +41,7 @@ function deviceFlow(options: {
         ? REGISTRATION
         : options.registration,
     assert_credential_store: async () => undefined,
+    load_credential: options.load ?? (async () => null),
     store_credential:
       options.store ?? (async () => undefined),
     start_device_authorization: async () => DEVICE_AUTHORIZATION,
@@ -149,6 +151,144 @@ describe("GitHub onboarding orchestration", () => {
     ).toStrictEqual([]);
   });
 
+  it("reuses stored authorization instead of presenting Device Flow again", async () => {
+    let deviceAuthorizationCalls = 0;
+    let acquired = false;
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      device_flow: new GitHubDeviceFlowSession({
+        registration: REGISTRATION,
+        assert_credential_store: async () => undefined,
+        load_credential: async () => CREDENTIAL,
+        store_credential: async () => undefined,
+        start_device_authorization: async () => {
+          deviceAuthorizationCalls += 1;
+          return DEVICE_AUTHORIZATION;
+        },
+        poll_device_authorization: async () => ({
+          status: "authorized" as const,
+          credential: CREDENTIAL,
+        }),
+        now: () => new Date("2030-01-01T00:00:00.000Z"),
+      }),
+      list_installations: async () => [
+        {
+          id: 7,
+          account: {
+            id: 11,
+            login: "pontivus-com",
+            type: "Organization",
+          },
+        },
+      ],
+      list_repositories: async () => [
+        {
+          id: 99,
+          owner: "pontivus-com",
+          name: "planning",
+          clone_url: "https://github.com/pontivus-com/planning.git",
+        },
+      ],
+      acquire_repository: async () => {
+        acquired = true;
+        return "configured";
+      },
+    });
+
+    await controller.start();
+    await waitForSnapshot(controller, () => acquired);
+
+    expect(controller.snapshot().authorization).toBeNull();
+    expect(deviceAuthorizationCalls).toBe(0);
+    expect(acquired).toBe(true);
+  });
+
+  it("does not restart an active connection when the intent is repeated", async () => {
+    let deviceAuthorizationCalls = 0;
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      device_flow: new GitHubDeviceFlowSession({
+        registration: REGISTRATION,
+        assert_credential_store: async () => undefined,
+        load_credential: async () => null,
+        store_credential: async () => undefined,
+        start_device_authorization: async () => {
+          deviceAuthorizationCalls += 1;
+          return DEVICE_AUTHORIZATION;
+        },
+        poll_device_authorization: async () => ({
+          status: "authorized" as const,
+          credential: CREDENTIAL,
+        }),
+        now: () => new Date("2030-01-01T00:00:00.000Z"),
+      }),
+      list_installations: async () => [
+        {
+          id: 7,
+          account: {
+            id: 11,
+            login: "pontivus-com",
+            type: "Organization",
+          },
+        },
+      ],
+      list_repositories: async () => [
+        {
+          id: 99,
+          owner: "pontivus-com",
+          name: "planning",
+          clone_url: "https://github.com/pontivus-com/planning.git",
+        },
+      ],
+      acquire_repository: async () => "configured",
+    });
+
+    const first = await controller.start();
+    const second = await controller.start();
+
+    expect(first.authorization).toStrictEqual(second.authorization);
+    expect(deviceAuthorizationCalls).toBe(1);
+  });
+
+  it("closes the concurrent connect race while credential storage is loading", async () => {
+    const credentialLoadControl: { release: () => void } = {
+      release: () => undefined,
+    };
+    let deviceAuthorizationCalls = 0;
+    const credentialLoad = new Promise<GitHubCredential | null>((resolve) => {
+      credentialLoadControl.release = () => resolve(null);
+    });
+    const controller = new GitHubOnboardingController({
+      registration: REGISTRATION,
+      device_flow: new GitHubDeviceFlowSession({
+        registration: REGISTRATION,
+        assert_credential_store: async () => undefined,
+        load_credential: async () => credentialLoad,
+        store_credential: async () => undefined,
+        start_device_authorization: async () => {
+          deviceAuthorizationCalls += 1;
+          return DEVICE_AUTHORIZATION;
+        },
+        poll_device_authorization: async () => ({
+          status: "authorized" as const,
+          credential: CREDENTIAL,
+        }),
+        now: () => new Date("2030-01-01T00:00:00.000Z"),
+      }),
+      acquire_repository: async () => "configured",
+    });
+
+    const first = controller.start();
+    const second = controller.start();
+    expect(controller.snapshot().state).toBe("connecting");
+    credentialLoadControl.release();
+
+    const [firstSnapshot, secondSnapshot] = await Promise.all([first, second]);
+    expect(firstSnapshot.authorization?.user_code).toBe("ABCD-EFGH");
+    expect(secondSnapshot.authorization).toBeNull();
+    expect(deviceAuthorizationCalls).toBe(1);
+  });
+
   it("stops only for a genuine multiple-repository choice", async () => {
     let nowMs = Date.parse("2030-01-01T00:00:00.000Z");
     let acquiredRepositoryId: number | null = null;
@@ -202,6 +342,9 @@ describe("GitHub onboarding orchestration", () => {
       .toStrictEqual([100, 99]);
 
     await controller.selectRepository(99);
+    await expect(controller.selectRepository(99)).resolves.toMatchObject({
+      state: "connecting",
+    });
     await waitForSnapshot(
       controller,
       () => acquiredRepositoryId === 99,

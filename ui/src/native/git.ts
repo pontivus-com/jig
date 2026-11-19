@@ -1,3 +1,4 @@
+import "./buffer-polyfill";
 import {
   add,
   addRemote,
@@ -32,6 +33,7 @@ import {
   createAndroidGitHttpClient,
   type IsomorphicGitHttpClient,
 } from "./git-http";
+import { bytesToBase64 } from "./binary";
 import { ANDROID_GIT_WORKTREE } from "./paths";
 
 export const ANDROID_DATA_BRANCH = "jig-data";
@@ -106,6 +108,22 @@ function authenticationCallbacks(
     onAuthSuccess: async (): Promise<void> => {
       await provider.onAuthSuccess?.();
     },
+  };
+}
+
+async function authenticatedHeaders(
+  provider: GitCredentialProvider,
+): Promise<Readonly<Record<string, string>>> {
+  const token = (await provider()).trim();
+  if (token.length === 0) {
+    throw new AndroidGitAdapterError(
+      "Android Git credential provider returned an empty token",
+    );
+  }
+  return {
+    Authorization: `Basic ${bytesToBase64(
+      new TextEncoder().encode(`x-access-token:${token}`),
+    )}`,
   };
 }
 
@@ -239,10 +257,12 @@ export async function acquireAndroidPortableRepository(
     );
   }
 
+  const headers = await authenticatedHeaders(credential);
   const refs = await listServerRefs({
     http: effects.http,
     url: remoteUrl,
     forPush: false,
+    headers,
     ...authenticationCallbacks(credential),
   });
   const hasDataBranch = refs.some(
@@ -322,6 +342,7 @@ export async function cloneAndroidPortableRepository(
 ): Promise<PortableSnapshot> {
   assertCredentialFreeHttpsRemote(remoteUrl);
   await ensureWorktreeParents(effects);
+  const headers = await authenticatedHeaders(credential);
 
   await clone({
     fs: effects.fs,
@@ -332,6 +353,7 @@ export async function cloneAndroidPortableRepository(
     remote: ANDROID_REMOTE,
     singleBranch: true,
     noTags: true,
+    headers,
     ...authenticationCallbacks(credential),
   });
 
@@ -366,6 +388,7 @@ export async function fetchAndroidPortableRepository(
   credential: GitCredentialProvider,
 ): Promise<string> {
   await assertDataBranch(effects);
+  const headers = await authenticatedHeaders(credential);
   await fetch({
     fs: effects.fs,
     http: effects.http,
@@ -374,6 +397,7 @@ export async function fetchAndroidPortableRepository(
     ref: ANDROID_DATA_BRANCH,
     singleBranch: true,
     tags: false,
+    headers,
     ...authenticationCallbacks(credential),
   });
   return resolveRef({
@@ -648,6 +672,7 @@ export async function pushAndroidPortableRepository(
   credential: GitCredentialProvider,
 ): Promise<void> {
   await assertDataBranch(effects);
+  const headers = await authenticatedHeaders(credential);
   const result = await push({
     fs: effects.fs,
     http: effects.http,
@@ -655,6 +680,7 @@ export async function pushAndroidPortableRepository(
     remote: ANDROID_REMOTE,
     ref: ANDROID_DATA_BRANCH,
     remoteRef: ANDROID_DATA_BRANCH,
+    headers,
     ...authenticationCallbacks(credential),
   });
   if (!result.ok) {
