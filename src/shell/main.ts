@@ -82,6 +82,13 @@ async function runConfigured(config: JigConfig): Promise<void> {
     config.repository_path,
     { registration: GITHUB_APP_REGISTRATION },
   );
+  const sync = createSyncController(
+    db,
+    { repository_path: config.repository_path },
+    managedGitHub === null
+      ? {}
+      : { synchronize: managedGitHub.synchronize },
+  );
   const githubReconnect =
     managedGitHub === null
       ? undefined
@@ -91,15 +98,12 @@ async function runConfigured(config: JigConfig): Promise<void> {
             assert_credential_store: assertSecretServiceAvailable,
             store_credential: storeGitHubCredential,
           }),
+          {
+            on_connected: async () => {
+              await sync.trigger();
+            },
+          },
         );
-
-  const sync = createSyncController(
-    db,
-    { repository_path: config.repository_path },
-    managedGitHub === null
-      ? {}
-      : { synchronize: managedGitHub.synchronize },
-  );
 
   const startupNow = new Date();
   await rollForwardOutstandingInDatabase(
@@ -225,6 +229,7 @@ async function runBootstrap(): Promise<void> {
         })
       ).config;
     },
+    on_acquired: onConfigured,
   });
 
   const bootstrapHandler = createBootstrapHttpHandler({
@@ -239,7 +244,6 @@ async function runBootstrap(): Promise<void> {
     write_token: token,
     onboarding: githubOnboarding,
     is_configured: () => isConfigured,
-    on_configured: onConfigured,
   });
 
   const server = Bun.serve({
