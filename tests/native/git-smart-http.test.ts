@@ -34,6 +34,7 @@ import {
   acquireAndroidPortableRepository,
   cloneAndroidPortableRepository,
   commitAndroidCanonicalState,
+  observeAndroidPortableRemote,
   pushAndroidPortableRepository,
   reopenAndroidPortableRepository,
   synchronizeAndroidPortableRepository,
@@ -974,6 +975,188 @@ describe("Android Git smart-HTTP feasibility", () => {
         "jig-data:format.json",
       ]),
     ).toContain(DATASET_ID);
+  });
+
+  it("retains Android remote deletion and rewrite evidence across repeated observations and restart", async () => {
+    const { remote, remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+    const { port: filesystemPort } = fakeFilesystem();
+    const effects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const credential = async (): Promise<string> => PASSWORD;
+    await cloneAndroidPortableRepository(
+      effects,
+      remoteUrl,
+      credential,
+    );
+
+    const first = await observeAndroidPortableRemote(
+      effects,
+      DATASET_ID,
+      credential,
+    );
+    const originalHead = first.remote_head;
+    expect(originalHead).not.toBeNull();
+
+    await runGit(root, [
+      "--git-dir",
+      remote,
+      "update-ref",
+      "-d",
+      "refs/heads/jig-data",
+    ]);
+    const deleted = await observeAndroidPortableRemote(
+      effects,
+      DATASET_ID,
+      credential,
+    );
+    expect(deleted).toMatchObject({
+      remote_state: "absent",
+      previous_remote_head: originalHead,
+    });
+
+    const replacement = join(root, "android-rewrite");
+    await runGit(root, [
+      "init",
+      "-b",
+      "jig-data",
+      replacement,
+    ]);
+    await runGit(replacement, [
+      "config",
+      "user.name",
+      "Fixture",
+    ]);
+    await runGit(replacement, [
+      "config",
+      "user.email",
+      "fixture@example.invalid",
+    ]);
+    await writeSnapshot(
+      replacement,
+      serializeSnapshot(
+        [task(
+          "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4060",
+          "Replacement history",
+          0,
+        )],
+        DATASET_ID,
+      ),
+    );
+    await runGit(replacement, ["add", "-A"]);
+    await runGit(replacement, [
+      "commit",
+      "-m",
+      "Replacement Jig history",
+    ]);
+    await runGit(replacement, [
+      "remote",
+      "add",
+      "origin",
+      remote,
+    ]);
+    await runGit(replacement, [
+      "push",
+      "origin",
+      "jig-data",
+    ]);
+
+    const rewritten = await observeAndroidPortableRemote(
+      effects,
+      DATASET_ID,
+      credential,
+    );
+    expect(rewritten.remote_rewritten).toBe(true);
+    expect(rewritten.previous_remote_head).toBe(originalHead);
+
+    const restarted: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const repeated = await observeAndroidPortableRemote(
+      restarted,
+      DATASET_ID,
+      credential,
+    );
+    expect(repeated.remote_rewritten).toBe(true);
+    expect(repeated.previous_remote_head).toBe(originalHead);
+  });
+
+  it("rejects an invalid Android remote portable tree before moving the local branch", async () => {
+    const { remote, remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+    const { port: filesystemPort } = fakeFilesystem();
+    const effects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const credential = async (): Promise<string> => PASSWORD;
+    await cloneAndroidPortableRepository(
+      effects,
+      remoteUrl,
+      credential,
+    );
+    const localHead = await runGit(root, [
+      "--git-dir",
+      remote,
+      "rev-parse",
+      "jig-data",
+    ]);
+
+    const writer = join(root, "android-invalid-tree");
+    await runGit(root, [
+      "clone",
+      "--branch",
+      "jig-data",
+      remote,
+      writer,
+    ]);
+    await runGit(writer, ["config", "user.name", "Fixture"]);
+    await runGit(writer, [
+      "config",
+      "user.email",
+      "fixture@example.invalid",
+    ]);
+    await writeFile(
+      join(writer, "unexpected.txt"),
+      "not portable Jig data\n",
+      "utf8",
+    );
+    await runGit(writer, ["add", "unexpected.txt"]);
+    await runGit(writer, [
+      "commit",
+      "-m",
+      "Invalid Android portable tree",
+    ]);
+    await runGit(writer, ["push", "origin", "jig-data"]);
+
+    await expect(
+      observeAndroidPortableRemote(
+        effects,
+        DATASET_ID,
+        credential,
+      ),
+    ).rejects.toThrow(/non-canonical jig-data tree entry/);
+    expect(
+      await reopenAndroidPortableRepository(
+        effects,
+        DATASET_ID,
+      ),
+    ).toMatchObject({ tasks: [] });
+    expect(localHead).not.toBe(
+      await runGit(writer, ["rev-parse", "HEAD"]),
+    );
   });
 
   it("refuses true portable-history divergence instead of auto-merging", async () => {
