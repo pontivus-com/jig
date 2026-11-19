@@ -413,11 +413,18 @@ describe("UI ownership architecture", () => {
 
     expect(setup).toContain('readonly layoutMode: LayoutMode;');
     expect(setup).toContain('layoutMode === "narrow"');
-    expect(setup).toContain("Same plan. Different devices.");
-    expect(setup).toContain("Choose one repository.");
+    expect(setup).toContain("function SetupBenefits");
+    expect(setup).toContain("Plan your week. Keep the data yours.");
+    expect(setup).not.toContain("Same plan. Different devices.");
+    expect(setup).not.toContain("Choose one repository.");
     expect(app).toContain(
       "<SetupView status={setupStatus} layoutMode={layoutMode} />",
     );
+
+    const taskEditor = source("ui/src/task-editor.tsx");
+    for (const section of ["Task", "Schedule", "Details", "Notes"]) {
+      expect(taskEditor).toContain(`<h3>${section}</h3>`);
+    }
   });
 
   it("keeps appearance controls in Settings and reminder delivery browser-native", () => {
