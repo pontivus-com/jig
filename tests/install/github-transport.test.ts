@@ -151,6 +151,60 @@ describe("managed GitHub transport", () => {
     ).resolves.toBeNull();
   });
 
+  it("exposes reconnect only when managed authorization cannot continue", async () => {
+    const home = await mkdtemp(join(tmpdir(), "jig-managed-home-"));
+    roots.push(home);
+    const path = join(
+      home,
+      ".local",
+      "share",
+      "jig-data",
+      "repositories",
+      "github",
+      "example",
+      "planning",
+    );
+    await mkdir(path, { recursive: true });
+    await git(path, ["init"]);
+    await git(path, [
+      "remote",
+      "add",
+      "origin",
+      "https://github.com/example/planning.git",
+    ]);
+
+    let credential: GitHubCredential | null = null;
+    const transport = await createManagedGitHubTransport(
+      path,
+      {
+        registration: {
+          app_slug: "jig-desktop-mobile",
+          client_id: "shared-client-id",
+        },
+        load_credential: async () => credential,
+      },
+      home,
+    );
+    if (transport === null) {
+      throw new Error("Expected managed GitHub transport");
+    }
+
+    try {
+      await expect(transport.reconnect_required()).resolves.toBe(true);
+
+      credential = {
+        user_id: 42,
+        access_token: "access-token",
+        refresh_token: "refresh-token",
+        access_token_expires_at: "2030-01-01T08:00:00.000Z",
+        refresh_token_expires_at: "2030-07-01T00:00:00.000Z",
+      };
+      await expect(transport.reconnect_required()).resolves.toBe(false);
+    } finally {
+      await transport.dispose();
+    }
+  });
+
   it("refreshes the credential inside the transport before network Git", async () => {
     const home = await mkdtemp(join(tmpdir(), "jig-managed-home-"));
     roots.push(home);
@@ -220,6 +274,7 @@ describe("managed GitHub transport", () => {
         retryable: false,
       });
       expect(stored).toStrictEqual(newCredential);
+      await expect(transport.reconnect_required()).resolves.toBe(false);
       expect(environment).toMatchObject({
         GIT_TERMINAL_PROMPT: "0",
         JIG_GITHUB_ACCESS_TOKEN: "new-token",
