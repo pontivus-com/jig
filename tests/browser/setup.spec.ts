@@ -16,7 +16,49 @@ async function routeGitHubStatus(
   });
 }
 
-test("bootstrap setup gates Planner and accepts an existing local repository", async ({
+async function preventExternalWindows(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  await page.addInitScript(() => {
+    window.open = () => null;
+  });
+}
+
+function configuredServiceStatus(
+  remoteState:
+    | "pending"
+    | "retrying"
+    | "synchronized"
+    | "sync-issue" = "synchronized",
+) {
+  return {
+    ready: true,
+    repository_path:
+      "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
+    repository_status: {
+      local_git: "committed",
+      remote: {
+        state: remoteState,
+        remote_name: "origin",
+        remote_location: "https://github.com/pontivus-com/planning.git",
+      },
+    },
+  } as const;
+}
+
+function diagnostics(remoteHealthy = true) {
+  return {
+    service_healthy: true,
+    sqlite_available: true,
+    sqlite_schema_version: 3,
+    repository_path:
+      "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
+    portable_format_version: 2,
+    repository_adapter_healthy: remoteHealthy,
+  };
+}
+
+test("bootstrap stays inside Jig and accepts an existing local repository", async ({
   page,
 }) => {
   let configured = false;
@@ -43,8 +85,9 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
   });
 
   await page.route("**/api/v1/setup/local-repository", async (route) => {
-    const request = route.request();
-    const body = request.postDataJSON() as { repository_path?: unknown };
+    const body = route.request().postDataJSON() as {
+      repository_path?: unknown;
+    };
     submittedPath =
       typeof body.repository_path === "string"
         ? body.repository_path
@@ -72,51 +115,38 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        ready: true,
-        repository_path: "/tmp/planning",
-        repository_status: {
-          local_git: "committed",
-          remote: {
-            state: "not-configured",
-            remote_name: null,
-            remote_location: null,
-          },
-        },
-      }),
+      body: JSON.stringify(configuredServiceStatus()),
     });
   });
   await page.route("**/api/v1/diagnostics", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        service_healthy: true,
-        sqlite_available: true,
-        sqlite_schema_version: 2,
-        repository_path: "/tmp/planning",
-        portable_format_version: 1,
-        repository_adapter_healthy: true,
-      }),
+      body: JSON.stringify(diagnostics()),
     });
   });
 
   await page.goto("/");
 
+  await expect(page.locator(".jig-app-shell")).toBeVisible();
+  await expect(page.locator(".jig-app-header-onboarding")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Set up Jig" }),
+    page.getByRole("heading", { name: "Connect your planning data" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Use this repository" }),
+    page.getByRole("button", { name: "Connect GitHub repository" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Connect GitHub" }),
+    page.getByRole("button", { name: "Use an existing local repository" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Add task", exact: true }),
   ).toHaveCount(0);
   expect(taskRequests).toBe(0);
 
+  await page
+    .getByRole("button", { name: "Use an existing local repository" })
+    .click();
   await page.getByLabel("Repository path").fill("/tmp/planning");
   await page
     .getByRole("button", { name: "Use this repository" })
@@ -129,7 +159,7 @@ test("bootstrap setup gates Planner and accepts an existing local repository", a
   expect(taskRequests).toBeGreaterThan(0);
 });
 
-test("bootstrap keeps invalid repository errors on the setup surface", async ({
+test("bootstrap keeps invalid repository errors and the entered path", async ({
   page,
 }) => {
   await page.route("**/api/v1/setup/status", async (route) => {
@@ -157,6 +187,9 @@ test("bootstrap keeps invalid repository errors on the setup surface", async ({
   });
 
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Use an existing local repository" })
+    .click();
   await page.getByLabel("Repository path").fill("/does/not/exist");
   await page
     .getByRole("button", { name: "Use this repository" })
@@ -168,11 +201,13 @@ test("bootstrap keeps invalid repository errors on the setup surface", async ({
   await expect(page.getByLabel("Repository path")).toHaveValue(
     "/does/not/exist",
   );
+  await expect(page.locator(".jig-app-header-onboarding")).toBeVisible();
 });
 
-test("Connect GitHub presents the direct Device Flow code and verification action", async ({
+test("Connect GitHub shows the provider-required code without protocol controls", async ({
   page,
 }) => {
+  await preventExternalWindows(page);
   await page.route("**/api/v1/setup/status", async (route) => {
     await route.fulfill({
       status: 200,
@@ -188,48 +223,53 @@ test("Connect GitHub presents the direct Device Flow code and verification actio
     reconnect_available: false,
   });
 
-  await page.route("**/api/v1/setup/github/start", async (route) => {
+  const connecting = {
+    available: true,
+    state: "connecting",
+    authorization: {
+      mode: "device",
+      verification_uri: "https://github.com/login/device",
+      user_code: "ABCD-EFGH",
+    },
+    provider_url: null,
+    repositories: [],
+    error: null,
+  };
+  await page.route("**/api/v1/setup/github/connect", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        available: true,
-        phase: "authorizing",
-        authorization: {
-          mode: "device",
-          verification_uri: "https://github.com/login/device",
-          user_code: "ABCD-EFGH",
-          retry_after_seconds: 5,
-        },
-        grant_access_url: null,
-        manage_access: [],
-        installations: [],
-        repositories: [],
-        error: null,
-      }),
+      body: JSON.stringify(connecting),
+    });
+  });
+  await page.route("**/api/v1/setup/github/state", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(connecting),
     });
   });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Connect GitHub" }).click();
+  await page
+    .getByRole("button", { name: "Connect GitHub repository" })
+    .click();
 
   await expect(page.getByText("ABCD-EFGH", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("at GitHub's device authorization page to continue."),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Open GitHub device authorization" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Refresh access" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy code" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open GitHub" })).toBeVisible();
+  await expect(page.getByText(/Refresh access/i)).toHaveCount(0);
+  await expect(page.getByText(/Grant repository access/i)).toHaveCount(0);
+  await expect(page.getByText(/Manage GitHub access/i)).toHaveCount(0);
   await expect(page.getByText(/client_secret|Redirect URI/i)).toHaveCount(0);
 });
 
-test("Device Flow continues polling when GitHub returns the same interval", async ({
+test("GitHub access is observed automatically and stops only for a genuine repository choice", async ({
   page,
 }) => {
-  let refreshCalls = 0;
+  await preventExternalWindows(page);
+  let stateReads = 0;
+
   await page.route("**/api/v1/setup/status", async (route) => {
     await route.fulfill({
       status: 200,
@@ -244,94 +284,101 @@ test("Device Flow continues polling when GitHub returns the same interval", asyn
     onboarding_available: true,
     reconnect_available: false,
   });
-  await page.route("**/api/v1/setup/github/start", async (route) => {
+
+  await page.route("**/api/v1/setup/github/connect", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         available: true,
-        phase: "authorizing",
+        state: "connecting",
         authorization: {
           mode: "device",
           verification_uri: "https://github.com/login/device",
           user_code: "ABCD-EFGH",
-          retry_after_seconds: 1,
         },
-        grant_access_url: null,
-        manage_access: [],
-        installations: [],
+        provider_url: null,
         repositories: [],
         error: null,
       }),
     });
   });
-  await page.route(
-    "**/api/v1/setup/github/refresh-access",
-    async (route) => {
-      refreshCalls += 1;
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(
-          refreshCalls < 2
-            ? {
-                available: true,
-                phase: "authorizing",
-                authorization: {
-                  mode: "device",
-                  verification_uri: "https://github.com/login/device",
-                  user_code: "ABCD-EFGH",
-                  retry_after_seconds: 1,
-                },
-                grant_access_url: null,
-                manage_access: [],
-                installations: [],
-                repositories: [],
-                error: null,
-              }
-            : {
-                available: true,
-                phase: "repository-access",
-                authorization: null,
-                grant_access_url:
-                  "https://github.com/apps/jig-desktop-mobile-test/installations/new",
-                manage_access: [],
-                installations: [],
-                repositories: [],
-                error: null,
+
+  await page.route("**/api/v1/setup/github/state", async (route) => {
+    stateReads += 1;
+    const body =
+      stateReads === 1
+        ? {
+            available: true,
+            state: "connecting",
+            authorization: null,
+            provider_url:
+              "https://github.com/apps/jig-desktop-mobile-test/installations/new",
+            repositories: [],
+            error: null,
+          }
+        : {
+            available: true,
+            state: "repository-selection",
+            authorization: null,
+            provider_url: "https://github.com/settings/installations",
+            repositories: [
+              {
+                id: 10,
+                owner: "example",
+                name: "planning",
+                clone_url: "https://github.com/example/planning.git",
+                installation_id: 1,
+                account_login: "example",
+                account_type: "Organization",
               },
-        ),
-      });
-    },
-  );
+              {
+                id: 11,
+                owner: "example",
+                name: "personal",
+                clone_url: "https://github.com/example/personal.git",
+                installation_id: 1,
+                account_login: "example",
+                account_type: "Organization",
+              },
+            ],
+            error: null,
+          };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+  });
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Connect GitHub" }).click();
+  await page
+    .getByRole("button", { name: "Connect GitHub repository" })
+    .click();
 
-  await expect.poll(() => refreshCalls, { timeout: 5_000 }).toBe(2);
+  await expect.poll(() => stateReads, { timeout: 5_000 }).toBeGreaterThan(1);
   await expect(
-    page.getByRole("button", { name: "Grant repository access" }),
+    page.getByRole("heading", { name: "Choose a repository" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "example/planning" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "example/personal" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Refresh access/i)).toHaveCount(0);
 });
 
-test("configured managed repository reconnects GitHub through Device Flow without repository setup", async ({
+test("configured managed repository reconnects automatically without repository setup", async ({
   page,
 }) => {
+  await preventExternalWindows(page);
   let remoteStatus:
     | "pending"
     | "retrying"
     | "synchronized"
     | "sync-issue" = "sync-issue";
-  let syncCalls = 0;
-
-  const repositoryStatus = () => ({
-    local_git: "committed" as const,
-    remote: {
-      state: remoteStatus,
-      remote_name: "origin",
-      remote_location: "https://github.com/pontivus-com/planning.git",
-    },
-  });
+  let reconnectReads = 0;
 
   await page.route("**/api/v1/setup/status", async (route) => {
     await route.fulfill({
@@ -355,71 +402,59 @@ test("configured managed repository reconnects GitHub through Device Flow withou
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        ready: true,
-        repository_path:
-          "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
-        repository_status: repositoryStatus(),
-      }),
+      body: JSON.stringify(configuredServiceStatus(remoteStatus)),
     });
   });
   await page.route("**/api/v1/diagnostics", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        service_healthy: true,
-        sqlite_available: true,
-        sqlite_schema_version: 2,
-        repository_path:
-          "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
-        portable_format_version: 1,
-        repository_adapter_healthy:
-          remoteStatus !== "sync-issue",
-      }),
+      body: JSON.stringify(diagnostics(remoteStatus !== "sync-issue")),
     });
   });
-  await page.route("**/api/v1/github/reconnect/start", async (route) => {
+  await page.route("**/api/v1/github/reconnect", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         available: true,
-        phase: "authorizing",
+        state: "connecting",
         authorization: {
           mode: "device",
           verification_uri: "https://github.com/login/device",
           user_code: "WXYZ-1234",
-          retry_after_seconds: 5,
         },
         error: null,
       }),
     });
   });
-  await page.route(
-    "**/api/v1/github/reconnect/refresh",
-    async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          available: true,
-          phase: "idle",
-          authorization: null,
-          error: null,
-        }),
-      });
-    },
-  );
-  await page.route("**/api/v1/sync", async (route) => {
-    syncCalls += 1;
-    remoteStatus = "synchronized";
+  await page.route("**/api/v1/github/reconnect/state", async (route) => {
+    reconnectReads += 1;
+    if (reconnectReads > 1) {
+      remoteStatus = "synchronized";
+    }
     await route.fulfill({
-      status: 202,
+      status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
-        repository_status: repositoryStatus(),
-      }),
+      body: JSON.stringify(
+        reconnectReads > 1
+          ? {
+              available: true,
+              state: "initial",
+              authorization: null,
+              error: null,
+            }
+          : {
+              available: true,
+              state: "connecting",
+              authorization: {
+                mode: "device",
+                verification_uri: "https://github.com/login/device",
+                user_code: "WXYZ-1234",
+              },
+              error: null,
+            },
+      ),
     });
   });
 
@@ -434,21 +469,16 @@ test("configured managed repository reconnects GitHub through Device Flow withou
   await page.getByRole("button", { name: "Reconnect GitHub" }).click();
 
   await expect(page.getByText("WXYZ-1234", { exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Open GitHub device authorization" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open GitHub" })).toBeVisible();
+  await expect(page.getByText(/Refresh GitHub authorization/i)).toHaveCount(0);
 
-  await page
-    .getByRole("button", { name: "Refresh GitHub authorization" })
-    .click();
-
-  await expect.poll(() => syncCalls).toBe(1);
-  await expect(
-    page.getByText(
-      "The current Jig snapshot is committed locally and synchronized remotely.",
-    ),
-  ).toBeVisible();
+  await expect.poll(() => reconnectReads, { timeout: 5_000 })
+    .toBeGreaterThan(1);
+  await expect(page.getByText("Up to date", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Reconnect GitHub" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Choose a repository" }),
   ).toHaveCount(0);
 });
