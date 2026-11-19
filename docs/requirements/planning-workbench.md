@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding functional design through v1.1, amended 2026-11-18. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract below supersedes affected header, secondary-screen heading, synchronization transparency, reminder, onboarding, Android and drag/drop behavior.
+**Status:** Binding functional design through v1.1, amended 2026-11-19. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract below supersedes affected header, secondary-screen heading, synchronization, reminder, onboarding, Android and drag/drop behavior.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -278,8 +278,8 @@ The earlier Day/Week mockups remain historical design inputs only. Their separat
 
 - A successful mutation visibly updates the list and its date/count, in the same interaction.
 - Failed local saving is visible and actionable. Repository synchronization failure is reported separately as a durable generic sync issue while the successful local Task state remains available; Jig does not translate Git conflict/topology details into planning state.
-- Settings distinguishes **local Git snapshot state** from **remote synchronization state**. It shows whether the current canonical revision has been committed to Jig's local Git data ref, identifies the actual configured synchronization remote when one exists, and separately reports whether that local Git state is pending/retrying/synchronized with the remote or has a synchronization issue. A repository with no synchronization remote explicitly shows that no remote is configured rather than implying remote synchronization.
-- The remote repository identity shown in Settings is informational and credential-free. It is derived from Git's currently selected synchronization remote and is not copied into Jig application configuration or promoted into Task/planning state.
+- Settings leads with the user's planning-data home and one continuity/synchronization outcome rather than requiring Git vocabulary. When remote continuity has a problem but the current Jig state is durable locally, the UI says so directly; automatic synchronization remains the default and recovery actions appear only when user action is actually required.
+- Exact local Git snapshot state, configured remote identity and transport/service/database facts remain available as secondary diagnostics. The remote repository identity is credential-free, derived from Git's currently selected synchronization remote, and is not copied into Jig application configuration or promoted into Task/planning state.
 - A due Task reminder uses the browser/OS Notification capability only when permission has been explicitly granted. Visibility and focus do not change that delivery mechanism.
 - Reminder delivery does not use an in-app toast and has no toast fallback. Unsupported, default/not-yet-granted or denied notification permission means Jig makes no reminder-delivery claim.
 - Notification permission is requested only from explicit user action, and Settings exposes the resulting browser permission state honestly.
@@ -357,16 +357,16 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-07 | Scheduled and displayed/delivered notification outcomes are never conflated; failed/denied delivery never hides in-app attention. |
 | JIG-110-FR-08 | Android schedules/cancels/reconciles OS local notifications for future reminders without push infrastructure. |
 | JIG-110-FR-09 | Linux/browser uses the service-worker notification path while open; closed-browser scheduling remains outside the requirement. |
-| JIG-110-FR-10 | Fresh Jig starts in bootstrap before repository configuration; Task application surfaces remain unavailable until setup succeeds. |
+| JIG-110-FR-10 | Fresh Jig starts in onboarding before repository configuration, but onboarding remains inside the canonical Jig application frame/header/body; Task application surfaces remain unavailable until setup succeeds. |
 | JIG-110-FR-11 | Existing configured upgrades bypass onboarding. |
 | JIG-110-FR-12 | Linux bootstrap offers existing local repository or Connect GitHub; normal UI does not expose installer URL/checkout flags. |
 | JIG-110-FR-13 | A valid existing Git worktree is sufficient for local setup. |
 | JIG-110-FR-14 | Existing remotes retain their topology/authentication; later sync failure does not undo local setup. |
 | JIG-110-FR-15 | Existing repository without remote is healthy Local only; Jig does not fabricate remote/auth state. |
 | JIG-110-FR-16 | Existing local repository setup remains provider-neutral. |
-| JIG-110-FR-17 | Connect GitHub authorizes, grants/selects repository access, acquires a managed checkout and converges on canonical adoption. |
+| JIG-110-FR-17 | Connect GitHub repository is one user intent; Jig automatically continues authorization/access discovery/acquisition/adoption, presenting repository selection only when genuinely required. |
 | JIG-110-FR-18 | GitHub integration requests least privilege. |
-| JIG-110-FR-19 | GitHub owns provider authentication policy; Jig only initiates the supported flow and presents credentials to Git transport. |
+| JIG-110-FR-19 | GitHub owns identity/consent/policy; Jig owns automatic orchestration around provider-required interaction and must not make protocol progression a user responsibility. |
 | JIG-110-FR-20 | Provider credentials never become Task/portable/repository/shareable configuration data. |
 | JIG-110-FR-21 | Linux GitHub-managed checkout uses Jig-owned persistent data storage outside the replaceable application runtime. |
 | JIG-110-FR-22 | Android repository/SQLite storage is app-owned/private and pathless to the user. |
@@ -378,6 +378,6 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-28 | Task drag/drop uses a dedicated grip and a stable exact insertion indicator for same-date, cross-date, empty-list and inter-card-gap placement; persisted move equals displayed intent. |
 | JIG-110-FR-29 | Tasks support finite weekly/monthly recurrence with an inclusive end date; generated occurrences are ordinary independent Tasks, reminders repeat at the occurrence's scheduled date/time, and rollover/rescheduling of one occurrence never shifts the series cadence. |
 | JIG-110-FR-30 | History and Settings have one destination-heading owner: their application header presents both title and concise subtitle, and the content surface does not duplicate either heading before the actual page content. |
-| JIG-110-FR-31 | Settings presents local Git commit state and remote synchronization as distinct facts: it shows whether the current Jig snapshot is locally Git-committed, identifies the configured synchronization remote when present, and separately reports remote synchronization state without persisting or exposing credentials/remote topology as Jig application state. |
+| JIG-110-FR-31 | Settings presents planning-data home, local safety and continuity in user language; low-level Git/service/database facts remain secondary diagnostics, and retry/reconnect appears only when actionable. |
 
 Older JIG-103/104/105/106 rows remain release-history provenance only when JIG-110 explicitly supersedes their affected behavior.
