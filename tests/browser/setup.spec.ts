@@ -318,6 +318,29 @@ test("Connect GitHub shows the provider-required code without protocol controls"
     .getByRole("button", { name: "Connect GitHub repository" })
     .click();
 
+  await expect(page.locator(".jig-setup-value")).toContainText(
+    "Same plan. Different devices.",
+  );
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Authorize Jig on GitHub" }),
+  ).toBeVisible();
+  const copyBox = await page
+    .getByRole("button", { name: "Copy code" })
+    .boundingBox();
+  const openBox = await page
+    .getByRole("button", { name: "Open GitHub" })
+    .boundingBox();
+  if (copyBox === null || openBox === null) {
+    throw new Error("Focused narrow authorization geometry unavailable");
+  }
+  expect(copyBox.width).toBeGreaterThanOrEqual(48);
+  expect(copyBox.height).toBeGreaterThanOrEqual(48);
+  expect(openBox.width).toBeGreaterThanOrEqual(48);
+  expect(openBox.height).toBeGreaterThanOrEqual(48);
+
   await expect(page.getByText("ABCD-EFGH", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy code" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open GitHub" })).toBeVisible();
@@ -425,13 +448,117 @@ test("GitHub access is observed automatically and stops only for a genuine repos
       name: "Choose your planning repository",
     }),
   ).toBeVisible();
+  await expect(page.locator(".jig-setup-value")).toContainText(
+    "Choose one repository.",
+  );
   await expect(
     page.getByRole("button", { name: "example/planning" }),
+  ).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", {
+      name: "Choose your planning repository",
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "example/personal" }),
   ).toBeVisible();
   await expect(page.getByText(/Refresh access/i)).toHaveCount(0);
+});
+
+test("narrow finishing and recovery remain focused onboarding states", async ({
+  page,
+}) => {
+  await preventExternalWindows(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await page.route("**/api/v1/setup/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        mode: "bootstrap",
+        local_repository_available: false,
+      }),
+    });
+  });
+  await routeGitHubStatus(page, {
+    onboarding_available: true,
+    reconnect_available: false,
+  });
+
+  let snapshot = {
+    available: true,
+    state: "connecting",
+    authorization: null,
+    provider_url: null,
+    repositories: [],
+    error: null,
+  };
+  await page.route("**/api/v1/setup/github/connect", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(snapshot),
+    });
+  });
+  await page.route("**/api/v1/setup/github/state", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(snapshot),
+    });
+  });
+
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Connect GitHub repository" })
+    .click();
+
+  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Getting your plan ready…" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Jig is connecting your planning data. No additional action is required.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  snapshot = {
+    available: true,
+    state: "attention",
+    authorization: null,
+    provider_url: "https://github.com/settings/installations",
+    repositories: [],
+    error: "GitHub hasn’t made a repository available yet.",
+  };
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Connect GitHub repository" })
+    .click();
+
+  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Connection needs attention" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("GitHub hasn’t made a repository available yet.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  for (const label of ["Open GitHub", "Try again"]) {
+    const box = await page.getByRole("button", { name: label }).boundingBox();
+    if (box === null) {
+      throw new Error(`${label} recovery geometry unavailable`);
+    }
+    expect(box.width).toBeGreaterThanOrEqual(48);
+    expect(box.height).toBeGreaterThanOrEqual(48);
+  }
 });
 
 test("configured managed repository reconnects automatically without repository setup", async ({
