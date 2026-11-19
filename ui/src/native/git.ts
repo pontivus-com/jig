@@ -707,7 +707,7 @@ export async function observeAndroidPortableRemote(
     http: effects.http,
     url: location,
     forPush: false,
-    headers,
+    headers: { ...headers },
     ...authenticationCallbacks(credential),
   });
   const advertised = refs.find(
@@ -739,7 +739,7 @@ export async function observeAndroidPortableRemote(
     ref: ANDROID_DATA_BRANCH,
     singleBranch: true,
     tags: false,
-    headers,
+    headers: { ...headers },
     ...authenticationCallbacks(credential),
   });
   const remoteHead = await resolveRef({

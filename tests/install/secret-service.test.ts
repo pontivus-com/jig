@@ -51,7 +51,6 @@ async function installFakeSecretTool(): Promise<string> {
       "#!/usr/bin/env bash",
       "set -euo pipefail",
       'case "${1:-}" in',
-      '  --version) printf "secret-tool fake\\n" ;;',
       '  store) cat > "${JIG_SECRET_STORE:?}" ;;',
       '  lookup) [[ -f "${JIG_SECRET_STORE:?}" ]] && cat "${JIG_SECRET_STORE}" ;;',
       '  clear) rm -f "${JIG_SECRET_STORE:?}" ;;',

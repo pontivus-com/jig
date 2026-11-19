@@ -80,8 +80,20 @@ async function runSecretTool(
 }
 
 export async function assertSecretServiceAvailable(): Promise<void> {
-  const result = await runSecretTool(["--version"]).catch(() => null);
-  if (result === null || result.exit_code !== 0) {
+  // `secret-tool --version` is not a portable capability check: the
+  // freedesktop implementation shipped by some distributions treats it as
+  // invalid usage and exits nonzero even when Secret Service is available.
+  // A lookup is read-only, exercises the actual D-Bus Secret Service path,
+  // and exit 1 with no diagnostic is the normal "item not found" result.
+  const result = await runSecretTool([
+    "lookup",
+    ...BASE_ATTRIBUTES,
+  ]).catch(() => null);
+  if (
+    result === null ||
+    (result.exit_code !== 0 &&
+      !(result.exit_code === 1 && result.stderr.length === 0))
+  ) {
     throw new SecretServiceError(
       "Connect GitHub requires secret-tool and an available freedesktop Secret Service",
     );
