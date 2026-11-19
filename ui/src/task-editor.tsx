@@ -435,226 +435,246 @@ export function TaskEditor({
           </div>
         )}
 
-        <TextInput
-          label="Title"
-          value={draft.title}
-          onChange={(value) => update("title", value)}
-          isRequired
-          hasAutoFocus
-          width="100%"
-          controlClassName="jig-mobile-touch-control"
-        />
-
-        <DateInput
-          label="Date"
-          value={asIsoDateString(draft.scheduledDate)}
-          onChange={(value) => {
-            if (value !== undefined) {
-              updateScheduledDate(value);
-            }
-          }}
-          isRequired
-          weekStartsOn="mon"
-          controlClassName="jig-mobile-touch-control"
-        />
-
-        <div className="jig-repeat-field">
-          <Selector
-            label="Repeat"
-            value={draft.repeatKind}
-            options={REPEAT_OPTIONS}
-            presentation="adaptive"
+        <div className="jig-editor-section">
+          <div className="jig-editor-section-heading">
+            <h3>Task</h3>
+          </div>
+          <TextInput
+            label="Title"
+            value={draft.title}
+            onChange={(value) => update("title", value)}
+            isRequired
+            hasAutoFocus
+            width="100%"
             controlClassName="jig-mobile-touch-control"
-            renderOption={(option) => (
-              <span className="jig-mobile-selector-option">
-                {option.label}
-              </span>
-            )}
+          />
+        </div>
+
+        <div className="jig-editor-section">
+          <div className="jig-editor-section-heading">
+            <h3>Schedule</h3>
+          </div>
+          <DateInput
+            label="Date"
+            value={asIsoDateString(draft.scheduledDate)}
             onChange={(value) => {
-              if (isRepeatKind(value)) {
-                changeRepeatKind(value);
+              if (value !== undefined) {
+                updateScheduledDate(value);
               }
             }}
+            isRequired
+            weekStartsOn="mon"
+            controlClassName="jig-mobile-touch-control"
           />
 
-          {draft.repeatKind === "weekly" ? (
-            <div className="jig-repeat-disclosure">
-              <TextInput
-                label="Every N weeks"
-                value={draft.repeatIntervalWeeks}
-                onChange={(value) => update("repeatIntervalWeeks", value)}
-                isRequired
-                width="100%"
-                controlClassName="jig-mobile-touch-control"
-              />
-              <div className="jig-editor-group-field">
-                <FieldLabel
-                  label="Repeat on"
-                  inputID={weekdayGroupId}
-                  labelID={weekdayLabelId}
-                  isGroupLabel
+          <div className="jig-repeat-field">
+            <Selector
+              label="Repeat"
+              value={draft.repeatKind}
+              options={REPEAT_OPTIONS}
+              presentation="adaptive"
+              controlClassName="jig-mobile-touch-control"
+              renderOption={(option) => (
+                <span className="jig-mobile-selector-option">
+                  {option.label}
+                </span>
+              )}
+              onChange={(value) => {
+                if (isRepeatKind(value)) {
+                  changeRepeatKind(value);
+                }
+              }}
+            />
+
+            {draft.repeatKind === "weekly" ? (
+              <div className="jig-repeat-disclosure">
+                <TextInput
+                  label="Every N weeks"
+                  value={draft.repeatIntervalWeeks}
+                  onChange={(value) => update("repeatIntervalWeeks", value)}
+                  isRequired
+                  width="100%"
+                  controlClassName="jig-mobile-touch-control"
                 />
-                <div
-                  id={weekdayGroupId}
-                  className="jig-repeat-weekdays"
-                  role="group"
-                  aria-labelledby={weekdayLabelId}
-                >
-                  {WEEKDAYS.map((weekday) => (
-                    <ToggleButton
-                      key={weekday}
-                      className="jig-repeat-weekday"
-                      label={WEEKDAY_LABELS[weekday]}
-                      isPressed={draft.repeatWeekdays.includes(weekday)}
-                      onPressedChange={() => toggleWeekday(weekday)}
-                    />
-                  ))}
+                <div className="jig-editor-group-field">
+                  <FieldLabel
+                    label="Repeat on"
+                    inputID={weekdayGroupId}
+                    labelID={weekdayLabelId}
+                    isGroupLabel
+                  />
+                  <div
+                    id={weekdayGroupId}
+                    className="jig-repeat-weekdays"
+                    role="group"
+                    aria-labelledby={weekdayLabelId}
+                  >
+                    {WEEKDAYS.map((weekday) => (
+                      <ToggleButton
+                        key={weekday}
+                        className="jig-repeat-weekday"
+                        label={WEEKDAY_LABELS[weekday]}
+                        isPressed={draft.repeatWeekdays.includes(weekday)}
+                        onPressedChange={() => toggleWeekday(weekday)}
+                      />
+                    ))}
+                  </div>
                 </div>
+                <DateInput
+                  label="Ends on"
+                  value={
+                    draft.repeatEndDate.length === 0
+                      ? undefined
+                      : asIsoDateString(draft.repeatEndDate)
+                  }
+                  onChange={(value) =>
+                    update("repeatEndDate", value ?? "")
+                  }
+                  isRequired
+                  weekStartsOn="mon"
+                  controlClassName="jig-mobile-touch-control"
+                />
               </div>
-              <DateInput
-                label="Ends on"
-                value={
-                  draft.repeatEndDate.length === 0
-                    ? undefined
-                    : asIsoDateString(draft.repeatEndDate)
-                }
-                onChange={(value) =>
-                  update("repeatEndDate", value ?? "")
-                }
-                isRequired
-                weekStartsOn="mon"
-                controlClassName="jig-mobile-touch-control"
+            ) : draft.repeatKind === "monthly" ? (
+              <div className="jig-repeat-disclosure">
+                <TextInput
+                  label="Day of month"
+                  value={draft.repeatDayOfMonth}
+                  onChange={(value) => update("repeatDayOfMonth", value)}
+                  isRequired
+                  width="100%"
+                  controlClassName="jig-mobile-touch-control"
+                />
+                <span className="jig-secondary-copy">
+                  Months without this day are skipped.
+                </span>
+                <DateInput
+                  label="Ends on"
+                  value={
+                    draft.repeatEndDate.length === 0
+                      ? undefined
+                      : asIsoDateString(draft.repeatEndDate)
+                  }
+                  onChange={(value) =>
+                    update("repeatEndDate", value ?? "")
+                  }
+                  isRequired
+                  weekStartsOn="mon"
+                  controlClassName="jig-mobile-touch-control"
+                />
+              </div>
+            ) : null}
+
+            {repeatSummary === null ? null : (
+              <p className="jig-repeat-summary">{repeatSummary}</p>
+            )}
+
+            {repeating && task !== null ? (
+              <p className="jig-repeat-scope-copy">
+                Repeat changes the series schedule. Other Task fields change
+                this Task only.
+              </p>
+            ) : null}
+
+            {stoppingExistingSeries ? (
+              <Banner
+                status="warning"
+                title="Stop this series when you save?"
+                description="This Task stays as a one-off. Completed History stays. Other outstanding Tasks in this series are removed."
+                collapsible={false}
               />
-            </div>
-          ) : draft.repeatKind === "monthly" ? (
-            <div className="jig-repeat-disclosure">
-              <TextInput
-                label="Day of month"
-                value={draft.repeatDayOfMonth}
-                onChange={(value) => update("repeatDayOfMonth", value)}
-                isRequired
-                width="100%"
-                controlClassName="jig-mobile-touch-control"
-              />
-              <span className="jig-secondary-copy">
-                Months without this day are skipped.
-              </span>
-              <DateInput
-                label="Ends on"
-                value={
-                  draft.repeatEndDate.length === 0
-                    ? undefined
-                    : asIsoDateString(draft.repeatEndDate)
-                }
-                onChange={(value) =>
-                  update("repeatEndDate", value ?? "")
-                }
-                isRequired
-                weekStartsOn="mon"
-                controlClassName="jig-mobile-touch-control"
-              />
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
-          {repeatSummary === null ? null : (
-            <p className="jig-repeat-summary">{repeatSummary}</p>
-          )}
-
-          {repeating && task !== null ? (
-            <p className="jig-repeat-scope-copy">
-              Repeat changes the series schedule. Other Task fields change
-              this Task only.
-            </p>
-          ) : null}
-
-          {stoppingExistingSeries ? (
-            <Banner
-              status="warning"
-              title="Stop this series when you save?"
-              description="This Task stays as a one-off. Completed History stays. Other outstanding Tasks in this series are removed."
-              collapsible={false}
-            />
-          ) : null}
-        </div>
-
-        <TimeInput
-          label="Reminder"
-          value={
-            draft.reminderTime.length === 0
-              ? undefined
-              : asIsoTimeString(draft.reminderTime)
-          }
-          onChange={(value) => update("reminderTime", value ?? "")}
-          isOptional
-          hasClear
-          controlClassName="jig-mobile-touch-control"
-        />
-
-        <div className="jig-editor-group-field">
-          <FieldLabel
-            label="Priority"
-            inputID={priorityGroupId}
-            labelID={priorityLabelId}
-            isGroupLabel
+          <TimeInput
+            label="Reminder"
+            value={
+              draft.reminderTime.length === 0
+                ? undefined
+                : asIsoTimeString(draft.reminderTime)
+            }
+            onChange={(value) => update("reminderTime", value ?? "")}
+            isOptional
+            hasClear
+            controlClassName="jig-mobile-touch-control"
           />
-          <SegmentedControl
-            id={priorityGroupId}
-            aria-labelledby={priorityLabelId}
-            label="Priority"
-            value={draft.priority}
-            onChange={(value) => {
-              if (isPriority(value)) {
-                update("priority", value);
-              }
-            }}
-            layout="fill"
-          >
-            <SegmentedControlItem
-              value="HIGH"
-              label="High"
-              style={{ minHeight: "48px" }}
-            />
-            <SegmentedControlItem
-              value="NORMAL"
-              label="Normal"
-              style={{ minHeight: "48px" }}
-            />
-            <SegmentedControlItem
-              value="LOW"
-              label="Low"
-              style={{ minHeight: "48px" }}
-            />
-          </SegmentedControl>
         </div>
 
-        <TextInput
-          label="Context"
-          value={draft.context}
-          onChange={(value) => update("context", value)}
-          isOptional
-          width="100%"
-          controlClassName="jig-mobile-touch-control"
-          placeholder="Project, client, or place"
-        />
+        <div className="jig-editor-section">
+          <div className="jig-editor-section-heading">
+            <h3>Details</h3>
+          </div>
+          <div className="jig-editor-group-field">
+            <FieldLabel
+              label="Priority"
+              inputID={priorityGroupId}
+              labelID={priorityLabelId}
+              isGroupLabel
+            />
+            <SegmentedControl
+              id={priorityGroupId}
+              aria-labelledby={priorityLabelId}
+              label="Priority"
+              value={draft.priority}
+              onChange={(value) => {
+                if (isPriority(value)) {
+                  update("priority", value);
+                }
+              }}
+              layout="fill"
+            >
+              <SegmentedControlItem
+                value="HIGH"
+                label="High"
+                style={{ minHeight: "48px" }}
+              />
+              <SegmentedControlItem
+                value="NORMAL"
+                label="Normal"
+                style={{ minHeight: "48px" }}
+              />
+              <SegmentedControlItem
+                value="LOW"
+                label="Low"
+                style={{ minHeight: "48px" }}
+              />
+            </SegmentedControl>
+          </div>
 
-        <TextInput
-          label="Reference"
-          value={draft.reference}
-          onChange={(value) => update("reference", value)}
-          isOptional
-          width="100%"
-          controlClassName="jig-mobile-touch-control"
-          placeholder="https://… or a path/locator to copy"
-        />
+          <TextInput
+            label="Context"
+            value={draft.context}
+            onChange={(value) => update("context", value)}
+            isOptional
+            width="100%"
+            controlClassName="jig-mobile-touch-control"
+            placeholder="Project, client, or place"
+          />
 
-        <TextArea
-          label="Notes"
-          value={draft.note}
-          onChange={(value) => update("note", value)}
-          isOptional
-          rows={4}
-          controlClassName="jig-mobile-touch-control"
-        />
+          <TextInput
+            label="Reference"
+            value={draft.reference}
+            onChange={(value) => update("reference", value)}
+            isOptional
+            width="100%"
+            controlClassName="jig-mobile-touch-control"
+            placeholder="https://… or a path/locator to copy"
+          />
+        </div>
+
+        <div className="jig-editor-section">
+          <div className="jig-editor-section-heading">
+            <h3>Notes</h3>
+          </div>
+          <TextArea
+            label="Notes"
+            value={draft.note}
+            onChange={(value) => update("note", value)}
+            isOptional
+            rows={4}
+            controlClassName="jig-mobile-touch-control"
+          />
+        </div>
 
         {showActions ? (
           <div className="jig-editor-actions">
