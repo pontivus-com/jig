@@ -1332,7 +1332,9 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
       };
     });
     expect(frame.margin).toBe("0px");
-    expect(frame.padding).toBe("0px");
+    expect(frame.padding).toBe(
+      viewport.width >= 1168 ? "0px" : "0px 0px 64px",
+    );
     expect(frame.border).toBe("0px");
     expect(frame.radius).toBe("0px");
     expect(frame.shadow).toBe("none");
