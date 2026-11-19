@@ -1286,6 +1286,12 @@ body {
       min-height: 48px;
     }
 
+    .jig-mobile-selector-option {
+      display: flex;
+      min-height: 36px;
+      align-items: center;
+    }
+
     .jig-app-header-narrow button,
     .jig-app-header-narrow [role="button"],
     .jig-date-add,
