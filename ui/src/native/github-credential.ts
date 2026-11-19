@@ -24,7 +24,6 @@ function refreshAuthorizationFailed(error: unknown): boolean {
   return (
     error instanceof GitHubAuthError &&
     (
-      error.status_code === null ||
       error.status_code === 400 ||
       error.status_code === 401
     )
