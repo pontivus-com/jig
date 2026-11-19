@@ -391,7 +391,7 @@ body {
     height: 56px;
     min-height: 56px;
     border-radius: var(--radius-full);
-    box-shadow: var(--shadow-raised);
+    box-shadow: var(--shadow-med);
   }
 
   .jig-mobile-today {
