@@ -7,7 +7,6 @@ import {
   commit,
   currentBranch,
   fetch,
-  findMergeBase,
   getConfig,
   init,
   isDescendent,
@@ -644,12 +643,6 @@ export interface AndroidPortableRemoteObservation {
   readonly remote_rewritten: boolean;
   readonly lineage: GitLineage;
   readonly remote_snapshot: PortableSnapshot | null;
-  readonly base:
-    | {
-        readonly head: string;
-        readonly snapshot: PortableSnapshot;
-      }
-    | null;
 }
 
 async function optionalAndroidRef(
@@ -669,7 +662,6 @@ async function optionalAndroidRef(
 
 export async function observeAndroidPortableRemote(
   effects: AndroidGitEffects,
-  expectedDatasetId: string,
   credential: GitCredentialProvider,
 ): Promise<AndroidPortableRemoteObservation> {
   await assertDataBranch(effects);
@@ -717,7 +709,6 @@ export async function observeAndroidPortableRemote(
       remote_rewritten: false,
       lineage: "unknown",
       remote_snapshot: null,
-      base: null,
     };
   }
   const advertisedOid = advertised.oid;
@@ -774,17 +765,8 @@ export async function observeAndroidPortableRemote(
   }
 
   let lineage: GitLineage = "unknown";
-  let base: AndroidPortableRemoteObservation["base"] = null;
   if (localHead === remoteHead) {
     lineage = "equal";
-    base = {
-      head: localHead,
-      snapshot: await readAndroidSnapshotAtOid(
-        effects,
-        localHead,
-        expectedDatasetId,
-      ),
-    };
   } else {
     let remoteDescendsLocal: boolean | null = null;
     let localDescendsRemote: boolean | null = null;
@@ -808,41 +790,13 @@ export async function observeAndroidPortableRemote(
 
     if (remoteDescendsLocal === true) {
       lineage = "remote-ahead";
-      base = {
-        head: localHead,
-        snapshot: await readAndroidSnapshotAtOid(
-          effects,
-          localHead,
-          expectedDatasetId,
-        ),
-      };
     } else if (localDescendsRemote === true) {
       lineage = "local-ahead";
-      base = {
-        head: remoteHead,
-        snapshot: remoteSnapshot,
-      };
     } else if (
       remoteDescendsLocal === false &&
       localDescendsRemote === false
     ) {
       lineage = "diverged";
-      const bases = await findMergeBase({
-        fs: effects.fs,
-        dir: effects.dir,
-        oids: [localHead, remoteHead],
-      });
-      const baseHead = bases[0];
-      if (baseHead !== undefined) {
-        base = {
-          head: baseHead,
-          snapshot: await readAndroidSnapshotAtOid(
-            effects,
-            baseHead,
-            expectedDatasetId,
-          ),
-        };
-      }
     }
   }
 
@@ -864,25 +818,7 @@ export async function observeAndroidPortableRemote(
     remote_rewritten: remoteRewritten,
     lineage,
     remote_snapshot: remoteSnapshot,
-    base,
   };
-}
-
-export async function acknowledgeAndroidRemoteHead(
-  effects: AndroidGitEffects,
-  head: string,
-): Promise<void> {
-  const current = await optionalAndroidRef(
-    effects,
-    ANDROID_OBSERVED_REMOTE_REF,
-  );
-  await writeRef({
-    fs: effects.fs,
-    dir: effects.dir,
-    ref: ANDROID_OBSERVED_REMOTE_REF,
-    value: head,
-    force: current !== null,
-  });
 }
 
 export async function normalizeAndroidPortableHead(
@@ -982,7 +918,6 @@ export async function synchronizeAndroidPortableRepository(
 ): Promise<AndroidGitSynchronizationResult> {
   const observation = await observeAndroidPortableRemote(
     effects,
-    expectedDatasetId,
     credential,
   );
   if (
