@@ -5,6 +5,8 @@ import {
   DrawerHeader,
   Layout,
   LayoutContent,
+  LayoutFooter,
+  LayoutHeader,
 } from "@astryxdesign/core";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Task, TaskCommand } from "../../src/core/task";
@@ -37,6 +39,8 @@ export type TaskWorkspacePresentation =
     };
 
 interface TaskWorkspaceContentProps {
+  readonly editorFormId?: string;
+  readonly showEditorActions?: boolean;
   readonly workspace: TaskWorkspacePresentation;
   readonly externalError: string | null;
   readonly isSaving: boolean;
@@ -55,6 +59,8 @@ function workspaceTask(
 }
 
 function TaskWorkspaceContent({
+  editorFormId,
+  showEditorActions = true,
   workspace,
   externalError,
   isSaving,
@@ -70,6 +76,8 @@ function TaskWorkspaceContent({
   return (
     <div className="jig-task-workspace-form">
       <TaskEditor
+        formId={editorFormId}
+        showActions={showEditorActions}
         task={task}
         recurrenceSeries={recurrenceSeries}
         draft={workspace.draft}
@@ -223,35 +231,68 @@ export function TaskWorkspaceBottomSheet({
       padding={4}
     >
       {workspace === null ? null : (
-        <>
-          <div className="jig-task-sheet-header">
-            <div>
-              <strong>{title}</strong>
-              <span>{workspaceSubtitle(workspace)}</span>
-            </div>
-            <Button
-              label="Close"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (!isSaving) {
-                  onClose();
-                }
-              }}
-            />
-          </div>
-          <TaskWorkspaceContent
-            workspace={workspace}
-            externalError={externalError}
-            isSaving={isSaving}
-            recurrenceSeries={recurrenceSeries}
-            onDraftChange={onDraftChange}
-            onSave={onSave}
-            onDelete={onDelete}
-            onToggleComplete={onToggleComplete}
-            onClose={onClose}
-          />
-        </>
+        <Layout
+          height="fill"
+          header={
+            <LayoutHeader hasDivider>
+              <div className="jig-task-sheet-header">
+                <div>
+                  <strong>{title}</strong>
+                  <span>{workspaceSubtitle(workspace)}</span>
+                </div>
+                <Button
+                  label="Close"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (!isSaving) {
+                      onClose();
+                    }
+                  }}
+                />
+              </div>
+            </LayoutHeader>
+          }
+          content={
+            <LayoutContent>
+              <TaskWorkspaceContent
+                editorFormId="jig-task-bottom-sheet-form"
+                showEditorActions={false}
+                workspace={workspace}
+                externalError={externalError}
+                isSaving={isSaving}
+                recurrenceSeries={recurrenceSeries}
+                onDraftChange={onDraftChange}
+                onSave={onSave}
+                onDelete={onDelete}
+                onToggleComplete={onToggleComplete}
+                onClose={onClose}
+              />
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter hasDivider>
+              <div className="jig-editor-actions jig-task-workspace-footer-actions">
+                <div className="jig-editor-primary-actions">
+                  <Button
+                    type="button"
+                    label="Cancel"
+                    variant="secondary"
+                    onClick={onClose}
+                    isDisabled={isSaving}
+                  />
+                  <Button
+                    type="submit"
+                    form="jig-task-bottom-sheet-form"
+                    label={workspace.mode === "create" ? "Add task" : "Save"}
+                    variant="primary"
+                    isLoading={isSaving}
+                  />
+                </div>
+              </div>
+            </LayoutFooter>
+          }
+        />
       )}
     </BottomSheet>
   );
