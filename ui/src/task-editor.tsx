@@ -437,6 +437,7 @@ export function TaskEditor({
           isRequired
           hasAutoFocus
           width="100%"
+          controlClassName="jig-mobile-touch-control"
         />
 
         <DateInput
@@ -449,6 +450,7 @@ export function TaskEditor({
           }}
           isRequired
           weekStartsOn="mon"
+          controlClassName="jig-mobile-touch-control"
         />
 
         <div className="jig-repeat-field">
@@ -456,6 +458,7 @@ export function TaskEditor({
             label="Repeat"
             value={draft.repeatKind}
             options={REPEAT_OPTIONS}
+            controlClassName="jig-mobile-touch-control"
             onChange={(value) => {
               if (isRepeatKind(value)) {
                 changeRepeatKind(value);
@@ -471,6 +474,7 @@ export function TaskEditor({
                 onChange={(value) => update("repeatIntervalWeeks", value)}
                 isRequired
                 width="100%"
+                controlClassName="jig-mobile-touch-control"
               />
               <div className="jig-editor-group-field">
                 <FieldLabel
@@ -508,6 +512,7 @@ export function TaskEditor({
                 }
                 isRequired
                 weekStartsOn="mon"
+                controlClassName="jig-mobile-touch-control"
               />
             </div>
           ) : draft.repeatKind === "monthly" ? (
@@ -518,6 +523,7 @@ export function TaskEditor({
                 onChange={(value) => update("repeatDayOfMonth", value)}
                 isRequired
                 width="100%"
+                controlClassName="jig-mobile-touch-control"
               />
               <span className="jig-secondary-copy">
                 Months without this day are skipped.
@@ -534,6 +540,7 @@ export function TaskEditor({
                 }
                 isRequired
                 weekStartsOn="mon"
+                controlClassName="jig-mobile-touch-control"
               />
             </div>
           ) : null}
@@ -569,6 +576,7 @@ export function TaskEditor({
           onChange={(value) => update("reminderTime", value ?? "")}
           isOptional
           hasClear
+          controlClassName="jig-mobile-touch-control"
         />
 
         <div className="jig-editor-group-field">
@@ -590,9 +598,21 @@ export function TaskEditor({
             }}
             layout="fill"
           >
-            <SegmentedControlItem value="HIGH" label="High" />
-            <SegmentedControlItem value="NORMAL" label="Normal" />
-            <SegmentedControlItem value="LOW" label="Low" />
+            <SegmentedControlItem
+              value="HIGH"
+              label="High"
+              className="jig-mobile-touch-control"
+            />
+            <SegmentedControlItem
+              value="NORMAL"
+              label="Normal"
+              className="jig-mobile-touch-control"
+            />
+            <SegmentedControlItem
+              value="LOW"
+              label="Low"
+              className="jig-mobile-touch-control"
+            />
           </SegmentedControl>
         </div>
 
@@ -602,6 +622,7 @@ export function TaskEditor({
           onChange={(value) => update("context", value)}
           isOptional
           width="100%"
+          controlClassName="jig-mobile-touch-control"
           placeholder="Project, client, or place"
         />
 
@@ -611,6 +632,7 @@ export function TaskEditor({
           onChange={(value) => update("reference", value)}
           isOptional
           width="100%"
+          controlClassName="jig-mobile-touch-control"
           placeholder="https://… or a path/locator to copy"
         />
 
@@ -620,6 +642,7 @@ export function TaskEditor({
           onChange={(value) => update("note", value)}
           isOptional
           rows={4}
+          controlClassName="jig-mobile-touch-control"
         />
 
         <div className="jig-editor-actions">
