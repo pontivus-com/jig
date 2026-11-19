@@ -728,14 +728,14 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   let workspace = page.getByRole("dialog", {
     name: "Browser recurrence",
   });
-  await expect(
-    workspace.getByText("Not repeating", { exact: true }),
-  ).toBeVisible();
+  const repeat = workspace.getByRole("combobox", { name: "Repeat" });
+  await repeat.click();
+  await page.getByRole("option", { name: "Weekly", exact: true }).click();
   await workspace
-    .getByLabel("Repeat until")
+    .getByLabel("Ends on")
     .fill(await displayedDateValue(page, endDate));
   await workspace
-    .getByRole("button", { name: "Enable repeat", exact: true })
+    .getByRole("button", { name: "Save", exact: true })
     .click();
 
   await expect
@@ -780,10 +780,10 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
     workspace.getByText(/until/).first(),
   ).toBeVisible();
   await expect(
-    workspace.getByRole("button", {
-      name: "Stop repeating",
-      exact: true,
-    }),
+    workspace.getByText(
+      "Repeat changes the series schedule. Other Task fields change this Task only.",
+      { exact: true },
+    ),
   ).toBeVisible();
 
   const invokingSlot = state.tasks.find(
@@ -795,11 +795,18 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
     throw new Error("Expected later recurrence occurrence");
   }
 
+  const repeatForExisting = workspace.getByRole("combobox", {
+    name: "Repeat",
+  });
+  await repeatForExisting.click();
+  await page
+    .getByRole("option", { name: "Does not repeat", exact: true })
+    .click();
+  await expect(
+    workspace.getByText("Stop this series when you save?", { exact: true }),
+  ).toBeVisible();
   await workspace
-    .getByRole("button", {
-      name: "Stop repeating",
-      exact: true,
-    })
+    .getByRole("button", { name: "Save", exact: true })
     .click();
 
   await expect
@@ -851,14 +858,19 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
       }
 
       if (destination === "Settings") {
-        const columns = await page.locator(".jig-settings-grid").evaluate(
-          (element) => getComputedStyle(element).gridTemplateColumns,
-        );
-        if (width >= 1168) {
-          expect(columns.split(" ")).toHaveLength(2);
-        } else {
-          expect(columns.split(" ")).toHaveLength(1);
-        }
+        const settings = page.locator(".jig-settings-sections");
+        await expect(settings).toBeVisible();
+        await expect(
+          settings.locator(".jig-settings-section"),
+        ).toHaveCount(4);
+        const headings = await settings.getByRole("heading", { level: 2 })
+          .allTextContents();
+        expect(headings.map((value) => value.trim())).toEqual([
+          "Data & sync",
+          "Appearance",
+          "Notifications",
+          "Diagnostics",
+        ]);
       }
     }
 
