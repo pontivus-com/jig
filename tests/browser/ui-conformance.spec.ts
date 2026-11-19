@@ -1195,6 +1195,20 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
           "Notifications",
           "Diagnostics",
         ]);
+        await expect(
+          settings.getByText("Planning data", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          settings.getByText("Saved on this device", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          settings.getByText("Synchronization", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          settings.locator(
+            ".jig-settings-section:not(.jig-settings-diagnostics) .jig-settings-card",
+          ),
+        ).toHaveCount(0);
       }
     }
 
@@ -1525,9 +1539,9 @@ test("Settings workspace menu and destructive dialog inherit the active semantic
   expect(rootTokens.primary).not.toBe("");
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  const settingsCard = page.locator(".jig-settings-card").first();
-  await expect(settingsCard).toBeVisible();
-  const settingsTokens = await settingsCard.evaluate((element) => {
+  const settingsSurface = page.locator(".jig-settings-group").first();
+  await expect(settingsSurface).toBeVisible();
+  const settingsTokens = await settingsSurface.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       surface: style.getPropertyValue("--color-background-surface").trim(),
