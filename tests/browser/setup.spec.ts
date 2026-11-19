@@ -163,7 +163,7 @@ test("bootstrap stays inside Jig and accepts an existing local repository", asyn
 
 test("governed onboarding adapts from desktop to narrow touch geometry", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.route("**/api/v1/setup/status", async (route) => {
     await route.fulfill({
       status: 200,
@@ -192,6 +192,10 @@ test("governed onboarding adapts from desktop to narrow touch geometry", async (
   await expect(
     page.getByRole("button", { name: "Use an existing local repository" }),
   ).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("v1.1-onboarding-desktop.png"),
+    fullPage: true,
+  });
 
   for (const width of [320, 360, 390, 414] as const) {
     await page.setViewportSize({ width, height: 844 });
@@ -219,6 +223,10 @@ test("governed onboarding adapts from desktop to narrow touch geometry", async (
       scrollWidth: element.scrollWidth,
     }));
     expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+    await page.screenshot({
+      path: testInfo.outputPath(`v1.1-onboarding-mobile-${width}.png`),
+      fullPage: true,
+    });
   }
 });
 
