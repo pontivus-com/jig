@@ -401,6 +401,16 @@ export function TaskEditor({
   const stoppingExistingSeries =
     recurrenceSeries !== null && draft.repeatKind === "none";
   const repeating = draft.repeatKind !== "none";
+  const repeatSummary =
+    draft.repeatEndDate.length === 0
+      ? null
+      : draft.repeatKind === "weekly"
+        ? `Every ${draft.repeatIntervalWeeks} week${draft.repeatIntervalWeeks === "1" ? "" : "s"} · ${draft.repeatWeekdays
+            .map((weekday) => WEEKDAY_LABELS[weekday])
+            .join(", ")} · until ${draft.repeatEndDate}`
+        : draft.repeatKind === "monthly"
+          ? `Monthly · day ${draft.repeatDayOfMonth} · until ${draft.repeatEndDate}`
+          : null;
 
   return (
     <section
@@ -527,6 +537,10 @@ export function TaskEditor({
               />
             </div>
           ) : null}
+
+          {repeatSummary === null ? null : (
+            <p className="jig-repeat-summary">{repeatSummary}</p>
+          )}
 
           {repeating && task !== null ? (
             <p className="jig-repeat-scope-copy">
