@@ -1,8 +1,8 @@
 # Android v1.1 development and physical-device certification
 
-**Status:** v1.1 implementation support document, amended after the 2026-11-19 physical UX failure and subsequent replacement Task-movement completion. The previous Pangea drag candidate failed; the replacement J110-IMP-09 physical Task-movement gate was later completed successfully, but its detailed execution record was not retained. This document now governs the remaining J110-IMP-15 physical mobile UX/runtime audit and preserves the historical IMP-09 checklist without reconstructing missing evidence.
+**Status:** v1.1 implementation support document, amended 2026-11-20 after partial J110-IMP-15 physical acceptance. J110-IMP-09 remains complete with its detailed historical record lost. The Samsung SM-S901E / Android 16 session on executable head `222f2fe0e672b122424042b3fa39747efb991610` proved the exercised Android Git synchronization/restart path but exposed defects governed by J110-IMP-18..21. Final J110-IMP-15 certification must use the later post-remediation executable/APK lineage.
 
-**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-24, SD-34 and SD-35; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09 and J110-IMP-15.
+**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39 and SD-40; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..21 and J110-IMP-15.
 
 ## 1. Governed Android baseline
 
@@ -112,7 +112,7 @@ J110-IMP-09 was completed successfully on physical Android, but the detailed dev
 
 The previous Pangea implementation is a recorded **FAIL**. The replacement dnd-kit implementation subsequently passed the physical Task-movement gate and must not be rerun solely to reconstruct the lost detailed record.
 
-The current retained post-UX source/APK lineage is source `611c8ced6a854a80f24bf727c53d792f5c5d556c` and GitHub Actions APK artifact `14541004265`; the downloaded artifact contains `app-debug.apk` with SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`. These are the governed inputs for the remaining IMP-15 work. The lost IMP-09 record does not support reconstructing an exact historical source/APK claim.
+The prior post-UX source/APK lineage `611c8ced…` / artifact `14541004265` remains historical evidence only. Partial physical IMP-15 evidence was later collected on executable source `222f2fe0e672b122424042b3fa39747efb991610`, Samsung SM-S901E / Android 16 API 36, package `com.pontivus.jig`, APK SHA-256 `b3d134786827dea601f4f3cbd89ad4269578393151efd5dab056812a682c8d4b`. Because J110-IMP-18..20 require executable corrections, neither lineage is the final certification input; J110-IMP-21 must establish the next exact source/APK identity.
 
 The repository package authority expects application ID `com.pontivus.jig`; the governed preflight must prove package/version badging with Build Tools 36.0.0 `aapt` for the remaining IMP-15 certification host.
 
@@ -131,6 +131,17 @@ The repository package authority expects application ID `com.pontivus.jig`; the 
 13. repeat after scrolling and after opening/closing the BottomSheet.
 
 The checklist above is retained as the historical IMP-09 gate definition. Its detailed execution results were not retained. If new physical evidence during IMP-15 shows a repeated missed drop, floating-card residue, unstable slot or scroll conflict, reopen SD-34/35 from that new evidence. Do not add Pangea, another drag library or a platform-only sensor stack.
+
+### 2026-11-20 partial physical acceptance findings
+
+The current corrective wave is not optional visual polish. Before final physical certification:
+
+- J110-IMP-18 corrects compact Jig identity + centered Planner/History/Settings title, header density, action-label legibility and Task grip/checkbox vertical centering;
+- J110-IMP-19 makes intentional scheduling current/future only through one canonical core rule and gives past-date drag/edit attempts concise feedback without mutation;
+- J110-IMP-20 makes shared daily rollover recurrence-aware so older overdue outstanding siblings do not accumulate when a later occurrence is due;
+- J110-IMP-21 establishes the exact final APK/source and reruns browser/hosted/physical evidence before IMP-15 resumes closure.
+
+Do not implement any of these as Android-only behavior.
 
 ### Broader mobile UX observations for J110-IMP-15
 
@@ -161,9 +172,9 @@ Browser geometry is necessary but does not replace this physical usability evide
 
 ## 6. Remaining physical certification outcome
 
-J110-IMP-09 is closed. Release-candidate closure now depends on explicit physical-device evidence for J110-IMP-15 plus the separate live Linux/Desktop acceptance gate.
+J110-IMP-09 is closed. Release-candidate closure now depends on J110-IMP-18..20 implementation, J110-IMP-21 exact-head recertification, completion of the remaining J110-IMP-15 physical-device matrix, and the separate live Linux/Desktop acceptance gate.
 
-- **PASS:** the J110-IMP-15 physical-device certification records the governed current candidate launch/runtime, onboarding, reminder, lifecycle, Git/reconnect and interoperability evidence.
+- **PASS:** after J110-IMP-18..21 close, the J110-IMP-15 physical-device certification records the governed final candidate launch/runtime, compact-header/readability/alignment corrections, historical-date feedback, recurrence non-accumulation, onboarding, reminder, lifecycle, Git/reconnect and interoperability evidence.
 - **FAIL:** record the concrete device/WebView behavior and return only the affected governing design/task contract for correction.
 - **NOT RUN:** browser/emulator/build evidence may remain useful, but the physical-device portions of J110-IMP-15 remain open.
 
