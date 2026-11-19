@@ -443,10 +443,14 @@ export async function inspectSynchronizationRemote(
 
 export async function repositorySynchronizationMode(
   config: GitAdapterConfig,
-): Promise<"local-only" | "remote"> {
-  return (await discoverSynchronizationRemote(config.repository_path)) === null
-    ? "local-only"
-    : "remote";
+): Promise<"local-only" | "remote" | "ambiguous"> {
+  const authority = await inspectSynchronizationAuthority(config);
+  if (authority.state === "none") {
+    return "local-only";
+  }
+  return authority.state === "selected"
+    ? "remote"
+    : "ambiguous";
 }
 
 export async function repositoryCommonDir(
