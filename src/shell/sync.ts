@@ -577,9 +577,8 @@ export function createSyncController(
             adapter,
             remoteHead,
           );
-          const current = await readCanonicalState(db);
           await markAdoptedHead(db, remoteHead);
-          await markExported(db, current.revision, remoteHead);
+          await markExported(db, state.revision, remoteHead);
           continue;
         } catch {
           continue;
@@ -601,8 +600,13 @@ export function createSyncController(
             localHead,
             remoteHead,
           );
-          const adopted = await readCanonicalState(db);
-          await markExported(db, adopted.revision, remoteHead);
+          await markExported(
+            db,
+            (await readMetadata(db)).last_adopted_head === remoteHead
+              ? expectedRevision + 1
+              : expectedRevision + 1,
+            remoteHead,
+          );
           continue;
         } catch {
           continue;
