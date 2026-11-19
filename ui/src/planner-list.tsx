@@ -1,9 +1,10 @@
 import { List } from "@astryxdesign/core";
+import { Fragment } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { DraggableTaskRow } from "./task-row";
-import { useTaskDragState } from "./drag";
+import { TaskInsertionSlot } from "./drag";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
@@ -31,7 +32,6 @@ interface PlannerSequenceRowProps
   readonly date: string;
   readonly sequenceLength: number;
   readonly isSelected: boolean;
-  readonly dropIndicator?: "before" | "after" | undefined;
 }
 
 function PlannerSequenceRow({
@@ -42,7 +42,6 @@ function PlannerSequenceRow({
   date,
   sequenceLength,
   isSelected,
-  dropIndicator,
   onSelectTask,
   onEdit,
   onToggleComplete,
@@ -84,7 +83,6 @@ function PlannerSequenceRow({
       recurrenceSeries={recurrenceSeries}
       now={now}
       index={index}
-      {...(dropIndicator === undefined ? {} : { dropIndicator })}
     />
   );
 }
@@ -103,60 +101,36 @@ export function PlannerTaskList({
   onMove,
 }: PlannerTaskListProps): React.ReactElement | null {
   const outstanding = outstandingForDate(tasks, date);
-  const dragState = useTaskDragState();
-  const intent =
-    dragState.intent?.destination_date === date
-      ? dragState.intent
-      : null;
-  const filtered = outstanding.filter(
-    (task) => task.id !== dragState.activeTaskId,
-  );
-  const beforeTarget =
-    intent !== null && intent.destination_index < filtered.length
-      ? filtered[intent.destination_index]?.id ?? null
-      : null;
-  const afterTarget =
-    intent !== null &&
-    filtered.length > 0 &&
-    intent.destination_index === filtered.length
-      ? filtered[filtered.length - 1]?.id ?? null
-      : null;
-
-  if (outstanding.length === 0) {
-    return null;
-  }
 
   return (
     <List density="compact" edge="padded" className="jig-task-card-list">
       {outstanding.map((task, index) => (
-        <PlannerSequenceRow
-          key={task.id}
-          task={task}
-          recurrenceSeries={
-            task.recurrence_series_id === null
-              ? null
-              : recurrences.find(
-                  (series) => series.id === task.recurrence_series_id,
-                ) ?? null
-          }
-          now={now}
-          index={index}
-          date={date}
-          sequenceLength={outstanding.length}
-          isSelected={selectedTask?.id === task.id}
-          {...(task.id === beforeTarget
-            ? { dropIndicator: "before" as const }
-            : task.id === afterTarget
-              ? { dropIndicator: "after" as const }
-              : {})}
-          onSelectTask={onSelectTask}
-          onEdit={onEdit}
-          onToggleComplete={onToggleComplete}
-          onSetPriority={onSetPriority}
-          onDelete={onDelete}
-          onMove={onMove}
-        />
+        <Fragment key={task.id}>
+          <TaskInsertionSlot date={date} slotIndex={index} />
+          <PlannerSequenceRow
+            task={task}
+            recurrenceSeries={
+              task.recurrence_series_id === null
+                ? null
+                : recurrences.find(
+                    (series) => series.id === task.recurrence_series_id,
+                  ) ?? null
+            }
+            now={now}
+            index={index}
+            date={date}
+            sequenceLength={outstanding.length}
+            isSelected={selectedTask?.id === task.id}
+            onSelectTask={onSelectTask}
+            onEdit={onEdit}
+            onToggleComplete={onToggleComplete}
+            onSetPriority={onSetPriority}
+            onDelete={onDelete}
+            onMove={onMove}
+          />
+        </Fragment>
       ))}
+      <TaskInsertionSlot date={date} slotIndex={outstanding.length} />
     </List>
   );
 }
