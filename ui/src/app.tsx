@@ -831,10 +831,10 @@ function ConfiguredApp({
             </div>
           </div>
           {workspaceSurface}
-          {layoutMode === "narrow" ? (
+          {layoutMode === "narrow" && workspacePresentation === null ? (
             <CompactApplicationNavigation
               destination={destination}
-              showAdd={workspacePresentation === null}
+              showAdd
               onAdd={() =>
                 openCreate(
                   defaultAddDate(
