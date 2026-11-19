@@ -1,10 +1,10 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** NON-DEVICE IMPLEMENTATION COMPLETE, including the 2026-11-19 intent-first onboarding/reconnect/Settings remediation. Permanent hosted certification passes for every repository/host/browser/Linux/CI/emulator-testable implementation surface on the product/test candidate below. Remaining closure work is external live-acceptance evidence and the explicitly physical-device portions of J110-IMP-09/J110-IMP-15. This file does not constitute physical-device evidence.
+**Status:** REOPENED FOR MOBILE UX/UI REMEDIATION on 2026-11-19. The hosted candidate below remains valid evidence for unaffected core/runtime/Git/reminder/distribution behavior, but it is **not current closure evidence** for mobile interaction geometry, Settings information architecture, Repeat form/save UX or Task drag/drop. Physical Android use failed the prior Pangea drag hard gate and exposed broader mobile UX defects now governed by the amended FR/SD/implementation plan.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
-## Certified product/test candidate
+## Previously certified pre-remediation candidate
 
 - Governed integration branch: `v1.1` via PR #32.
 - Certified product/test candidate commit: `d29df9ebeb05eaf44666d12f6ee20ccd81673d32`.
@@ -13,7 +13,7 @@
 - Workflow result: **PASS** — Linux/browser Verify, Android deterministic build/F-Droid certification and Android API-24 runtime all completed successfully.
 - `package.json.version` remains `1.0.6` by design; the `1.1.0` version transition remains owned by the later `release/v1.1.0` metadata PR.
 
-The product/test candidate is the source state certified by the hosted run. Later evidence-only/documentation commits do not replace this candidate unless they alter executable/product/test behavior.
+This candidate is retained as historical pre-remediation evidence. A new product/test candidate and permanent Verify run are required after the reopened UX work. Do not cite run 44450324316 as proof that the amended FR-03/FR-28/FR-29/FR-31 UX contracts pass.
 
 ## Hosted non-device evidence ledger
 
@@ -35,9 +35,9 @@ The product/test candidate is the source state certified by the hosted run. Late
 | Live Linux/Desktop GitHub Device Flow/private-repo acquisition | **IMPLEMENTATION COMPLETE / EXTERNAL LIVE ACCEPTANCE PENDING** — deterministic protocol, Secret Service, managed transport, complete installation/repository pagination, provider-access recheck, clone/adoption, refresh/reconnect and failure semantics are implemented and permanently tested. A real user authorization/private-repository run remains external acceptance evidence tracked by issue #31. |
 | Live/physical Android GitHub Device Flow/private-repo acquisition | **PENDING physical-device verification**. |
 
-## Non-device implementation closure audit
+## Pre-remediation non-device audit
 
-The v1.1 repository has no known remaining non-device implementation defect.
+The prior audit remains useful for unaffected architecture, but the following repository-executable defects are now open: app-wide mobile touch geometry/menu density, Settings information design, integrated Repeat form/save semantics and replacement of failed Pangea Task movement.
 
 The closure audit confirms:
 
@@ -76,20 +76,17 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 
 ## Still required before release-candidate closure
 
-No non-device repository implementation gap remains.
+1. Implement the reopened non-device UX remediation in the order governed by `docs/implementation/v1.1-complete-implementation-plan.md`.
+2. Establish a **new** combined product/test candidate and permanent hosted Verify evidence after mobile geometry/menu, Settings IA, Repeat integration/atomic save and replacement drag code are complete.
+3. Run J110-IMP-09 on the exact new candidate APK. The old Pangea APK/result cannot close this gate.
+4. Run the remaining J110-IMP-15 physical/native matrix, including the complete mobile touch/menu/Task form/Settings usability audit plus native Git/reminder/lifecycle/interoperability checks.
+5. Complete the external live Linux/Desktop GitHub acceptance tracked by issue #31.
+6. Only after all of the above may the `release/v1.1.0` metadata/tag/Release/F-Droid publication ceremony proceed.
 
-The remaining governed evidence is:
-
-1. **External live acceptance:** verify the live **Jig Desktop & Mobile** GitHub App configuration and execute real Linux/Desktop Device Flow plus selected private-repository acquisition/synchronization through Secret Service. This is non-device external acceptance requiring an interactive GitHub user session and live Secret Service environment; it is issue #31 evidence, not an unfinished repository code task and cannot be manufactured by the repository execution surface.
-2. **Physical device:** execute J110-IMP-09 on a physical Android phone, including the exact drag/drop inter-card-gap gate.
-3. **Physical/native matrix:** execute the J110-IMP-15 Android API 24/31/33/36 matrix with at least one physical phone, including GitHub authorization/private clone, same portable dataset as Linux, offline CRUD/order, safe-area/sticky header, rollover, native reminder policy/permission/failure semantics, notification reconciliation, token expiry/reconnect, restart persistence, reconnect-after-network, Git interoperability and uninstall/reinstall continuity.
-4. Record the physical device make/model, Android/API/WebView versions, exact source/APK identity and results here.
-5. Only after external-live and physical evidence closure may the separate `release/v1.1.0` metadata transition, immutable tag/Release workflow and external F-Droid submission/publication proceed.
-
-Local `act` rehearsal is optional developer preflight and is no longer a release-candidate closure requirement; the permanent hosted workflows are authoritative.
+Local `act` remains optional developer preflight; hosted permanent workflows are authoritative.
 
 ## Physical-device evidence
 
-**NOT RUN in this ledger.** J110-IMP-09 and the physical portions of J110-IMP-15 require a recorded physical Android device, exact candidate APK/source SHA, device/API/WebView versions and the complete governed interaction/synchronization/reminder matrix.
+**PARTIAL PHYSICAL FEEDBACK RECORDED / CERTIFICATION NOT CLOSED.** Physical Android use has produced a blocking FAIL for the Pangea drag interaction (unreliable destination/drop with stranded floating-card behavior) and material UX findings for touch density, Settings and Repeat composition. Those findings reopened the design. J110-IMP-09 must be rerun on the replacement implementation; the full J110-IMP-15 matrix remains open.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.
