@@ -674,30 +674,31 @@ function executeCoreCommand(
     );
   }
 
-  if (command.type === "set_recurrence") {
-    return setTaskRecurrence(
-      state.tasks,
-      state.recurrences,
-      command.task_id,
-      command.recurrence,
-      createId,
-      createId,
-      now,
-    );
-  }
-
   let result:
     | { readonly tasks: readonly Task[]; readonly task: Task }
     | { readonly tasks: readonly Task[]; readonly deleted_task_id: string };
   switch (command.type) {
-    case "edit":
-      result = editTask(
+    case "edit": {
+      const edited = editTask(
         state.tasks,
         command.task_id,
         command.changes,
         now,
       );
-      break;
+      if (command.recurrence === undefined) {
+        result = edited;
+        break;
+      }
+      return setTaskRecurrence(
+        edited.tasks,
+        state.recurrences,
+        command.task_id,
+        command.recurrence,
+        createId,
+        createId,
+        now,
+      );
+    }
     case "move":
       result = moveTask(
         state.tasks,
