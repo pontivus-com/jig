@@ -110,6 +110,8 @@ No additional repository UX/UI remediation is currently identified by the review
 
 ## Physical-device evidence
 
+Use [physical-android-certification.md](physical-android-certification.md) as the canonical evidence record for J110-IMP-09 and J110-IMP-15. It is pinned to source `611c8ced6a854a80f24bf727c53d792f5c5d556c`, artifact `14541004265` and unpacked APK SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`. Do not mark any row PASS from browser/emulator/hosted-CI evidence.
+
 **PARTIAL PHYSICAL FEEDBACK RECORDED / CERTIFICATION NOT CLOSED.** Physical Android use has produced a blocking FAIL for the Pangea drag interaction (unreliable destination/drop with stranded floating-card behavior) and material UX findings for touch density, Settings and Repeat composition. Those findings reopened the design. J110-IMP-09 must be rerun on the replacement implementation; the full J110-IMP-15 matrix remains open.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.
