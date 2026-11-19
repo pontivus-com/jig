@@ -139,6 +139,7 @@ function workspaceTaskId(state: TaskWorkspaceState): string | null {
 }
 
 interface ConfiguredAppProps {
+  readonly layoutMode: LayoutMode;
   readonly themePreset: ThemePreset;
   readonly appearanceMode: AppearanceMode;
   readonly onThemePresetChange: (value: ThemePreset) => void;
@@ -146,12 +147,12 @@ interface ConfiguredAppProps {
 }
 
 function ConfiguredApp({
+  layoutMode,
   themePreset,
   appearanceMode,
   onThemePresetChange,
   onAppearanceModeChange,
 }: ConfiguredAppProps): React.ReactElement {
-  const layoutMode = useLayoutMode();
   const reminderNow = useReminderClock();
   const [destination, setDestination] = useState<Destination>("planner");
   const [plannerState, setPlannerState] =
@@ -875,6 +876,7 @@ function ConfiguredApp({
 
 
 export function App(): React.ReactElement {
+  const layoutMode = useLayoutMode();
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [themePreset, setThemePreset] =
@@ -936,6 +938,7 @@ export function App(): React.ReactElement {
       <LayerProvider>
         {setupStatus?.mode === "configured" ? (
           <ConfiguredApp
+            layoutMode={layoutMode}
             themePreset={themePreset}
             appearanceMode={appearanceMode}
             onThemePresetChange={changeThemePreset}
