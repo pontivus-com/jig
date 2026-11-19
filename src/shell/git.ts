@@ -52,7 +52,7 @@ export interface GitCommandResult {
 }
 
 export interface RepositorySynchronizationResult {
-  readonly status: RepositoryPushStatus;
+  readonly status: "synchronized" | "sync-issue";
   readonly retryable: boolean;
 }
 
