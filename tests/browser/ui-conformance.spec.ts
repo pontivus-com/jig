@@ -586,9 +586,11 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     const mobileActionRects = await page
       .locator(".jig-header-mobile-actions button")
       .evaluateAll((elements) =>
-        elements.map((element) => {
+        elements.flatMap((element) => {
           const rect = element.getBoundingClientRect();
-          return { left: rect.left, right: rect.right };
+          return rect.width > 0 && rect.height > 0
+            ? [{ left: rect.left, right: rect.right }]
+            : [];
         }),
       );
     for (let index = 1; index < mobileActionRects.length; index += 1) {
