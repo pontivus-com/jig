@@ -475,7 +475,7 @@ test("desktop header stays compact while narrow header uses sticky destination-s
     await menu.getByRole("menuitem", { name: /^Settings/ }).click();
 
     const narrowSettingsHeight = await headerHeight(page);
-    expect(narrowSettingsHeight).toBeGreaterThanOrEqual(44);
+    expect(narrowSettingsHeight).toBeGreaterThanOrEqual(56);
     await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
     await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(0);
@@ -508,6 +508,266 @@ test("desktop header stays compact while narrow header uses sticky destination-s
     await expect(page.getByRole("button", { name: "Add task", exact: true })).toBeVisible();
     const narrowPlannerHeight = await headerHeight(page);
     expect(narrowPlannerHeight).toBeGreaterThan(narrowSettingsHeight);
+  }
+});
+
+test("mobile interaction inventory meets the governed geometry and expanded-form contract", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await apiCommand(page, {
+    type: "create",
+    title: "Mobile geometry inventory",
+    scheduled_date: today,
+    priority: "NORMAL",
+    context: null,
+    reference: "https://example.com/mobile-geometry",
+    note: null,
+    reminder_time: null,
+  });
+  await page.reload();
+
+  const expectTarget = async (
+    locator: ReturnType<Page["locator"]>,
+    label: string,
+  ): Promise<void> => {
+    const box = await locator.boundingBox();
+    if (box === null) {
+      throw new Error(`Missing geometry for ${label}`);
+    }
+    // Layout engines can report a 48px CSS box a few ten-thousandths
+    // below 48 after device-pixel/subpixel conversion. Keep the product
+    // contract at 48 CSS px while tolerating only that floating-point noise.
+    expect(box.width, `${label} width`).toBeGreaterThanOrEqual(47.99);
+    expect(box.height, `${label} height`).toBeGreaterThanOrEqual(47.99);
+  };
+
+  for (const width of [320, 360, 390, 414] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    await waitForResponsiveHeader(page, width);
+
+    const applicationRow = await page
+      .locator(".jig-header-mobile-application-row")
+      .boundingBox();
+    const temporalRow = await page
+      .locator(".jig-header-mobile-temporal-row")
+      .boundingBox();
+    if (applicationRow === null || temporalRow === null) {
+      throw new Error("Mobile Planner header geometry unavailable");
+    }
+    expect(applicationRow.height).toBeGreaterThanOrEqual(56);
+    expect(temporalRow.height).toBeGreaterThanOrEqual(56);
+
+    await expectTarget(
+      page.getByRole("button", { name: "Planner home", exact: true }),
+      "Planner home",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Add task", exact: true }),
+      "Global Add task",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Previous week", exact: true }),
+      "Previous week",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Next week", exact: true }),
+      "Next week",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Today", exact: true }),
+      "Today",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Open navigation menu", exact: true }),
+      "Navigation menu trigger",
+    );
+    await expectTarget(
+      page.locator(".jig-date-add").first(),
+      "Date Add",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Move Mobile geometry inventory" }),
+      "Task drag grip",
+    );
+    await expectTarget(
+      page.locator(".jig-task-menu-trigger").first(),
+      "Task action menu",
+    );
+    await expectTarget(
+      page.locator(".jig-task-completion-target").first(),
+      "Task completion",
+    );
+    await expectTarget(
+      page.getByRole("link", { name: "Open reference" }).first(),
+      "Task reference",
+    );
+
+    const mobileActionRects = await page
+      .locator(".jig-header-mobile-actions button")
+      .evaluateAll((elements) =>
+        elements.flatMap((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0
+            ? [{ left: rect.left, right: rect.right }]
+            : [];
+        }),
+      );
+    for (let index = 1; index < mobileActionRects.length; index += 1) {
+      const previous = mobileActionRects[index - 1];
+      const current = mobileActionRects[index];
+      if (previous === undefined || current === undefined) {
+        throw new Error("Missing mobile header action geometry");
+      }
+      expect(
+        current.left - previous.right,
+        "mobile standalone header action spacing",
+      ).toBeGreaterThanOrEqual(8);
+    }
+
+    await page
+      .getByRole("button", { name: "Open navigation menu", exact: true })
+      .click();
+    const menuItems = page.getByRole("menuitem");
+    await expect(menuItems).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expectTarget(menuItems.nth(index), `navigation menu row ${index + 1}`);
+    }
+    await page.keyboard.press("Escape");
+
+    const widthGeometry = await page.locator(".jig-content-frame").evaluate(
+      (element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }),
+    );
+    expect(widthGeometry.scrollWidth).toBeLessThanOrEqual(
+      widthGeometry.clientWidth + 1,
+    );
+
+    await page.getByText("Mobile geometry inventory", { exact: true }).click();
+    const workspace = page.getByRole("dialog", {
+      name: "Mobile geometry inventory",
+    });
+    await expect(workspace).toBeVisible();
+
+    await expectTarget(
+      workspace.getByRole("button", { name: "Close", exact: true }),
+      "BottomSheet close",
+    );
+    await expectTarget(
+      workspace.getByRole("button", { name: "Cancel", exact: true }),
+      "Task form Cancel",
+    );
+    await expectTarget(
+      workspace.getByRole("button", { name: "Save", exact: true }),
+      "Task form Save",
+    );
+
+    const baseControls = workspace.locator(".jig-mobile-touch-control");
+    await expect(baseControls).toHaveCount(7);
+    for (let index = 0; index < 7; index += 1) {
+      await expectTarget(baseControls.nth(index), `Task form control ${index + 1}`);
+    }
+    const priorityControls = workspace.getByRole("radio");
+    await expect(priorityControls).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expectTarget(
+        priorityControls.nth(index),
+        `Priority segment ${index + 1}`,
+      );
+    }
+
+    const repeat = workspace.getByRole("combobox", { name: "Repeat" });
+    await repeat.click();
+    const repeatOptions = page.getByRole("option");
+    await expect(repeatOptions).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expectTarget(repeatOptions.nth(index), `Repeat option ${index + 1}`);
+    }
+    await page.getByRole("option", { name: "Weekly", exact: true }).click();
+
+    const weeklyControls = workspace.locator(".jig-mobile-touch-control");
+    await expect(weeklyControls).toHaveCount(9);
+    for (let index = 0; index < 9; index += 1) {
+      await expectTarget(
+        weeklyControls.nth(index),
+        `Expanded weekly control ${index + 1}`,
+      );
+    }
+
+    const weekdays = workspace.locator(".jig-repeat-weekday");
+    await expect(weekdays).toHaveCount(7);
+    for (let index = 0; index < 7; index += 1) {
+      await expectTarget(weekdays.nth(index), `Repeat weekday ${index + 1}`);
+    }
+
+    const actionRegion = workspace.locator(".jig-editor-actions");
+    const actionBefore = await actionRegion.boundingBox();
+    if (actionBefore === null) {
+      throw new Error("Task action region geometry unavailable");
+    }
+
+    const notes = workspace.getByLabel("Notes");
+    await notes.scrollIntoViewIfNeeded();
+    await expect(notes).toBeVisible();
+    await notes.focus();
+    await expect(notes).toBeFocused();
+    await expect(
+      workspace.getByRole("button", { name: "Save", exact: true }),
+    ).toBeVisible();
+
+    const actionAfter = await actionRegion.boundingBox();
+    if (actionAfter === null) {
+      throw new Error("Sticky Task action region geometry unavailable");
+    }
+    expectNear(actionAfter.y, actionBefore.y, 2);
+
+    await workspace
+      .getByRole("button", { name: "Close", exact: true })
+      .click();
+
+    await page
+      .getByRole("button", { name: "Open navigation menu", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: /^Settings/ }).click();
+
+    const settingsControls = page
+      .locator(".jig-settings-view .jig-mobile-touch-control");
+    await expect(settingsControls).toHaveCount(1);
+    await expectTarget(settingsControls.first(), "Theme selector");
+
+    const appearanceControls = page
+      .locator(".jig-settings-view")
+      .getByRole("radio");
+    await expect(appearanceControls).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expectTarget(
+        appearanceControls.nth(index),
+        `Appearance segment ${index + 1}`,
+      );
+    }
+    await expectTarget(
+      page.getByRole("button", { name: "Show diagnostics", exact: true }),
+      "Diagnostics disclosure",
+    );
+
+    const themeSelector = page.getByRole("combobox", { name: "Theme" });
+    await themeSelector.click();
+    const themeOptions = page.getByRole("option");
+    await expect(themeOptions).toHaveCount(13);
+    for (let index = 0; index < 13; index += 1) {
+      await expectTarget(
+        themeOptions.nth(index),
+        `Theme option ${index + 1}`,
+      );
+    }
+    await page.keyboard.press("Escape");
+
+    await page
+      .getByRole("button", { name: "Open navigation menu", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name: /^Planner/ }).click();
   }
 });
 
@@ -728,14 +988,14 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   let workspace = page.getByRole("dialog", {
     name: "Browser recurrence",
   });
-  await expect(
-    workspace.getByText("Not repeating", { exact: true }),
-  ).toBeVisible();
+  const repeat = workspace.getByRole("combobox", { name: "Repeat" });
+  await repeat.click();
+  await page.getByRole("option", { name: "Weekly", exact: true }).click();
   await workspace
-    .getByLabel("Repeat until")
+    .getByLabel("Ends on")
     .fill(await displayedDateValue(page, endDate));
   await workspace
-    .getByRole("button", { name: "Enable repeat", exact: true })
+    .getByRole("button", { name: "Save", exact: true })
     .click();
 
   await expect
@@ -766,7 +1026,12 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   await expect(
     page.getByLabel("Recurring task").first(),
   ).toBeVisible();
-  await expect(workspace.getByText(/until/).first()).toBeVisible();
+  await expect(
+    workspace.getByRole("combobox", { name: "Repeat" }),
+  ).toContainText("Weekly");
+  await expect(workspace.getByLabel("Ends on")).toHaveValue(
+    await displayedDateValue(page, endDate),
+  );
 
   await workspace
     .getByRole("button", { name: "Close", exact: true })
@@ -777,13 +1042,16 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
     name: "Browser recurrence",
   });
   await expect(
-    workspace.getByText(/until/).first(),
-  ).toBeVisible();
+    workspace.getByRole("combobox", { name: "Repeat" }),
+  ).toContainText("Weekly");
+  await expect(workspace.getByLabel("Ends on")).toHaveValue(
+    await displayedDateValue(page, endDate),
+  );
   await expect(
-    workspace.getByRole("button", {
-      name: "Stop repeating",
-      exact: true,
-    }),
+    workspace.getByText(
+      "Repeat changes the series schedule. Other Task fields change this Task only.",
+      { exact: true },
+    ),
   ).toBeVisible();
 
   const invokingSlot = state.tasks.find(
@@ -795,11 +1063,18 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
     throw new Error("Expected later recurrence occurrence");
   }
 
+  const repeatForExisting = workspace.getByRole("combobox", {
+    name: "Repeat",
+  });
+  await repeatForExisting.click();
+  await page
+    .getByRole("option", { name: "Does not repeat", exact: true })
+    .click();
+  await expect(
+    workspace.getByText("Stop this series when you save?", { exact: true }),
+  ).toBeVisible();
   await workspace
-    .getByRole("button", {
-      name: "Stop repeating",
-      exact: true,
-    })
+    .getByRole("button", { name: "Save", exact: true })
     .click();
 
   await expect
@@ -851,14 +1126,19 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
       }
 
       if (destination === "Settings") {
-        const columns = await page.locator(".jig-settings-grid").evaluate(
-          (element) => getComputedStyle(element).gridTemplateColumns,
-        );
-        if (width >= 1168) {
-          expect(columns.split(" ")).toHaveLength(2);
-        } else {
-          expect(columns.split(" ")).toHaveLength(1);
-        }
+        const settings = page.locator(".jig-settings-sections");
+        await expect(settings).toBeVisible();
+        await expect(
+          settings.locator(".jig-settings-section"),
+        ).toHaveCount(4);
+        const headings = await settings.getByRole("heading", { level: 2 })
+          .allTextContents();
+        expect(headings.map((value) => value.trim())).toEqual([
+          "Data & sync",
+          "Appearance",
+          "Notifications",
+          "Diagnostics",
+        ]);
       }
     }
 
@@ -1008,26 +1288,30 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Settings", exact: true }).click();
 
-  const planningData = page.locator(
-    ".jig-settings-planning .jig-settings-card",
-  );
-  const synchronization = page.locator(".jig-settings-sync-card");
-  const diagnostics = page.locator(
-    ".jig-settings-diagnostics .jig-settings-card",
-  );
+  const dataSync = page.locator(".jig-settings-section").filter({
+    has: page.getByRole("heading", { name: "Data & sync" }),
+  });
+  const diagnosticsSection = page.locator(".jig-settings-diagnostics");
 
-  await expect(planningData).toContainText("/tmp/jig-playwright-remote.git");
+  await expect(dataSync).toContainText("/tmp/jig-playwright-remote.git");
   await expect(
-    synchronization.getByText("Syncing", { exact: true }),
+    dataSync.getByText("Syncing", { exact: true }),
   ).toBeVisible();
-  await expect(synchronization.getByText("Local Git", { exact: true }))
+  await expect(dataSync.getByText("Local Git", { exact: true }))
     .toHaveCount(0);
-  await expect(synchronization.getByText("Remote Git", { exact: true }))
+  await expect(dataSync.getByText("Remote Git", { exact: true }))
     .toHaveCount(0);
   await expect(
-    synchronization.getByRole("button", { name: "Sync now", exact: true }),
+    dataSync.getByRole("button", { name: "Sync now", exact: true }),
   ).toHaveCount(0);
 
+  await expect(diagnosticsSection.getByText("Local Git", { exact: true }))
+    .toHaveCount(0);
+  await diagnosticsSection
+    .getByRole("button", { name: "Show diagnostics", exact: true })
+    .click();
+
+  const diagnostics = diagnosticsSection.locator(".jig-settings-card");
   await expect(diagnostics.getByText("Local Git", { exact: true }))
     .toBeVisible();
   await expect(diagnostics.getByText("Remote Git", { exact: true }))
@@ -1059,7 +1343,7 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
     .toBe("Synchronized");
 
   await expect(
-    synchronization.getByText("Up to date", { exact: true }),
+    dataSync.getByText("Up to date", { exact: true }),
   ).toBeVisible();
 
   const remoteRepository = diagnostics
