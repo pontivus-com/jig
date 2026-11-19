@@ -132,6 +132,7 @@ export async function runGit(
     stderr: "pipe",
     env: { ...process.env, ...extraEnv },
   });
+
   let timedOut = false;
   const timeout =
     timeoutMs === undefined
@@ -140,17 +141,23 @@ export async function runGit(
           timedOut = true;
           processHandle.kill("SIGKILL");
         }, timeoutMs);
-  const [exitCode, stdout, stderr] = await Promise.all([
-    processHandle.exited,
-    new Response(processHandle.stdout).text(),
-    new Response(processHandle.stderr).text(),
-  ]);
-  if (timeout !== null) clearTimeout(timeout);
-  return {
-    exit_code: exitCode,
-    stdout: stdout.trim(),
-    stderr: timedOut ? "Git operation timed out" : stderr.trim(),
-  };
+
+  try {
+    const [exitCode, stdout, stderr] = await Promise.all([
+      processHandle.exited,
+      new Response(processHandle.stdout).text(),
+      new Response(processHandle.stderr).text(),
+    ]);
+    return {
+      exit_code: exitCode,
+      stdout: stdout.trim(),
+      stderr: timedOut ? "Git operation timed out" : stderr.trim(),
+    };
+  } finally {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+  }
 }
 
 async function requireGit(
@@ -171,14 +178,16 @@ async function requireGit(
 async function selectedRemoteName(
   repositoryPath: string,
 ): Promise<string | null | "ambiguous"> {
-  const listed = await runGit(repositoryPath, ["remote"]);
-  if (listed.exit_code !== 0) {
+  const result = await runGit(repositoryPath, ["remote"]);
+  if (result.exit_code !== 0) {
     throw new GitAdapterError(
-      `Unable to inspect repository remotes: ${listed.stderr || listed.stdout}`,
+      `Unable to inspect repository remotes: ${result.stderr || result.stdout}`,
     );
   }
-  const remotes = listed.stdout.split("\n").filter(Boolean);
-  if (remotes.length === 0) return null;
+  const remotes = result.stdout.split("\n").filter(Boolean);
+  if (remotes.length === 0) {
+    return null;
+  }
 
   const pushDefault = await runGit(repositoryPath, [
     "config",
@@ -192,17 +201,17 @@ async function selectedRemoteName(
     return pushDefault.stdout;
   }
 
-  const branch = await runGit(repositoryPath, [
+  const branchName = await runGit(repositoryPath, [
     "symbolic-ref",
     "--quiet",
     "--short",
     "HEAD",
   ]);
-  if (branch.exit_code === 0) {
+  if (branchName.exit_code === 0 && branchName.stdout.length > 0) {
     const branchRemote = await runGit(repositoryPath, [
       "config",
       "--get",
-      `branch.${branch.stdout}.remote`,
+      `branch.${branchName.stdout}.remote`,
     ]);
     if (
       branchRemote.exit_code === 0 &&
@@ -211,59 +220,17 @@ async function selectedRemoteName(
       return branchRemote.stdout;
     }
   }
+
   return remotes.length === 1
     ? remotes[0] ?? null
     : "ambiguous";
 }
 
-export async function inspectSynchronizationAuthority(
-  config: GitAdapterConfig,
-): Promise<SynchronizationAuthority> {
-  assertAdapterPaths(config);
-  const name = await selectedRemoteName(config.repository_path);
-  if (name === null) {
-    return { state: "none" };
-  }
-  if (name === "ambiguous") {
-    return { state: "ambiguous" };
-  }
-
-  const push = await runGit(config.repository_path, [
-    "remote",
-    "get-url",
-    "--push",
-    "--all",
-    name,
-  ]);
-  const pushUrls = push.stdout.split("\n").filter(Boolean);
-  if (
-    push.exit_code !== 0 ||
-    pushUrls.length !== 1 ||
-    pushUrls[0] === undefined
-  ) {
-    return { state: "ambiguous" };
-  }
-
-  return {
-    state: "selected",
-    remote: {
-      name,
-      location: sanitizeSynchronizationRemoteLocation(
-        pushUrls[0],
-      ),
-    },
-  };
-}
-
 export async function discoverSynchronizationRemote(
   repositoryPath: string,
 ): Promise<string | null> {
-  const authority = await inspectSynchronizationAuthority({
-    repository_path: repositoryPath,
-  });
-  return authority.state === "selected"
-    ? authority.remote.name
-    : null;
+  const selected = await selectedRemoteName(repositoryPath);
+  return selected === "ambiguous" ? null : selected;
 }
 
 export async function readCurrentPortableSnapshot(
@@ -403,6 +370,45 @@ export function sanitizeSynchronizationRemoteLocation(
   }
 }
 
+export async function inspectSynchronizationAuthority(
+  config: GitAdapterConfig,
+): Promise<SynchronizationAuthority> {
+  assertAdapterPaths(config);
+  const name = await selectedRemoteName(config.repository_path);
+  if (name === null) {
+    return { state: "none" };
+  }
+  if (name === "ambiguous") {
+    return { state: "ambiguous" };
+  }
+
+  const urls = await runGit(config.repository_path, [
+    "remote",
+    "get-url",
+    "--push",
+    "--all",
+    name,
+  ]);
+  const pushUrls = urls.stdout.split("\n").filter(Boolean);
+  if (
+    urls.exit_code !== 0 ||
+    pushUrls.length !== 1 ||
+    pushUrls[0] === undefined
+  ) {
+    return { state: "ambiguous" };
+  }
+
+  return {
+    state: "selected",
+    remote: {
+      name,
+      location: sanitizeSynchronizationRemoteLocation(
+        pushUrls[0],
+      ),
+    },
+  };
+}
+
 export async function inspectSynchronizationRemote(
   config: GitAdapterConfig,
 ): Promise<SynchronizationRemote | null> {
@@ -416,11 +422,12 @@ export async function repositorySynchronizationMode(
   config: GitAdapterConfig,
 ): Promise<"local-only" | "remote" | "ambiguous"> {
   const authority = await inspectSynchronizationAuthority(config);
-  return authority.state === "none"
-    ? "local-only"
-    : authority.state === "selected"
-      ? "remote"
-      : "ambiguous";
+  if (authority.state === "none") {
+    return "local-only";
+  }
+  return authority.state === "selected"
+    ? "remote"
+    : "ambiguous";
 }
 
 export async function repositoryCommonDir(
@@ -743,19 +750,28 @@ export async function readSnapshotAtRef(
   ref: string,
   expectedDatasetId?: string,
 ): Promise<PortableSnapshot> {
-  const tree = await runGit(repositoryPath, ["ls-tree", "-r", ref]);
+  const tree = await runGit(repositoryPath, [
+    "ls-tree",
+    "-r",
+    ref,
+  ]);
   if (tree.exit_code !== 0) {
     throw new GitAdapterError(
       `Unable to enumerate candidate snapshot: ${tree.stderr}`,
     );
   }
+
   const files = new Map<string, string>();
   for (const line of tree.stdout.split("\n").filter(Boolean)) {
     const tab = line.indexOf("\t");
+    if (tab < 0) {
+      throw new GitAdapterError(
+        "Refusing malformed jig-data tree entry",
+      );
+    }
     const metadata = line.slice(0, tab).split(" ");
     const path = line.slice(tab + 1);
     if (
-      tab < 0 ||
       metadata[0] !== "100644" ||
       metadata[1] !== "blob" ||
       !(
@@ -768,11 +784,13 @@ export async function readSnapshotAtRef(
         `Refusing non-canonical jig-data tree entry ${path}`,
       );
     }
-    files.set(
-      path,
-      `${await requireGit(repositoryPath, ["show", `${ref}:${path}`])}\n`,
-    );
+    const content = await requireGit(repositoryPath, [
+      "show",
+      `${ref}:${path}`,
+    ]);
+    files.set(path, `${content}\n`);
   }
+
   return validateSnapshot(files, expectedDatasetId);
 }
 
@@ -781,7 +799,10 @@ async function refHead(
   ref: string,
 ): Promise<string | null> {
   const result = await runGit(repositoryPath, [
-    "show-ref", "--verify", "--hash", ref,
+    "show-ref",
+    "--verify",
+    "--hash",
+    ref,
   ]);
   return result.exit_code === 0 && result.stdout.length > 0
     ? result.stdout
@@ -794,7 +815,10 @@ async function ancestor(
   newer: string,
 ): Promise<boolean | null> {
   const result = await runGit(repositoryPath, [
-    "merge-base", "--is-ancestor", older, newer,
+    "merge-base",
+    "--is-ancestor",
+    older,
+    newer,
   ]);
   return result.exit_code === 0
     ? true
@@ -811,7 +835,6 @@ export async function observePortableRemote(
 ): Promise<PortableRemoteObservation> {
   const authority = await inspectSynchronizationAuthority(config);
   const localHead = await refHead(config.repository_path, DATA_REF);
-
   if (authority.state === "none") {
     return { state: "none", local_head: localHead };
   }
@@ -1018,6 +1041,7 @@ export async function pushPortableDataRef(
   ) {
     return { status: "sync-issue", retryable: false };
   }
+
   const result = await runGit(
     config.repository_path,
     [
@@ -1030,7 +1054,10 @@ export async function pushPortableDataRef(
     REMOTE_GIT_TIMEOUT_MS,
   );
   return {
-    status: result.exit_code === 0 ? "synchronized" : "sync-issue",
+    status:
+      result.exit_code === 0
+        ? "synchronized"
+        : "sync-issue",
     retryable: result.exit_code !== 0,
   };
 }
