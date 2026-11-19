@@ -104,6 +104,7 @@ interface FakeRepository {
 }
 
 interface FakeOptions {
+  readonly alignFailure?: boolean;
   readonly pushRace?: {
     readonly head: string;
     readonly snapshot: PortableSnapshot;
@@ -208,7 +209,10 @@ function fakeEffects(
         expectedHead,
         targetHead,
       ) => {
-        if (repo.localHead !== expectedHead) {
+        if (
+          options.alignFailure === true ||
+          repo.localHead !== expectedHead
+        ) {
           throw new Error("synthetic local ref race");
         }
         if (
@@ -672,6 +676,57 @@ describe("cross-installation synchronization worker", () => {
       last_exported_head: remoteHead,
       pending_sync: false,
     });
+  });
+
+  it("SYNC-E5 keeps an incompatible local-ref race in attention without pushing", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    const remoteTask = task("209", "Adopted but not aligned");
+    const remote = serializeSnapshot(
+      [remoteTask],
+      DATASET_ID,
+    );
+    const remoteHead = "7".repeat(40);
+    await markExported(db, 0, BASE_HEAD);
+    await adoptCanonicalSnapshot(
+      db,
+      [remoteTask],
+      [],
+      remoteHead,
+      0,
+    );
+
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead,
+      remoteSnapshot: remote,
+      remoteRewritten: false,
+      lineage: "remote-ahead",
+      previouslySynchronized: true,
+    };
+    const fake = fakeEffects(repo, {
+      alignFailure: true,
+    });
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      fake.effects,
+    );
+
+    expect(await controller.trigger()).toMatchObject({
+      remote: { state: "sync-issue" },
+    });
+    expect(fake.writes.count).toBe(0);
+    expect(fake.pushes.count).toBe(0);
+
+    expect(await controller.trigger()).toMatchObject({
+      remote: { state: "sync-issue" },
+    });
+    expect(fake.pushes.count).toBe(0);
+    expect(
+      (await readCanonicalState(db)).tasks[0]?.title,
+    ).toBe("Adopted but not aligned");
   });
 
   it("SYNC-E5 repairs commit-before-metadata lag without creating a duplicate commit", async () => {
