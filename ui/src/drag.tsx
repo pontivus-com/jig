@@ -1,10 +1,12 @@
 import {
-  DragDropContext,
-  Droppable,
-  type DragStart,
-  type DragUpdate,
-  type DropResult,
-} from "@hello-pangea/dnd";
+  DragDropProvider,
+  DragOverlay,
+  useDroppable,
+} from "@dnd-kit/react";
+import {
+  PointerActivationConstraints,
+  PointerSensor,
+} from "@dnd-kit/dom";
 import {
   createContext,
   useContext,
@@ -49,18 +51,64 @@ export interface TaskDragProviderProps {
   ) => Promise<boolean>;
 }
 
-function intentFor(
+function destinationIndexForSlot(
+  task: Task,
+  destinationDate: string,
+  slotIndex: number,
+): number {
+  if (
+    destinationDate === task.scheduled_date &&
+    task.position !== null &&
+    slotIndex > task.position
+  ) {
+    return slotIndex - 1;
+  }
+  return slotIndex;
+}
+
+function dropIntent(
+  tasks: readonly Task[],
   taskId: string,
-  update: DragUpdate | DropResult,
+  target: {
+    readonly type?: unknown;
+    readonly data?: Readonly<Record<string, unknown>>;
+  } | null,
 ): TaskDropIntent | null {
-  const destination = update.destination;
-  if (destination === null || destination === undefined) {
+  if (target === null || target.type !== "jig-insertion-slot") {
     return null;
   }
+  const date = target.data?.date;
+  const slotIndex = target.data?.slot_index;
+  if (
+    typeof date !== "string" ||
+    typeof slotIndex !== "number" ||
+    !Number.isInteger(slotIndex) ||
+    slotIndex < 0
+  ) {
+    return null;
+  }
+
+  const task = tasks.find((candidate) => candidate.id === taskId);
+  if (task === undefined || task.completed_at !== null) {
+    return null;
+  }
+
+  const destinationIndex = destinationIndexForSlot(
+    task,
+    date,
+    slotIndex,
+  );
+  const available = outstandingForDate(tasks, date).filter(
+    (candidate) => candidate.id !== task.id,
+  ).length;
+  if (destinationIndex < 0 || destinationIndex > available) {
+    return null;
+  }
+
   return {
-    task_id: taskId,
-    destination_date: destination.droppableId,
-    destination_index: destination.index,
+    task_id: task.id,
+    destination_date: date,
+    destination_index: destinationIndex,
   };
 }
 
@@ -70,158 +118,172 @@ export function TaskDragProvider({
   onMove,
 }: TaskDragProviderProps): React.ReactElement {
   const [state, setState] = useState<TaskDragState>(EMPTY_DRAG_STATE);
-
-  const onDragStart = (start: DragStart): void => {
-    setState({
-      activeTaskId: start.draggableId,
-      sourceDate: start.source.droppableId,
-      intent: {
-        task_id: start.draggableId,
-        destination_date: start.source.droppableId,
-        destination_index: start.source.index,
-      },
-    });
-  };
-
-  const onDragUpdate = (update: DragUpdate): void => {
-    setState((current) => ({
-      ...current,
-      intent: intentFor(update.draggableId, update),
-    }));
-  };
-
-  const onDragEnd = (result: DropResult): void => {
-    const destination = result.destination;
-    setState(EMPTY_DRAG_STATE);
-
-    if (result.reason !== "DROP" || destination === null) {
-      return;
-    }
-
-    const task = tasks.find((candidate) => candidate.id === result.draggableId);
-    if (task === undefined || task.completed_at !== null) {
-      return;
-    }
-
-    const filteredDestination = outstandingForDate(
-      tasks,
-      destination.droppableId,
-    ).filter((candidate) => candidate.id !== task.id);
-    if (
-      destination.index < 0 ||
-      destination.index > filteredDestination.length
-    ) {
-      return;
-    }
-
-    if (
-      result.source.droppableId === destination.droppableId &&
-      result.source.index === destination.index
-    ) {
-      return;
-    }
-
-    void onMove(
-      task.id,
-      destination.droppableId,
-      destination.index,
-    );
-  };
+  const activeTask =
+    state.activeTaskId === null
+      ? null
+      : tasks.find((task) => task.id === state.activeTaskId) ?? null;
 
   return (
-    <DragDropContext
-      onDragStart={onDragStart}
-      onDragUpdate={onDragUpdate}
-      onDragEnd={onDragEnd}
+    <DragDropProvider
+      sensors={(defaults) => [
+        ...defaults.filter((sensor) => sensor !== PointerSensor),
+        PointerSensor.configure({
+          activationConstraints: [
+            new PointerActivationConstraints.Distance({ value: 6 }),
+          ],
+        }),
+      ]}
+      onDragStart={({ operation }) => {
+        const taskId =
+          operation.source === null
+            ? null
+            : String(operation.source.id);
+        const task =
+          taskId === null
+            ? null
+            : tasks.find((candidate) => candidate.id === taskId) ?? null;
+        setState({
+          activeTaskId: taskId,
+          sourceDate: task?.scheduled_date ?? null,
+          intent: null,
+        });
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        const source = event.operation.source;
+        const target = event.operation.target;
+        if (source === null) {
+          setState((current) => ({ ...current, intent: null }));
+          return;
+        }
+        const intent = dropIntent(
+          tasks,
+          String(source.id),
+          target,
+        );
+        setState((current) => ({ ...current, intent }));
+      }}
+      onDragEnd={(event) => {
+        const source = event.operation.source;
+        const target = event.operation.target;
+        const intent =
+          source === null
+            ? null
+            : dropIntent(tasks, String(source.id), target);
+        setState(EMPTY_DRAG_STATE);
+
+        if (event.canceled || source === null || intent === null) {
+          return;
+        }
+
+        const task = tasks.find(
+          (candidate) => candidate.id === intent.task_id,
+        );
+        if (
+          task === undefined ||
+          task.completed_at !== null ||
+          (task.scheduled_date === intent.destination_date &&
+            task.position === intent.destination_index)
+        ) {
+          return;
+        }
+
+        void onMove(
+          intent.task_id,
+          intent.destination_date,
+          intent.destination_index,
+        );
+      }}
     >
       <TaskDragContext.Provider value={state}>
         <div
           className="jig-task-drag-scope"
+          data-jig-drag-active={state.activeTaskId === null ? "false" : "true"}
           data-jig-drop-date={state.intent?.destination_date ?? ""}
           data-jig-drop-index={state.intent?.destination_index ?? ""}
         >
           {children}
         </div>
+        <DragOverlay>
+          {activeTask === null ? null : (
+            <TaskCardPreview task={activeTask} />
+          )}
+        </DragOverlay>
       </TaskDragContext.Provider>
-    </DragDropContext>
+    </DragDropProvider>
+  );
+}
+
+export interface TaskInsertionSlotProps {
+  readonly date: string;
+  readonly slotIndex: number;
+}
+
+export function TaskInsertionSlot({
+  date,
+  slotIndex,
+}: TaskInsertionSlotProps): React.ReactElement {
+  const { ref, isDropTarget } = useDroppable({
+    id: `jig-slot-${date}-${slotIndex}`,
+    type: "jig-insertion-slot",
+    accept: "jig-task",
+    data: {
+      date,
+      slot_index: slotIndex,
+    },
+  });
+
+  const slotRef = (element: HTMLLIElement | null): void => {
+    ref(element);
+  };
+
+  return (
+    <li
+      ref={slotRef}
+      role="presentation"
+      className={[
+        "jig-task-insertion-slot",
+        isDropTarget ? "jig-task-insertion-slot-active" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      data-jig-drop-slot={slotIndex}
+      aria-hidden="true"
+    >
+      <span className="jig-task-drop-indicator" />
+    </li>
   );
 }
 
 export interface DateDropZoneProps {
   readonly date: string;
-  readonly tasks: readonly Task[];
   readonly children: ReactNode;
   readonly className?: string;
 }
 
 export function DateDropZone({
   date,
-  tasks,
   children,
   className,
 }: DateDropZoneProps): React.ReactElement {
-  const dragState = useTaskDragState();
-  const outstanding = outstandingForDate(tasks, date).filter(
-    (task) => task.id !== dragState.activeTaskId,
-  );
-  const emptyIntent =
-    dragState.intent?.destination_date === date &&
-    outstanding.length === 0;
+  const state = useTaskDragState();
   const crossDateActive =
-    dragState.intent?.destination_date === date &&
-    dragState.sourceDate !== null &&
-    dragState.sourceDate !== date;
+    state.intent?.destination_date === date &&
+    state.sourceDate !== null &&
+    state.sourceDate !== date;
 
   return (
-    <Droppable
-      droppableId={date}
-      type="jig-task"
-      renderClone={(provided, snapshot, rubric) => {
-        const task = tasks.find(
-          (candidate) => candidate.id === rubric.draggableId,
-        );
-        return (
-          <div
-            ref={provided.innerRef}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            className={snapshot.isDragging ? "jig-drag-clone-shell" : ""}
-          >
-            {task === undefined ? null : <TaskCardPreview task={task} />}
-          </div>
-        );
-      }}
+    <div
+      className={[
+        className,
+        "jig-date-drop-zone",
+        crossDateActive ? "jig-date-drop-zone-active" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      data-date={date}
     >
-      {(provided, snapshot) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.droppableProps}
-          className={[
-            className,
-            "jig-date-drop-zone",
-            snapshot.isDraggingOver && crossDateActive
-              ? "jig-date-drop-zone-active"
-              : "",
-            emptyIntent ? "jig-date-drop-zone-empty-target" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          {children}
-          {emptyIntent ? (
-            <>
-              <span
-                className="jig-task-drop-indicator jig-task-drop-indicator-empty"
-                aria-hidden="true"
-              />
-              <span className="jig-visually-hidden">
-                Drop task at start of {date}
-              </span>
-            </>
-          ) : null}
-          {provided.placeholder}
-        </div>
-      )}
-    </Droppable>
+      {children}
+    </div>
   );
 }
