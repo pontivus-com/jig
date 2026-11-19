@@ -3,6 +3,7 @@ import {
   mkdtemp,
   readFile,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -13,6 +14,7 @@ import {
   ensureJigLocalExclude,
   ensurePortableData,
   GitAdapterError,
+  inspectSynchronizationAuthority,
   inspectSynchronizationRemote,
   observePortableRemote,
   pushPortableDataRef,
@@ -258,6 +260,82 @@ describe("isolated jig-data adapter", () => {
     );
   });
 
+  it("accepts protocol-different fetch/push URLs only when they identify one logical repository", async () => {
+    const repo = await fixture();
+    await git(repo, [
+      "remote",
+      "add",
+      "origin",
+      "https://github.com/pontivus-com/jig-data.git",
+    ]);
+    await git(repo, [
+      "remote",
+      "set-url",
+      "--push",
+      "origin",
+      "git@github.com:pontivus-com/jig-data.git",
+    ]);
+
+    await expect(
+      inspectSynchronizationAuthority({
+        repository_path: repo,
+      }),
+    ).resolves.toMatchObject({
+      state: "selected",
+      remote: { name: "origin" },
+    });
+
+    await git(repo, [
+      "remote",
+      "set-url",
+      "--push",
+      "origin",
+      "git@github.com:pontivus-com/different-data.git",
+    ]);
+    await expect(
+      inspectSynchronizationAuthority({
+        repository_path: repo,
+      }),
+    ).resolves.toStrictEqual({ state: "ambiguous" });
+  });
+
+  it("refuses multiple effective push destinations instead of partially synchronizing", async () => {
+    const repo = await fixture();
+    await git(repo, [
+      "remote",
+      "add",
+      "origin",
+      "https://example.invalid/team/jig-data.git",
+    ]);
+    await git(repo, [
+      "remote",
+      "set-url",
+      "--add",
+      "--push",
+      "origin",
+      "https://backup.invalid/team/jig-data.git",
+    ]);
+    await git(repo, [
+      "remote",
+      "set-url",
+      "--add",
+      "--push",
+      "origin",
+      "https://example.invalid/team/jig-data.git",
+    ]);
+
+    await expect(
+      inspectSynchronizationAuthority({
+        repository_path: repo,
+      }),
+    ).resolves.toStrictEqual({ state: "ambiguous" });
+    expect(
+      await repositorySynchronizationMode({
+        repository_path: repo,
+      }),
+    ).toBe("ambiguous");
+  });
+
   it("reports the selected synchronization remote without exposing credentials", async () => {
     const repo = await fixture();
     await git(repo, [
@@ -403,6 +481,55 @@ describe("isolated jig-data adapter", () => {
     );
     await git(writer, ["add", "unexpected.txt"]);
     await git(writer, ["commit", "-m", "Invalid portable tree"]);
+    await git(writer, ["push", "origin", "jig-data"]);
+
+    await expect(
+      observePortableRemote(config, DATASET_ID),
+    ).rejects.toThrow(/non-canonical jig-data tree entry/);
+  });
+
+  it("rejects symlink entries on jig-data before adoption", async () => {
+    const repo = await fixture();
+    const config = { repository_path: repo } as const;
+    await ensurePortableData(config, DATASET_ID);
+    await writePortableSnapshot(
+      config,
+      serializeSnapshot([], DATASET_ID),
+      0,
+    );
+    const remote = await remoteFixture(repo);
+    const writer = await cloneDataBranch(remote, "symlink-tree");
+    await symlink("format.json", join(writer, "alias.json"));
+    await git(writer, ["add", "alias.json"]);
+    await git(writer, ["commit", "-m", "Add invalid symlink"]);
+    await git(writer, ["push", "origin", "jig-data"]);
+
+    await expect(
+      observePortableRemote(config, DATASET_ID),
+    ).rejects.toThrow(/non-canonical jig-data tree entry/);
+  });
+
+  it("rejects submodule entries on jig-data before adoption", async () => {
+    const repo = await fixture();
+    const config = { repository_path: repo } as const;
+    await ensurePortableData(config, DATASET_ID);
+    await writePortableSnapshot(
+      config,
+      serializeSnapshot([], DATASET_ID),
+      0,
+    );
+    const remote = await remoteFixture(repo);
+    const writer = await cloneDataBranch(remote, "submodule-tree");
+    const other = await fixture();
+    await git(writer, [
+      "-c",
+      "protocol.file.allow=always",
+      "submodule",
+      "add",
+      other,
+      "embedded",
+    ]);
+    await git(writer, ["commit", "-m", "Add invalid submodule"]);
     await git(writer, ["push", "origin", "jig-data"]);
 
     await expect(
