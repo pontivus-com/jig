@@ -588,13 +588,14 @@ export function createSyncController(
       if (decision === "adopt-remote") {
         try {
           const expectedRevision = state.revision;
-          await applySynchronizedCanonicalState(
-            db,
-            expectedRevision,
-            remoteSnapshot.tasks,
-            remoteSnapshot.recurrences,
-            remoteHead,
-          );
+          const applied =
+            await applySynchronizedCanonicalState(
+              db,
+              expectedRevision,
+              remoteSnapshot.tasks,
+              remoteSnapshot.recurrences,
+              remoteHead,
+            );
           await effects.alignLocal(
             adapter,
             localHead,
@@ -602,9 +603,7 @@ export function createSyncController(
           );
           await markExported(
             db,
-            (await readMetadata(db)).last_adopted_head === remoteHead
-              ? expectedRevision + 1
-              : expectedRevision + 1,
+            applied.revision,
             remoteHead,
           );
           continue;
