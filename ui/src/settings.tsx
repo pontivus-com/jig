@@ -14,6 +14,7 @@ import type {
 } from "../../src/protocol";
 import {
   localGitStatusPresentation,
+  planningDataHomePresentation,
   remoteGitStatusPresentation,
   repositoryStatusPresentation,
 } from "./repository-status";
@@ -58,7 +59,6 @@ export interface SettingsViewProps {
   readonly onAppearanceModeChange: (value: AppearanceMode) => void;
   readonly onSync: () => Promise<void>;
   readonly onReconnectGitHub: () => Promise<void>;
-  readonly onRefreshGitHubReconnect: () => Promise<void>;
 }
 
 function notificationStatusMessage(
@@ -105,13 +105,15 @@ export function SettingsView({
   onAppearanceModeChange,
   onSync,
   onReconnectGitHub,
-  onRefreshGitHubReconnect,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
     useState<NotificationSettingsState | null>(null);
   const repositoryStatus = repositoryStatusPresentation(status);
+  const planningDataHome = planningDataHomePresentation(status);
   const localGitStatus = localGitStatusPresentation(status);
   const remoteGitStatus = remoteGitStatusPresentation(status);
+  const synchronizationNeedsAttention =
+    repositoryStatus.key === "sync-issue";
 
   useEffect(() => {
     let disposed = false;
@@ -160,9 +162,8 @@ export function SettingsView({
             dividers={["top", "bottom", "start", "end"]}
           >
             <VStack gap={3}>
-              <strong>Repository</strong>
-              <p>{status?.repository_path ?? "Unavailable"}</p>
-              <small>Selected planning-data home · informational only</small>
+              <strong>{planningDataHome.label}</strong>
+              <p>{planningDataHome.detail}</p>
             </VStack>
           </Section>
         </section>
@@ -181,38 +182,23 @@ export function SettingsView({
             <VStack gap={3} height="100%">
               <strong>{repositoryStatus.label}</strong>
               <p>{repositoryStatus.message}</p>
-              <dl className="jig-diagnostics">
-                <div>
-                  <dt>Service</dt>
-                  <dd>{status?.ready ? "Running" : "Unavailable"}</dd>
-                </div>
-                <div>
-                  <dt>Local Git</dt>
-                  <dd title={localGitStatus.message}>
-                    {localGitStatus.label}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Remote Git</dt>
-                  <dd title={remoteGitStatus.message}>
-                    {remoteGitStatus.label}
-                  </dd>
-                </div>
-                {remoteGitStatus.remoteLocation === null ? null : (
-                  <div>
-                    <dt>Remote repository</dt>
-                    <dd>
-                      <span>{remoteGitStatus.remoteLocation}</span>
-                      <small className="jig-settings-remote-name">
-                        Git remote: {remoteGitStatus.remoteName}
-                      </small>
-                    </dd>
-                  </div>
-                )}
-              </dl>
-              <div className="jig-settings-sync-action">
+
+              {synchronizationNeedsAttention &&
+              githubReconnectAvailable &&
+              githubReconnect === null ? (
                 <Button
-                  label="Sync now"
+                  label="Reconnect GitHub"
+                  variant="secondary"
+                  width={190}
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onReconnectGitHub();
+                  }}
+                />
+              ) : synchronizationNeedsAttention &&
+                !githubReconnectAvailable ? (
+                <Button
+                  label="Try again"
                   variant="secondary"
                   width={190}
                   isLoading={isOperating}
@@ -220,27 +206,24 @@ export function SettingsView({
                     void onSync();
                   }}
                 />
-                {githubReconnectAvailable &&
-                status?.repository_status.remote.state === "sync-issue" &&
-                githubReconnect === null ? (
-                  <Button
-                    label="Reconnect GitHub"
-                    variant="secondary"
-                    width={190}
-                    isLoading={isOperating}
-                    onClick={() => {
-                      void onReconnectGitHub();
-                    }}
-                  />
-                ) : null}
-              </div>
+              ) : null}
+
               <GitHubDeviceFlowPanel
                 authorization={githubReconnect?.authorization ?? null}
-                isOperating={isOperating}
                 purpose="reconnect"
-                refreshLabel="Refresh GitHub authorization"
-                onRefresh={onRefreshGitHubReconnect}
               />
+
+              {githubReconnect?.state === "attention" ? (
+                <Button
+                  label="Try reconnecting GitHub"
+                  variant="secondary"
+                  width={190}
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onReconnectGitHub();
+                  }}
+                />
+              ) : null}
             </VStack>
           </Section>
         </section>
@@ -344,24 +327,66 @@ export function SettingsView({
             padding={5}
             dividers={["top", "bottom", "start", "end"]}
           >
-            <dl className="jig-diagnostics">
-              <div>
-                <dt>Jig service</dt>
-                <dd>{status?.ready ? "Healthy" : "Unavailable"}</dd>
-              </div>
-              <div>
-                <dt>Local database</dt>
-                <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
-              </div>
-              <div>
-                <dt>Portable data</dt>
-                <dd>
-                  {diagnostics?.repository_adapter_healthy
-                    ? "Healthy"
-                    : "Needs attention"}
-                </dd>
-              </div>
-            </dl>
+            <VStack gap={3}>
+              <dl className="jig-diagnostics">
+                <div>
+                  <dt>Repository path</dt>
+                  <dd>{status?.repository_path ?? "Unavailable"}</dd>
+                </div>
+                <div>
+                  <dt>Jig service</dt>
+                  <dd>{status?.ready ? "Healthy" : "Unavailable"}</dd>
+                </div>
+                <div>
+                  <dt>Local database</dt>
+                  <dd>
+                    {diagnostics?.sqlite_available
+                      ? "Available"
+                      : "Unavailable"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Portable data</dt>
+                  <dd>
+                    {diagnostics?.repository_adapter_healthy
+                      ? "Healthy"
+                      : "Needs attention"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Local Git</dt>
+                  <dd title={localGitStatus.message}>
+                    {localGitStatus.label}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Remote Git</dt>
+                  <dd title={remoteGitStatus.message}>
+                    {remoteGitStatus.label}
+                  </dd>
+                </div>
+                {remoteGitStatus.remoteLocation === null ? null : (
+                  <div>
+                    <dt>Remote repository</dt>
+                    <dd>
+                      <span>{remoteGitStatus.remoteLocation}</span>
+                      <small className="jig-settings-remote-name">
+                        Git remote: {remoteGitStatus.remoteName}
+                      </small>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              <Button
+                label="Sync now"
+                variant="secondary"
+                size="sm"
+                isLoading={isOperating}
+                onClick={() => {
+                  void onSync();
+                }}
+              />
+            </VStack>
           </Section>
         </section>
       </div>
@@ -374,7 +399,9 @@ export function SettingsView({
       >
         <VStack gap={1.5}>
           <strong>Local-first behavior</strong>
-          <p>Local planning remains usable when synchronization is unavailable.</p>
+          <p>
+            Local planning remains usable when synchronization is unavailable.
+          </p>
           <p>
             Notifications require explicit permission; unrelated repository
             content is never touched.
