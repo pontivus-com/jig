@@ -511,6 +511,162 @@ test("desktop header stays compact while narrow header uses sticky destination-s
   }
 });
 
+test("mobile interaction inventory meets the governed geometry and expanded-form contract", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Mobile geometry inventory", today);
+  await page.reload();
+
+  const expectTarget = async (
+    locator: ReturnType<Page["locator"]>,
+    label: string,
+  ): Promise<void> => {
+    const box = await locator.boundingBox();
+    if (box === null) {
+      throw new Error(`Missing geometry for ${label}`);
+    }
+    expect(box.width, `${label} width`).toBeGreaterThanOrEqual(48);
+    expect(box.height, `${label} height`).toBeGreaterThanOrEqual(48);
+  };
+
+  for (const width of [320, 360, 390, 414] as const) {
+    await page.setViewportSize({ width, height: 844 });
+    await waitForResponsiveHeader(page, width);
+
+    const applicationRow = await page
+      .locator(".jig-header-mobile-application-row")
+      .boundingBox();
+    const temporalRow = await page
+      .locator(".jig-header-mobile-temporal-row")
+      .boundingBox();
+    if (applicationRow === null || temporalRow === null) {
+      throw new Error("Mobile Planner header geometry unavailable");
+    }
+    expect(applicationRow.height).toBeGreaterThanOrEqual(56);
+    expect(temporalRow.height).toBeGreaterThanOrEqual(56);
+
+    await expectTarget(
+      page.getByRole("button", { name: "Planner home", exact: true }),
+      "Planner home",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Add task", exact: true }),
+      "Global Add task",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Previous week", exact: true }),
+      "Previous week",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Next week", exact: true }),
+      "Next week",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Today", exact: true }),
+      "Today",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Open navigation menu", exact: true }),
+      "Navigation menu trigger",
+    );
+    await expectTarget(
+      page.locator(".jig-date-add").first(),
+      "Date Add",
+    );
+    await expectTarget(
+      page.getByRole("button", { name: "Move Mobile geometry inventory" }),
+      "Task drag grip",
+    );
+    await expectTarget(
+      page.locator(".jig-task-menu-trigger").first(),
+      "Task action menu",
+    );
+
+    const mobileActionRects = await page
+      .locator(".jig-header-mobile-actions button")
+      .evaluateAll((elements) =>
+        elements.map((element) => {
+          const rect = element.getBoundingClientRect();
+          return { left: rect.left, right: rect.right };
+        }),
+      );
+    for (let index = 1; index < mobileActionRects.length; index += 1) {
+      const previous = mobileActionRects[index - 1];
+      const current = mobileActionRects[index];
+      if (previous === undefined || current === undefined) {
+        throw new Error("Missing mobile header action geometry");
+      }
+      expect(
+        current.left - previous.right,
+        "mobile standalone header action spacing",
+      ).toBeGreaterThanOrEqual(8);
+    }
+
+    await page
+      .getByRole("button", { name: "Open navigation menu", exact: true })
+      .click();
+    const menuItems = page.getByRole("menuitem");
+    await expect(menuItems).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await expectTarget(menuItems.nth(index), `navigation menu row ${index + 1}`);
+    }
+    await page.keyboard.press("Escape");
+
+    const widthGeometry = await page.locator(".jig-content-frame").evaluate(
+      (element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }),
+    );
+    expect(widthGeometry.scrollWidth).toBeLessThanOrEqual(
+      widthGeometry.clientWidth + 1,
+    );
+
+    await page.getByText("Mobile geometry inventory", { exact: true }).click();
+    const workspace = page.getByRole("dialog", {
+      name: "Mobile geometry inventory",
+    });
+    await expect(workspace).toBeVisible();
+
+    await expectTarget(
+      workspace.getByRole("button", { name: "Close", exact: true }),
+      "BottomSheet close",
+    );
+    await expectTarget(
+      workspace.getByRole("button", { name: "Cancel", exact: true }),
+      "Task form Cancel",
+    );
+    await expectTarget(
+      workspace.getByRole("button", { name: "Save", exact: true }),
+      "Task form Save",
+    );
+
+    const repeat = workspace.getByRole("combobox", { name: "Repeat" });
+    await repeat.click();
+    await page.getByRole("option", { name: "Weekly", exact: true }).click();
+
+    const weekdays = workspace.locator(".jig-repeat-weekday");
+    await expect(weekdays).toHaveCount(7);
+    for (let index = 0; index < 7; index += 1) {
+      await expectTarget(weekdays.nth(index), `Repeat weekday ${index + 1}`);
+    }
+
+    const notes = workspace.getByLabel("Notes");
+    await notes.scrollIntoViewIfNeeded();
+    await expect(notes).toBeVisible();
+    await notes.focus();
+    await expect(notes).toBeFocused();
+    await expect(
+      workspace.getByRole("button", { name: "Save", exact: true }),
+    ).toBeAttached();
+
+    await workspace
+      .getByRole("button", { name: "Close", exact: true })
+      .click();
+  }
+});
+
 test("History and Settings headings exist once in the application header", async ({
   page,
 }) => {
