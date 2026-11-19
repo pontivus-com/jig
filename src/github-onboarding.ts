@@ -3,6 +3,7 @@ import type {
   GitHubCredential,
   GitHubInstallation,
   GitHubOnboardingSnapshot,
+  GitHubRepository,
   GitHubRepositoryChoice,
 } from "./github";
 import {
@@ -276,7 +277,7 @@ export class GitHubOnboardingController<TAcquired> {
       const choices = new Map<number, GitHubRepositoryChoice>();
       let restrictedProviderUrl: string | null = null;
       for (const installation of installations) {
-        let repositories;
+        let repositories: readonly GitHubRepository[];
         try {
           repositories = await (
             this.dependencies.list_repositories ??
