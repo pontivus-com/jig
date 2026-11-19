@@ -213,6 +213,41 @@ function recurrenceSemanticallyEqual(
   );
 }
 
+interface MergedValue<T> {
+  readonly state: "merged";
+  readonly value: T;
+}
+
+interface ConflictingValue {
+  readonly state: "conflict";
+  readonly field: string;
+}
+
+function mergeValue<T>(
+  field: string,
+  base: T,
+  local: T,
+  remote: T,
+): MergedValue<T> | ConflictingValue {
+  const localChanged = !sameValue(local, base);
+  const remoteChanged = !sameValue(remote, base);
+  if (
+    localChanged &&
+    remoteChanged &&
+    !sameValue(local, remote)
+  ) {
+    return { state: "conflict", field };
+  }
+  return {
+    state: "merged",
+    value: localChanged
+      ? local
+      : remoteChanged
+        ? remote
+        : base,
+  };
+}
+
 function mergeTask(
   base: Task | undefined,
   local: Task | undefined,
@@ -258,119 +293,124 @@ function mergeTask(
     return `Task ${base.id} changed immutable created_at metadata`;
   }
 
-  const merged: {
-    id: string;
-    title: string;
-    scheduled_date: string;
-    position: number | null;
-    priority: Task["priority"];
-    context: string | null;
-    reference: string | null;
-    note: string | null;
-    reminder_time: string | null;
-    recurrence_series_id: string | null;
-    recurrence_occurrence_date: string | null;
-    completed_at: string | null;
-    created_at: string;
-    updated_at: string;
-  } = {
+  const title = mergeValue(
+    "title",
+    base.title,
+    local.title,
+    remote.title,
+  );
+  const scheduledDate = mergeValue(
+    "scheduled_date",
+    base.scheduled_date,
+    local.scheduled_date,
+    remote.scheduled_date,
+  );
+  const priority = mergeValue(
+    "priority",
+    base.priority,
+    local.priority,
+    remote.priority,
+  );
+  const context = mergeValue(
+    "context",
+    base.context,
+    local.context,
+    remote.context,
+  );
+  const reference = mergeValue(
+    "reference",
+    base.reference,
+    local.reference,
+    remote.reference,
+  );
+  const note = mergeValue(
+    "note",
+    base.note,
+    local.note,
+    remote.note,
+  );
+  const reminderTime = mergeValue(
+    "reminder_time",
+    base.reminder_time,
+    local.reminder_time,
+    remote.reminder_time,
+  );
+  const recurrenceSeriesId = mergeValue(
+    "recurrence_series_id",
+    base.recurrence_series_id,
+    local.recurrence_series_id,
+    remote.recurrence_series_id,
+  );
+  const recurrenceOccurrenceDate = mergeValue(
+    "recurrence_occurrence_date",
+    base.recurrence_occurrence_date,
+    local.recurrence_occurrence_date,
+    remote.recurrence_occurrence_date,
+  );
+  const completedAt = mergeValue(
+    "completed_at",
+    base.completed_at,
+    local.completed_at,
+    remote.completed_at,
+  );
+
+  const values = [
+    title,
+    scheduledDate,
+    priority,
+    context,
+    reference,
+    note,
+    reminderTime,
+    recurrenceSeriesId,
+    recurrenceOccurrenceDate,
+    completedAt,
+  ];
+  const conflict = values.find(
+    (value): value is ConflictingValue =>
+      value.state === "conflict",
+  );
+  if (conflict !== undefined) {
+    return `Task ${base.id} has conflicting ${conflict.field} changes`;
+  }
+  if (
+    title.state !== "merged" ||
+    scheduledDate.state !== "merged" ||
+    priority.state !== "merged" ||
+    context.state !== "merged" ||
+    reference.state !== "merged" ||
+    note.state !== "merged" ||
+    reminderTime.state !== "merged" ||
+    recurrenceSeriesId.state !== "merged" ||
+    recurrenceOccurrenceDate.state !== "merged" ||
+    completedAt.state !== "merged"
+  ) {
+    return `Task ${base.id} reconciliation did not resolve every field`;
+  }
+
+  return validateTask({
     id: base.id,
-    title: base.title,
-    scheduled_date: base.scheduled_date,
-    position: base.position,
-    priority: base.priority,
-    context: base.context,
-    reference: base.reference,
-    note: base.note,
-    reminder_time: base.reminder_time,
-    recurrence_series_id: base.recurrence_series_id,
-    recurrence_occurrence_date: base.recurrence_occurrence_date,
-    completed_at: base.completed_at,
+    title: title.value,
+    scheduled_date: scheduledDate.value,
+    position:
+      completedAt.value === null
+        ? base.position ?? local.position ?? remote.position ?? 0
+        : null,
+    priority: priority.value,
+    context: context.value,
+    reference: reference.value,
+    note: note.value,
+    reminder_time: reminderTime.value,
+    recurrence_series_id: recurrenceSeriesId.value,
+    recurrence_occurrence_date: recurrenceOccurrenceDate.value,
+    completed_at: completedAt.value,
     created_at: base.created_at,
     updated_at: latestInstant(
       base.updated_at,
       local.updated_at,
       remote.updated_at,
     ),
-  };
-
-  for (const field of TASK_FIELDS) {
-    const baseValue = base[field];
-    const localValue = local[field];
-    const remoteValue = remote[field];
-    const localChanged = !sameValue(localValue, baseValue);
-    const remoteChanged = !sameValue(remoteValue, baseValue);
-
-    if (
-      localChanged &&
-      remoteChanged &&
-      !sameValue(localValue, remoteValue)
-    ) {
-      return `Task ${base.id} has conflicting ${field} changes`;
-    }
-
-    const value = localChanged
-      ? localValue
-      : remoteChanged
-        ? remoteValue
-        : baseValue;
-
-    switch (field) {
-      case "title":
-        merged.title = value as string;
-        break;
-      case "scheduled_date":
-        merged.scheduled_date = value as string;
-        break;
-      case "priority":
-        merged.priority = value as Task["priority"];
-        break;
-      case "context":
-        merged.context = value as string | null;
-        break;
-      case "reference":
-        merged.reference = value as string | null;
-        break;
-      case "note":
-        merged.note = value as string | null;
-        break;
-      case "reminder_time":
-        merged.reminder_time = value as string | null;
-        break;
-      case "recurrence_series_id":
-        merged.recurrence_series_id = value as string | null;
-        break;
-      case "recurrence_occurrence_date":
-        merged.recurrence_occurrence_date = value as string | null;
-        break;
-      case "completed_at":
-        merged.completed_at = value as string | null;
-        break;
-    }
-  }
-
-  merged.position =
-    merged.completed_at === null
-      ? base.position ?? local.position ?? remote.position ?? 0
-      : null;
-  return validateTask(merged);
-}
-
-function mergePattern(
-  base: RecurrencePattern,
-  local: RecurrencePattern,
-  remote: RecurrencePattern,
-): RecurrencePattern | string {
-  const localChanged = !sameValue(local, base);
-  const remoteChanged = !sameValue(remote, base);
-  if (
-    localChanged &&
-    remoteChanged &&
-    !sameValue(local, remote)
-  ) {
-    return "recurrence pattern changed differently";
-  }
-  return localChanged ? local : remoteChanged ? remote : base;
+  });
 }
 
 function mergeRecurrence(
@@ -418,53 +458,45 @@ function mergeRecurrence(
     return `Recurrence series ${base.id} changed immutable created_at metadata`;
   }
 
-  let effectiveFrom = base.effective_from;
-  let endDate = base.end_date;
-  let pattern: RecurrencePattern = base.pattern;
-
-  for (const field of RECURRENCE_FIELDS) {
-    if (field === "pattern") {
-      const mergedPattern = mergePattern(
-        base.pattern,
-        local.pattern,
-        remote.pattern,
-      );
-      if (typeof mergedPattern === "string") {
-        return `Recurrence series ${base.id} ${mergedPattern}`;
-      }
-      pattern = mergedPattern;
-      continue;
-    }
-
-    const baseValue = base[field];
-    const localValue = local[field];
-    const remoteValue = remote[field];
-    const localChanged = localValue !== baseValue;
-    const remoteChanged = remoteValue !== baseValue;
-    if (
-      localChanged &&
-      remoteChanged &&
-      localValue !== remoteValue
-    ) {
-      return `Recurrence series ${base.id} has conflicting ${field} changes`;
-    }
-    const value = localChanged
-      ? localValue
-      : remoteChanged
-        ? remoteValue
-        : baseValue;
-    if (field === "effective_from") {
-      effectiveFrom = value;
-    } else {
-      endDate = value;
-    }
+  const effectiveFrom = mergeValue(
+    "effective_from",
+    base.effective_from,
+    local.effective_from,
+    remote.effective_from,
+  );
+  const endDate = mergeValue(
+    "end_date",
+    base.end_date,
+    local.end_date,
+    remote.end_date,
+  );
+  const pattern = mergeValue(
+    "pattern",
+    base.pattern,
+    local.pattern,
+    remote.pattern,
+  );
+  const values = [effectiveFrom, endDate, pattern];
+  const conflict = values.find(
+    (value): value is ConflictingValue =>
+      value.state === "conflict",
+  );
+  if (conflict !== undefined) {
+    return `Recurrence series ${base.id} has conflicting ${conflict.field} changes`;
+  }
+  if (
+    effectiveFrom.state !== "merged" ||
+    endDate.state !== "merged" ||
+    pattern.state !== "merged"
+  ) {
+    return `Recurrence series ${base.id} reconciliation did not resolve every field`;
   }
 
   return validateRecurrenceSeries({
     id: base.id,
-    effective_from: effectiveFrom,
-    end_date: endDate,
-    pattern,
+    effective_from: effectiveFrom.value,
+    end_date: endDate.value,
+    pattern: pattern.value,
     created_at: base.created_at,
     updated_at: latestInstant(
       base.updated_at,
