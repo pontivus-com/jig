@@ -13,7 +13,7 @@
 - Workflow result: **PASS** — Linux/browser Verify, Android deterministic build/F-Droid certification and Android API-24 runtime all completed successfully.
 - `package.json.version` remains `1.0.6` by design; the `1.1.0` version transition remains owned by the later `release/v1.1.0` metadata PR.
 
-This candidate is retained as historical pre-remediation evidence. A new product/test candidate and permanent Verify run are required after the reopened UX work. Do not cite run 44450324316 as proof that the amended FR-03/FR-28/FR-29/FR-31 UX contracts pass.
+This candidate is retained as historical pre-remediation evidence. A new product/test candidate and permanent Verify run are required after the reopened UX work and the corrected FR-24 cross-installation synchronization contract. Do not cite run 44450324316 as proof that the amended FR-03/FR-24/FR-28/FR-29/FR-31 contracts pass. The Android Git transport proof remains valid for transport capability, but the prior interoperability coverage did not exercise Desktop/Linux adopting a valid Android remote advance through the real Desktop synchronization controller.
 
 The current presentation target for the reopened candidate is now explicit: `../../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html` and `../../design/reference/jig-v1.1-desktop-onboarding-task-form-governed-reference.html` are binding UX/UI authority for onboarding and the complete Task form/Repeat presentation. Historical `mobile-editor.svg` and the pre-remediation implementation are not closure targets in that scope.
 
@@ -26,7 +26,7 @@ The current presentation target for the reopened candidate is now explicit: `../
 | Android deterministic build certification | **PASS** — Gradle dependency-lock verification, Android unit/static checks, FLOSS dependency boundary, Android version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention all passed in run `44450324316`. |
 | Android API-24 instrumentation | **PASS** — run `44450324316`; Android 7.0 / API 24 x86_64 emulator; 5/5 instrumentation tests completed successfully; Gradle `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`. |
 | Android bundled SQLite transaction/restart proof | **PASS at the native-driver/API-24 boundary** — covered by the committed API-24 instrumentation. Cross-platform physical-device continuity remains part of J110-IMP-15. |
-| Android Git native HTTP transport | **PASS at the native-transport/API-24 boundary** — committed instrumentation passed; host smart-HTTP/portable interoperability coverage is included in the 217-test core/integration/architecture result. Live private-repository acquisition remains external/physical evidence. |
+| Android Git native HTTP transport | **PASS at the native-transport/API-24 boundary; cross-installation interoperability REOPENED** — committed instrumentation still proves the selected native smart-HTTP/isomorphic-git transport works. The earlier host interoperability proof was asymmetric: it proved Android can adopt a Desktop/system-Git advance, but did not prove the Desktop synchronization controller fetches/adopts an Android advance. FR-24/SD-41 now require both directions. Live private-repository acquisition remains external/physical evidence. |
 | Android GitHub Device Flow native HTTP composition | **PASS** — the shared Device Flow request/poll/user-lookup contract is exercised through the Android native HTTP adapter, including canonical client ID, `offline_access`, pending→authorized transition and absence of `client_secret`/`redirect_uri`. Live authorization remains external/physical evidence. |
 | Android reminder scheduling/reconciliation | **PASS for implemented host/reconciliation semantics** — permanent unit/reconciliation coverage passed. API 31/33/36 policy/permission behavior and physical notification delivery remain J110-IMP-15 evidence. |
 | F-Droid candidate metadata lint | **PASS** — permanent Android certification lint passed against the pinned F-Droid category authority. External submission/publication has not occurred. |
@@ -39,7 +39,7 @@ The current presentation target for the reopened candidate is now explicit: `../
 
 ## Pre-remediation non-device audit
 
-The prior audit remains useful for unaffected architecture, but the following repository-executable defects are now open: app-wide mobile touch geometry/menu density, Settings information design, integrated Repeat form/save semantics and replacement of failed Pangea Task movement.
+The prior audit remains useful for unaffected architecture, but the following repository-executable defects are now open: app-wide mobile touch geometry/menu density, Settings information design, integrated Repeat form/save semantics, replacement of failed Pangea Task movement, and the FR-24/SD-41 cross-installation synchronization asymmetry where Desktop/Linux does not fetch/classify/adopt a valid Android remote advance before attempting push.
 
 The closure audit confirms:
 
@@ -52,7 +52,7 @@ The closure audit confirms:
 - fresh onboarding/loading/error states render inside the same canonical Jig AppShell/header/body as configured mode; normal onboarding/reconnect exposes no manual Refresh/Grant/Manage/acquire controls;
 - primary header/Settings synchronization presentation uses Local only / Syncing / Up to date / Needs attention and planning-data-home language; exact Local Git/Remote Git/service/database/path/manual-sync facts remain secondary Diagnostics;
 - the browser entrypoint lazily crosses into native runtime code only after `Capacitor.isNativePlatform()`, preventing Android/isomorphic-git evaluation in the browser;
-- Android SQLite, Git transport, GitHub Device Flow composition, reminder reconciliation, dependency/FLOSS boundary and F-Droid candidate path have permanent host/emulator certification;
+- Android SQLite, Git **transport capability**, GitHub Device Flow composition, reminder reconciliation, dependency/FLOSS boundary and F-Droid candidate path have permanent host/emulator certification; bidirectional Desktop/Linux ↔ Android synchronization convergence is explicitly reopened and is not covered by that transport proof;
 - permanent architecture tests enforce these ownership boundaries so the closure is regression-protected.
 
 The real Linux/Desktop Device Flow/private-repository exercise is deliberately classified as **external live acceptance**, not unfinished repository implementation: it requires an interactive GitHub user authorization and live Secret Service environment that the connected repository execution surface cannot manufacture. Its absence does not authorize additional code or a substitute authentication architecture.
@@ -79,13 +79,15 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 ## Still required before release-candidate closure
 
 1. Implement the reopened non-device UX remediation in the order governed by `docs/implementation/v1.1-complete-implementation-plan.md`.
-2. Establish a **new** combined product/test candidate and permanent hosted Verify evidence after mobile geometry/menu, Settings IA, governed onboarding presentation, complete Task-form/Repeat integration/atomic save and replacement drag code are complete.
-3. Record desktop screenshots for governed onboarding and complete Task-form states, browser geometry screenshots/assertions at 320/360/390/414px, and physical Android screenshots/notes covering onboarding, Weekly/Monthly expanded form scrolling, IME access, Stop repeating consequence and first-empty-Planner activation.
-4. Explicitly prove that the sibling recurrence editor/secondary recurrence Save no longer exists and that the complete Task form remains reachable beneath expanded Repeat controls.
-3. Run J110-IMP-09 on the exact new candidate APK. The old Pangea APK/result cannot close this gate.
-4. Run the remaining J110-IMP-15 physical/native matrix, including the complete mobile touch/menu/Task form/Settings usability audit plus native Git/reminder/lifecycle/interoperability checks.
-5. Complete the external live Linux/Desktop GitHub acceptance tracked by issue #31.
-6. Only after all of the above may the `release/v1.1.0` metadata/tag/Release/F-Droid publication ceremony proceed.
+2. Implement the corrected FR-24/SD-30/SD-41 synchronization sequence so Desktop/Linux and Android share the same remote-observation/lineage/adopt-or-push semantics, including the stale-client-with-local-pending safe-stop rule.
+3. Establish a **new** combined product/test candidate and permanent hosted Verify evidence after mobile geometry/menu, Settings IA, governed onboarding presentation, complete Task-form/Repeat integration/atomic save, replacement drag code and cross-installation synchronization correction are complete.
+4. Record desktop screenshots for governed onboarding and complete Task-form states, browser geometry screenshots/assertions at 320/360/390/414px, and physical Android screenshots/notes covering onboarding, Weekly/Monthly expanded form scrolling, IME access, Stop repeating consequence and first-empty-Planner activation.
+5. Explicitly prove that the sibling recurrence editor/secondary recurrence Save no longer exists and that the complete Task form remains reachable beneath expanded Repeat controls.
+6. Prove Desktop → Android → Desktop and Android → Desktop → Android against the corrected synchronization controller, including remote-only fast-forward adoption, pending-local-plus-remote-advance safe stop, true divergence preservation and push-race reclassification.
+7. Run J110-IMP-09 on the exact new candidate APK. The old Pangea APK/result cannot close this gate.
+8. Run the remaining J110-IMP-15 physical/native matrix, including the complete mobile touch/menu/Task form/Settings usability audit plus native Git/reminder/lifecycle/interoperability checks.
+9. Complete the external live Linux/Desktop GitHub acceptance tracked by issue #31.
+10. Only after all of the above may the `release/v1.1.0` metadata/tag/Release/F-Droid publication ceremony proceed.
 
 Local `act` remains optional developer preflight; hosted permanent workflows are authoritative.
 
