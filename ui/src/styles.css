@@ -123,6 +123,16 @@ body {
     gap: var(--spacing-0-5);
   }
 
+  .jig-navigation-menu {
+    display: grid;
+    min-width: 13rem;
+    gap: var(--spacing-1);
+  }
+
+  .jig-navigation-menu-item {
+    min-height: 48px;
+  }
+
   .jig-header-week-range {
     min-width: 0;
     white-space: nowrap;
