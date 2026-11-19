@@ -319,7 +319,7 @@ export function SetupView({
                       Existing repository
                     </span>
                   ) : null}
-                  <h2>Use an existing local repository</h2>
+                  <h2 id={layoutMode === "narrow" ? "jig-setup-title" : undefined}>Use an existing local repository</h2>
                   <p>
                     Enter the absolute path to the repository that already
                     carries your planning data.
@@ -413,7 +413,9 @@ export function SetupView({
                       Connect your planning data
                     </span>
                   ) : null}
-                  <h2>
+                  <h2
+                    id={layoutMode === "narrow" ? "jig-setup-title" : undefined}
+                  >
                     {github.authorization !== null
                       ? "Authorize Jig on GitHub"
                       : github.provider_url !== null
@@ -465,7 +467,7 @@ export function SetupView({
                       Connect your planning data
                     </span>
                   ) : null}
-                  <h2>Choose your planning repository</h2>
+                  <h2 id={layoutMode === "narrow" ? "jig-setup-title" : undefined}>Choose your planning repository</h2>
                   <p>
                     Choose the repository that carries your Jig planning data.
                   </p>
@@ -507,7 +509,7 @@ export function SetupView({
                       Connection needs attention
                     </span>
                   ) : null}
-                  <h2>Connection needs attention</h2>
+                  <h2 id={layoutMode === "narrow" ? "jig-setup-title" : undefined}>Connection needs attention</h2>
                   <p>
                     {github.error ??
                       "Jig cannot continue until the connection is available."}
