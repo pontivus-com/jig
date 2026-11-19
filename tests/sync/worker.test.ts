@@ -228,7 +228,7 @@ function fakeEffects(
           repo.mode = "present";
           repo.remoteHead = options.pushRace.head;
           repo.remoteSnapshot = options.pushRace.snapshot;
-          repo.lineage = "remote-ahead";
+          repo.lineage = "diverged";
           return {
             status: "sync-issue",
             retryable: true,
