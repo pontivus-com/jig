@@ -365,6 +365,35 @@ describe("UI ownership architecture", () => {
     expect(deviceFlow).not.toContain("onRefresh");
   });
 
+  it("keeps v1.1 mobile form and onboarding composition on governed public owners", () => {
+    const taskEditor = source("ui/src/task-editor.tsx");
+    const setup = source("ui/src/setup.tsx");
+    const app = source("ui/src/app.tsx");
+    const styles = source("ui/src/styles.css");
+
+    expect(taskEditor).toContain("ToggleButton");
+    expect(taskEditor).toContain('className="jig-repeat-weekday"');
+    expect(taskEditor).not.toContain("<CheckboxInput");
+    expect(taskEditor).toContain(
+      'controlClassName="jig-mobile-touch-control"',
+    );
+    expect(styles).toContain(".jig-mobile-touch-control {");
+    expect(styles).toContain("min-width: 48px;");
+    expect(styles).toContain("min-height: 48px;");
+
+    expect(styles).toContain(".jig-editor-actions {");
+    expect(styles).toContain("position: sticky;");
+    expect(styles).toContain("inset-block-end: 0;");
+
+    expect(setup).toContain('readonly layoutMode: LayoutMode;');
+    expect(setup).toContain('layoutMode === "narrow"');
+    expect(setup).toContain("Same plan. Different devices.");
+    expect(setup).toContain("Choose one repository.");
+    expect(app).toContain(
+      "<SetupView status={setupStatus} layoutMode={layoutMode} />",
+    );
+  });
+
   it("keeps appearance controls in Settings and reminder delivery browser-native", () => {
     const app = source("ui/src/app.tsx");
     const settings = source("ui/src/settings.tsx");
