@@ -11,6 +11,7 @@ import {
 } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
+  adoptCanonicalSnapshot,
   applyTaskCommand,
   markExported,
   readCanonicalState,
@@ -573,6 +574,104 @@ describe("cross-installation synchronization worker", () => {
     );
     expect(pushes.count).toBe(1);
     expect(observes.count).toBe(2);
+  });
+
+  it("SYNC-E4 preserves pending SQLite when credentials are unavailable before remote observation", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    await markExported(db, 0, BASE_HEAD);
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Offline safe",
+        scheduled_date: "2026-11-19",
+      },
+      0,
+      "2026-11-19T02:00:00.000Z",
+      () =>
+        "018f47f0-7b5c-7d4d-8e2b-000000000207",
+    );
+
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: BASE_HEAD,
+      remoteSnapshot: base,
+      remoteRewritten: false,
+      lineage: "equal",
+      previouslySynchronized: true,
+    };
+    const fake = fakeEffects(repo);
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      {
+        ...fake.effects,
+        networkEnvironment: async () => null,
+      },
+    );
+
+    expect(await controller.trigger()).toMatchObject({
+      local_git: "pending",
+      remote: { state: "sync-issue" },
+    });
+    expect(fake.writes.count).toBe(0);
+    expect(fake.pushes.count).toBe(0);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 1,
+      last_exported_revision: 0,
+      pending_sync: true,
+    });
+  });
+
+  it("SYNC-E5 finishes SQLite-adopted remote state without creating another snapshot", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    const remoteTask = task("208", "Adopted before restart");
+    const remote = serializeSnapshot(
+      [remoteTask],
+      DATASET_ID,
+    );
+    const remoteHead = "8".repeat(40);
+    await markExported(db, 0, BASE_HEAD);
+    const applied = await adoptCanonicalSnapshot(
+      db,
+      [remoteTask],
+      [],
+      remoteHead,
+      0,
+    );
+    expect(applied.revision).toBe(1);
+
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead,
+      remoteSnapshot: remote,
+      remoteRewritten: false,
+      lineage: "remote-ahead",
+      previouslySynchronized: true,
+    };
+    const { effects, writes, pushes } = fakeEffects(repo);
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
+    expect(writes.count).toBe(0);
+    expect(pushes.count).toBe(0);
+    expect(repo.localHead).toBe(remoteHead);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 1,
+      last_exported_revision: 1,
+      last_exported_head: remoteHead,
+      pending_sync: false,
+    });
   });
 
   it("SYNC-E5 repairs commit-before-metadata lag without creating a duplicate commit", async () => {
