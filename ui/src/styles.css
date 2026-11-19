@@ -180,11 +180,11 @@ body {
 
   .jig-header-mobile-application-row {
     display: grid;
-    min-height: 44px;
+    min-height: 56px;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: var(--spacing-0-5);
-    padding: 0 var(--spacing-0-5);
+    gap: var(--spacing-2);
+    padding: 0 var(--spacing-2);
   }
 
   .jig-header-mobile-title {
@@ -203,10 +203,10 @@ body {
 
   .jig-header-mobile-temporal-row {
     display: flex;
-    min-height: 44px;
+    min-height: 56px;
     align-items: center;
     justify-content: center;
-    padding: 0 var(--spacing-0-5);
+    padding: 0 var(--spacing-2);
     border-block-start: var(--border-width) solid var(--color-border);
   }
 
@@ -684,6 +684,52 @@ body {
     color: var(--color-text-secondary);
   }
 
+  .jig-planner-surface {
+    position: relative;
+    min-height: 100%;
+  }
+
+  .jig-planner-empty-state {
+    display: grid;
+    width: min(100% - 2 * var(--spacing-4), 28rem);
+    justify-items: center;
+    gap: var(--spacing-2);
+    margin: var(--spacing-6) auto var(--spacing-2);
+    padding: var(--spacing-5);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-element);
+    background: var(--color-background-surface);
+    text-align: center;
+  }
+
+  .jig-planner-empty-state p {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+
+  .jig-task-insertion-slot {
+    position: relative;
+    min-height: 8px;
+    list-style: none;
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .jig-task-drag-scope[data-jig-drag-active="true"] .jig-task-insertion-slot {
+    min-height: 20px;
+    opacity: 1;
+  }
+
+  .jig-task-insertion-slot .jig-task-drop-indicator {
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+  }
+
+  .jig-task-insertion-slot-active .jig-task-drop-indicator {
+    opacity: 1;
+  }
+
   .jig-history-view,
   .jig-settings-view {
     width: 100%;
@@ -752,22 +798,42 @@ body {
     border-block-end: 0;
   }
 
-  .jig-settings-grid {
+  .jig-settings-sections {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--spacing-7) 30px;
+    gap: var(--spacing-6);
     margin-block-start: var(--spacing-5);
   }
 
-  .jig-settings-panel {
+  .jig-settings-section {
     display: grid;
-    align-content: start;
-    gap: calc(var(--spacing-2) + var(--spacing-0-5));
+    gap: var(--spacing-2);
   }
 
-  .jig-settings-panel h2 {
+  .jig-settings-section h2,
+  .jig-settings-section-heading h2 {
     margin: 0;
     font-size: var(--font-size-lg);
+  }
+
+  .jig-settings-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+  }
+
+  .jig-settings-section-heading p,
+  .jig-settings-card p,
+  .jig-settings-card small,
+  .jig-settings-safety-copy {
+    margin: 0;
+  }
+
+  .jig-settings-section-heading p,
+  .jig-settings-card small,
+  .jig-settings-safety-copy {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .jig-settings-card {
@@ -775,31 +841,23 @@ body {
     border-radius: calc(var(--radius-element) + var(--border-width));
   }
 
-  .jig-settings-card p,
-  .jig-settings-card small {
-    margin: 0;
-  }
-
-  .jig-settings-card small {
-    color: var(--color-text-secondary);
-  }
-
-  .jig-settings-sync-action {
+  .jig-settings-row {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-4);
+  }
+
+  .jig-settings-row > div:first-child {
+    min-width: 0;
+  }
+
+  .jig-settings-row-actions,
+  .jig-settings-diagnostics-actions {
+    display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
-    margin-block-start: auto;
-  }
-
-  .jig-local-first-note {
-    overflow: hidden;
-    margin-block-start: calc(var(--spacing-7) + var(--spacing-0-5));
-    border-radius: calc(var(--radius-element) + var(--border-width));
-  }
-
-  .jig-local-first-note p {
-    margin: 0;
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
+    gap: var(--spacing-2);
   }
 
   .jig-settings-notifications {
@@ -908,33 +966,34 @@ body {
     padding-block-start: var(--spacing-2);
   }
 
-  .jig-repeat-editor {
+  .jig-repeat-field,
+  .jig-repeat-disclosure {
     display: grid;
     gap: var(--spacing-3);
-    padding-block: var(--spacing-4);
-    border-block: var(--border-width) solid var(--color-border);
   }
 
-  .jig-repeat-heading {
-    display: grid;
-    gap: var(--spacing-0-5);
-  }
-
-  .jig-repeat-heading > span {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
+  .jig-repeat-disclosure {
+    padding-block-start: var(--spacing-1);
   }
 
   .jig-repeat-weekdays {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: var(--spacing-2);
   }
 
-  .jig-repeat-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-2);
+  .jig-repeat-weekday {
+    min-width: 0;
+  }
+
+  .jig-repeat-scope-copy {
+    margin: 0;
+    padding: var(--spacing-2) var(--spacing-3);
+    border-inline-start: calc(3 * var(--border-width)) solid var(--color-border-warning);
+    border-radius: var(--radius-element);
+    background: var(--color-background-muted);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .jig-form-error {
@@ -953,19 +1012,25 @@ body {
 
   .jig-setup {
     min-height: 100%;
-    padding: var(--spacing-6) var(--spacing-4);
+    padding: var(--spacing-7) var(--spacing-6);
     background: var(--color-background-body);
     color: var(--color-text-primary);
   }
 
-  .jig-setup-content {
+  .jig-setup-layout {
     display: grid;
-    width: min(100%, 42rem);
+    width: min(100%, 72rem);
+    min-height: calc(100vh - 2.75rem - 2 * var(--spacing-7));
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 30rem);
+    align-items: center;
+    gap: var(--spacing-8);
     margin-inline: auto;
-    gap: var(--spacing-4);
   }
 
+  .jig-setup-value,
+  .jig-setup-pane,
   .jig-setup-heading,
+  .jig-setup-state-heading,
   .jig-setup-local-repository,
   .jig-setup-github-state,
   .jig-setup-github-repositories {
@@ -973,8 +1038,42 @@ body {
     gap: var(--spacing-2);
   }
 
+  .jig-setup-value {
+    gap: var(--spacing-5);
+  }
+
   .jig-setup-heading {
     gap: var(--spacing-1);
+  }
+
+  .jig-setup-heading h1 {
+    max-width: 18ch;
+    font-size: var(--font-size-2xl);
+    line-height: 1.15;
+  }
+
+  .jig-setup-eyebrow {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .jig-setup-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-4);
+  }
+
+  .jig-setup-benefits > div {
+    display: grid;
+    gap: var(--spacing-1);
+  }
+
+  .jig-setup-benefits span {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .jig-setup-github-actions {
@@ -989,12 +1088,14 @@ body {
   }
 
   .jig-setup-heading h1,
-  .jig-setup-card h2 {
+  .jig-setup-card h2,
+  .jig-setup-state-heading h2 {
     margin: 0;
   }
 
   .jig-setup-heading p,
   .jig-setup-card p,
+  .jig-setup-state-heading p,
   .jig-setup-github-state small {
     margin: 0;
     color: var(--color-text-secondary);
@@ -1009,12 +1110,28 @@ body {
 
   @media (max-width: 72.999rem) {
     .jig-app-header-onboarding {
-      min-height: calc(44px + env(safe-area-inset-top, 0px));
-      padding: env(safe-area-inset-top, 0px) var(--spacing-0-5) 0;
+      min-height: calc(56px + env(safe-area-inset-top, 0px));
+      padding: env(safe-area-inset-top, 0px) var(--spacing-2) 0;
     }
 
     .jig-setup {
       padding: var(--spacing-4) var(--spacing-3);
+    }
+
+    .jig-setup-layout {
+      min-height: auto;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+      gap: var(--spacing-5);
+    }
+
+    .jig-setup-benefits {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--spacing-3);
+    }
+
+    .jig-setup-pane {
+      width: 100%;
     }
 
     .jig-app-shell {
@@ -1088,22 +1205,44 @@ body {
     }
 
     .jig-task-drag-handle {
-      width: 44px;
-      height: 44px;
+      width: 48px;
+      height: 48px;
     }
 
     .jig-history-groups,
-    .jig-settings-grid {
+    .jig-settings-sections {
       margin-block-start: var(--spacing-5);
     }
 
-    .jig-settings-grid {
-      grid-template-columns: 1fr;
-      gap: var(--spacing-5);
+    .jig-settings-row,
+    .jig-settings-section-heading,
+    .jig-settings-notifications {
+      align-items: stretch;
+      flex-direction: column;
     }
 
-    .jig-local-first-note {
-      margin-block-start: var(--spacing-5);
+    .jig-settings-row-actions,
+    .jig-settings-diagnostics-actions {
+      justify-content: stretch;
+    }
+
+    .jig-settings-row-actions > *,
+    .jig-settings-diagnostics-actions > * {
+      min-width: 100%;
+    }
+
+    .jig-repeat-weekdays {
+      grid-template-columns: repeat(4, minmax(48px, 1fr));
+    }
+
+    .jig-repeat-weekday {
+      min-width: 48px;
+      min-height: 48px;
+    }
+
+    .jig-repeat-weekday > * {
+      min-width: 48px;
+      min-height: 48px;
     }
 
     .jig-editor-actions {
@@ -1117,6 +1256,28 @@ body {
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
       width: 100%;
       gap: var(--spacing-3);
+    }
+
+    .jig-app-header-narrow button,
+    .jig-app-header-narrow [role="button"],
+    .jig-date-add,
+    .jig-task-menu-trigger,
+    .jig-task-card-leading [role="checkbox"],
+    .jig-editor-primary-actions button,
+    .jig-task-sheet-header button,
+    .jig-settings-view button,
+    .jig-setup button {
+      min-width: 48px;
+      min-height: 48px;
+    }
+
+    .jig-header-mobile-actions,
+    .jig-header-temporal {
+      gap: var(--spacing-2);
+    }
+
+    .jig-editor-form {
+      padding-block-end: calc(var(--spacing-6) + env(safe-area-inset-bottom, 0px));
     }
 
     .jig-diagnostics > div {
