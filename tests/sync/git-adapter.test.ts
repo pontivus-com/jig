@@ -439,6 +439,49 @@ describe("isolated jig-data adapter", () => {
     });
   });
 
+  it("classifies a different portable dataset as unsafe without replacing local identity", async () => {
+    const repo = await fixture();
+    const config = { repository_path: repo } as const;
+    await ensurePortableData(config, DATASET_ID);
+    await writePortableSnapshot(
+      config,
+      serializeSnapshot([], DATASET_ID),
+      0,
+    );
+    const remote = await remoteFixture(repo);
+    const writer = await cloneDataBranch(
+      remote,
+      "different-dataset",
+    );
+    await writeSnapshotFiles(
+      writer,
+      serializeSnapshot(
+        [],
+        "018f47f0-7b5c-7d4d-8e2b-9c3aa11f9999",
+      ),
+    );
+    await git(writer, ["add", "-A"]);
+    await git(writer, [
+      "commit",
+      "-m",
+      "Different Jig dataset",
+    ]);
+    await git(writer, ["push", "origin", "jig-data"]);
+
+    await expect(
+      observePortableRemote(
+        config,
+        DATASET_ID,
+        null,
+      ),
+    ).resolves.toMatchObject({ state: "unsafe" });
+
+    expect(
+      (await readCurrentPortableSnapshot(config, DATASET_ID))
+        ?.snapshot.dataset_id,
+    ).toBe(DATASET_ID);
+  });
+
   it("rejects non-canonical paths on the portable branch before adoption", async () => {
     const repo = await fixture();
     const config = { repository_path: repo } as const;
