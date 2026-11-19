@@ -12,6 +12,37 @@ import {
   type Task,
 } from "./core/task";
 
+export const SYNCHRONIZATION_RETRY_SECONDS = [
+  5,
+  10,
+  20,
+  40,
+  80,
+  160,
+  300,
+] as const;
+
+export const SYNCHRONIZATION_HEALTHY_POLL_MS = 60_000;
+
+export function synchronizationRetryDelayMs(
+  failureCount: number,
+): number {
+  if (!Number.isInteger(failureCount) || failureCount < 1) {
+    throw new Error("failureCount must be a positive integer");
+  }
+  const index = Math.min(
+    failureCount - 1,
+    SYNCHRONIZATION_RETRY_SECONDS.length - 1,
+  );
+  return (
+    SYNCHRONIZATION_RETRY_SECONDS[index] ??
+    SYNCHRONIZATION_RETRY_SECONDS[
+      SYNCHRONIZATION_RETRY_SECONDS.length - 1
+    ] ??
+    300
+  ) * 1000;
+}
+
 export type GitLineage =
   | "equal"
   | "remote-ahead"
