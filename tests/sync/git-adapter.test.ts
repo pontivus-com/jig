@@ -11,6 +11,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
+  alignPortableDataRef,
   ensureJigLocalExclude,
   ensurePortableData,
   GitAdapterError,
@@ -385,6 +386,58 @@ describe("isolated jig-data adapter", () => {
       remoteTask,
     ]);
     expect(await git(repo, ["rev-parse", DATA_REF])).toBe(before);
+  });
+
+  it("rejects a local jig-data ref race instead of overwriting the newer local head", async () => {
+    const repo = await fixture();
+    const config = { repository_path: repo } as const;
+    await ensurePortableData(config, DATASET_ID);
+    await writePortableSnapshot(
+      config,
+      serializeSnapshot([], DATASET_ID),
+      0,
+    );
+    const remote = await remoteFixture(repo);
+    const writer = await cloneDataBranch(remote, "remote-fast-forward");
+    await writeSnapshotFiles(
+      writer,
+      serializeSnapshot([task()], DATASET_ID),
+    );
+    await git(writer, ["add", "-A"]);
+    await git(writer, ["commit", "-m", "Remote advance"]);
+    await git(writer, ["push", "origin", "jig-data"]);
+
+    const observed = await observePortableRemote(
+      config,
+      DATASET_ID,
+      null,
+    );
+    if (observed.state !== "present") {
+      throw new Error("expected remote observation");
+    }
+
+    const localTask = {
+      ...task(),
+      id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0102",
+      title: "Concurrent local head",
+    };
+    const concurrentHead = await writePortableSnapshot(
+      config,
+      serializeSnapshot([localTask], DATASET_ID),
+      1,
+    );
+
+    await expect(
+      alignPortableDataRef(
+        config,
+        observed.local_head ?? "",
+        observed.remote_head,
+      ),
+    ).rejects.toThrow(/changed concurrently/);
+
+    expect(
+      (await readCurrentPortableSnapshot(config, DATASET_ID))?.head,
+    ).toBe(concurrentHead);
   });
 
   it("retains Git-owned remote-head evidence when the remote branch is deleted or rewritten", async () => {
