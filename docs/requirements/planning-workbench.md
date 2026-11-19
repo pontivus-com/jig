@@ -336,10 +336,11 @@ A responsive visual structure and touch-accessible controls are required. The [J
 15. **Restart:** Restart the Linux user service or log out and back in. The current plan is immediately usable and unsynchronized changes resume transfer; a missing remote is displayed as local-only.
 16. **Repository synchronization issue:** Arrange the repository so synchronization cannot complete. Jig keeps the locally saved Task state usable and reports a generic sync issue without exposing a planning-level divergence/conflict state. Reconcile the repository with Git tooling outside Jig; once the repository boundary is healthy again, synchronization resumes without Jig performing merge/conflict resolution.
 17. **Idle lifecycle:** Leave the service running without the browser for a working day. It remains responsive when reopened and does not continuously poll at an unnecessarily expensive cadence.
+18. **Cross-installation continuity:** Synchronize one valid dataset on Desktop/Linux, acquire it on Android, change/synchronize Android, then return to Desktop/Linux with no intervening local edit. Desktop/Linux automatically adopts the newer portable state and remains synchronizable; repeat the sequence in the opposite direction. If both installations instead change independently before either sees the other's update, both local planning states remain safe and Jig reports continuity attention without silently overwriting or reconciling either history.
 
 ### Responsibility boundary
 
-Jig owns Task behavior, local persistence, deterministic portable Jig records, automatic synchronization intent and coarse synchronization outcomes. Git owns repository acquisition, repository topology, branches/refs/worktrees, signing and identity policy, credentials, history, merge/rebase/conflict behavior and reconciliation. Functional requirements may require isolation or automatic synchronization outcomes, but must not promote Git implementation mechanics into Jig workflow or user configuration.
+Jig owns Task behavior, local persistence, deterministic portable Jig records, automatic synchronization intent, ordinary cross-installation continuity for supported Jig clients, and coarse synchronization outcomes. Git owns repository acquisition, repository topology, branches/refs/worktrees, signing and identity policy, credentials, history, merge/rebase/conflict behavior and reconciliation. A newer valid portable state produced by another supported Jig installation is part of ordinary Jig continuity and must not require manual Git repair merely because a different supported runtime produced it. Functional requirements still must not promote Git implementation mechanics or genuine history reconciliation into Jig workflow or user configuration.
 
 ## 10. Non-decisions
 
@@ -373,7 +374,7 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-21 | Linux GitHub-managed checkout uses Jig-owned persistent data storage outside the replaceable application runtime. |
 | JIG-110-FR-22 | Android repository/SQLite storage is app-owned/private and pathless to the user. |
 | JIG-110-FR-23 | All acquisition paths converge on one Jig repository adoption authority. |
-| JIG-110-FR-24 | Linux and Android exchange exactly the same portable Jig contract/dataset identity. |
+| JIG-110-FR-24 | Linux and Android exchange exactly the same portable Jig contract/dataset identity and support ordinary alternating synchronization in both directions. A newer valid state from another supported installation is adopted automatically when the current installation has no unsynchronized local planning change; genuinely concurrent independent changes preserve both sides and surface continuity attention rather than hidden reconciliation. |
 | JIG-110-FR-25 | Android uses the same Task/planning semantics including daily rollover on launch/resume/foreground midnight. |
 | JIG-110-FR-26 | Android saves locally first and retries synchronization opportunistically without making connectivity a correctness dependency. |
 | JIG-110-FR-27 | Android is locally certifiable by directly installed development APK; F-Droid is the first public Android distribution target; iOS/Play are outside v1.1. |
