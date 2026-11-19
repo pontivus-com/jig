@@ -60,6 +60,9 @@ export interface ManagedGitHubTransport {
   readonly synchronize: (
     config: GitAdapterConfig,
   ) => Promise<RepositorySynchronizationResult>;
+  readonly network_environment: () => Promise<
+    Readonly<Record<string, string>> | null
+  >;
   readonly reconnect_required: () => Promise<boolean>;
   readonly dispose: () => Promise<void>;
 }
@@ -219,86 +222,92 @@ export async function createManagedGitHubTransport(
     loadCurrentGitHubCredential;
   const now = dependencies.now ?? (() => new Date());
 
+  const networkEnvironment = async (): Promise<
+    Readonly<Record<string, string>> | null
+  > => {
+    try {
+      await assertManagedGitHubSynchronizationRemote(
+        repositoryPath,
+        home,
+      );
+
+      let credential = await loadCredential();
+      if (credential === null) {
+        reconnectRequired = true;
+        return null;
+      }
+
+      const currentTime = now();
+      if (credentialNeedsReconnect(credential, currentTime)) {
+        reconnectRequired = true;
+        return null;
+      }
+
+      if (
+        credential.access_token_expires_at !== null &&
+        Date.parse(credential.access_token_expires_at) -
+          currentTime.getTime() <=
+          5 * 60 * 1000
+      ) {
+        try {
+          credential = await (
+            dependencies.refresh_credential ??
+            refreshGitHubCredential
+          )(
+            dependencies.registration,
+            credential,
+            currentTime,
+          );
+          await (
+            dependencies.store_credential ??
+            storeGitHubCredential
+          )(credential);
+        } catch (error) {
+          if (refreshAuthorizationFailed(error)) {
+            reconnectRequired = true;
+            return null;
+          }
+          throw error;
+        }
+      }
+
+      reconnectRequired = false;
+      return githubGitEnvironment(
+        askpass.path,
+        credential.access_token,
+      );
+    } catch (error) {
+      if (
+        refreshAuthorizationFailed(error) ||
+        error instanceof GitHubAuthError ||
+        error instanceof SecretServiceError ||
+        error instanceof InstallationError
+      ) {
+        reconnectRequired = true;
+        return null;
+      }
+      throw error;
+    }
+  };
+
   return {
     synchronize: async (
       config: GitAdapterConfig,
     ): Promise<RepositorySynchronizationResult> => {
-      try {
-        await assertManagedGitHubSynchronizationRemote(
-          config.repository_path,
-          home,
-        );
-
-        let credential = await loadCredential();
-        if (credential === null) {
-          reconnectRequired = true;
-          return nonRetryableIssue();
-        }
-
-        const currentTime = now();
-        if (credentialNeedsReconnect(credential, currentTime)) {
-          reconnectRequired = true;
-          return nonRetryableIssue();
-        }
-
-        if (
-          credential.access_token_expires_at !== null &&
-          Date.parse(credential.access_token_expires_at) -
-            currentTime.getTime() <=
-            5 * 60 * 1000
-        ) {
-          try {
-            credential = await (
-              dependencies.refresh_credential ??
-              refreshGitHubCredential
-            )(
-              dependencies.registration,
-              credential,
-              currentTime,
-            );
-            await (
-              dependencies.store_credential ??
-              storeGitHubCredential
-            )(credential);
-            reconnectRequired = false;
-          } catch (error) {
-            if (refreshAuthorizationFailed(error)) {
-              reconnectRequired = true;
-              return nonRetryableIssue();
-            }
-            throw error;
-          }
-        }
-
-        const result = await (
-          dependencies.synchronize ??
-          synchronizePortableData
-        )(
-          config,
-          githubGitEnvironment(
-            askpass.path,
-            credential.access_token,
-          ),
-        );
-        if (result.status === "synchronized") {
-          reconnectRequired = false;
-        }
-        return result;
-      } catch (error) {
-        if (refreshAuthorizationFailed(error)) {
-          reconnectRequired = true;
-          return nonRetryableIssue();
-        }
-        if (
-          error instanceof GitHubAuthError ||
-          error instanceof SecretServiceError ||
-          error instanceof InstallationError
-        ) {
-          return nonRetryableIssue();
-        }
-        throw error;
+      const environment = await networkEnvironment();
+      if (environment === null) {
+        return nonRetryableIssue();
       }
+      const result = await (
+        dependencies.synchronize ??
+        synchronizePortableData
+      )(config, environment);
+      if (result.status === "synchronized") {
+        reconnectRequired = false;
+      }
+      return result;
     },
+    network_environment: networkEnvironment,
     reconnect_required: async (): Promise<boolean> => {
       if (reconnectRequired) {
         return true;
