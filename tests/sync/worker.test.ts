@@ -59,6 +59,21 @@ function task(
   };
 }
 
+function snapshotsEqual(
+  left: PortableSnapshot,
+  right: PortableSnapshot,
+): boolean {
+  if (left.files.size !== right.files.size) {
+    return false;
+  }
+  for (const [path, content] of left.files) {
+    if (right.files.get(path) !== content) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function configuredStatus(
   remoteState:
     | "pending"
@@ -162,6 +177,8 @@ function fakeEffects(
       readonly head: string;
       readonly snapshot: PortableSnapshot;
     };
+    readonly ambiguousPushSuccess?: boolean;
+    readonly alwaysRetryablePushFailure?: boolean;
   } = {},
 ): {
   readonly effects: SyncEffects;
@@ -190,6 +207,9 @@ function fakeEffects(
         revision,
       ) => {
         writes.count += 1;
+        if (snapshotsEqual(repo.localSnapshot, snapshot)) {
+          return repo.localHead;
+        }
         repo.localHead =
           revision.toString(16).padStart(40, "0");
         repo.localSnapshot = snapshot;
@@ -254,6 +274,19 @@ function fakeEffects(
           repo.remoteHead = options.pushRace.head;
           repo.remoteSnapshot = options.pushRace.snapshot;
           repo.lineage = "remote-ahead";
+          return { status: "sync-issue", retryable: true };
+        }
+        if (
+          options.ambiguousPushSuccess === true &&
+          !raced
+        ) {
+          raced = true;
+          repo.remoteHead = repo.localHead;
+          repo.remoteSnapshot = repo.localSnapshot;
+          repo.lineage = "equal";
+          return { status: "sync-issue", retryable: true };
+        }
+        if (options.alwaysRetryablePushFailure === true) {
           return { status: "sync-issue", retryable: true };
         }
         if (options.conflict === true) {
@@ -486,6 +519,225 @@ describe("convergence-first synchronization worker", () => {
     expect(pushes.count).toBe(0);
     await vi.advanceTimersByTimeAsync(59_999);
     expect(pushes.count).toBe(0);
+    controller.stop();
+  });
+
+  it("treats an ambiguous push response as success after exact-head re-observation", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    await markExported(db, 0, BASE_HEAD);
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Possibly accepted",
+        scheduled_date: "2026-11-19",
+      },
+      0,
+      "2026-11-19T02:00:00.000Z",
+      () =>
+        "018f47f0-7b5c-7d4d-8e2b-000000000208",
+    );
+    const repo: FakeRepository = {
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: BASE_HEAD,
+      remoteSnapshot: base,
+      baseHead: BASE_HEAD,
+      baseSnapshot: base,
+      remoteRewritten: false,
+      lineage: "equal",
+    };
+    const { effects, pushes, observes } = fakeEffects(repo, {
+      ambiguousPushSuccess: true,
+    });
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
+    expect(pushes.count).toBe(1);
+    expect(observes.count).toBeGreaterThanOrEqual(2);
+    controller.stop();
+  });
+
+  it("bounds immediate race retries before entering backoff", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    await markExported(db, 0, BASE_HEAD);
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Contended",
+        scheduled_date: "2026-11-19",
+      },
+      0,
+      "2026-11-19T02:00:00.000Z",
+      () =>
+        "018f47f0-7b5c-7d4d-8e2b-000000000209",
+    );
+    const repo: FakeRepository = {
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: BASE_HEAD,
+      remoteSnapshot: base,
+      baseHead: BASE_HEAD,
+      baseSnapshot: base,
+      remoteRewritten: false,
+      lineage: "equal",
+    };
+    const { effects, pushes } = fakeEffects(repo, {
+      alwaysRetryablePushFailure: true,
+    });
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toMatchObject({
+      remote: { state: "retrying" },
+    });
+    expect(pushes.count).toBe(3);
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(pushes.count).toBe(3);
+    controller.stop();
+  });
+
+  it("repairs Git-commit-before-metadata lag without creating another semantic commit", async () => {
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Already in Git",
+        scheduled_date: "2026-11-19",
+      },
+      0,
+      "2026-11-19T02:00:00.000Z",
+      () =>
+        "018f47f0-7b5c-7d4d-8e2b-000000000210",
+    );
+    const state = await readCanonicalState(db);
+    const committed = serializeSnapshot(
+      state.tasks,
+      DATASET_ID,
+      state.recurrences,
+    );
+    const committedHead = "f".repeat(40);
+    const repo: FakeRepository = {
+      localHead: committedHead,
+      localSnapshot: committed,
+      remoteHead: committedHead,
+      remoteSnapshot: committed,
+      baseHead: committedHead,
+      baseSnapshot: committed,
+      remoteRewritten: false,
+      lineage: "equal",
+    };
+    const { effects, writes } = fakeEffects(repo);
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
+    expect(writes.count).toBe(0);
+    expect(await readMetadata(db)).toMatchObject({
+      last_exported_revision: state.revision,
+      last_exported_head: committedHead,
+      pending_sync: false,
+    });
+    controller.stop();
+  });
+
+  it("recovers remote-SQLite-adoption-before-local-ref alignment", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    const remoteTask = task("211", "Remote adopted before crash");
+    const remoteSnapshot = serializeSnapshot(
+      [remoteTask],
+      DATASET_ID,
+    );
+    await markExported(db, 0, BASE_HEAD);
+    await applySynchronizedCanonicalState(
+      db,
+      0,
+      [remoteTask],
+      [],
+      "1".repeat(40),
+    );
+    const repo: FakeRepository = {
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: "1".repeat(40),
+      remoteSnapshot,
+      baseHead: BASE_HEAD,
+      baseSnapshot: base,
+      remoteRewritten: false,
+      lineage: "remote-ahead",
+    };
+    const { effects, writes } = fakeEffects(repo);
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
+    expect(repo.localHead).toBe("1".repeat(40));
+    expect(writes.count).toBe(0);
+    expect(await readMetadata(db)).toMatchObject({
+      last_exported_head: "1".repeat(40),
+      pending_sync: false,
+    });
+    controller.stop();
+  });
+
+  it("recovers local-ref-alignment-before-SQLite adoption and metadata repair", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    const remoteTask = task("212", "Ref moved before crash");
+    const remoteSnapshot = serializeSnapshot(
+      [remoteTask],
+      DATASET_ID,
+    );
+    await markExported(db, 0, BASE_HEAD);
+    const remoteHead = "2".repeat(40);
+    const repo: FakeRepository = {
+      localHead: remoteHead,
+      localSnapshot: remoteSnapshot,
+      remoteHead,
+      remoteSnapshot,
+      baseHead: BASE_HEAD,
+      baseSnapshot: base,
+      remoteRewritten: false,
+      lineage: "equal",
+    };
+    const { effects } = fakeEffects(repo);
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
+    expect(
+      (await readCanonicalState(db)).tasks.map(
+        (candidate) => candidate.title,
+      ),
+    ).toEqual(["Ref moved before crash"]);
+    expect(await readMetadata(db)).toMatchObject({
+      last_exported_head: remoteHead,
+      pending_sync: false,
+    });
     controller.stop();
   });
 
