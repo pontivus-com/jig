@@ -47,7 +47,7 @@ const REPEAT_OPTIONS = [
   { value: "none", label: "Does not repeat" },
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
-] as const;
+];
 
 const WEEKDAY_LABELS: Readonly<Record<Weekday, string>> = {
   MON: "Mon",
@@ -226,12 +226,14 @@ function recurrenceMatchesSeries(
     spec.pattern.kind === "weekly" &&
     series.pattern.kind === "weekly"
   ) {
+    const specPattern = spec.pattern;
+    const seriesPattern = series.pattern;
     return (
-      spec.pattern.interval_weeks === series.pattern.interval_weeks &&
-      spec.pattern.weekdays.length === series.pattern.weekdays.length &&
-      spec.pattern.weekdays.every(
+      specPattern.interval_weeks === seriesPattern.interval_weeks &&
+      specPattern.weekdays.length === seriesPattern.weekdays.length &&
+      specPattern.weekdays.every(
         (weekday, index) =>
-          weekday === series.pattern.weekdays[index],
+          weekday === seriesPattern.weekdays[index],
       )
     );
   }
