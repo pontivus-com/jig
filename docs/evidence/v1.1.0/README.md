@@ -6,7 +6,7 @@
 
 ## Current combined non-device candidate
 
-- Integration branch: `work/v1.1-complete-non-device-remediation-20261119`, tracked by PR #41 into `v1.1`.
+- Authoritative integration branch: `v1.1`. The completed non-device tree and both branch histories were integrated into `v1.1` by merge commit `fceaed0ae9a6adfeb8dc16f628fa9578a726a5cd`; temporary work/CI branches are not implementation-state authority.
 - Certified executable/product source candidate: `305b2cd8f14f8f6ac791e3d5d07340b9d5e45efd`.
 - Permanent Verify workflow: run `44516299671` / run number `1460`, triggered through CI-only PR #42.
 - Workflow result: **PASS** — Linux/browser Verify, Android deterministic build/F-Droid certification and Android API-24 runtime all completed successfully on the same candidate.
