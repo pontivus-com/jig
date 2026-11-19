@@ -52,9 +52,13 @@ The onboarding body is deliberately distinct from Planner content and intentiona
 - one repository chooser only when multiple eligible repositories require a real user choice;
 - one bounded needs-attention/error presentation when Jig cannot continue without user involvement.
 
-The UI must never expose provider/Git implementation sequencing as a succession of controls. Authorization polling, access discovery, clone/fetch, checkout placement, validation, adoption, SQLite initialization and initial synchronization remain behind the connecting state. Provider-owned identity/consent/access surfaces may interrupt the flow when GitHub requires them; Jig resumes automatically afterward.
+The UI must never expose provider/Git implementation sequencing as a succession of controls. Authorization polling, access discovery, pagination, clone/fetch, checkout placement, validation, adoption, SQLite initialization and initial synchronization remain behind the connecting state.
 
-There is no normal-flow **Refresh access**, **Grant repository access**, **Manage GitHub access**, manual authorization polling, checkout-path choice or separate adoption action. Reconnect follows the same rule: one Jig recovery intent, provider-owned consent when required, then automatic continuation.
+GitHub Device Flow has one unavoidable provider-owned interaction that is part of the normal connection experience: GitHub returns an 8-character authorization code that the user must enter on GitHub's fixed device-verification page. Jig therefore keeps one **Connecting repository…** surface visible with the code, a compact **Copy code** affordance and an **Open GitHub** fallback while automatically opening GitHub when permitted and polling in the background. The code is shown because GitHub requires it; polling cadence, pending/slow-down states and token exchange are never shown as steps.
+
+After authorization, GitHub may also require installation/repository-access selection on its own surface. Jig opens that provider surface when needed, waits, and re-checks access automatically when the app/browser becomes active and through bounded background retry. Closing or returning from GitHub is not itself treated as proof that access was granted because organization policy may turn the action into an approval request.
+
+There is no normal-flow **Refresh access**, Jig-owned **Grant repository access**, **Manage GitHub access**, manual authorization polling, checkout-path choice or separate adoption action. When provider access must change, the only Jig action is a user-level **Open GitHub**/continue-access affordance that hands control to GitHub's own installation/access page. Reconnect follows the same rule: one Jig recovery intent, the same required GitHub code/consent interaction, then automatic continuation without repository selection or re-acquisition.
 
 A compact always-available synchronization indicator truthfully communicates the user-level outcome: **Local only**, **Syncing**, **Up to date** or **Needs attention**. When remote continuity has a problem but current work is safe locally, the user-facing copy says so directly. Low-level Git/service/database facts remain available only as secondary diagnostics.
 
@@ -135,13 +139,28 @@ Onboarding uses the same outer application composition on desktop and Android; p
 
 **Body:** use one quiet, bounded onboarding composition centered within the normal Jig body. It is not a dashboard of setup cards and not a technical checklist. The initial state contains one short orientation and the available user choices. Android has one primary **Connect GitHub repository** action. Desktop has the same primary GitHub action plus **Use an existing local repository** as a secondary alternative.
 
-After Connect, replace the initial controls with one coherent **Connecting repository…** presentation. Progress may use a compact spinner/progress indicator and short outcome-oriented copy; it must not enumerate authorization, polling, installation, cloning, validating, adopting or database phases.
+After Connect, replace the initial controls with one coherent **Connecting repository…** presentation. It has three possible content variants without becoming a stepper:
 
-If repository selection is necessary, render one simple repository chooser using human-readable owner/repository identity. After selection, return to the single connecting state automatically.
+1. **Authorize with GitHub.** Show the GitHub-generated device code prominently enough to copy accurately, provide **Copy code**, and open GitHub's fixed device-verification page automatically where permitted. If opening is blocked or the user returns before completing authorization, expose one **Open GitHub** action. Supporting copy is concise: the user is completing GitHub authorization, not "step 2 of setup." Jig polls automatically and the user never presses Refresh.
+2. **Repository access on GitHub.** If the authorized token cannot see an eligible Jig App installation/repository, explain that repository access must be chosen on GitHub and provide/open the GitHub-owned installation/access page. When the user returns, Jig re-checks automatically. Do not claim installation or approval succeeded until GitHub's API actually exposes the installation/repository.
+3. **Finishing connection.** While clone/validation/adoption/database initialization run, show passive progress only. Do not expose those technical phases individually.
 
-If external consent/access is required, Jig may open or foreground GitHub's provider-owned surface. The Jig body remains a waiting/continuation state and resumes automatically when the app regains focus/activation or the provider flow completes. There is no Jig-owned **Refresh access**, **Grant repository access**, **Manage access** or manual poll control.
+The authorization code is a provider requirement, not optional developer detail: it must remain visible until GitHub authorizes, denies or expires that Device Flow. Do not substitute a fake one-click "Continue" that conceals a required code-entry action and leaves the user stranded on GitHub.
 
-**Needs attention:** show one concise explanation of the user-impacting problem and only the minimum action that can actually resolve it, for example **Reconnect GitHub**, **Try again** or returning to the repository chooser. Raw provider responses, filesystem paths, Git commands, transport phases and database terminology belong in diagnostics, not this surface.
+If repository selection is necessary, render one simple chooser using human-readable `owner/repository` identity from the complete authoritative GitHub App-accessible repository set. The list may span multiple accounts/organizations and must represent all paginated results, not only the first API page. If exactly one eligible repository exists, Jig may continue automatically. After an explicit selection, return immediately to the single connecting state.
+
+Provider installation/access UI can legitimately show organization-owned choices such as Install, Request or selected repositories. Jig does not reproduce those controls. If organization policy prevents immediate access, Jig remains truthful: **GitHub has not made this repository available yet** and provides the provider handoff/retry only as needed. It must not infer or display **Waiting for approval** unless that state is actually known.
+
+There is no Jig-owned **Refresh access**, **Grant repository access**, **Manage access** or manual poll control.
+
+**Needs attention:** map technical failure to the smallest real recovery:
+- authorization denied/expired → **Try GitHub authorization again** and generate a fresh code;
+- credential refresh/revocation after setup → **Reconnect GitHub**;
+- GitHub repository access absent → **Open GitHub** to review/install/request repository access, then continue automatic re-check;
+- transient network failure → automatic retry first, with **Try again** only after bounded retry is exhausted;
+- clone/adoption failure → concise product-level failure plus **Try again** or repository re-selection when that choice can actually change the outcome.
+
+Raw HTTP codes, `authorization_pending`, `slow_down`, installation IDs, filesystem paths, Git commands, transport phases and database terminology belong in diagnostics, not this surface.
 
 Successful setup transitions directly from onboarding into Planner without a completion ceremony or additional Continue button.
 
@@ -192,6 +211,8 @@ The Settings **Synchronization** section leads with user-level continuity rather
 Automatic synchronization is the normal behavior, so **Sync now** is not a standing primary Settings control. Reconnect/retry appears only when synchronization actually needs user intervention.
 
 A secondary **Diagnostics / technical details** region may show Local Git snapshot state, configured remote name/location, service health, database health and other engineering facts. That region is explicitly diagnostic and visually subordinate. It does not determine the primary Settings hierarchy and does not expose credentials, access tokens, raw askpass material or provider-specific internal IDs.
+
+For a managed GitHub repository, credential renewal is normally invisible: Jig refreshes expiring Device-Flow credentials before the network operation. **Reconnect GitHub** appears only when that automatic renewal is impossible or GitHub has revoked/rejected the authorization. Reconnect uses the same bounded device-code presentation described above and returns automatically to synchronization when GitHub authorizes; it never shows a repository picker or repeats onboarding.
 
 The compact header status is the concise projection of the same underlying synchronization state; it is not a separate state store. When the remote has a problem while current work is durable locally, both header/Settings messaging preserve that truth without requiring Git vocabulary.
 
