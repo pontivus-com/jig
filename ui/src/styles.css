@@ -192,24 +192,27 @@ body {
   .jig-header-mobile-application-row {
     display: grid;
     min-height: 56px;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--spacing-2);
     padding: 0 var(--spacing-2);
   }
 
-  .jig-header-mobile-title {
+  .jig-header-mobile-identity {
     min-width: 0;
-    justify-self: center;
+    justify-self: start;
     overflow: hidden;
   }
 
-  .jig-header-mobile-title .jig-header-destination-heading {
+  .jig-header-mobile-identity .jig-header-destination-heading {
     max-width: 100%;
+    justify-items: start;
+    text-align: start;
   }
 
-  .jig-header-mobile-title .jig-header-destination-subtitle {
-    white-space: normal;
+  .jig-header-mobile-identity .jig-header-destination-title {
+    font-size: var(--font-size-lg);
+    line-height: 1.2;
   }
 
   .jig-header-mobile-temporal-row {
@@ -298,6 +301,102 @@ body {
   .jig-status-unknown {
     color: var(--color-text-secondary);
     background: var(--color-background-muted);
+  }
+
+  .jig-status-indicator {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .jig-status-indicator.jig-status-synchronized,
+  .jig-status-indicator.jig-status-local-only,
+  .jig-status-indicator.jig-status-pending,
+  .jig-status-indicator.jig-status-retrying,
+  .jig-status-indicator.jig-status-sync-issue,
+  .jig-status-indicator.jig-status-unknown {
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .jig-mobile-bottom-navigation {
+    position: fixed;
+    z-index: 3;
+    inset-inline: 0;
+    inset-block-end: 0;
+    display: grid;
+    min-height: calc(64px + env(safe-area-inset-bottom, 0px));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    padding: var(--spacing-1) var(--spacing-1)
+      env(safe-area-inset-bottom, 0px);
+    border-block-start: var(--border-width) solid var(--color-border);
+    background: var(--color-background-surface);
+  }
+
+  .jig-mobile-nav-item {
+    min-width: 0;
+    min-height: 56px;
+    padding: 0;
+    border-radius: var(--radius-element);
+    color: var(--color-text-secondary);
+  }
+
+  .jig-mobile-nav-content {
+    display: grid;
+    min-width: 0;
+    justify-items: center;
+    gap: var(--spacing-0-5);
+  }
+
+  .jig-mobile-nav-icon {
+    display: grid;
+    min-width: 44px;
+    min-height: 28px;
+    place-items: center;
+    border-radius: var(--radius-full);
+  }
+
+  .jig-mobile-nav-label {
+    overflow: hidden;
+    max-width: 100%;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .jig-mobile-nav-item-active {
+    color: var(--jig-state-nav-active-text);
+  }
+
+  .jig-mobile-nav-item-active .jig-mobile-nav-icon {
+    background: var(--jig-state-nav-active-bg);
+  }
+
+  .jig-mobile-add-fab {
+    position: fixed;
+    z-index: 4;
+    inset-inline-end: max(
+      var(--spacing-3),
+      env(safe-area-inset-right, 0px)
+    );
+    inset-block-end: calc(
+      64px + env(safe-area-inset-bottom, 0px) + var(--spacing-3)
+    );
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+    min-height: 56px;
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .jig-mobile-today {
+    min-width: 64px;
+    font-weight: var(--font-weight-semibold);
   }
 
   .jig-view-heading {
@@ -1170,6 +1269,9 @@ body {
     .jig-content-frame {
       height: 100%;
       margin: 0;
+      padding-block-end: calc(
+        64px + env(safe-area-inset-bottom, 0px)
+      );
       overflow: auto;
       border: 0;
       border-radius: 0;
@@ -1196,8 +1298,22 @@ body {
       text-overflow: ellipsis;
     }
 
-    .jig-header-mobile-actions .jig-status-control {
-      min-width: 0;
+    .jig-header-mobile-actions .jig-status-indicator {
+      min-width: 48px;
+      min-height: 48px;
+    }
+
+    .jig-app-header-narrow .jig-header-temporal {
+      width: 100%;
+      justify-content: space-between;
+      gap: var(--spacing-1);
+    }
+
+    .jig-app-header-narrow .jig-header-week-range {
+      flex: 1 1 auto;
+      text-align: center;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-bold);
     }
 
     .jig-week-board {
@@ -1297,6 +1413,8 @@ body {
 
     .jig-app-header-narrow button,
     .jig-app-header-narrow [role="button"],
+    .jig-mobile-bottom-navigation button,
+    .jig-mobile-add-fab,
     .jig-date-add,
     .jig-task-menu-trigger,
     .jig-task-reference-action,
