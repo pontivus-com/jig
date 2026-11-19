@@ -734,7 +734,6 @@ export async function observeAndroidPortableRemote(
   const remoteSnapshot = await readAndroidSnapshotAtOid(
     effects,
     remoteHead,
-    expectedDatasetId,
   );
 
   let remoteRewritten = false;
