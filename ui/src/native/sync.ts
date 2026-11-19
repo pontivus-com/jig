@@ -360,11 +360,10 @@ export function createAndroidSyncController(
             effects,
             remoteHead,
           );
-          const currentState = await readCanonicalState(database);
           await markAdoptedHead(database, remoteHead);
           await markExported(
             database,
-            currentState.revision,
+            state.revision,
             remoteHead,
           );
           continue;
