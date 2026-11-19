@@ -475,7 +475,7 @@ test("desktop header stays compact while narrow header uses sticky destination-s
     await menu.getByRole("menuitem", { name: /^Settings/ }).click();
 
     const narrowSettingsHeight = await headerHeight(page);
-    expect(narrowSettingsHeight).toBeGreaterThanOrEqual(44);
+    expect(narrowSettingsHeight).toBeGreaterThanOrEqual(56);
     await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
     await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(0);
