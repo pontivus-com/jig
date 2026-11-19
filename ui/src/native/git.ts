@@ -19,6 +19,7 @@ import {
   remove,
   resolveRef,
   statusMatrix,
+  writeRef,
 } from "isomorphic-git";
 import {
   serializeSnapshot,
@@ -796,6 +797,19 @@ export async function observeAndroidPortableRemote(
     ) {
       lineage = "diverged";
     }
+  }
+
+  if (
+    remoteRewritten &&
+    previousRemoteHead !== null
+  ) {
+    await writeRef({
+      fs: effects.fs,
+      dir: effects.dir,
+      ref: trackingRef,
+      value: previousRemoteHead,
+      force: true,
+    });
   }
 
   return {
