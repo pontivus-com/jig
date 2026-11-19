@@ -377,6 +377,11 @@ describe("UI ownership architecture", () => {
     expect(taskEditor).toContain(
       'controlClassName="jig-mobile-touch-control"',
     );
+    expect(taskEditor).toContain('presentation="adaptive"');
+    expect(taskEditor).toContain("jig-mobile-selector-option");
+    expect(source("ui/src/settings.tsx")).toContain(
+      'presentation="adaptive"',
+    );
     expect(styles).toContain(".jig-mobile-touch-control {");
     expect(styles).toContain("min-width: 48px;");
     expect(styles).toContain("min-height: 48px;");
