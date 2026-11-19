@@ -1049,7 +1049,7 @@ describe("Android Git smart-HTTP feasibility", () => {
     ).toStrictEqual([localTask]);
   });
 
-  it("keeps Local Git committed when authenticated remote synchronization fails", async () => {
+  it("keeps SQLite durable and Local Git pending when authenticated remote observation fails", async () => {
     const { remoteUrl } = await fixture();
     const port = server?.port;
     if (port === undefined || root === null) {
@@ -1094,7 +1094,7 @@ describe("Android Git smart-HTTP feasibility", () => {
       const status = await controller.trigger();
 
       expect(status).toMatchObject({
-        local_git: "committed",
+        local_git: "pending",
         remote: {
           state: "sync-issue",
           remote_name: "origin",
@@ -1103,8 +1103,8 @@ describe("Android Git smart-HTTP feasibility", () => {
       });
       expect(await readMetadata(database)).toMatchObject({
         revision: 1,
-        last_exported_revision: 1,
-        pending_sync: false,
+        last_exported_revision: 0,
+        pending_sync: true,
       });
       expect(
         (await readCanonicalState(database)).tasks[0],
