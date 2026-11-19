@@ -90,6 +90,11 @@ export type PortableRemoteObservation =
       readonly previously_synchronized: boolean;
     }
   | {
+      readonly state: "unsafe";
+      readonly remote: SynchronizationRemote;
+      readonly local_head: string | null;
+    }
+  | {
       readonly state: "present";
       readonly remote: SynchronizationRemote;
       readonly local_head: string | null;
@@ -870,11 +875,20 @@ export async function observePortableRemote(
     );
   }
 
-  const remoteSnapshot = await readSnapshotAtRef(
-    config.repository_path,
-    remoteHead,
-    expectedDatasetId,
-  );
+  let remoteSnapshot: PortableSnapshot;
+  try {
+    remoteSnapshot = await readSnapshotAtRef(
+      config.repository_path,
+      remoteHead,
+      expectedDatasetId,
+    );
+  } catch {
+    return {
+      state: "unsafe",
+      remote: authority.remote,
+      local_head: localHead,
+    };
+  }
 
   const remoteRewritten =
     lastAdoptedHead !== null &&
