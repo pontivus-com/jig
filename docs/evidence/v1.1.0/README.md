@@ -1,6 +1,6 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** POST-UX NON-DEVICE CANDIDATE CERTIFIED / REVIEWED UX-F0..UX-F7 CLOSED / PHYSICAL CERTIFICATION OPEN — the 2026-11-19 fidelity remediation is complete on the authoritative `v1.1` branch. Exact executable source candidate `611c8ced6a854a80f24bf727c53d792f5c5d556c` passed permanent Verify run `44547579822` / #1521 across Linux/browser, deterministic Android build certification and API-24 instrumentation. The retained browser matrix was explicitly reviewed against the corrected UX-F0 authority; J110-IMP-09, J110-IMP-15 and live Linux/Desktop GitHub acceptance remain open.
+**Status:** POST-UX NON-DEVICE CANDIDATE CERTIFIED / REVIEWED UX-F0..UX-F7 CLOSED / J110-IMP-09 PHYSICAL TASK MOVEMENT COMPLETE / J110-IMP-15 + LIVE DESKTOP ACCEPTANCE OPEN — the 2026-11-19 fidelity remediation is complete on the authoritative `v1.1` branch. Exact executable source candidate `611c8ced6a854a80f24bf727c53d792f5c5d556c` passed permanent Verify run `44547579822` / #1521 across Linux/browser, deterministic Android build certification and API-24 instrumentation. The retained browser matrix was explicitly reviewed against the corrected UX-F0 authority. J110-IMP-09 physical Task movement was completed on physical Android, but the detailed execution record was not retained and must not be reconstructed. J110-IMP-15 and live Linux/Desktop GitHub acceptance remain open.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
@@ -18,7 +18,7 @@
 - Android API-24 instrumentation: `cd android && ./gradlew :app:connectedDebugAndroidTest` ended **`BUILD SUCCESSFUL`**.
 - `package.json.version` remains `1.0.6` by design; the `1.1.0` version transition remains owned by the later `release/v1.1.0` metadata PR.
 
-This candidate closes the repository/host/emulator **functional, runtime and UX/UI non-device gates**. It is now the required source/APK lineage for J110-IMP-09 and the subsequent J110-IMP-15 physical certification. Any later executable change invalidates that physical-candidate identity and requires a new certified artifact.
+This candidate closes the repository/host/emulator **functional, runtime and UX/UI non-device gates**. J110-IMP-09 physical Task movement has also completed, although its detailed execution record was lost. The retained source/APK lineage remains the governed input for the remaining J110-IMP-15 physical certification. Any later executable change invalidates that current physical-candidate identity and requires a new certified artifact.
 
 ## Historical pre-remediation candidate
 
@@ -101,17 +101,16 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 
 UX-F0..UX-F7 and the complete non-device post-UX candidate are now closed. Remaining gates are external/physical:
 
-1. Run **J110-IMP-09** on APK artifact `14541004265` from exact executable source head `611c8ced6a854a80f24bf727c53d792f5c5d556c` and prove repeated replacement dnd-kit Task movement on physical Android.
-2. Run the remaining **J110-IMP-15** physical/native matrix on the **same APK/source lineage**, including real-device usability of onboarding, shell/navigation, Planner, Task form, Settings and History plus reminders/lifecycle/Git interoperability.
-3. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
-4. Only after those gates pass may `v1.1` be promoted to `master` and the `release/v1.1.0` metadata/tag/GitHub Release/F-Droid publication ceremony proceed.
+1. Run the remaining **J110-IMP-15** physical/native matrix on the governed current APK/source lineage, including real-device usability of onboarding, shell/navigation, Planner, Task form, Settings and History plus reminders/lifecycle/Git interoperability. J110-IMP-09 is already complete and must not be rerun solely to reconstruct its lost detailed record.
+2. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
+3. Only after those two remaining acceptance streams pass may `v1.1` be promoted to `master` and the `release/v1.1.0` metadata/tag/GitHub Release/F-Droid publication ceremony proceed.
 
 No additional repository UX/UI remediation is currently identified by the reviewed non-device matrix. A physical failure must reopen the affected governed contract on `v1.1`; it must not create a competing branch or unreviewed substitute architecture.
 
 ## Physical-device evidence
 
-Use [physical-android-certification.md](physical-android-certification.md) as the canonical evidence record for J110-IMP-09 and J110-IMP-15. It is pinned to source `611c8ced6a854a80f24bf727c53d792f5c5d556c`, artifact `14541004265` and unpacked APK SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`. Do not mark any row PASS from browser/emulator/hosted-CI evidence.
+Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It records the corrected J110-IMP-09 disposition as completed with detailed execution evidence lost, and remains the active evidence record for J110-IMP-15. The current retained candidate is source `611c8ced6a854a80f24bf727c53d792f5c5d556c`, artifact `14541004265` and unpacked APK SHA-256 `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`. Do not backfill unknown IMP-09 execution details from browser/emulator/hosted-CI evidence.
 
-**PARTIAL PHYSICAL FEEDBACK RECORDED / CERTIFICATION NOT CLOSED.** Physical Android use has produced a blocking FAIL for the Pangea drag interaction (unreliable destination/drop with stranded floating-card behavior) and material UX findings for touch density, Settings and Repeat composition. Those findings reopened the design. J110-IMP-09 must be rerun on the replacement implementation; the full J110-IMP-15 matrix remains open.
+**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-15 OPEN.** The earlier Pangea failure and associated UX findings reopened the design; the replacement Task-movement implementation was subsequently exercised successfully on physical Android. The detailed IMP-09 execution record was not retained, so unknown device, source/APK and per-check facts must not be reconstructed. The remaining physical work is the J110-IMP-15 matrix.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.
