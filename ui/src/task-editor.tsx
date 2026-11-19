@@ -298,6 +298,8 @@ export function commandForDraft(
 }
 
 export interface TaskEditorProps {
+  readonly formId?: string;
+  readonly showActions?: boolean;
   readonly task: Task | null;
   readonly recurrenceSeries: RecurrenceSeries | null;
   readonly draft: TaskDraft;
@@ -309,6 +311,8 @@ export interface TaskEditorProps {
 }
 
 export function TaskEditor({
+  formId,
+  showActions = true,
   task,
   recurrenceSeries,
   draft,
@@ -418,6 +422,7 @@ export function TaskEditor({
       aria-label={task === null ? "Add task" : `Task ${task.title}`}
     >
       <form
+        id={formId}
         className="jig-editor-form"
         onSubmit={(event) => {
           event.preventDefault();
@@ -651,23 +656,25 @@ export function TaskEditor({
           controlClassName="jig-mobile-touch-control"
         />
 
-        <div className="jig-editor-actions">
-          <div className="jig-editor-primary-actions">
-            <Button
-              type="button"
-              label="Cancel"
-              variant="secondary"
-              onClick={onCancel}
-              isDisabled={isSaving}
-            />
-            <Button
-              type="submit"
-              label={task === null ? "Add task" : "Save"}
-              variant="primary"
-              isLoading={isSaving}
-            />
+        {showActions ? (
+          <div className="jig-editor-actions">
+            <div className="jig-editor-primary-actions">
+              <Button
+                type="button"
+                label="Cancel"
+                variant="secondary"
+                onClick={onCancel}
+                isDisabled={isSaving}
+              />
+              <Button
+                type="submit"
+                label={task === null ? "Add task" : "Save"}
+                variant="primary"
+                isLoading={isSaving}
+              />
+            </div>
           </div>
-        </div>
+        ) : null}
       </form>
     </section>
   );
