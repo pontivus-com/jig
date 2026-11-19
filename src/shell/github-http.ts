@@ -1,6 +1,6 @@
-import type { JigConfig } from "./config";
 import type { GitHubOnboardingController } from "../github-onboarding";
 import type { GitHubReconnectController } from "../github-reconnect";
+import type { JigConfig } from "./config";
 import { InstallationError } from "./setup";
 import {
   authorizeMutation,
@@ -12,22 +12,22 @@ export interface GitHubHttpDependencies {
   readonly onboarding?: GitHubOnboardingController<JigConfig>;
   readonly reconnect?: GitHubReconnectController;
   readonly is_configured: () => boolean;
-  readonly on_configured?: (config: JigConfig) => void;
 }
 
-interface GitHubAcquireRequest {
+interface GitHubRepositorySelectionRequest {
   readonly repository_id: number;
 }
 
-async function parseGitHubAcquireRequest(
+async function parseRepositorySelection(
   request: Request,
-): Promise<GitHubAcquireRequest> {
+): Promise<GitHubRepositorySelectionRequest> {
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().startsWith("application/json")) {
     throw new InstallationError(
       "State-changing setup requests require Content-Type application/json",
     );
   }
+
   let value: unknown;
   try {
     value = await request.json();
@@ -35,11 +35,13 @@ async function parseGitHubAcquireRequest(
     throw new InstallationError("Setup request body must be valid JSON");
   }
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new InstallationError("GitHub acquisition request must be an object");
+    throw new InstallationError(
+      "GitHub repository selection request must be an object",
+    );
   }
-  const object: Record<string, unknown> = Object.fromEntries(
-    Object.entries(value),
-  );
+
+  const object: Record<string, unknown> =
+    Object.fromEntries(Object.entries(value));
   if (
     Object.keys(object).length !== 1 ||
     typeof object.repository_id !== "number" ||
@@ -47,10 +49,21 @@ async function parseGitHubAcquireRequest(
     object.repository_id <= 0
   ) {
     throw new InstallationError(
-      "GitHub acquisition requires exactly a positive repository_id",
+      "GitHub repository selection requires exactly a positive repository_id",
     );
   }
   return { repository_id: object.repository_id };
+}
+
+function unavailableOnboarding(): Response {
+  return jsonResponse({ error: "Connect GitHub is unavailable" }, 503);
+}
+
+function unavailableReconnect(): Response {
+  return jsonResponse(
+    { error: "GitHub reconnect is unavailable for this repository" },
+    409,
+  );
 }
 
 export function createGitHubHttpHandler(
@@ -73,22 +86,21 @@ export function createGitHubHttpHandler(
 
     if (
       request.method === "GET" &&
-      pathname === "/api/v1/setup/github/repositories"
+      pathname === "/api/v1/setup/github/state"
     ) {
       const onboarding = dependencies.onboarding;
-      if (onboarding === undefined || !onboarding.snapshot().available) {
-        return jsonResponse({ error: "Connect GitHub is unavailable" }, 503);
-      }
-      return jsonResponse(onboarding.snapshot());
+      return onboarding === undefined || !onboarding.snapshot().available
+        ? unavailableOnboarding()
+        : jsonResponse(onboarding.snapshot());
     }
 
     if (
       request.method === "POST" &&
-      [
-        "/api/v1/setup/github/start",
-        "/api/v1/setup/github/refresh-access",
-        "/api/v1/setup/github/acquire",
-      ].includes(pathname)
+      (
+        pathname === "/api/v1/setup/github/connect" ||
+        pathname === "/api/v1/setup/github/select-repository" ||
+        pathname === "/api/v1/setup/github/retry"
+      )
     ) {
       const unauthorized = authorizeMutation(
         request,
@@ -103,30 +115,21 @@ export function createGitHubHttpHandler(
 
       const onboarding = dependencies.onboarding;
       if (onboarding === undefined || !onboarding.snapshot().available) {
-        return jsonResponse({ error: "Connect GitHub is unavailable" }, 503);
+        return unavailableOnboarding();
       }
 
       try {
-        if (pathname === "/api/v1/setup/github/start") {
+        if (pathname === "/api/v1/setup/github/connect") {
           return jsonResponse(await onboarding.start());
         }
-        if (pathname === "/api/v1/setup/github/refresh-access") {
-          return jsonResponse(await onboarding.refreshAccess());
+        if (pathname === "/api/v1/setup/github/retry") {
+          return jsonResponse(await onboarding.retry());
         }
 
-        const body = await parseGitHubAcquireRequest(request);
-        const config = await onboarding.acquire(body.repository_id);
-        if (dependencies.on_configured === undefined) {
-          return jsonResponse(
-            { error: "GitHub setup completion is unavailable" },
-            409,
-          );
-        }
-        dependencies.on_configured(config);
-        return jsonResponse({
-          configured: true,
-          repository_path: config.repository_path,
-        });
+        const body = await parseRepositorySelection(request);
+        return jsonResponse(
+          await onboarding.selectRepository(body.repository_id),
+        );
       } catch (error) {
         return jsonResponse(
           {
@@ -141,11 +144,18 @@ export function createGitHubHttpHandler(
     }
 
     if (
+      request.method === "GET" &&
+      pathname === "/api/v1/github/reconnect/state"
+    ) {
+      const reconnect = dependencies.reconnect;
+      return reconnect === undefined || !reconnect.available()
+        ? unavailableReconnect()
+        : jsonResponse(reconnect.snapshot());
+    }
+
+    if (
       request.method === "POST" &&
-      [
-        "/api/v1/github/reconnect/start",
-        "/api/v1/github/reconnect/refresh",
-      ].includes(pathname)
+      pathname === "/api/v1/github/reconnect"
     ) {
       const unauthorized = authorizeMutation(
         request,
@@ -157,17 +167,14 @@ export function createGitHubHttpHandler(
 
       const reconnect = dependencies.reconnect;
       if (reconnect === undefined || !reconnect.available()) {
-        return jsonResponse(
-          { error: "GitHub reconnect is unavailable for this repository" },
-          409,
-        );
+        return unavailableReconnect();
       }
 
       try {
         return jsonResponse(
-          pathname.endsWith("/start")
-            ? await reconnect.start()
-            : await reconnect.refresh(),
+          reconnect.snapshot().state === "attention"
+            ? await reconnect.retry()
+            : await reconnect.start(),
         );
       } catch (error) {
         return jsonResponse(
