@@ -20,6 +20,7 @@ import {
   remove,
   resolveRef,
   statusMatrix,
+  writeRef,
 } from "isomorphic-git";
 import {
   serializeSnapshot,
@@ -42,6 +43,8 @@ import { ANDROID_GIT_WORKTREE } from "./paths";
 
 export const ANDROID_DATA_BRANCH = "jig-data";
 const ANDROID_REMOTE = "origin";
+const ANDROID_OBSERVED_REMOTE_REF =
+  "refs/jig/observed/origin/jig-data";
 
 export interface GitCredentialProvider {
   (): Promise<string>;
@@ -655,10 +658,13 @@ export async function observeAndroidPortableRemote(
   const localHead = await androidPortableHead(effects);
   const trackingRef =
     `refs/remotes/${ANDROID_REMOTE}/${ANDROID_DATA_BRANCH}`;
-  const previousRemoteHead = await optionalAndroidRef(
+  const durableObservedHead = await optionalAndroidRef(
     effects,
-    trackingRef,
+    ANDROID_OBSERVED_REMOTE_REF,
   );
+  const previousRemoteHead =
+    durableObservedHead ??
+    await optionalAndroidRef(effects, trackingRef);
 
   const location = await getConfig({
     fs: effects.fs,
@@ -823,6 +829,16 @@ export async function observeAndroidPortableRemote(
     }
   }
 
+  if (!remoteRewritten) {
+    await writeRef({
+      fs: effects.fs,
+      dir: effects.dir,
+      ref: ANDROID_OBSERVED_REMOTE_REF,
+      value: remoteHead,
+      force: previousRemoteHead !== null,
+    });
+  }
+
   return {
     remote_state: "present",
     local_head: localHead,
@@ -833,6 +849,54 @@ export async function observeAndroidPortableRemote(
     remote_snapshot: remoteSnapshot,
     base,
   };
+}
+
+export async function acknowledgeAndroidRemoteHead(
+  effects: AndroidGitEffects,
+  head: string,
+): Promise<void> {
+  const current = await optionalAndroidRef(
+    effects,
+    ANDROID_OBSERVED_REMOTE_REF,
+  );
+  await writeRef({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: ANDROID_OBSERVED_REMOTE_REF,
+    value: head,
+    force: current !== null,
+  });
+}
+
+export async function normalizeAndroidPortableHead(
+  effects: AndroidGitEffects,
+  expectedHead: string,
+  targetHead: string,
+): Promise<void> {
+  const current = await androidPortableHead(effects);
+  if (current !== expectedHead) {
+    throw new AndroidGitAdapterError(
+      "Android jig-data head changed concurrently; retry required",
+    );
+  }
+  await writeRef({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: `refs/heads/${ANDROID_DATA_BRANCH}`,
+    value: targetHead,
+    force: true,
+  });
+  await checkout({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: ANDROID_DATA_BRANCH,
+    force: true,
+  });
+  if ((await androidPortableHead(effects)) !== targetHead) {
+    throw new AndroidGitAdapterError(
+      "Android jig-data normalization did not reach target head",
+    );
+  }
 }
 
 export async function alignAndroidPortableHead(
