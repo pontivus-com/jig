@@ -16,6 +16,7 @@ import {
 } from "../../../src/core/reconciliation";
 import {
   decideSynchronization,
+  runSynchronizationRemoteOperation,
   SYNCHRONIZATION_HEALTHY_POLL_MS,
   synchronizationRetryDelayMs,
 } from "../../../src/synchronization";
@@ -37,7 +38,7 @@ const MUTATION_DEBOUNCE_MS = 3_000;
 
 export interface AndroidSyncController {
   readonly start: () => Promise<void>;
-  readonly stop: () => void;
+  readonly stop: () => Promise<void>;
   readonly status: () => RepositorySynchronizationStatus;
   readonly notifyMutation: () => void;
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
@@ -219,11 +220,15 @@ export function createAndroidSyncController(
       let observation:
         Awaited<ReturnType<typeof observeAndroidPortableRemote>>;
       try {
-        observation = await observeAndroidPortableRemote(
-          effects,
-          metadata.dataset_id,
-          credential,
-        );
+        observation =
+          await runSynchronizationRemoteOperation(
+            () =>
+              observeAndroidPortableRemote(
+                effects,
+                metadata.dataset_id,
+                credential,
+              ),
+          );
       } catch {
         return transientIssue();
       }
@@ -442,9 +447,12 @@ export function createAndroidSyncController(
             merged.revision,
             committed,
           );
-          await pushAndroidPortableRepository(
-            effects,
-            credential,
+          await runSynchronizationRemoteOperation(
+            () =>
+              pushAndroidPortableRepository(
+                effects,
+                credential,
+              ),
           );
           if (merged.revision < applied.revision) {
             continue;
@@ -466,9 +474,12 @@ export function createAndroidSyncController(
           if (await localPending()) {
             await exportCurrent();
           }
-          await pushAndroidPortableRepository(
-            effects,
-            credential,
+          await runSynchronizationRemoteOperation(
+            () =>
+              pushAndroidPortableRepository(
+                effects,
+                credential,
+              ),
           );
           continue;
         } catch {
@@ -502,9 +513,13 @@ export function createAndroidSyncController(
       );
       schedule(0);
     },
-    stop: () => {
+    stop: async () => {
       stopped = true;
       clearTimer();
+      const active = running;
+      if (active !== null) {
+        await active.catch(() => current);
+      }
     },
     status: () => current,
     notifyMutation: () => {
