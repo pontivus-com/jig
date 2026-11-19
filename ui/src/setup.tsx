@@ -183,7 +183,7 @@ export function SetupView({
   };
 
   return (
-    <main className="jig-setup" aria-labelledby="jig-setup-title">
+    <div className="jig-setup" aria-labelledby="jig-setup-title">
       <div className="jig-setup-layout">
         <section className="jig-setup-value">
           <div className="jig-setup-heading">
@@ -439,6 +439,6 @@ export function SetupView({
           ) : null}
         </section>
       </div>
-    </main>
+    </div>
   );
 }
