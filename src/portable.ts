@@ -62,6 +62,21 @@ function stableJson(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+export function portableSnapshotsEqual(
+  left: PortableSnapshot,
+  right: PortableSnapshot,
+): boolean {
+  if (left.files.size !== right.files.size) {
+    return false;
+  }
+  for (const [path, content] of left.files) {
+    if (right.files.get(path) !== content) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function serializeSnapshot(
   tasks: readonly Task[],
   datasetId: string,
