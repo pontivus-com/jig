@@ -296,18 +296,19 @@ export function createSyncController(
     ).revision;
   };
 
-  const transientRemoteFailure = (): RepositorySynchronizationStatus => {
-    remoteFailureCount += 1;
-    currentStatus = synchronizationStatus(
-      (currentStatus.local_git === "issue"
-        ? "issue"
-        : "committed"),
-      remote,
-      remoteFailureCount >= 7 ? "sync-issue" : "retrying",
-    );
-    schedule(synchronizationRetryDelayMs(remoteFailureCount));
-    return currentStatus;
-  };
+  const transientRemoteFailure =
+    async (): Promise<RepositorySynchronizationStatus> => {
+      remoteFailureCount += 1;
+      currentStatus = synchronizationStatus(
+        (await localPending()) ? "pending" : "committed",
+        remote,
+        remoteFailureCount >= 7 ? "sync-issue" : "retrying",
+      );
+      schedule(
+        synchronizationRetryDelayMs(remoteFailureCount),
+      );
+      return currentStatus;
+    };
 
   const structuralIssue = async (): Promise<RepositorySynchronizationStatus> => {
     const committed = !(await localPending());
@@ -345,7 +346,7 @@ export function createSyncController(
     try {
       remote = await effects.inspectRemote(adapter);
     } catch {
-      return transientRemoteFailure();
+      return await transientRemoteFailure();
     }
 
     let networkEnvironment:
@@ -353,7 +354,7 @@ export function createSyncController(
     try {
       networkEnvironment = await effects.networkEnvironment();
     } catch {
-      return transientRemoteFailure();
+      return await transientRemoteFailure();
     }
     if (networkEnvironment === null) {
       return structuralIssue();
@@ -369,7 +370,7 @@ export function createSyncController(
           networkEnvironment,
         );
       } catch {
-        return transientRemoteFailure();
+        return await transientRemoteFailure();
       }
 
       remote = remoteIdentity(observation);
@@ -662,7 +663,7 @@ export function createSyncController(
       return structuralIssue();
     }
 
-    return transientRemoteFailure();
+    return await transientRemoteFailure();
   };
 
   const trigger = async (): Promise<RepositorySynchronizationStatus> => {
