@@ -168,9 +168,32 @@ async function requireGit(
 }
 
 function endpointIdentity(value: string): string {
-  return sanitizeSynchronizationRemoteLocation(value)
-    .replace(/\.git\/?$/i, "")
-    .replace(/\/$/, "");
+  const trimmed = value.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "file:") {
+      return `local:${parsed.pathname.replace(/\.git\/?$/i, "").replace(/\/$/, "")}`;
+    }
+    const path = parsed.pathname
+      .replace(/^\/+/, "")
+      .replace(/\.git\/?$/i, "")
+      .replace(/\/$/, "");
+    return `remote:${parsed.host.toLowerCase()}/${path}`;
+  } catch {
+    const scpLike =
+      /^(?:[^@\s]+@)?([^:\s]+):(.+)$/.exec(trimmed);
+    const host = scpLike?.[1];
+    const path = scpLike?.[2];
+    if (host !== undefined && path !== undefined) {
+      return `remote:${host.toLowerCase()}/${path
+        .replace(/^\/+/, "")
+        .replace(/\.git\/?$/i, "")
+        .replace(/\/$/, "")}`;
+    }
+    return `local:${trimmed
+      .replace(/\.git\/?$/i, "")
+      .replace(/\/$/, "")}`;
+  }
 }
 
 async function selectedRemoteName(
