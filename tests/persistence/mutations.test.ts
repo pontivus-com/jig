@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  applySynchronizedCanonicalState,
   applyTaskCommand,
   readCanonicalState,
   readMetadata,
@@ -515,4 +516,73 @@ describe("transactional recurrence persistence", () => {
     expect(state.recurrences).toHaveLength(1);
   });
 });
+});
+
+
+describe("synchronized canonical application", () => {
+  it("requires the exact observed revision and leaves the applied state pending until Git export", async () => {
+    const before = await readCanonicalState(db);
+    const synchronizedTask = {
+      id: IDS[0],
+      title: "Remote adopted",
+      scheduled_date: "2026-11-16",
+      position: 0,
+      priority: "NORMAL" as const,
+      context: null,
+      reference: null,
+      note: null,
+      reminder_time: null,
+      recurrence_series_id: null,
+      recurrence_occurrence_date: null,
+      completed_at: null,
+      created_at: TIMES[0],
+      updated_at: TIMES[0],
+    };
+
+    const applied = await applySynchronizedCanonicalState(
+      db,
+      before.revision,
+      [synchronizedTask],
+      [],
+      "a".repeat(40),
+    );
+
+    expect(applied.revision).toBe(before.revision + 1);
+    expect(applied.tasks).toStrictEqual([synchronizedTask]);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: before.revision + 1,
+      last_adopted_head: "a".repeat(40),
+      last_exported_revision: 0,
+      last_exported_head: null,
+      pending_sync: true,
+    });
+  });
+
+  it("cannot overwrite a Task mutation that lands after remote observation", async () => {
+    const observedRevision = (await readCanonicalState(db)).revision;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Newer local mutation",
+        scheduled_date: "2026-11-16",
+      },
+      observedRevision,
+      TIMES[0],
+      () => IDS[0],
+    );
+    const before = await readCanonicalState(db);
+
+    await expect(
+      applySynchronizedCanonicalState(
+        db,
+        observedRevision,
+        [],
+        [],
+        "b".repeat(40),
+      ),
+    ).rejects.toThrow(StaleRevisionError);
+
+    expect(await readCanonicalState(db)).toStrictEqual(before);
+  });
 });
