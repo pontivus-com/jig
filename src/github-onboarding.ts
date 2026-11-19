@@ -24,6 +24,11 @@ type GitHubOnboardingPhase =
   | "attention"
   | "configured";
 
+type GitHubOnboardingRecovery =
+  | "authorization"
+  | "repository-access"
+  | "acquisition";
+
 type Sleep = (milliseconds: number) => Promise<void>;
 
 export interface GitHubOnboardingDependencies<TAcquired> {
@@ -71,6 +76,7 @@ export class GitHubOnboardingController<TAcquired> {
   private worker: Promise<void> | null = null;
   private accessRetryMs = INITIAL_ACCESS_RETRY_MS;
   private transientAccessFailures = 0;
+  private recovery: GitHubOnboardingRecovery = "authorization";
   private readonly wakeup = new GitHubFlowWakeup();
 
   constructor(
@@ -144,7 +150,26 @@ export class GitHubOnboardingController<TAcquired> {
     if (this.phase !== "attention") {
       return this.snapshot();
     }
-    return this.start();
+
+    this.error = null;
+    if (this.recovery === "authorization") {
+      return this.start();
+    }
+    if (this.recovery === "repository-access") {
+      this.phase = "repository-access";
+      this.accessRetryMs = INITIAL_ACCESS_RETRY_MS;
+      this.transientAccessFailures = 0;
+      this.ensureWorker();
+      return this.snapshot();
+    }
+
+    if (this.selectedRepository === null) {
+      this.phase = "repository-selection";
+      return this.snapshot();
+    }
+    this.phase = "acquiring";
+    this.ensureWorker();
+    return this.snapshot();
   }
 
   resume(): void {
@@ -224,6 +249,7 @@ export class GitHubOnboardingController<TAcquired> {
     }
 
     this.phase = "attention";
+    this.recovery = "authorization";
     this.error =
       authorization.error ??
       "GitHub authorization did not complete. Try GitHub authorization again.";
@@ -234,7 +260,9 @@ export class GitHubOnboardingController<TAcquired> {
     const credential = this.dependencies.device_flow.credential();
     if (credential === null) {
       this.phase = "attention";
-      this.error = "GitHub authorization is no longer available. Try GitHub authorization again.";
+      this.recovery = "authorization";
+      this.error =
+        "GitHub authorization is no longer available. Try GitHub authorization again.";
       return "continue";
     }
 
@@ -290,6 +318,7 @@ export class GitHubOnboardingController<TAcquired> {
         error.status_code === 401
       ) {
         this.phase = "attention";
+        this.recovery = "authorization";
         this.error =
           "GitHub authorization is no longer valid. Try GitHub authorization again.";
         return "continue";
@@ -313,6 +342,7 @@ export class GitHubOnboardingController<TAcquired> {
         MAX_TRANSIENT_ACCESS_FAILURES
       ) {
         this.phase = "attention";
+        this.recovery = "repository-access";
         this.error =
           "Jig could not confirm repository access with GitHub. Try again when the connection is available.";
         return "continue";
@@ -340,14 +370,17 @@ export class GitHubOnboardingController<TAcquired> {
       }
       this.phase = "configured";
       this.error = null;
-    } catch (error) {
+    } catch {
       this.phase = "attention";
-      this.error = error instanceof Error ? error.message : String(error);
+      this.recovery = "acquisition";
+      this.error =
+        "Jig could not finish connecting this repository. Try again.";
     }
   }
 
   private fail(error: unknown): void {
     this.phase = "attention";
+    this.recovery = "authorization";
     this.error = error instanceof Error ? error.message : String(error);
   }
 
@@ -368,6 +401,7 @@ export class GitHubOnboardingController<TAcquired> {
     this.error = null;
     this.accessRetryMs = INITIAL_ACCESS_RETRY_MS;
     this.transientAccessFailures = 0;
+    this.recovery = "authorization";
   }
 
   private wait(milliseconds: number): Promise<void> {
