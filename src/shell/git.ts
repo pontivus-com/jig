@@ -1010,7 +1010,6 @@ export async function observePortableRemote(
   const remoteSnapshot = await readSnapshotAtRef(
     config.repository_path,
     remoteHead,
-    expectedDatasetId,
   );
 
   let remoteRewritten = false;
