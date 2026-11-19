@@ -260,6 +260,33 @@ describe("isolated jig-data adapter", () => {
     );
   });
 
+  it("treats equivalent relative and absolute local fetch/push paths as one repository", async () => {
+    const repo = await fixture();
+    const remote = await mkdtemp(join(tmpdir(), "jig-local-identity-"));
+    roots.push(remote);
+    await git(remote, ["init", "--bare"]);
+
+    const relativeRemote =
+      "../" + remote.slice(remote.lastIndexOf("/") + 1);
+    await git(repo, ["remote", "add", "origin", relativeRemote]);
+    await git(repo, [
+      "remote",
+      "set-url",
+      "--push",
+      "origin",
+      remote,
+    ]);
+
+    await expect(
+      inspectSynchronizationAuthority({
+        repository_path: repo,
+      }),
+    ).resolves.toMatchObject({
+      state: "selected",
+      remote: { name: "origin" },
+    });
+  });
+
   it("accepts protocol-different fetch/push URLs only when they identify one logical repository", async () => {
     const repo = await fixture();
     await git(repo, [
