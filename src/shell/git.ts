@@ -167,12 +167,17 @@ async function requireGit(
   return result.stdout;
 }
 
-function endpointIdentity(value: string): string {
+function endpointIdentity(
+  value: string,
+  repositoryPath: string,
+): string {
   const trimmed = value.trim();
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol === "file:") {
-      return `local:${parsed.pathname.replace(/\.git\/?$/i, "").replace(/\/$/, "")}`;
+      return `local:${resolve(parsed.pathname)
+        .replace(/\.git\/?$/i, "")
+        .replace(/\/$/, "")}`;
     }
     const path = parsed.pathname
       .replace(/^\/+/, "")
@@ -190,7 +195,7 @@ function endpointIdentity(value: string): string {
         .replace(/\.git\/?$/i, "")
         .replace(/\/$/, "")}`;
     }
-    return `local:${trimmed
+    return `local:${resolve(repositoryPath, trimmed)
       .replace(/\.git\/?$/i, "")
       .replace(/\/$/, "")}`;
   }
@@ -291,7 +296,8 @@ export async function inspectSynchronizationAuthority(
   if (
     fetchLocation === undefined ||
     pushLocation === undefined ||
-    endpointIdentity(fetchLocation) !== endpointIdentity(pushLocation)
+    endpointIdentity(fetchLocation, config.repository_path) !==
+      endpointIdentity(pushLocation, config.repository_path)
   ) {
     return { state: "ambiguous" };
   }
