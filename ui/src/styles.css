@@ -572,6 +572,11 @@ body {
     gap: var(--spacing-0-5);
   }
 
+  .jig-task-completion-target {
+    display: grid;
+    place-items: center;
+  }
+
   .jig-task-card-preview-row {
     display: flex;
     align-items: center;
@@ -1230,7 +1235,8 @@ body {
       min-height: 88px;
     }
 
-    .jig-task-drag-handle {
+    .jig-task-drag-handle,
+    .jig-task-completion-target {
       width: 48px;
       height: 48px;
     }
