@@ -12,6 +12,10 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+function activeWeek(page: Page) {
+  return page.locator('.jig-week-slide[data-jig-week-page="active"]');
+}
+
 function expectNear(actual: number, expected: number, tolerance = 3): void {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance);
 }
@@ -99,17 +103,22 @@ async function themeSnapshot(page: Page): Promise<{
     readonly background: string;
   }[];
 }> {
-  await expect(page.locator(".jig-task-card").first()).toBeVisible();
+  const active = activeWeek(page);
+  await expect(active.locator(".jig-task-card").first()).toBeVisible();
   await expect(
-    page.locator(".jig-week-column-today .jig-week-column-header"),
+    active.locator(".jig-week-column-today .jig-week-column-header"),
   ).toBeVisible();
   await expect(page.locator(".jig-logo")).toBeVisible();
 
   return page.evaluate(() => {
-    const task = document.querySelector<HTMLElement>(".jig-task-card");
-    const today = document.querySelector<HTMLElement>(
-      ".jig-week-column-today .jig-week-column-header",
+    const active = document.querySelector<HTMLElement>(
+      '.jig-week-slide[data-jig-week-page="active"]',
     );
+    const task = active?.querySelector<HTMLElement>(".jig-task-card") ?? null;
+    const today =
+      active?.querySelector<HTMLElement>(
+        ".jig-week-column-today .jig-week-column-header",
+      ) ?? null;
     const logoPrimary = document.querySelector<SVGElement>(".jig-logo path");
     const logoAccent = document.querySelector<SVGElement>(".jig-logo circle");
     if (
@@ -229,12 +238,13 @@ test("desktop uses explicit Planner navigation with one seven-date open canvas",
   await expect(page.getByRole("button", { name: "History", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Settings", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add task", exact: true }).first()).toBeVisible();
-  await expect(page.locator(".jig-week-column")).toHaveCount(7);
+  const active = activeWeek(page);
+  await expect(active.locator(".jig-week-column")).toHaveCount(7);
   await expect(page.locator(".jig-week-column-selected")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(0);
   await expect(page.locator(".jig-week-add-task")).toHaveCount(0);
 
-  const labels = await page
+  const labels = await active
     .locator(".jig-week-date-signifier > strong")
     .allTextContents();
   expect(labels.map((label) => label.split(" ")[0])).toEqual([
@@ -247,7 +257,7 @@ test("desktop uses explicit Planner navigation with one seven-date open canvas",
     "Sunday",
   ]);
 
-  const chrome = await page.locator(".jig-week-column").first().evaluate(
+  const chrome = await active.locator(".jig-week-column").first().evaluate(
     (element) => {
       const style = getComputedStyle(element);
       return {
@@ -562,14 +572,14 @@ test("temporal group stays page-centered in one row and navigation has no select
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(range).toHaveText(rangeBefore ?? "");
-  await expect(page.locator(".jig-week-board")).toHaveClass(
+  await expect(activeWeek.locator(".jig-week-board")).toHaveClass(
     /jig-week-board-today/,
   );
   await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Previous week" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
-  await expect(page.locator(".jig-week-board")).not.toHaveClass(
+  await expect(activeWeek.locator(".jig-week-board")).not.toHaveClass(
     /jig-week-board-(previous|next)/,
   );
 });
@@ -749,7 +759,7 @@ test("desktop lanes keep equal widths but content-driven independent heights", a
   await page.reload();
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  const board = page.locator(".jig-week-board");
+  const board = activeWeek(page).locator(".jig-week-board");
   const columns = board.locator(".jig-week-column");
   const geometry = await columns.evaluateAll((elements) =>
     elements.map((element) => {
@@ -766,7 +776,7 @@ test("desktop lanes keep equal widths but content-driven independent heights", a
   expect(Math.max(...geometry.map((column) => column.height)))
     .toBeGreaterThan(Math.min(...geometry.map((column) => column.height)));
 
-  const todayColumn = page.locator(`[data-date="${today}"]`);
+  const todayColumn = activeWeek(page).locator(`[data-date="${today}"]`);
   await expect(todayColumn.getByRole("button", { name: /^Add task to / })).toBeVisible();
 });
 
@@ -782,14 +792,16 @@ test("narrow Planner opens with the current day at the top", async ({
   await waitForResponsiveHeader(page, 390);
 
   const frame = page.locator(".jig-content-frame");
-  const today = page.locator(".jig-week-column-today");
+  const today = activeWeek(page).locator(".jig-week-column-today");
   await expect(today).toBeVisible();
 
   const initialGeometry = await page.evaluate(() => {
     const frame = document.querySelector<HTMLElement>(".jig-content-frame");
-    const today = document.querySelector<HTMLElement>(
-      ".jig-week-column-today",
+    const active = document.querySelector<HTMLElement>(
+      '.jig-week-slide[data-jig-week-page="active"]',
     );
+    const today =
+      active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
     if (frame === null || today === null) {
       throw new Error("Narrow Planner scroll geometry unavailable");
     }
@@ -811,9 +823,11 @@ test("narrow Planner opens with the current day at the top", async ({
     .not.toBeNull();
   const scrolledUpGeometry = await page.evaluate(() => {
     const frame = document.querySelector<HTMLElement>(".jig-content-frame");
-    const today = document.querySelector<HTMLElement>(
-      ".jig-week-column-today",
+    const active = document.querySelector<HTMLElement>(
+      '.jig-week-slide[data-jig-week-page="active"]',
     );
+    const today =
+      active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
     if (frame === null || today === null) {
       throw new Error("Narrow Planner scroll geometry unavailable");
     }
@@ -860,12 +874,13 @@ test("global Add exposes the full form and derives the current weekday in the di
 
 test("per-date plus opens the same full form for its explicit date", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const firstDate = await page.locator(".jig-week-column").first().getAttribute("data-date");
+  const active = activeWeek(page);
+  const firstDate = await active.locator(".jig-week-column").first().getAttribute("data-date");
   if (firstDate === null) {
     throw new Error("First Planner date is unavailable");
   }
 
-  await page
+  await active
     .locator(".jig-week-column")
     .first()
     .getByRole("button", { name: /^Add task to / })
@@ -887,9 +902,10 @@ test("Task click opens the editable Drawer directly and blank content dismisses 
   await page.reload();
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  const board = page.locator(".jig-week-board");
+  const active = activeWeek(page);
+  const board = active.locator(".jig-week-board");
   const before = await board.boundingBox();
-  await page.getByText("Editable directly", { exact: true }).click();
+  await active.getByText("Editable directly", { exact: true }).click();
 
   const workspace = page.getByRole("dialog", { name: "Editable directly" });
   await expect(workspace).toBeVisible();
@@ -1183,7 +1199,7 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       widthGeometry.clientWidth + 1,
     );
 
-    const emptyDateHeights = await page
+    const emptyDateHeights = await activeWeek(page)
       .locator(".jig-week-column")
       .evaluateAll((elements) =>
         elements
@@ -1495,20 +1511,24 @@ test("selected Task today priority and status use distinct governed semantics", 
   await createTask(page, "Selected semantic task", today, "NORMAL");
   await page.reload();
 
-  const todayHeader = page
+  const active = activeWeek(page);
+  const todayHeader = active
     .locator(`[data-date="${today}"] .jig-week-column-header`);
-  const task = page
+  const task = active
     .getByText("Selected semantic task", { exact: true })
     .locator("xpath=ancestor::li[1]");
   await task.click();
 
   const semantics = await page.evaluate(() => {
-    const todayElement = document.querySelector<HTMLElement>(
-      ".jig-week-column-today .jig-week-column-header",
+    const active = document.querySelector<HTMLElement>(
+      '.jig-week-slide[data-jig-week-page="active"]',
     );
-    const selected = document.querySelector<HTMLElement>(
-      ".jig-task-card-selected",
-    );
+    const todayElement =
+      active?.querySelector<HTMLElement>(
+        ".jig-week-column-today .jig-week-column-header",
+      ) ?? null;
+    const selected =
+      active?.querySelector<HTMLElement>(".jig-task-card-selected") ?? null;
     const status = document.querySelector<HTMLElement>(
       ".jig-status-control",
     );
@@ -1537,16 +1557,17 @@ test("narrow Planner shows all seven dated sections and preserves the same works
   await page.reload();
   await page.setViewportSize({ width: 390, height: 844 });
 
-  await expect(page.locator(".jig-week-board")).toHaveCount(1);
-  await expect(page.locator(".jig-week-board .jig-week-column")).toHaveCount(7);
+  const active = activeWeek(page);
+  await expect(active.locator(".jig-week-board")).toHaveCount(1);
+  await expect(active.locator(".jig-week-column")).toHaveCount(7);
   await expect(page.locator(".jig-planner-narrow")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(0);
   await expect(
     page.getByRole("navigation", { name: "Primary" }),
   ).toBeVisible();
 
-  const labels = await page
-    .locator(".jig-week-board .jig-week-date-signifier > strong")
+  const labels = await active
+    .locator(".jig-week-date-signifier > strong")
     .allTextContents();
   expect(labels.map((label) => label.split(" ")[0])).toEqual([
     "Monday",
@@ -1720,8 +1741,7 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   await expect(page.locator(".jig-header-week-range")).not.toHaveText(
     rangeBeforeNext ?? "",
   );
-  await page
-    .locator(".jig-week-board")
+  await activeWeek(page)
     .getByText("Browser recurrence", { exact: true })
     .click();
   workspace = page.getByRole("dialog", {
@@ -1882,7 +1902,9 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
         .getByRole("button", { name: "Planner", exact: true })
         .click();
     }
-    const planner = await page.locator(".jig-week-board").boundingBox();
+    const planner = await activeWeek(page)
+      .locator(".jig-week-board")
+      .boundingBox();
     expect(planner).not.toBeNull();
     if (planner !== null) {
       expectNear(planner.x, 0, 1);
@@ -1951,7 +1973,9 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
 
   await page.setViewportSize({ width: 1168, height: 900 });
   await waitForResponsiveHeader(page, 1168);
-  const desktopGeometry = await page.locator(".jig-week-column").evaluateAll(
+  const desktopGeometry = await activeWeek(page)
+    .locator(".jig-week-column")
+    .evaluateAll(
     (elements) => elements.slice(0, 2).map((element) => {
       const box = element.getBoundingClientRect();
       return { x: box.x, y: box.y, width: box.width };
@@ -1963,7 +1987,9 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
 
   await page.setViewportSize({ width: 1167, height: 900 });
   await waitForResponsiveHeader(page, 1167);
-  const narrowGeometry = await page.locator(".jig-week-column").evaluateAll(
+  const narrowGeometry = await activeWeek(page)
+    .locator(".jig-week-column")
+    .evaluateAll(
     (elements) => elements.slice(0, 2).map((element) => {
       const box = element.getBoundingClientRect();
       return { y: box.y };

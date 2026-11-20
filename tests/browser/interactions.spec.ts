@@ -26,8 +26,12 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+function activeWeek(page: Page): Locator {
+  return page.locator('.jig-week-slide[data-jig-week-page="active"]');
+}
+
 async function taskCard(page: Page, title: string) {
-  return page
+  return activeWeek(page)
     .getByText(title, { exact: true })
     .locator("xpath=ancestor::li[contains(@class,'jig-task-card')][1]");
 }
@@ -327,7 +331,9 @@ test("date headers are signifiers rather than selectable Planner state", async (
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator('[aria-current="date"]')).toHaveCount(0);
   await expect(page.locator(".jig-date-heading-button")).toHaveCount(0);
-  await expect(page.locator(".jig-week-date-signifier > strong")).toHaveCount(7);
+  await expect(
+    activeWeek(page).locator(".jig-week-date-signifier > strong"),
+  ).toHaveCount(7);
 });
 
 test("past-date drag is visibly unavailable and reports the canonical reason without mutation", async ({
@@ -1402,12 +1408,12 @@ test("narrow Planner reflows the same seven-date semantic board", async ({
   await page.reload();
   await page.setViewportSize({ width: 390, height: 1600 });
 
-  await expect(page.locator(".jig-week-board")).toHaveCount(1);
-  await expect(page.locator(".jig-week-board .jig-week-column")).toHaveCount(7);
+  await expect(activeWeek(page).locator(".jig-week-board")).toHaveCount(1);
+  await expect(activeWeek(page).locator(".jig-week-column")).toHaveCount(7);
   await expect(page.locator(".jig-planner-narrow")).toHaveCount(0);
   await expect(page.locator(".jig-week-strip-date")).toHaveCount(0);
   await expect(
-    page
+    activeWeek(page)
       .locator(".jig-task-card")
       .filter({ hasText: "Narrow stacked task" })
       .first(),
@@ -1415,7 +1421,7 @@ test("narrow Planner reflows the same seven-date semantic board", async ({
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(
-    page
+    activeWeek(page)
       .locator(".jig-task-card")
       .filter({ hasText: "Narrow stacked task" })
       .first(),
