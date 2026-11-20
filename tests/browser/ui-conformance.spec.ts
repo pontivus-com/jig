@@ -400,6 +400,43 @@ test("retains governed synchronization-attention evidence without exposing techn
     "animation-name",
     "jig-attention-reveal",
   );
+  const desktopBannerGeometry = await page
+    .locator(".jig-attention-banner")
+    .evaluate((element) => {
+      const icon = element.querySelector<HTMLElement>(
+        ".jig-attention-banner-icon",
+      );
+      const message = element.querySelector<HTMLElement>(
+        ".jig-attention-banner-message",
+      );
+      const action = element.querySelector<HTMLElement>(
+        ".jig-attention-banner-action",
+      );
+      if (icon === null || message === null || action === null) {
+        throw new Error("Attention banner geometry fixture unavailable");
+      }
+      const rootRect = element.getBoundingClientRect();
+      const iconRect = icon.getBoundingClientRect();
+      const messageRect = message.getBoundingClientRect();
+      const actionRect = action.getBoundingClientRect();
+      return {
+        iconCenter: iconRect.top + iconRect.height / 2,
+        messageCenter: messageRect.top + messageRect.height / 2,
+        actionCenter: actionRect.top + actionRect.height / 2,
+        overflow: element.scrollWidth - rootRect.width,
+      };
+    });
+  expectNear(
+    desktopBannerGeometry.iconCenter,
+    desktopBannerGeometry.messageCenter,
+    1,
+  );
+  expectNear(
+    desktopBannerGeometry.actionCenter,
+    desktopBannerGeometry.messageCenter,
+    1,
+  );
+  expect(desktopBannerGeometry.overflow).toBeLessThanOrEqual(1);
   await page.screenshot({
     path: testInfo.outputPath("v1.1-sync-attention-planner-desktop.png"),
     fullPage: true,
@@ -446,6 +483,45 @@ test("retains governed synchronization-attention evidence without exposing techn
     path: testInfo.outputPath("v1.1-sync-attention-planner-mobile-390.png"),
     fullPage: true,
   });
+
+  await page.setViewportSize({ width: 320, height: 844 });
+  await waitForResponsiveHeader(page, 320);
+  const mobileBannerGeometry = await page
+    .locator(".jig-attention-banner")
+    .evaluate((element) => {
+      const icon = element.querySelector<HTMLElement>(
+        ".jig-attention-banner-icon",
+      );
+      const message = element.querySelector<HTMLElement>(
+        ".jig-attention-banner-message",
+      );
+      const action = element.querySelector<HTMLElement>(
+        ".jig-attention-banner-action",
+      );
+      if (icon === null || message === null || action === null) {
+        throw new Error("Mobile attention banner geometry fixture unavailable");
+      }
+      const rootRect = element.getBoundingClientRect();
+      const iconRect = icon.getBoundingClientRect();
+      const messageRect = message.getBoundingClientRect();
+      const actionRect = action.getBoundingClientRect();
+      return {
+        iconCenter: iconRect.top + iconRect.height / 2,
+        messageCenter: messageRect.top + messageRect.height / 2,
+        actionTop: actionRect.top,
+        messageBottom: messageRect.bottom,
+        overflow: element.scrollWidth - rootRect.width,
+      };
+    });
+  expectNear(
+    mobileBannerGeometry.iconCenter,
+    mobileBannerGeometry.messageCenter,
+    1,
+  );
+  expect(mobileBannerGeometry.actionTop).toBeGreaterThanOrEqual(
+    mobileBannerGeometry.messageBottom - 1,
+  );
+  expect(mobileBannerGeometry.overflow).toBeLessThanOrEqual(1);
 });
 
 test("temporal group stays page-centered in one row and navigation has no selected-day state", async ({
@@ -473,11 +549,11 @@ test("temporal group stays page-centered in one row and navigation has no select
   const rangeBefore = await range.textContent();
   await expect(page.locator(".jig-week-column-today")).toHaveCount(1);
 
+  await expect(page.locator(".jig-week-pager")).toHaveCount(1);
+  await expect(page.locator('.jig-week-slide[data-jig-week-page="preview"]')).toHaveCount(2);
+
   await page.getByRole("button", { name: "Next week" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
-  await expect(page.locator(".jig-week-board")).toHaveClass(
-    /jig-week-board-next/,
-  );
   await expect(page.locator(".jig-week-column-today")).toHaveCount(0);
   await expect(page.locator('[aria-current="date"]')).toHaveCount(0);
 
@@ -486,140 +562,67 @@ test("temporal group stays page-centered in one row and navigation has no select
   await expect(page.locator(".jig-week-board")).toHaveClass(
     /jig-week-board-today/,
   );
-  await expect(page.locator(".jig-week-board")).not.toHaveClass(
-    /jig-week-board-(previous|next)/,
-  );
   await expect(page.locator(".jig-week-column-today")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Previous week" }).click();
-  await expect(page.locator(".jig-week-board")).toHaveClass(
-    /jig-week-board-previous/,
+  await expect(range).not.toHaveText(rangeBefore ?? "");
+  await expect(page.locator(".jig-week-board")).not.toHaveClass(
+    /jig-week-board-(previous|next)/,
   );
 });
 
-test("narrow Planner maps only deliberate touch swipes to one week change", async ({
+test("shared WeekPager commits one adjacent week and keeps previews inert", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 390, height: 1600 });
-  await createTask(page, "Swipe exclusion task", await browserCivilDate(page));
-  await page.reload();
-  const range = page.locator(".jig-header-week-range");
-  const board = page.locator(".jig-week-board");
-  const rangeBefore = await range.textContent();
-
-  const dispatchGesture = async (options: {
-    readonly moves: Array<readonly [number, number]>;
-    readonly pointerType?: "touch" | "mouse";
-    readonly selector?: string;
-    readonly terminalEvent?: "pointerup" | "pointercancel";
-  }): Promise<void> => {
-    const {
-      moves,
-      pointerType = "touch",
-      selector = ".jig-week-board",
-      terminalEvent = "pointerup",
-    } = options;
-    await page.evaluate(
-      ({ moves: nextMoves, pointerType: nextPointerType, selector: targetSelector, terminalEvent: finalEvent }) => {
-        const target = document.querySelector<HTMLElement>(targetSelector);
-        if (target === null) {
-          throw new Error(`Swipe target is unavailable: ${targetSelector}`);
-        }
-        const startX = 180;
-        const startY = 700;
-        const pointerId = nextPointerType === "mouse" ? 8 : 7;
-        const event = (type: string, clientX: number, clientY: number) =>
-          target.dispatchEvent(
-            new PointerEvent(type, {
-              bubbles: true,
-              pointerId,
-              pointerType: nextPointerType,
-              isPrimary: true,
-              clientX,
-              clientY,
-              buttons:
-                type === "pointerup" || type === "pointercancel" ? 0 : 1,
-            }),
-          );
-        event("pointerdown", startX, startY);
-        let clientX = startX;
-        let clientY = startY;
-        for (const [deltaX, deltaY] of nextMoves) {
-          clientX = startX + deltaX;
-          clientY = startY + deltaY;
-          event("pointermove", clientX, clientY);
-        }
-        event(finalEvent, clientX, clientY);
-      },
-      { moves, pointerType, selector, terminalEvent },
-    );
+  const settleOnPage = async (index: 0 | 2): Promise<void> => {
+    await page.locator(".jig-week-pager").evaluate((element, pageIndex) => {
+      const pager = element as HTMLElement;
+      pager.scrollLeft = pager.clientWidth * pageIndex;
+      pager.dispatchEvent(new Event("scrollend"));
+    }, index);
   };
 
-  // Task-card starts never initiate week navigation.
-  await dispatchGesture({ moves: [[-96, 4]], selector: ".jig-task-card" });
-  await expect(range).toHaveText(rangeBefore ?? "");
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 1600 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.getByRole("button", { name: "Today", exact: true }).click();
+    const range = page.locator(".jig-header-week-range");
+    const rangeBefore = await range.textContent();
 
-  // A short horizontal drag stays a short drag.
-  await dispatchGesture({ moves: [[-20, 4]] });
-  await expect(range).toHaveText(rangeBefore ?? "");
+    const previews = page.locator(
+      '.jig-week-slide[data-jig-week-page="preview"]',
+    );
+    await expect(previews).toHaveCount(2);
+    expect(
+      await previews.evaluateAll((elements) =>
+        elements.every((element) => (element as HTMLElement).inert),
+      ),
+    ).toBe(true);
+    await expect(previews.locator("[data-jig-drop-slot]")).toHaveCount(0);
+    await expect(previews.getByRole("button")).toHaveCount(0);
+    await expect(previews.getByRole("link")).toHaveCount(0);
+    await expect(
+      page.locator(
+        '.jig-week-slide[data-jig-week-page="active"] .jig-task-drag-scope',
+      ),
+    ).toHaveCount(1);
 
-  // A tap must not leave eligibility behind for a later mouse drag.
-  await dispatchGesture({ moves: [] });
-  await dispatchGesture({
-    moves: [
-      [-32, 2],
-      [-64, 3],
-      [-96, 4],
-    ],
-    pointerType: "mouse",
-  });
-  await expect(range).toHaveText(rangeBefore ?? "");
+    await settleOnPage(2);
+    await expect(range).not.toHaveText(rangeBefore ?? "");
+    await expect(page.locator(".jig-week-board")).toHaveCount(1);
 
-  // One completed touch gesture with several moves changes exactly one week.
-  await dispatchGesture({
-    moves: [
-      [-32, 2],
-      [-64, 3],
-      [-96, 4],
-    ],
-  });
-  await expect(range).not.toHaveText(rangeBefore ?? "");
-  await expect(board).toHaveClass(/jig-week-board-next/);
+    await settleOnPage(0);
+    await expect(range).toHaveText(rangeBefore ?? "");
+    await expect(page.locator(".jig-week-board")).toHaveCount(1);
+  }
 
-  // One gesture back returns to the original week.
-  await dispatchGesture({
-    moves: [
-      [32, 2],
-      [64, 3],
-      [96, 4],
-    ],
-  });
-  await expect(range).toHaveText(rangeBefore ?? "");
-  await expect(board).toHaveClass(/jig-week-board-previous/);
-
-  // A cancelled pan is a no-op.
-  await dispatchGesture({ moves: [[96, 4]], terminalEvent: "pointercancel" });
-  await expect(range).toHaveText(rangeBefore ?? "");
-
-  // A predominantly vertical drag is not a week change.
-  await dispatchGesture({ moves: [[4, 96]] });
-  await expect(range).toHaveText(rangeBefore ?? "");
-
-  // A diagonal drag that is not clearly horizontal is not a week change.
-  await dispatchGesture({ moves: [[40, 56]] });
-  await expect(range).toHaveText(rangeBefore ?? "");
-
-  // Reduced motion keeps the same immediate semantic week change.
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await dispatchGesture({
-    moves: [
-      [-32, 2],
-      [-64, 3],
-      [-96, 4],
-    ],
-  });
-  await expect(range).not.toHaveText(rangeBefore ?? "");
-  await expect(board).toHaveClass(/jig-week-board-next/);
+  const range = page.locator(".jig-header-week-range");
+  const beforeReduced = await range.textContent();
+  await page.getByRole("button", { name: "Next week" }).click();
+  await expect(range).not.toHaveText(beforeReduced ?? "");
 });
 
 test("desktop lanes keep equal widths but content-driven independent heights", async ({

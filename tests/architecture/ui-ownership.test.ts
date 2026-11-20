@@ -526,17 +526,43 @@ describe("UI ownership architecture", () => {
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
   });
 
-  it("keeps mobile week gestures in the public Astryx gesture owner", () => {
-    const weekSwipe = source("ui/src/week-swipe.ts");
+  it("keeps adjacent-week paging in one Jig-owned native scroll owner", () => {
+    const pager = source("ui/src/week-pager.tsx");
     const week = source("ui/src/week.tsx");
+    const planner = source("ui/src/planner.tsx");
+    const app = source("ui/src/app.tsx");
 
-    expect(weekSwipe).toContain('usePanGesture');
-    expect(weekSwipe).toContain('from "@astryxdesign/core"');
-    expect(weekSwipe).toContain('axis: "x"');
-    expect(weekSwipe).not.toContain("performance.now");
-    expect(weekSwipe).not.toContain("onPointerUp");
-    expect(weekSwipe).not.toContain("setTimeout");
-    expect(week).toContain("onPointerDownCapture");
-    expect(week).not.toContain("touch-action");
+    expect(existsSync("ui/src/week-swipe.ts")).toBe(false);
+    expect(pager).toContain('className="jig-week-pager"');
+    expect(pager).toContain('addEventListener("scrollend"');
+    expect(pager).toContain('scroll-snap');
+    expect(pager).not.toContain("@astryxdesign/core");
+    expect(pager).not.toContain("firstElementChild");
+    expect(pager).not.toContain("usePanGesture");
+    expect(pager).not.toContain("setTimeout");
+    expect(week).toContain("<WeekPager");
+    expect(week).toContain("<PlannerTaskPreviewList");
+    expect(week).toContain("onDragActiveChange={setIsTaskDragging}");
+    expect(planner).not.toContain("enableWeekSwipe");
+    expect(app).toContain("weekPagingRequest");
+    expect(app).toContain("commitWeek");
+  });
+
+  it("keeps operational attention in one public-leaf Jig composition", () => {
+    const attention = source("ui/src/attention-banner.tsx");
+    const app = source("ui/src/app.tsx");
+    const settings = source("ui/src/settings.tsx");
+    const setup = source("ui/src/setup.tsx");
+
+    expect(attention).toContain('from "@astryxdesign/core"');
+    expect(attention).toContain("<Icon");
+    expect(attention).not.toContain("<Banner");
+    expect(attention).not.toContain("stylex");
+    expect(app).toContain("<JigAttentionBanner");
+    expect(settings).toContain("<JigAttentionBanner");
+    expect(setup).toContain("<JigAttentionBanner");
+    expect(app).not.toContain("<Banner");
+    expect(settings).not.toContain("<Banner");
+    expect(setup).not.toContain("<Banner");
   });
 });
