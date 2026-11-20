@@ -112,7 +112,7 @@ J110-IMP-09 was completed successfully on physical Android, but the detailed dev
 
 The previous Pangea implementation is a recorded **FAIL**. The replacement dnd-kit implementation subsequently passed the physical Task-movement gate and must not be rerun solely to reconstruct the lost detailed record.
 
-The prior post-UX source/APK lineage `611c8ced…` / artifact `14541004265` and the partial Samsung session on `222f2fe…` remain historical evidence only. The current post-remediation physical candidate is exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1`, Verify `44652277552` / #1598, Android artifact `14591926175`, unpacked APK size 9,780,552 bytes and APK SHA-256 `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`. Hosted Android build certification and API-24 instrumentation are green; this exact APK now requires the focused J110-IMP-21 physical confirmation.
+The prior post-UX source/APK lineage `611c8ced…` / artifact `14541004265`, the partial Samsung session on `222f2fe…`, and the `3b60ad9…` / artifact `14591926175` physical attempt remain historical evidence. The current physical candidate is source `59f7d1642211739df88dc188a4fdfe17af2c26c9`, Verify `44690410706` / #1632, Android artifact `14608147658`, extracted APK size 9,787,835 bytes and SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. Hosted Android build certification and API-24 instrumentation are green; this exact APK now requires the focused J110-IMP-21/23/24 physical confirmation and remaining IMP-15 rows.
 
 The repository package authority expects application ID `com.pontivus.jig`; the governed preflight must prove package/version badging with Build Tools 36.0.0 `aapt` for the remaining IMP-15 certification host.
 
@@ -148,8 +148,8 @@ The current corrective wave is not optional visual polish. Before final physical
 - J110-IMP-19 **COMPLETE:** intentional scheduling is current/future only through one canonical core rule with concise existing-feedback projection and no mutation on rejection;
 - J110-IMP-20 **COMPLETE:** shared daily rollover is recurrence-aware so older overdue outstanding siblings do not accumulate when a later occurrence is due;
 - J110-IMP-21 **IN PROGRESS:** exact source/APK and hosted/browser evidence are established; focused physical Android confirmation remains.
-- J110-IMP-23 **REOPENED:** the cross-platform WeekPager requires a new exact-head browser/Android candidate.
-- J110-IMP-24 **OPEN:** the shared operational-attention Banner geometry requires desktop+narrow browser evidence plus physical Android confirmation before IMP-15 resumes closure.
+- J110-IMP-23 **IMPLEMENTED + NON-DEVICE CERTIFIED:** the cross-platform WeekPager passes Verify #1632; exact-candidate physical touch/scroll/drag arbitration remains open.
+- J110-IMP-24 **IMPLEMENTED + NON-DEVICE CERTIFIED:** desktop+narrow browser geometry passes Verify #1632; exact-candidate physical WebView confirmation remains open.
 
 Do not implement any of these as Android-only behavior.
 
