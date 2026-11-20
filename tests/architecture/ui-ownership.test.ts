@@ -540,52 +540,43 @@ describe("UI ownership architecture", () => {
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
   });
 
-  it("keeps adjacent-week visual presentation singular while the Carousel cutover is pending", () => {
-    const pager = source("ui/src/week-pager.tsx");
+  it("contains no deprecated Jig-owned adjacent-week pager implementation", () => {
+    const app = source("ui/src/app.tsx");
+    const planner = source("ui/src/planner.tsx");
     const week = source("ui/src/week.tsx");
     const list = source("ui/src/planner-list.tsx");
     const taskRow = source("ui/src/task-row.tsx");
-    const drag = source("ui/src/drag.tsx");
-    const planner = source("ui/src/planner.tsx");
     const css = source("ui/src/styles.css");
+    const browser = source("tests/browser/ui-conformance.spec.ts");
 
+    expect(existsSync("ui/src/week-pager.tsx")).toBe(false);
     expect(existsSync("ui/src/week-swipe.ts")).toBe(false);
-    expect(pager).not.toContain("firstElementChild");
-    expect(pager).not.toContain("usePanGesture");
-    expect(week).toContain("<WeekPager");
-    expect(week).toContain("interface ActiveWeekPageProps");
-    expect(week).toContain("interface PassiveWeekPageProps");
-    expect(week).toContain("type WeekInteraction");
-    expect(week).not.toContain("readonly interactive: boolean");
-    expect(week).not.toContain("interactive={isActive}");
-    expect(week.match(/<WeekPage(?:\s|>)/g)?.length).toBe(2);
-    expect(week.match(/<PlannerTaskList/g)?.length).toBe(2);
-    expect(week).toContain('mode="active"');
-    expect(week).toContain('mode="passive"');
-    expect(week).not.toContain("PlannerTaskPreviewList");
-    expect(week).not.toContain("jig-week-preview");
 
-    expect(list).toContain("function PlannerTaskSequence");
-    expect(list).toContain("plannerTaskPresentationItems");
-    expect(list).toContain("useAnimatedLayout");
-    expect(list.match(/className="jig-task-card-list"/g)?.length).toBe(1);
-    expect(list).toContain("<TaskInsertionSlotPresentation");
-    expect(list).toContain('mode="passive"');
-    expect(list).not.toContain("PassiveTaskRow");
-    expect(list).not.toContain("PlannerTaskPreviewList");
-    expect(list).not.toContain("jig-week-preview");
+    for (const runtime of [app, planner, week]) {
+      expect(runtime).not.toContain("WeekPager");
+      expect(runtime).not.toContain("WeekPagingRequest");
+      expect(runtime).not.toContain("weekPagingRequest");
+      expect(runtime).not.toContain("WeekPagingDirection");
+      expect(runtime).not.toContain("scrollend");
+      expect(runtime).not.toContain("scrollLeft");
+    }
 
-    expect(drag).toContain("export function TaskInsertionSlotPresentation");
-    expect(taskRow).toContain("function TaskCardPresentation");
-    expect(taskRow).toContain('readonly mode: "active"');
-    expect(taskRow).toContain('readonly mode: "passive"');
-    expect(taskRow).not.toContain("export function PassiveTaskRow");
-    expect(taskRow).not.toContain("TaskCardPassivePreview");
-    expect(taskRow).not.toContain("jig-week-preview");
-    expect(css).not.toContain("jig-week-preview");
+    expect(week).not.toContain('mode="passive"');
+    expect(week).not.toContain("PassiveWeek");
+    expect(list).not.toContain('mode="passive"');
+    expect(list).not.toContain("PassivePlanner");
+    expect(taskRow).not.toContain('mode: "passive"');
+    expect(taskRow).not.toContain("PassiveTask");
 
-    expect(week).toContain("onDragActiveChange={setIsTaskDragging}");
-    expect(planner).not.toContain("enableWeekSwipe");
+    expect(css).not.toContain(".jig-week-pager");
+    expect(css).not.toContain(".jig-week-slide");
+    expect(css).not.toContain("scroll-snap-type");
+    expect(css).not.toContain("scroll-snap-align");
+
+    expect(browser).not.toContain(".jig-week-pager");
+    expect(browser).not.toContain(".jig-week-slide");
+    expect(browser).not.toContain('new Event("scrollend")');
+    expect(browser).not.toContain("pager.scrollLeft");
   });
 
   it("keeps operational attention in one public-leaf Jig composition", () => {
