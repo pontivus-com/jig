@@ -42,8 +42,8 @@ import {
 } from "./runtime";
 import { Planner, type WeekTransitionDirection } from "./planner";
 import type {
+  WeekPagerHandle,
   WeekPagingDirection,
-  WeekPagingRequest,
 } from "./week-pager";
 import {
   CompactApplicationNavigation,
@@ -192,8 +192,7 @@ function ConfiguredApp({
   const [todayScrollRequest, setTodayScrollRequest] = useState(0);
   const [weekTransitionDirection, setWeekTransitionDirection] =
     useState<WeekTransitionDirection | null>(null);
-  const [weekPagingRequest, setWeekPagingRequest] =
-    useState<WeekPagingRequest | null>(null);
+  const weekPagerRef = useRef<WeekPagerHandle>(null);
   const [observedToday, setObservedToday] = useState(todayCivilDate);
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
@@ -677,20 +676,14 @@ function ConfiguredApp({
     };
   }, [githubReconnect !== null, refreshOperationalState]);
 
-  const requestPreviousWeek = useCallback((): void => {
+  const goToPreviousWeek = useCallback((): void => {
     setWeekTransitionDirection(null);
-    setWeekPagingRequest((current) => ({
-      id: (current?.id ?? 0) + 1,
-      direction: "previous",
-    }));
+    weekPagerRef.current?.previous();
   }, []);
 
-  const requestNextWeek = useCallback((): void => {
+  const goToNextWeek = useCallback((): void => {
     setWeekTransitionDirection(null);
-    setWeekPagingRequest((current) => ({
-      id: (current?.id ?? 0) + 1,
-      direction: "next",
-    }));
+    weekPagerRef.current?.next();
   }, []);
 
   const commitWeek = useCallback((direction: WeekPagingDirection): void => {
@@ -704,7 +697,7 @@ function ConfiguredApp({
   }, []);
 
   const goToToday = useCallback((): void => {
-    setWeekPagingRequest(null);
+    weekPagerRef.current?.restoreCurrent();
     const todayWeekStart = startOfWeekMonday(todayCivilDate());
     setWeekTransitionDirection(
       layoutMode === "narrow" ||
@@ -836,7 +829,7 @@ function ConfiguredApp({
         focusCurrentDayOnMount={layoutMode === "narrow"}
         todayScrollRequest={todayScrollRequest}
         weekTransitionDirection={weekTransitionDirection}
-        weekPagingRequest={weekPagingRequest}
+        weekPagerRef={weekPagerRef}
         onCommitWeek={commitWeek}
         tasks={tasks}
         recurrences={canonical.recurrences}
@@ -917,9 +910,9 @@ function ConfiguredApp({
               statusControl={statusControl}
               compactStatusControl={compactStatusControl}
               onHome={() => navigateDestination("planner")}
-              onPreviousWeek={requestPreviousWeek}
+              onPreviousWeek={goToPreviousWeek}
               onToday={goToToday}
-              onNextWeek={requestNextWeek}
+              onNextWeek={goToNextWeek}
               onAdd={() =>
                 openCreate(
                   defaultAddDate(
