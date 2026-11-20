@@ -51,8 +51,7 @@ jobs:
           set -euo pipefail
           git diff --check
           changed="$(git diff --name-only)"
-          printf '%s
-' "$changed"
+          printf '%s\\n' "$changed"
           while IFS= read -r path; do
             case "$path" in
               packages/core/src/Carousel/Carousel.tsx|packages/core/src/Carousel/index.ts|packages/core/src/Carousel/Carousel.doc.mjs|packages/core/src/Carousel/Carousel.test.tsx|packages/core/src/SnapPaging/SnapPaging.ts|packages/core/src/SnapPaging/snapPagingValue.ts|packages/core/src/SnapPaging/useSnapPaging.doc.mjs|packages/core/src/SnapPaging/SnapPaging.test.tsx|.changeset/carousel-settled-reposition.md) ;;
@@ -86,15 +85,15 @@ jobs:
         run: |
           set -euo pipefail
           git -C astryx diff --binary "$ASTRYX_BASE_SHA" > astryx-carousel-lifecycle.patch
-          test -s astryx-carousel-lifecycle.patch
-          sha256sum astryx-carousel-lifecycle.patch > astryx-carousel-lifecycle.patch.sha256
+          test -s astrx-carousel-lifecycle.patch
+          sha256sum astrx-carousel-lifecycle.patch > astrx-carousel-lifecycle.patch.sha256
 
       - name: Retain tested Astryx patch
         uses: actions/upload-artifact@v4
         with:
           name: astryx-carousel-lifecycle-${{ env.ASTRYX_BASE_SHA }}
           path: |
-            astryx-carousel-lifecycle.patch
+            astrx-carousel-lifecycle.patch
             astryx-carousel-lifecycle.patch.sha256
           if-no-files-found: error
           retention-days: 14
@@ -106,44 +105,9 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packages/core/src/Carousel packages/core/src/SnapPaging .changeset/carousel-settled-reposition.md
-          git commit -m "feat(Carousel): expose settled paging lifecycle"
-
-      - name: Attempt upstream branch publication
-        id: publish
-        working-directory: astryx
-        continue-on-error: true
-        env:
-          ASTRYX_WRITE_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN }}
-          FALLBACK_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          token="$ASTRYX_WRITE_TOKEN"
-          if [[ -z "$token" ]]; then token="$FALLBACK_TOKEN"; fi
-          branch="jig-imp-23-carousel-lifecycle-${GITHUB_RUN_ID}"
-          git branch -f "$branch" HEAD
-          git remote set-url origin "https://x-access-token:${token}@github.com/meta/astryx.git"
-          git push origin "$branch"
-          echo "branch=$branch" >> "$GITHUB_OUTPUT"
-
-      - name: Open upstream pull request
-        if: steps.publish.outcome == 'success'
-        working-directory: astryx
-        env:
-          GH_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN != '' && secrets.ASTRYX_WRITE_TOKEN || github.token }}
-          UPSTREAM_BRANCH: ${{ steps.publish.outputs.branch }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh pr create             --repo meta/astryx             --base main             --head "$UPSTREAM_BRANCH"             --title "feat(Carousel): expose settled paging lifecycle"             --body "Expose the existing SnapPaging/usePager settle lifecycle through public SnapPaging options and allow CarouselHandle.scrollTo(..., {animated:false}) for immediate bounded-window recentering. The patch is exercised by Carousel/SnapPaging unit tests, core typecheck/build, changeset validation and package-boundary checks."
-
-      - name: Record publication boundary
-        if: always()
-        shell: bash
-        run: |
-          if [[ "${{ steps.publish.outcome }}" == "success" ]]; then
-            echo "Upstream branch publication succeeded."
-          else
-            echo "::notice::The tested patch artifact is valid, but this Actions token cannot publish to meta/astryx. Configure ASTRYX_WRITE_TOKEN with upstream branch/PR permission or apply the retained artifact from an authorized workflow."
-          fi
+          git add packages/core/src/CarÝ\Ù[XÚØYÙ\ËØÛÜKÜÜËÔÛ\YÚ[ÈÚ[Ù\Ù]ØØ\Ý\Ù[\Ù]Y\\ÜÚ][ÛYÚ]ÛÛ[Z][HX]
+Ø\Ý\Ù[
+N^ÜÙHÙ]YYÚ[ÈYXÞXÛHH[YN][\\ÝX[H[ÚXXØ][ÛYX\ÚÛÜÚ[ËY\XÝÜN\Ý^ÛÛ[YK[ÛY\ÜYB[TÕVÕÔUWÕÒÑS	ÞÈÙXÜ]ËTÕVÕÔUWÕÒÑS_BSPÒ×ÕÒÑS	ÞÈÚ]XÚÙ[_BÚ[\Ú[Ù]Y][È\YZ[ÚÙ[HTÕVÕÔUWÕÒÑSYÖÈ^ÚÙ[WNÈ[ÚÙ[HSPÒ×ÕÒÑSÈB[ÚHYËZ[\LËXØ\Ý\Ù[[YXÞXÛKIÑÒUPÔSÒQHÚ][ÚY[ÚPQÚ][[ÝHÙ]]\ÜYÚ[ÎËÞXXØÙ\ÜË]ÚÙ[ÝÚÙ[PÚ]XÛÛKÛY]KØ\Ý^Ú]Ú]\ÚÜYÚ[[ÚXÚÈ[ÚI[ÚÒUPÓÕUUH[YNÜ[\ÝX[H[\]Y\ÝYÝ\ËX\ÚÝ]ÛÛYHOH	ÜÝXØÙ\ÜÉÂÛÜÚ[ËY\XÝÜN\Ý^[ÒÕÒÑS	ÞÈÙXÜ]ËTÕVÕÔUWÕÒÑSOH	ÉÈ	ÙXÜ]ËTÕVÕÔUWÕÒÑSÚ]XÚÙ[_BTÕPSWÐSÒ	ÞÈÝ\ËX\ÚÝ]]Ë[Ú_BÚ[\Ú[Ù]Y][È\YZ[ÚÜX]HK\\ÈY]KØ\Ý^KX\ÙHXZ[KZXYTÕPSWÐSÒK]]HX]
+Ø\Ý\Ù[
+N^ÜÙHÙ]YYÚ[ÈYXÞXÛHKXÙH^ÜÙHH^\Ý[ÈÛ\YÚ[ËÝ\ÙTYÙ\Ù]HYXÞXÛHÝYÚXXÈÛ\YÚ[ÈÜ[ÛÈ[[ÝÈØ\Ý\Ù[[KØÜÛÊØ[[X]Y[Ù_JHÜ[[YYX]HÝ[Y]Ú[ÝÈXÙ[\[ËH]Ú\È^\Ú\ÙYHØ\Ý\Ù[ÔÛ\YÚ[È[]\ÝËÛÜH\XÚXÚËØZ[Ú[Ù\Ù][Y][Û[XÚØYÙKXÝ[\HÚXÚÜËH[YNXÛÜXXØ][ÛÝ[\BY[Ø^\Ê
+BÚ[\Ú[YÖÈÞÈÝ\ËX\ÚÝ]ÛÛYH_HOHÝXØÙ\ÜÈWNÈ[XÚÈ\ÝX[H[ÚXXØ][ÛÝXØÙYYY[ÙBXÚÈÝXÙNH\ÝY]Ú\YXÝ\È[Y]\ÈXÝ[ÛÈÚÙ[Ø[ÝX\ÚÈY]KØ\Ý^ÛÛYÝ\HTÕVÕÔUWÕÒÑSÚ]\ÝX[H[ÚÔ\Z\ÜÚ[ÛÜ\HH]Z[Y\YXÝÛH[]]Ü^YÛÜÙÝËB
