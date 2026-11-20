@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
-  androidReminderFingerprint,
   deliverAndroidTaskReminder,
   readAndroidReminderPermission,
   scheduleAndroidTaskReminder,
@@ -223,8 +222,5 @@ describe("Android reminder scheduling adapter", () => {
       permission: "granted",
       exact_alarm: "unavailable",
     });
-    expect(androidReminderFingerprint(task())).toBe(
-      "2026-11-19|10:00",
-    );
   });
 });

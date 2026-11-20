@@ -8,6 +8,7 @@ import type { Task } from "../../src/core/task";
 import {
   isReminderDue,
   isReminderScheduledInFuture,
+  reminderFingerprint,
 } from "../../src/core/reminder";
 import {
   deliverAndroidTaskReminder,
@@ -31,15 +32,10 @@ export type ReminderLifecycle =
   | "notified";
 
 export function reminderDeliveryKey(task: Task): string | null {
-  if (task.reminder_time === null) {
-    return null;
-  }
-  return [
-    REMINDER_KEY_PREFIX,
-    task.id,
-    task.scheduled_date,
-    task.reminder_time,
-  ].join("|");
+  const fingerprint = reminderFingerprint(task);
+  return fingerprint === null
+    ? null
+    : [REMINDER_KEY_PREFIX, task.id, fingerprint].join("|");
 }
 
 function pruneOldReminderKeys(today: string): void {
@@ -169,8 +165,7 @@ export function ReminderMonitor({
         (candidate) =>
           candidate.id === taskId &&
           reminderDeliveryKey(candidate) !== null &&
-          `${candidate.scheduled_date}|${candidate.reminder_time}` ===
-            fingerprint,
+          reminderFingerprint(candidate) === fingerprint,
       );
       const key = task === undefined ? null : reminderDeliveryKey(task);
       if (key !== null) {
