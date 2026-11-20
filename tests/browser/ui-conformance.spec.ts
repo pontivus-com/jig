@@ -1932,6 +1932,12 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
     await expect
       .poll(async () => (await themeSnapshot(page)).bodyBackground)
       .not.toBe(systemLight.bodyBackground);
+    await expect
+      .poll(async () => {
+        const snapshot = await themeSnapshot(page);
+        return snapshot.chromeBackground === snapshot.bodyBackground;
+      })
+      .toBe(true);
     const systemDark = await themeSnapshot(page);
     expect(systemDark.rootTheme).toBe(preset);
     expect(systemDark.explicitMode).toBeNull();
