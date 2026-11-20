@@ -557,6 +557,9 @@ describe("UI ownership architecture", () => {
     expect(pager).toContain('pages: "item"');
     expect(pager).toContain("onSettle:");
     expect(pager).toContain("scrollTo(MIDDLE_PAGE, { animated: false })");
+    expect(pager).toContain("hasSnap={isPagingDisabled ? true : snapPaging}");
+    expect(pager).toContain("onWheelCapture=");
+    expect(pager).toContain("jig-week-carousel-dragging");
     expect(pager).toContain('data-jig-week-page={isActive ? "active" : "passive"}');
     expect(pager).not.toContain("scrollLeft");
     expect(pager).not.toContain("clientWidth");
@@ -579,6 +582,8 @@ describe("UI ownership architecture", () => {
     expect(week).not.toContain("navigationRequest");
 
     expect(css).toContain(".jig-week-carousel {");
+    expect(css).toContain(".jig-week-carousel-dragging {");
+    expect(css).toContain("touch-action: none;");
     expect(css).toContain(".jig-week-carousel-page {");
     expect(css).not.toContain(".jig-week-pager");
     expect(css).not.toContain(".jig-week-slide");
