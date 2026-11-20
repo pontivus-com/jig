@@ -3,7 +3,6 @@ import type { Task } from "../../src/core/task";
 import {
   androidReminderFingerprint,
   deliverAndroidTaskReminder,
-  isFutureAndroidReminder,
   readAndroidReminderPermission,
   scheduleAndroidTaskReminder,
   type AndroidLocalNotificationsPort,
@@ -202,12 +201,6 @@ describe("Android reminder scheduling adapter", () => {
       ...past,
       scheduled_date: "2026-11-18",
     };
-    expect(
-      isFutureAndroidReminder(
-        today,
-        new Date("2026-11-18T09:00:00"),
-      ),
-    ).toBe(false);
     await expect(
       scheduleAndroidTaskReminder(
         today,

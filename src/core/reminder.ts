@@ -15,6 +15,28 @@ function localTime(now: Date): string {
   ].join(":");
 }
 
+export function reminderScheduledAt(task: Task): Date | null {
+  if (task.reminder_time === null) {
+    return null;
+  }
+  const scheduled = new Date(
+    `${task.scheduled_date}T${task.reminder_time}:00`,
+  );
+  return Number.isNaN(scheduled.getTime()) ? null : scheduled;
+}
+
+export function isReminderScheduledInFuture(
+  task: Task,
+  now: Date,
+): boolean {
+  const scheduled = reminderScheduledAt(task);
+  return (
+    task.completed_at === null &&
+    scheduled !== null &&
+    scheduled.getTime() > now.getTime()
+  );
+}
+
 export function isReminderDue(task: Task, now: Date): boolean {
   return (
     task.completed_at === null &&

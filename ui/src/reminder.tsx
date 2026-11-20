@@ -5,7 +5,10 @@ import {
   useState,
 } from "react";
 import type { Task } from "../../src/core/task";
-import { isReminderDue } from "../../src/core/reminder";
+import {
+  isReminderDue,
+  isReminderScheduledInFuture,
+} from "../../src/core/reminder";
 import {
   deliverAndroidTaskReminder,
   listenForAndroidReminderDisplay,
@@ -78,10 +81,6 @@ export function isReminderNotified(task: Task): boolean {
   return key !== null && wasDelivered(key);
 }
 
-function isFutureOrCurrentDate(task: Task, now: Date): boolean {
-  return task.scheduled_date >= todayCivilDate(now);
-}
-
 export function useReminderLifecycle(
   task: Task,
   now: Date,
@@ -90,15 +89,16 @@ export function useReminderLifecycle(
 
   if (
     task.completed_at !== null ||
-    task.reminder_time === null ||
-    !isFutureOrCurrentDate(task, now)
+    task.reminder_time === null
   ) {
     return "none";
   }
   if (isReminderDue(task, now)) {
     return notified ? "notified" : "due";
   }
-  return "scheduled";
+  return isReminderScheduledInFuture(task, now)
+    ? "scheduled"
+    : "none";
 }
 
 export function useReminderClock(): Date {

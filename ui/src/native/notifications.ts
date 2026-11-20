@@ -6,6 +6,10 @@ import {
 } from "@capacitor/local-notifications";
 import type { PluginListenerHandle } from "@capacitor/core";
 import type { Task } from "../../../src/core/task";
+import {
+  isReminderScheduledInFuture,
+  reminderScheduledAt,
+} from "../../../src/core/reminder";
 
 export type AndroidReminderSchedulingOutcome =
   | "scheduled-exact"
@@ -99,39 +103,16 @@ export function androidReminderFingerprint(task: Task): string | null {
     : `${task.scheduled_date}|${task.reminder_time}`;
 }
 
-export function androidReminderDate(task: Task): Date | null {
-  if (task.reminder_time === null) {
-    return null;
-  }
-  const value = new Date(
-    `${task.scheduled_date}T${task.reminder_time}:00`,
-  );
-  return Number.isNaN(value.getTime()) ? null : value;
-}
-
-export function isFutureAndroidReminder(
-  task: Task,
-  now: Date,
-): boolean {
-  const at = androidReminderDate(task);
-  return (
-    task.completed_at === null &&
-    at !== null &&
-    at.getTime() > now.getTime()
-  );
-}
-
 export async function scheduleAndroidTaskReminder(
   task: Task,
   notificationId: number,
   now: Date,
   port: AndroidLocalNotificationsPort = LocalNotifications,
 ): Promise<AndroidReminderSchedulingOutcome> {
-  const at = androidReminderDate(task);
+  const at = reminderScheduledAt(task);
   if (
-    task.completed_at !== null ||
     at === null ||
-    at.getTime() <= now.getTime()
+    !isReminderScheduledInFuture(task, now)
   ) {
     return "failed";
   }

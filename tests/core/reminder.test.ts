@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
-import { isReminderDue } from "../../src/core/reminder";
+import {
+  isReminderDue,
+  isReminderScheduledInFuture,
+  reminderScheduledAt,
+} from "../../src/core/reminder";
 
 const BASE: Task = {
   id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001",
@@ -18,6 +22,42 @@ const BASE: Task = {
   created_at: "2026-11-18T01:00:00.000Z",
   updated_at: "2026-11-18T01:00:00.000Z",
 };
+
+describe("reminder schedule semantics", () => {
+  it("projects the Task reminder into the local scheduled instant", () => {
+    expect(reminderScheduledAt(BASE)).toEqual(
+      new Date(2026, 10, 18, 9, 30),
+    );
+    expect(
+      reminderScheduledAt({ ...BASE, reminder_time: null }),
+    ).toBeNull();
+  });
+
+  it("recognizes only incomplete future reminders as schedulable", () => {
+    expect(
+      isReminderScheduledInFuture(
+        BASE,
+        new Date(2026, 10, 18, 9, 29),
+      ),
+    ).toBe(true);
+    expect(
+      isReminderScheduledInFuture(
+        BASE,
+        new Date(2026, 10, 18, 9, 30),
+      ),
+    ).toBe(false);
+    expect(
+      isReminderScheduledInFuture(
+        {
+          ...BASE,
+          completed_at: "2026-11-18T09:00:00.000Z",
+          position: null,
+        },
+        new Date(2026, 10, 18, 9, 0),
+      ),
+    ).toBe(false);
+  });
+});
 
 describe("reminder due semantics", () => {
   it("is false before and true at/after the reminder minute", () => {
