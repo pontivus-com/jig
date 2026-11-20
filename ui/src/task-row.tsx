@@ -162,14 +162,16 @@ function TaskCompletionControl(
   props: TaskCompletionControlProps,
 ): React.ReactElement {
   const inputRef = useRef<HTMLInputElement>(null);
-  const isActive = props.mode === "active";
+  const onToggleComplete =
+    props.mode === "active" ? props.onToggleComplete : undefined;
 
   return (
     <span
       className="jig-task-completion-target"
       data-jig-drag-excluded="true"
-      {...(isActive
-        ? {
+      {...(onToggleComplete === undefined
+        ? {}
+        : {
             onClick: (event: React.MouseEvent<HTMLSpanElement>) => {
               // Astryx CheckboxInput intentionally keeps a label-hidden checkbox as
               // a 24px marker and exposes no public control-class hook. The Task row
@@ -183,8 +185,7 @@ function TaskCompletionControl(
               }
               event.stopPropagation();
             },
-          }
-        : {})}
+          })}
     >
       <CheckboxInput
         ref={inputRef}
@@ -195,8 +196,10 @@ function TaskCompletionControl(
         }
         isLabelHidden
         value={props.completed}
-        isReadOnly={!isActive}
-        {...(isActive ? { onChange: props.onToggleComplete } : {})}
+        isReadOnly={onToggleComplete === undefined}
+        {...(onToggleComplete === undefined
+          ? {}
+          : { onChange: onToggleComplete })}
       />
     </span>
   );
@@ -374,26 +377,26 @@ function TaskCardPresentation(
   const completed = props.task.completed_at !== null;
   const reminderLifecycle = useReminderLifecycle(props.task, props.now);
   const reminderDue = reminderLifecycle === "due";
-  const isActive = props.mode === "active";
+  const activeProps = props.mode === "active" ? props : null;
 
   return (
     <ListItem
-      {...(isActive && props.rowRef !== undefined ? { ref: props.rowRef } : {})}
+      {...(activeProps?.rowRef === undefined ? {} : { ref: activeProps.rowRef })}
       itemKey={props.task.id}
-      {...(isActive && props.onSelect !== undefined
-        ? { onClick: props.onSelect }
-        : {})}
+      {...(activeProps?.onSelect === undefined
+        ? {}
+        : { onClick: activeProps.onSelect })}
       className={[
         "jig-task-card",
         `jig-task-priority-${props.task.priority.toLowerCase()}`,
-        isActive && props.isSelected ? "jig-task-card-selected" : "",
+        activeProps?.isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
         reminderDue ? "jig-task-card-reminder-due" : "",
-        isActive && props.isDragging ? "jig-task-card-dragging" : "",
+        activeProps?.isDragging ? "jig-task-card-dragging" : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      isSelected={isActive && props.isSelected}
+      isSelected={activeProps?.isSelected ?? false}
       startContent={
         <span
           className="jig-task-card-leading"
@@ -401,36 +404,38 @@ function TaskCardPresentation(
         >
           {props.showDragHandle ? (
             <span
-              {...(isActive && props.dragHandleRef !== undefined
-                ? { ref: props.dragHandleRef }
-                : {})}
+              {...(activeProps?.dragHandleRef === undefined
+                ? {}
+                : { ref: activeProps.dragHandleRef })}
               className="jig-task-drag-handle"
-              role={isActive ? "button" : undefined}
-              tabIndex={isActive ? 0 : undefined}
-              aria-label={isActive ? `Move ${props.task.title}` : undefined}
-              aria-hidden={isActive ? undefined : true}
-              {...(isActive
-                ? {
+              role={activeProps === null ? undefined : "button"}
+              tabIndex={activeProps === null ? undefined : 0}
+              aria-label={
+                activeProps === null ? undefined : `Move ${props.task.title}`
+              }
+              aria-hidden={activeProps === null ? true : undefined}
+              {...(activeProps === null
+                ? {}
+                : {
                     onClick: (event: React.MouseEvent<HTMLSpanElement>) =>
                       event.stopPropagation(),
-                  }
-                : {})}
+                  })}
             >
               <JigIcon name="drag" color="inherit" size="sm" />
             </span>
           ) : null}
-          {isActive ? (
-            <TaskCompletionControl
-              mode="active"
-              task={props.task}
-              completed={completed}
-              onToggleComplete={props.onToggleComplete}
-            />
-          ) : (
+          {activeProps === null ? (
             <TaskCompletionControl
               mode="passive"
               task={props.task}
               completed={completed}
+            />
+          ) : (
+            <TaskCompletionControl
+              mode="active"
+              task={props.task}
+              completed={completed}
+              onToggleComplete={activeProps.onToggleComplete}
             />
           )}
         </span>
@@ -451,7 +456,7 @@ function TaskCardPresentation(
           <TaskMetadata
             task={props.task}
             recurrenceSeries={props.recurrenceSeries}
-            isInteractive={isActive}
+            isInteractive={activeProps !== null}
           />
           {reminderLifecycle === "scheduled" ? (
             <span
@@ -483,20 +488,20 @@ function TaskCardPresentation(
       endContent={
         <TaskActionMenu
           task={props.task}
-          {...(isActive
-            ? {
-                onEdit: props.onEdit,
-                onToggleComplete: props.onToggleComplete,
-                onSetPriority: props.onSetPriority,
-                onDelete: props.onDelete,
-                ...(props.onMoveUp === undefined
+          {...(activeProps === null
+            ? {}
+            : {
+                onEdit: activeProps.onEdit,
+                onToggleComplete: activeProps.onToggleComplete,
+                onSetPriority: activeProps.onSetPriority,
+                onDelete: activeProps.onDelete,
+                ...(activeProps.onMoveUp === undefined
                   ? {}
-                  : { onMoveUp: props.onMoveUp }),
-                ...(props.onMoveDown === undefined
+                  : { onMoveUp: activeProps.onMoveUp }),
+                ...(activeProps.onMoveDown === undefined
                   ? {}
-                  : { onMoveDown: props.onMoveDown }),
-              }
-            : {})}
+                  : { onMoveDown: activeProps.onMoveDown }),
+              })}
         />
       }
     />
