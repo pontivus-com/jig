@@ -359,6 +359,9 @@ describe("architecture compliance", () => {
       "export async function synchronizationPending",
     );
     expect(synchronizationPersistence).toContain(
+      "export async function exportCanonicalPortableSnapshot",
+    );
+    expect(synchronizationPersistence).toContain(
       "export async function reconcilePersistedPortableSnapshot",
     );
     expect(synchronizationPersistence).toContain(
@@ -373,6 +376,7 @@ describe("architecture compliance", () => {
     for (const sync of [desktopSync, androidSync]) {
       expect(sync).toContain("decideSynchronization");
       expect(sync).toContain("synchronizationPending");
+      expect(sync).toContain("exportCanonicalPortableSnapshot");
       expect(sync).toContain("reconcilePersistedPortableSnapshot");
       expect(sync).toContain("finishInterruptedSynchronizationAdoption");
       expect(sync).toContain("adoptObservedSynchronizationRemote");
@@ -394,6 +398,8 @@ describe("architecture compliance", () => {
     expect(desktopGit).not.toMatch(/["']pull["']|["']rebase["']/);
     expect(androidGit).not.toContain("normalizeAndroidPortableHead");
     expect(androidGit).not.toContain("synchronizeAndroidPortableRepository");
+    expect(androidGit).not.toContain("commitAndroidCanonicalState");
+    expect(androidGit).toContain("commitAndroidPortableSnapshot");
     expect(androidGit).toContain("fastForwardOnly: true");
 
     expect(persistence).toContain(

@@ -26,7 +26,6 @@ import {
   validateSnapshot,
   type PortableSnapshot,
 } from "../../../src/portable";
-import type { CanonicalState } from "../../../src/protocol";
 import type { SynchronizationLineage } from "../../../src/core/synchronization";
 import {
   AndroidFsError,
@@ -617,22 +616,6 @@ export async function commitAndroidPortableSnapshot(
 
   await trackedPortablePaths(effects);
   return oid;
-}
-
-export async function commitAndroidCanonicalState(
-  effects: AndroidGitEffects,
-  state: CanonicalState,
-  datasetId: string,
-): Promise<string> {
-  return commitAndroidPortableSnapshot(
-    effects,
-    serializeSnapshot(
-      state.tasks,
-      datasetId,
-      state.recurrences,
-    ),
-    state.revision,
-  );
 }
 
 export async function androidSynchronizationRemote(
