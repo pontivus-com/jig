@@ -1,8 +1,8 @@
 # Android v1.1 development and physical-device certification
 
-**Status:** v1.1 implementation support document, amended 2026-11-20 after the bounded remediation was implemented and hosted-certified. J110-IMP-09 remains complete with its detailed historical record lost. J110-IMP-18..20 are complete on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598. J110-IMP-21 now requires focused physical Android confirmation on artifact `14591926175` before the remaining J110-IMP-15 matrix can close. The earlier Samsung SM-S901E / Android 16 session on `222f2fe…` remains partial historical evidence.
+**Status:** v1.1 implementation support document, amended 2026-11-20 after the bounded remediation was implemented and hosted-certified. J110-IMP-09 remains complete with its detailed historical record lost. J110-IMP-18..20 are complete on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598. J110-IMP-21 still requires focused physical Android confirmation on artifact `14591926175`; J110-IMP-23 and J110-IMP-24 are additionally reopened and require a new exact-head candidate before the remaining J110-IMP-15 matrix can close. The earlier Samsung SM-S901E / Android 16 session on `222f2fe…` remains partial historical evidence.
 
-**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39, SD-40, SD-42 and SD-43; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..23 and J110-IMP-15.
+**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39, SD-40, SD-42 and SD-43; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..24 and J110-IMP-15.
 
 ## 1. Governed Android baseline
 
@@ -136,6 +136,10 @@ The checklist above is retained as the historical IMP-09 gate definition. Its de
 
 J110-IMP-23 / JIG-110-SD-43 now govern adjacent-week paging on both desktop and Android/narrow. Android physical certification must use the exact hosted candidate and confirm repeated previous/next horizontal paging on populated and empty weeks, ordinary vertical Planner scrolling, interruption, BottomSheet open/close, and that dedicated-grip Task dragging never pages or exposes an adjacent preview as a drop target. The active week must remain the only interactive/dnd domain. Prior raw-pointer or `usePanGesture` APK evidence is historical only. Do not add an Android `GestureDetector`, native week state, private Astryx Carousel integration or platform-specific paging workaround.
 
+### Shared operational-attention Banner physical boundary
+
+J110-IMP-24 governs the in-app error/warning attention surface shared by Linux/Desktop and the Android WebView. On the exact candidate, exercise a multi-line operational error without an action and a multi-line synchronization/recovery warning with an action. Confirm the status icon is vertically centered against the message block, the inline action is vertically centered when it fits, the action wraps cleanly without overlap at narrow width, touch/focus behavior remains ordinary, and reduced motion removes only reveal animation. Do not treat this as Android OS notification testing and do not add a native banner implementation.
+
 ### 2026-11-20 partial physical acceptance findings
 
 The current corrective wave is not optional visual polish. Before final physical certification:
@@ -143,7 +147,9 @@ The current corrective wave is not optional visual polish. Before final physical
 - J110-IMP-18 **COMPLETE:** compact Jig identity + centered Planner/History/Settings title, reduced header density, body-scale action-label legibility, Task grip/checkbox vertical centering and desktop-onboarding scroll ownership are implemented and browser/visual certified;
 - J110-IMP-19 **COMPLETE:** intentional scheduling is current/future only through one canonical core rule with concise existing-feedback projection and no mutation on rejection;
 - J110-IMP-20 **COMPLETE:** shared daily rollover is recurrence-aware so older overdue outstanding siblings do not accumulate when a later occurrence is due;
-- J110-IMP-21 **IN PROGRESS:** exact source/APK and hosted/browser evidence are established; focused physical Android confirmation remains before IMP-15 resumes closure.
+- J110-IMP-21 **IN PROGRESS:** exact source/APK and hosted/browser evidence are established; focused physical Android confirmation remains.
+- J110-IMP-23 **REOPENED:** the cross-platform WeekPager requires a new exact-head browser/Android candidate.
+- J110-IMP-24 **OPEN:** the shared operational-attention Banner geometry requires desktop+narrow browser evidence plus physical Android confirmation before IMP-15 resumes closure.
 
 Do not implement any of these as Android-only behavior.
 
