@@ -4,6 +4,7 @@ import {
   type CarouselHandle,
 } from "@astryxdesign/core";
 import {
+  useCallback,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
@@ -65,10 +66,10 @@ export function WeekPager({
     },
   });
 
-  const restoreCurrent = (): void => {
+  const restoreCurrent = useCallback((): void => {
     committingRef.current = false;
     carouselRef.current?.scrollTo(MIDDLE_PAGE, { animated: false });
-  };
+  }, []);
 
   useImperativeHandle(
     handleRef,
@@ -87,12 +88,12 @@ export function WeekPager({
       },
       restoreCurrent,
     }),
-    [isPagingDisabled],
+    [isPagingDisabled, restoreCurrent],
   );
 
   useLayoutEffect(() => {
     restoreCurrent();
-  }, [weekStart, isPagingDisabled]);
+  }, [isPagingDisabled, restoreCurrent, weekStart]);
 
   const slides = WEEK_OFFSETS.map((offset) =>
     weekDates(addCivilDays(weekStart, offset)),
