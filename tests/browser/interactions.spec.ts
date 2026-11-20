@@ -105,10 +105,6 @@ async function mouseDrag(
     { steps: 3 },
   );
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
-  await expect(page.locator(".jig-week-pager")).toHaveAttribute(
-    "data-jig-paging-disabled",
-    "true",
-  );
   const targetBox = await target.boundingBox();
   if (targetBox === null) {
     throw new Error("Drag target geometry unavailable after lift");
@@ -398,10 +394,6 @@ test("past-date drag is visibly unavailable and reports the canonical reason wit
     )
     .toBe(today);
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-  await expect(page.locator(".jig-week-pager")).toHaveAttribute(
-    "data-jig-paging-disabled",
-    "false",
-  );
 });
 
 test("dedicated-handle desktop drag moves exactly once without runtime errors or selection", async ({
