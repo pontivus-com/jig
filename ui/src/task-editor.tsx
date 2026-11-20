@@ -24,7 +24,12 @@ import {
   type Task,
   type TaskCommand,
 } from "../../src/core/task";
-import { asIsoDateString, asIsoTimeString } from "./dates";
+import { assertActiveScheduleDate } from "../../src/core/planning";
+import {
+  asIsoDateString,
+  asIsoTimeString,
+  todayCivilDate,
+} from "./dates";
 
 export type RepeatKind = "none" | "weekly" | "monthly";
 
@@ -390,6 +395,21 @@ export function TaskEditor({
     if (draft.scheduledDate.length === 0) {
       setLocalError("Date is required.");
       return;
+    }
+    if (task === null || task.completed_at === null) {
+      try {
+        assertActiveScheduleDate(
+          todayCivilDate(),
+          draft.scheduledDate,
+        );
+      } catch (error) {
+        setLocalError(
+          error instanceof Error
+            ? error.message
+            : "Outstanding Tasks can only be scheduled for today or a future date",
+        );
+        return;
+      }
     }
 
     const command = commandForDraft(task, draft, recurrenceSeries);
