@@ -261,6 +261,54 @@ describe("Android reminder reconciliation", () => {
     expect(notifications.pending.has(100000)).toBe(true);
   });
 
+  it("cancels the superseded recurring sibling reminder while retaining the survivor schedule", async () => {
+    const registry = registryFixture();
+    const notifications = notificationFixture();
+    const seriesId = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f5200";
+    const older = task({
+      id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f5201",
+      title: "Older recurrence",
+      scheduled_date: "2026-11-19",
+      recurrence_series_id: seriesId,
+      recurrence_occurrence_date: "2026-11-19",
+    });
+    const survivor = task({
+      id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f5202",
+      title: "Surviving recurrence",
+      scheduled_date: "2026-11-20",
+      recurrence_series_id: seriesId,
+      recurrence_occurrence_date: "2026-11-20",
+    });
+
+    await reconcileAndroidReminders(
+      [older, survivor],
+      NOW,
+      notifications.port,
+      registry.port,
+    );
+    const olderNotificationId =
+      registry.entries.get(older.id)?.notification_id;
+    const survivorEntry = registry.entries.get(survivor.id);
+    if (olderNotificationId === undefined || survivorEntry === undefined) {
+      throw new Error("recurring reminder fixture was not scheduled");
+    }
+
+    const result = await reconcileAndroidReminders(
+      [survivor],
+      new Date("2026-11-20T09:00:00"),
+      notifications.port,
+      registry.port,
+    );
+
+    expect(result.cancelled_task_ids).toContain(older.id);
+    expect(notifications.cancelled).toContain(olderNotificationId);
+    expect(registry.entries.has(older.id)).toBe(false);
+    expect(registry.entries.get(survivor.id)).toStrictEqual(survivorEntry);
+    expect(
+      notifications.pending.has(survivorEntry.notification_id),
+    ).toBe(true);
+  });
+
   it("does not persist a registry entry when permission is missing", async () => {
     const registry = registryFixture();
     const notifications = notificationFixture({
