@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   adoptCanonicalSnapshot,
-  applyTaskCommand,
+  applyTaskCommand as applyTaskCommandAtLocalDate,
   markExported,
   readCanonicalState,
   readMetadata,
@@ -32,6 +32,23 @@ const TIMES = [
 
 let root = "";
 let db: JigSqlConnection;
+
+function applyTaskCommand(
+  connection: JigSqlConnection,
+  command: Parameters<typeof applyTaskCommandAtLocalDate>[1],
+  expectedRevision: number,
+  now: string,
+  createId: () => string = crypto.randomUUID,
+): ReturnType<typeof applyTaskCommandAtLocalDate> {
+  return applyTaskCommandAtLocalDate(
+    connection,
+    command,
+    expectedRevision,
+    now.slice(0, 10),
+    now,
+    createId,
+  );
+}
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "jig-mutations-"));
@@ -132,8 +149,74 @@ describe("daily rollover persistence", () => {
     expect(result).toStrictEqual({
       revision: 1,
       moved_task_ids: [],
+      superseded_task_ids: [],
     });
     expect((await readCanonicalState(db)).revision).toBe(1);
+  });
+
+  it("supersedes an older overdue recurring occurrence even when the latest due occurrence is already today", async () => {
+    const recurrenceIds = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2001",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2002",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2003",
+    ];
+    let index = 0;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Daily-ish recurring",
+        scheduled_date: "2026-11-16",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON", "TUE"],
+          },
+          end_date: "2026-11-17",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = recurrenceIds[index];
+        if (id === undefined) {
+          throw new Error("recurrence rollover fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+    const before = await readCanonicalState(db);
+    const older = before.tasks.find(
+      (task) => task.recurrence_occurrence_date === "2026-11-16",
+    );
+    const latest = before.tasks.find(
+      (task) => task.recurrence_occurrence_date === "2026-11-17",
+    );
+    if (older === undefined || latest === undefined) {
+      throw new Error("recurrence rollover fixture missing");
+    }
+
+    const result = await rollForwardOutstandingInDatabase(
+      db,
+      "2026-11-17",
+      "2026-11-17T01:00:00.000Z",
+    );
+
+    expect(result.revision).toBe(2);
+    expect(result.moved_task_ids).toEqual([]);
+    expect(result.superseded_task_ids).toEqual([older.id]);
+    const after = await readCanonicalState(db);
+    expect(after.tasks).toHaveLength(1);
+    expect(after.tasks[0]).toMatchObject({
+      id: latest.id,
+      scheduled_date: "2026-11-17",
+      recurrence_occurrence_date: "2026-11-17",
+      completed_at: null,
+      position: 0,
+    });
+    expect((await readMetadata(db)).pending_sync).toBe(true);
   });
 
   it("rolls back the entire rollover transaction on SQL failure", async () => {
