@@ -158,6 +158,98 @@ describe("daily rollover persistence", () => {
     expect((await readCanonicalState(db)).revision).toBe(1);
   });
 
+  it("catches up a single-weekday recurring series without accumulation and survives restart", async () => {
+    const recurrenceIds = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2101",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2102",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2103",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2104",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2105",
+    ];
+    let index = 0;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Weekly catch-up",
+        scheduled_date: "2026-11-16",
+        reminder_time: "09:00",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON"],
+          },
+          end_date: "2026-12-07",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = recurrenceIds[index];
+        if (id === undefined) {
+          throw new Error("weekly rollover fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+
+    const before = await readCanonicalState(db);
+    const occurrence = (date: string) =>
+      before.tasks.find(
+        (task) => task.recurrence_occurrence_date === date,
+      );
+    const first = occurrence("2026-11-16");
+    const second = occurrence("2026-11-23");
+    const latestDue = occurrence("2026-11-30");
+    const future = occurrence("2026-12-07");
+    if (
+      first === undefined ||
+      second === undefined ||
+      latestDue === undefined ||
+      future === undefined
+    ) {
+      throw new Error("weekly rollover occurrences missing");
+    }
+
+    const result = await rollForwardOutstandingInDatabase(
+      db,
+      "2026-12-01",
+      "2026-12-01T01:00:00.000Z",
+    );
+
+    expect(result.revision).toBe(2);
+    expect(result.superseded_task_ids).toEqual([first.id, second.id]);
+    expect(result.moved_task_ids).toEqual([latestDue.id]);
+
+    const after = await readCanonicalState(db);
+    expect(after.tasks).toHaveLength(2);
+    expect(
+      after.tasks.find((task) => task.id === latestDue.id),
+    ).toMatchObject({
+      scheduled_date: "2026-12-01",
+      recurrence_occurrence_date: "2026-11-30",
+      reminder_time: "09:00",
+      completed_at: null,
+      position: 0,
+    });
+    expect(
+      after.tasks.find((task) => task.id === future.id),
+    ).toMatchObject({
+      scheduled_date: "2026-12-07",
+      recurrence_occurrence_date: "2026-12-07",
+      reminder_time: "09:00",
+      completed_at: null,
+      position: 0,
+    });
+    expect((await readMetadata(db)).pending_sync).toBe(true);
+
+    await db.close();
+    db = await openDatabase(join(root, "jig.sqlite"));
+    expect(await readCanonicalState(db)).toStrictEqual(after);
+  });
+
   it("supersedes an older overdue recurring occurrence even when the latest due occurrence is already today", async () => {
     const recurrenceIds = [
       "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2001",
