@@ -1,0 +1,118 @@
+name: Temporary v1.1 open-canvas chrome correction
+
+on:
+  push:
+    branches:
+      - ci/v11-open-canvas-chrome
+
+permissions:
+  contents: write
+
+jobs:
+  correct-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install exact frozen dependency graph
+        run: bun install --frozen-lockfile
+
+      - name: Apply governed open-canvas and chrome correction
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          tokens = Path("ui/src/themes/product-tokens.ts")
+          text = tokens.read_text()
+          text = text.replace(
+              '  "--jig-lane-surface": "var(--color-background-body)",\n',
+              "",
+          )
+          text, count = re.subn(
+              r'  "--jig-chrome-surface":\n\s+"color-mix\(in srgb, var\(--color-background-surface\) 60%, color-mix\(in srgb, var\(--color-background-muted\) 50%, var\(--color-background-body\) 50%\) 40%\)",',
+              '  "--jig-chrome-surface": "var(--color-background-body)",',
+              text,
+          )
+          if count != 1:
+              raise SystemExit(f"expected one chrome token replacement, got {count}")
+          tokens.write_text(text)
+
+          styles = Path("ui/src/styles.css")
+          text = styles.read_text()
+          old = '    background: var(--jig-lane-surface);\n'
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one lane background rule, got {text.count(old)}")
+          styles.write_text(text.replace(old, ""))
+
+          tests = Path("tests/architecture/ui-ownership.test.ts")
+          text = tests.read_text()
+          text = text.replace('  "--jig-lane-surface",\n', "")
+          old_block = '''    expect(css).toMatch(
+              /\\.jig-week-column\\s*\\{[^}]*background:\\s*var\\(--jig-lane-surface\\)/s,
+            );'''
+          new_block = '''    expect(css).not.toMatch(
+              /\\.jig-week-column\\s*\\{[^}]*\\bbackground:/s,
+            );'''
+          if old_block not in text:
+              raise SystemExit("week-column architecture assertion not found")
+          text = text.replace(old_block, new_block)
+          anchor = '''    for (const token of JIG_PRODUCT_TOKENS) {
+              expect(common).toContain(\`"\${token}"\`);
+            }
+          '''
+          replacement = '''    for (const token of JIG_PRODUCT_TOKENS) {
+              expect(common).toContain(\`"\${token}"\`);
+            }
+            expect(common).not.toContain('"--jig-lane-surface"');
+            expect(common).toContain(
+              '"--jig-chrome-surface": "var(--color-background-body)"',
+            );
+          '''
+          if anchor not in text:
+              raise SystemExit("product-token architecture assertion anchor not found")
+          tests.write_text(text.replace(anchor, replacement))
+          PY
+
+      - name: Regenerate governed Astryx theme artifacts
+        run: bun run theme:build
+
+      - name: Verify generated theme artifacts
+        run: bun run theme:check
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Verify UI architecture
+        run: bunx --bun vitest run tests/architecture/ui-ownership.test.ts
+
+      - name: Build
+        run: bun run build
+
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Re-run affected browser acceptance
+        run: >-
+          bunx playwright test tests/browser/ui-conformance.spec.ts
+          --grep "desktop uses explicit Planner navigation with one seven-date open canvas|desktop header stays compact while narrow header uses sticky destination-specific rows"
+
+      - name: Commit generated correction and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/temp-v11-open-canvas-chrome.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ui/src tests/architecture/ui-ownership.test.ts
+          git status --short
+          git commit -m "fix: restore governed open Planner canvas and chrome surface"
+          git push origin HEAD:ci/v11-open-canvas-chrome
