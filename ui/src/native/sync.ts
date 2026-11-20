@@ -125,18 +125,17 @@ export function createAndroidSyncController(
     return current;
   };
 
-  const reconcileLocalSnapshot = async (): Promise<void> => {
-    const metadata = await readMetadata(database);
-    const head = await androidPortableHead(effects);
-    const snapshot = await reopenAndroidPortableRepository(
-      effects,
-      metadata.dataset_id,
+  const reconcileLocalSnapshot = (): Promise<void> =>
+    reconcilePersistedPortableSnapshot(
+      database,
+      async (datasetId) => ({
+        head: await androidPortableHead(effects),
+        snapshot: await reopenAndroidPortableRepository(
+          effects,
+          datasetId,
+        ),
+      }),
     );
-    await reconcilePersistedPortableSnapshot(database, {
-      head,
-      snapshot,
-    });
-  };
 
   const exportCurrent = async (): Promise<void> => {
     const state = await readCanonicalState(database);
