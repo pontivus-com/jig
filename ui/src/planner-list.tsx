@@ -3,6 +3,7 @@ import { Fragment, useRef, type Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
+import { todayCivilDate } from "./dates";
 import {
   DraggableTaskRow,
   TaskInsertionSlot,
@@ -220,7 +221,11 @@ function PassivePlannerTaskList(
   return (
     <PlannerTaskSequence
       items={items}
-      renderInsertionSlot={() => <TaskInsertionSlotPresentation />}
+      renderInsertionSlot={() => (
+        <TaskInsertionSlotPresentation
+          isPastDate={props.date < todayCivilDate()}
+        />
+      )}
       renderTaskRow={(item) => (
         <TaskRow
           mode="passive"
