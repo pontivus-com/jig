@@ -46,6 +46,17 @@ async function runTaskAction(
   title: string,
   action: string,
 ): Promise<void> {
+  await expect
+    .poll(() =>
+      activeWeek(page).evaluate(
+        (element) =>
+          element
+            .getAnimations({ subtree: true })
+            .filter((animation) => animation.playState === "running").length,
+      ),
+    )
+    .toBe(0);
+
   const card = await taskCard(page, title);
   await card.getByRole("button", { name: `Actions for ${title}` }).click();
   await page.getByRole("menuitem", { name: action, exact: true }).click();
