@@ -791,17 +791,12 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     const navTypography = await page
       .locator(".jig-mobile-nav-label")
       .first()
-      .evaluate((element) => {
-        const style = getComputedStyle(element);
-        return {
-          actual: Number.parseFloat(style.fontSize),
-          small: Number.parseFloat(
-            style.getPropertyValue("--font-size-sm"),
-          ),
-        };
-      });
+      .evaluate((element) => ({
+        actual: Number.parseFloat(getComputedStyle(element).fontSize),
+        body: Number.parseFloat(getComputedStyle(document.body).fontSize),
+      }));
     expect(navTypography.actual).toBeGreaterThanOrEqual(
-      navTypography.small,
+      navTypography.body,
     );
     await expectTarget(
       page.locator(".jig-date-add").first(),
@@ -1103,6 +1098,10 @@ test("configured destination headings keep Jig identity and one title owner", as
     await waitForResponsiveHeader(page, width);
 
     if (width < 1168) {
+      await page
+        .getByRole("navigation", { name: "Primary" })
+        .getByRole("button", { name: "Planner", exact: true })
+        .click();
       const header = page.locator(".jig-app-header");
       await expect(
         header.getByRole("button", {
