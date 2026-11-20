@@ -134,7 +134,7 @@ The checklist above is retained as the historical IMP-09 gate definition. Its de
 
 ### Cross-platform WeekPager physical boundary
 
-J110-IMP-23 / JIG-110-SD-43 now govern adjacent-week paging on both desktop and Android/narrow. Android physical certification must use the exact hosted candidate and confirm repeated previous/next horizontal paging on populated and empty weeks, ordinary vertical Planner scrolling, interruption, BottomSheet open/close, and that dedicated-grip Task dragging never pages or exposes an adjacent preview as a drop target. The active week must remain the only interactive/dnd domain. Prior raw-pointer or `usePanGesture` APK evidence is historical only. Do not add an Android `GestureDetector`, native week state, private Astryx Carousel integration or platform-specific paging workaround.
+J110-IMP-23 / JIG-110-SD-43 govern adjacent-week paging on both desktop and Android/narrow. Android physical certification must use the exact final SD-43 candidate and confirm repeated previous/next horizontal paging on populated and empty weeks, ordinary vertical Planner scrolling, interruption, BottomSheet open/close, and that dedicated-grip Task dragging never pages or exposes an adjacent passive page as a drop target. The active week must remain the only interactive/dnd domain. This development guide defines no alternate Android paging implementation; any candidate not conforming to SD-43 is ineligible for certification.
 
 ### Shared operational-attention Banner physical boundary
 
