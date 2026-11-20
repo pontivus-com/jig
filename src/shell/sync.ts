@@ -214,14 +214,11 @@ export function createSyncController(
     return status;
   };
 
-  const reconcileLocalSnapshot = async (): Promise<void> => {
-    const metadata = await readMetadata(db);
-    const current = await effects.readCurrentSnapshot(
-      adapter,
-      metadata.dataset_id,
+  const reconcileLocalSnapshot = (): Promise<void> =>
+    reconcilePersistedPortableSnapshot(
+      db,
+      (datasetId) => effects.readCurrentSnapshot(adapter, datasetId),
     );
-    await reconcilePersistedPortableSnapshot(db, current);
-  };
 
   const exportCurrent = async (): Promise<string> => {
     const state = await readCanonicalState(db);
