@@ -128,7 +128,7 @@ The Task card now treats the warning highlight as unresolved due attention only.
 
 ### Local follow-up — motion audit correction and physical WebView acceptance
 
-The final local debug APK used for this focused motion check contains the History animated-layout owner, desktop Today transition, theme/status-surface transition contract, reduced-motion suppression and the mobile week swipe as it existed before J110-IMP-23 (the rejected raw pointer adapter). This APK predates the Astryx `usePanGesture` replacement, so it is not evidence for the IMP-23 swipe.
+The local debug APK used for this focused motion check predates the final JIG-110-SD-43 Carousel architecture. Its History animated-layout, desktop Today, theme/status and reduced-motion observations may remain evidence for those unaffected concerns, but its adjacent-week behavior is historical only and is not IMP-23 evidence.
 
 | Fact | Observed value |
 |---|---|
@@ -145,7 +145,7 @@ Focused physical observations:
 - **PASS — reduced-motion WebView contract on the physical device:** Chrome DevTools Protocol emulation of `prefers-reduced-motion: reduce` in the installed Android WebView reported `matchMedia(...).matches === true`, `scroll-behavior: auto` and no Planner board animation. This exercised the same built WebView CSS used by the APK, not a second native motion implementation.
 - **Boundary recorded:** Android's `secure/remove_animations=1` setting did not cause the WebView media query to become true on this Samsung build. Jig therefore does not claim that the OS setting itself is a WebView CSS preference bridge; the browser/WebView media-query contract remains the authoritative reduced-motion boundary, and native system animation settings remain OS-owned.
 
-**Historical J110-IMP-23 swipe replacement — SUPERSEDED / NOT RETAINED in this APK.** The Astryx `usePanGesture` adapter landed after this historical APK was built and was later superseded by FR-33/SD-43. Its former local typecheck/architecture/browser checks are historical implementation evidence only. This APK still contains the rejected raw adapter and must not be cited as WeekPager acceptance. The replacement WeekPager is now hosted-certified on executable source `59f7d164…`; physical horizontal paging, vertical-scroll arbitration and active-week drag isolation remain to be exercised on current artifact `14608147658`.
+**Adjacent-week paging — HISTORICAL ONLY.** This APK and the subsequent `59f7d164…` hosted lineage do not implement the final SD-43 Carousel architecture and must not be cited as WeekPager acceptance. Final physical horizontal paging, vertical-scroll arbitration and active-week drag isolation must be re-exercised on the exact post-cutover SD-43 candidate.
 
 This resolves the motion audit's implementation, ownership, interruption and physical-WebView reduced-motion findings. Hosted re-certification of the combined executable changes and the broader J110-IMP-15 matrix remain required before release promotion.
 
