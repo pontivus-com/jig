@@ -74,7 +74,7 @@ test("already-open browser refreshes canonical state across local midnight", asy
     .poll(() =>
       page
         .locator(
-          '.jig-week-slide[data-jig-week-page="active"] .jig-week-column-today',
+          ".jig-planner-surface .jig-week-column-today",
         )
         .getAttribute("data-date"),
     )
