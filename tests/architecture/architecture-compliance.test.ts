@@ -455,6 +455,39 @@ describe("architecture compliance", () => {
     );
   });
 
+  it("keeps reminder timing semantics in the functional core", () => {
+    const reminder = source("src/core/reminder.ts");
+    const uiReminder = source("ui/src/reminder.tsx");
+    const nativeNotifications = source("ui/src/native/notifications.ts");
+    const nativeReconciliation = source(
+      "ui/src/native/reminder-reconciliation.ts",
+    );
+
+    expect(reminder).toContain("export function isReminderDue");
+    expect(reminder).toContain(
+      "export function isReminderScheduledInFuture",
+    );
+    expect(reminder).toContain("export function reminderScheduledAt");
+    expect(uiReminder).toContain("isReminderDue");
+    expect(uiReminder).toContain("isReminderScheduledInFuture");
+    expect(uiReminder).not.toContain("function isFutureOrCurrentDate");
+    expect(nativeNotifications).toContain(
+      'from "../../../src/core/reminder"',
+    );
+    expect(nativeNotifications).not.toContain(
+      "isFutureAndroidReminder",
+    );
+    expect(nativeNotifications).not.toContain(
+      "function androidReminderDate",
+    );
+    expect(nativeReconciliation).toContain(
+      "isReminderScheduledInFuture",
+    );
+    expect(nativeReconciliation).not.toContain(
+      "isFutureAndroidReminder",
+    );
+  });
+
   it("keeps portable records platform-neutral and Android Git provider-neutral", () => {
     const portable = source("src/portable.ts");
     const desktopGit = source("src/shell/git.ts");

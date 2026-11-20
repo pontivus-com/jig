@@ -1,4 +1,5 @@
 import type { Task } from "../../../src/core/task";
+import { isReminderScheduledInFuture } from "../../../src/core/reminder";
 import {
   allocateAndroidReminderId,
   readAndroidReminderRegistry,
@@ -10,7 +11,6 @@ import {
 import {
   cancelAndroidReminder,
   androidReminderFingerprint,
-  isFutureAndroidReminder,
   scheduleAndroidTaskReminder,
   type AndroidLocalNotificationsPort,
   type AndroidReminderSchedulingOutcome,
@@ -58,7 +58,7 @@ export async function reconcileAndroidReminders(
   );
   const eligible = new Map(
     tasks
-      .filter((task) => isFutureAndroidReminder(task, now))
+      .filter((task) => isReminderScheduledInFuture(task, now))
       .map((task) => [task.id, task]),
   );
 
