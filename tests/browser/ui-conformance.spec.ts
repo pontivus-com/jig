@@ -654,7 +654,8 @@ test("desktop header stays compact while narrow header uses sticky destination-s
       .click();
 
     const narrowSettingsHeight = await headerHeight(page);
-    expect(narrowSettingsHeight).toBeGreaterThanOrEqual(56);
+    expect(narrowSettingsHeight).toBeGreaterThanOrEqual(52);
+    expect(narrowSettingsHeight).toBeLessThanOrEqual(57);
     await expect(page.locator(".jig-header-mobile-application-row")).toHaveCount(1);
     await expect(page.locator(".jig-header-mobile-temporal-row")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Add task", exact: true })).toHaveCount(0);
@@ -745,8 +746,10 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     if (applicationRow === null || temporalRow === null) {
       throw new Error("Mobile Planner header geometry unavailable");
     }
-    expect(applicationRow.height).toBeGreaterThanOrEqual(56);
-    expect(temporalRow.height).toBeGreaterThanOrEqual(56);
+    expect(applicationRow.height).toBeGreaterThanOrEqual(52);
+    expect(applicationRow.height).toBeLessThanOrEqual(56);
+    expect(temporalRow.height).toBeGreaterThanOrEqual(52);
+    expect(temporalRow.height).toBeLessThanOrEqual(56);
 
     await expectTarget(
       page.getByRole("button", { name: "Planner home", exact: true }),
@@ -784,6 +787,22 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
         `${destination} bottom navigation`,
       );
     }
+
+    const navTypography = await page
+      .locator(".jig-mobile-nav-label")
+      .first()
+      .evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          actual: Number.parseFloat(style.fontSize),
+          small: Number.parseFloat(
+            style.getPropertyValue("--font-size-sm"),
+          ),
+        };
+      });
+    expect(navTypography.actual).toBeGreaterThanOrEqual(
+      navTypography.small,
+    );
     await expectTarget(
       page.locator(".jig-date-add").first(),
       "Date Add",
@@ -800,6 +819,31 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       page.locator(".jig-task-completion-target").first(),
       "Task completion",
     );
+
+    const taskControlAlignment = await page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Mobile geometry inventory" })
+      .first()
+      .evaluate((card) => {
+        const leading = card.querySelector<HTMLElement>(
+          ".jig-task-card-leading",
+        );
+        if (leading === null) {
+          throw new Error("Task leading controls unavailable");
+        }
+        const cardBox = card.getBoundingClientRect();
+        const leadingBox = leading.getBoundingClientRect();
+        return {
+          cardCenter: cardBox.top + cardBox.height / 2,
+          leadingCenter: leadingBox.top + leadingBox.height / 2,
+        };
+      });
+    expect(
+      Math.abs(
+        taskControlAlignment.cardCenter -
+          taskControlAlignment.leadingCenter,
+      ),
+    ).toBeLessThanOrEqual(1);
     await expectTarget(
       page.getByRole("link", { name: "Open reference" }).first(),
       "Task reference",
@@ -1038,7 +1082,7 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
   }
 });
 
-test("History and Settings headings exist once in the application header", async ({
+test("configured destination headings keep Jig identity and one title owner", async ({
   page,
 }) => {
   const cases = [
@@ -1058,6 +1102,23 @@ test("History and Settings headings exist once in the application header", async
     await page.setViewportSize({ width, height: 900 });
     await waitForResponsiveHeader(page, width);
 
+    if (width < 1168) {
+      const header = page.locator(".jig-app-header");
+      await expect(
+        header.getByRole("button", {
+          name: "Planner home",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        header.getByRole("heading", {
+          level: 1,
+          name: "Planner",
+          exact: true,
+        }),
+      ).toHaveCount(1);
+    }
+
     for (const item of cases) {
       if (width >= 1168) {
         await page
@@ -1074,6 +1135,14 @@ test("History and Settings headings exist once in the application header", async
       }
 
       const header = page.locator(".jig-app-header");
+      if (width < 1168) {
+        await expect(
+          header.getByRole("button", {
+            name: "Planner home",
+            exact: true,
+          }),
+        ).toBeVisible();
+      }
       await expect(
         header.getByRole("heading", {
           level: 1,
