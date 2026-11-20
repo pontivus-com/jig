@@ -734,7 +734,10 @@ test("global Add exposes the full form and derives the current weekday in the di
   await expect(workspace.getByLabel("Notes")).toBeVisible();
   await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
 
+  const range = page.locator(".jig-header-week-range");
+  const rangeBefore = await range.textContent();
   await page.getByRole("button", { name: "Next week" }).click();
+  await expect(range).not.toHaveText(rangeBefore ?? "");
   const correspondingNextWeekDate = await browserCivilDate(page, 7);
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   workspace = page.getByRole("dialog", { name: "Add task" });
@@ -1600,8 +1603,15 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   await workspace
     .getByRole("button", { name: "Close", exact: true })
     .click();
+  const rangeBeforeNext = await page.locator(".jig-header-week-range").textContent();
   await page.getByRole("button", { name: "Next week" }).click();
-  await page.getByText("Browser recurrence", { exact: true }).click();
+  await expect(page.locator(".jig-header-week-range")).not.toHaveText(
+    rangeBeforeNext ?? "",
+  );
+  await page
+    .locator(".jig-week-board")
+    .getByText("Browser recurrence", { exact: true })
+    .click();
   workspace = page.getByRole("dialog", {
     name: "Browser recurrence",
   });
