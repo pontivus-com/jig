@@ -13,7 +13,55 @@ test.beforeEach(async ({ page }) => {
 });
 
 function activeWeek(page: Page) {
-  return page.locator('.jig-week-slide[data-jig-week-page="active"]');
+  return page.locator('.jig-week-carousel-page[data-jig-week-page="active"]');
+}
+
+async function swipeWeekWithTouch(
+  page: Page,
+  direction: "previous" | "next",
+): Promise<void> {
+  const board = activeWeek(page).locator(".jig-week-board");
+  const box = await board.boundingBox();
+  if (box === null) {
+    throw new Error("Planner week board is unavailable for touch paging");
+  }
+
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setTouchEmulationEnabled", {
+    enabled: true,
+    maxTouchPoints: 1,
+  });
+
+  const y = box.y + Math.min(96, Math.max(24, box.height / 2));
+  const startX =
+    direction === "next" ? box.x + box.width * 0.82 : box.x + box.width * 0.18;
+  const endX =
+    direction === "next" ? box.x + box.width * 0.18 : box.x + box.width * 0.82;
+
+  await session.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x: startX, y }],
+  });
+
+  for (let step = 1; step <= 6; step += 1) {
+    const progress = step / 6;
+    await session.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: startX + (endX - startX) * progress,
+          y,
+        },
+      ],
+    });
+    await page.waitForTimeout(16);
+  }
+
+  await session.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await session.detach();
 }
 
 function expectNear(actual: number, expected: number, tolerance = 3): void {
@@ -130,7 +178,7 @@ async function themeSnapshot(page: Page): Promise<{
 
   return page.evaluate(() => {
     const active = document.querySelector<HTMLElement>(
-      '.jig-week-slide[data-jig-week-page="active"]',
+      '.jig-week-carousel-page[data-jig-week-page="active"]',
     );
     const header = document.querySelector<HTMLElement>(".jig-app-header");
     const lane = active?.querySelector<HTMLElement>(".jig-week-column") ?? null;
@@ -582,12 +630,16 @@ test("temporal group stays page-centered in one row and navigation has no select
 
   const rangeBefore = await range.textContent();
   const activeWeek = page.locator(
-    '.jig-week-slide[data-jig-week-page="active"]',
+    '.jig-week-carousel-page[data-jig-week-page="active"]',
   );
   await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(1);
 
-  await expect(page.locator(".jig-week-pager")).toHaveCount(1);
-  await expect(page.locator('.jig-week-slide[data-jig-week-page="preview"]')).toHaveCount(2);
+  await expect(
+    page.getByRole("region", { name: "Planner week pager" }),
+  ).toHaveAttribute("aria-roledescription", "carousel");
+  await expect(
+    page.locator('.jig-week-carousel-page[data-jig-week-page="passive"]'),
+  ).toHaveCount(2);
 
   await page.getByRole("button", { name: "Next week" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
@@ -608,69 +660,67 @@ test("temporal group stays page-centered in one row and navigation has no select
   );
 });
 
-test("shared WeekPager commits one adjacent week and keeps previews inert", async ({
+test("Astryx WeekPager converges header and direct touch paging while passive pages stay inert", async ({
   page,
 }) => {
-  const settleOnPage = async (index: 0 | 2): Promise<void> => {
-    await page.locator(".jig-week-pager").evaluate((element, pageIndex) => {
-      const pager = element as HTMLElement;
-      pager.scrollLeft = pager.clientWidth * pageIndex;
-      pager.dispatchEvent(new Event("scrollend"));
-    }, index);
-  };
-
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 390, height: 1600 },
   ]) {
     await page.setViewportSize(viewport);
     await page.getByRole("button", { name: "Today", exact: true }).click();
+
     const range = page.locator(".jig-header-week-range");
     const rangeBefore = await range.textContent();
-
-    const previews = page.locator(
-      '.jig-week-slide[data-jig-week-page="preview"]',
+    const passivePages = page.locator(
+      '.jig-week-carousel-page[data-jig-week-page="passive"]',
     );
-    await expect(previews).toHaveCount(2);
+
+    await expect(passivePages).toHaveCount(2);
     expect(
-      await previews.evaluateAll((elements) =>
+      await passivePages.evaluateAll((elements) =>
         elements.every((element) => (element as HTMLElement).inert),
       ),
     ).toBe(true);
-    await expect(previews.locator("[data-jig-drop-slot]")).toHaveCount(0);
-    await expect(previews.getByRole("button")).toHaveCount(0);
-    await expect(previews.getByRole("link")).toHaveCount(0);
+    await expect(passivePages.locator("[data-jig-drop-slot]")).toHaveCount(0);
+    await expect(passivePages.getByRole("button")).toHaveCount(0);
+    await expect(passivePages.getByRole("link")).toHaveCount(0);
     await expect(
       page.locator(
-        '.jig-week-slide[data-jig-week-page="active"] .jig-task-drag-scope',
+        '.jig-week-carousel-page[data-jig-week-page="active"] .jig-task-drag-scope',
       ),
     ).toHaveCount(1);
 
-    await settleOnPage(2);
+    await page.getByRole("button", { name: "Next week" }).click();
     await expect(range).not.toHaveText(rangeBefore ?? "");
     await expect(
       page.locator(
-        '.jig-week-slide[data-jig-week-page="active"] .jig-week-board',
+        '.jig-week-carousel-page[data-jig-week-page="active"] .jig-week-board',
       ),
     ).toHaveCount(1);
 
-    await settleOnPage(0);
+    await page.getByRole("button", { name: "Previous week" }).click();
     await expect(range).toHaveText(rangeBefore ?? "");
-    await expect(
-      page.locator(
-        '.jig-week-slide[data-jig-week-page="active"] .jig-week-board',
-      ),
-    ).toHaveCount(1);
   }
 
-  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 1600 });
+  await page.getByRole("button", { name: "Today", exact: true }).click();
   const range = page.locator(".jig-header-week-range");
+  const touchRangeBefore = await range.textContent();
+
+  await swipeWeekWithTouch(page, "next");
+  await expect(range).not.toHaveText(touchRangeBefore ?? "");
+
+  await swipeWeekWithTouch(page, "previous");
+  await expect(range).toHaveText(touchRangeBefore ?? "");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const beforeReduced = await range.textContent();
   await page.getByRole("button", { name: "Next week" }).click();
   await expect(range).not.toHaveText(beforeReduced ?? "");
 });
 
-test("WeekPager incoming week preserves canonical Task geometry through settlement", async ({
+test("Carousel settlement preserves incoming Task geometry", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
@@ -681,10 +731,14 @@ test("WeekPager incoming week preserves canonical Task geometry through settleme
   await page.setViewportSize({ width: 390, height: 1600 });
 
   const activeCard = page
-    .locator('.jig-week-slide[data-jig-week-page="active"] .jig-task-card')
+    .locator(
+      '.jig-week-carousel-page[data-jig-week-page="active"] .jig-task-card',
+    )
     .filter({ hasText: "Pager active geometry task" });
   const incomingCard = page
-    .locator('.jig-week-slide[data-jig-week-page="preview"] .jig-task-card')
+    .locator(
+      '.jig-week-carousel-page[data-jig-week-page="passive"] .jig-task-card',
+    )
     .filter({ hasText: "Pager incoming geometry task" });
   await expect(activeCard).toHaveCount(1);
   await expect(incomingCard).toHaveCount(1);
@@ -742,30 +796,21 @@ test("WeekPager incoming week preserves canonical Task geometry through settleme
 
   await expect(
     page.locator(
-      '.jig-week-slide[data-jig-week-page="preview"] [data-jig-drop-slot]',
+      '.jig-week-carousel-page[data-jig-week-page="passive"] [data-jig-drop-slot]',
     ),
   ).toHaveCount(0);
   await expect(
     page.locator(
-      '.jig-week-slide[data-jig-week-page="preview"] .jig-task-insertion-slot',
+      '.jig-week-carousel-page[data-jig-week-page="passive"] .jig-task-insertion-slot',
     ),
   ).toHaveCount(15);
 
-  await page.locator(".jig-week-pager").evaluate((element) => {
-    const pager = element as HTMLElement;
-    pager.scrollLeft = pager.clientWidth * 1.5;
-    pager.dispatchEvent(new Event("scroll"));
-  });
-  expectGeometryNear(await geometry(incomingCard), incomingGeometry);
-
-  await page.locator(".jig-week-pager").evaluate((element) => {
-    const pager = element as HTMLElement;
-    pager.scrollLeft = pager.clientWidth * 2;
-    pager.dispatchEvent(new Event("scrollend"));
-  });
+  await page.getByRole("button", { name: "Next week" }).click();
 
   const settledCard = page
-    .locator('.jig-week-slide[data-jig-week-page="active"] .jig-task-card')
+    .locator(
+      '.jig-week-carousel-page[data-jig-week-page="active"] .jig-task-card',
+    )
     .filter({ hasText: "Pager incoming geometry task" });
   await expect(settledCard).toHaveCount(1);
   expectGeometryNear(await geometry(settledCard), incomingGeometry);
@@ -822,7 +867,7 @@ test("narrow Planner opens with the current day at the top", async ({
   const initialGeometry = await page.evaluate(() => {
     const frame = document.querySelector<HTMLElement>(".jig-content-frame");
     const active = document.querySelector<HTMLElement>(
-      '.jig-week-slide[data-jig-week-page="active"]',
+      '.jig-week-carousel-page[data-jig-week-page="active"]',
     );
     const today =
       active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
@@ -848,7 +893,7 @@ test("narrow Planner opens with the current day at the top", async ({
   const scrolledUpGeometry = await page.evaluate(() => {
     const frame = document.querySelector<HTMLElement>(".jig-content-frame");
     const active = document.querySelector<HTMLElement>(
-      '.jig-week-slide[data-jig-week-page="active"]',
+      '.jig-week-carousel-page[data-jig-week-page="active"]',
     );
     const today =
       active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
@@ -1545,7 +1590,7 @@ test("selected Task today priority and status use distinct governed semantics", 
 
   const semantics = await page.evaluate(() => {
     const active = document.querySelector<HTMLElement>(
-      '.jig-week-slide[data-jig-week-page="active"]',
+      '.jig-week-carousel-page[data-jig-week-page="active"]',
     );
     const todayElement =
       active?.querySelector<HTMLElement>(
