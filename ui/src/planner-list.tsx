@@ -1,5 +1,5 @@
-import { List, useAnimatedLayout } from "@astryxdesign/core";
-import { Fragment, useRef } from "react";
+import { List } from "@astryxdesign/core";
+import { Fragment } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
@@ -104,13 +104,9 @@ export function PlannerTaskList({
   onMove,
 }: PlannerTaskListProps): React.ReactElement | null {
   const outstanding = outstandingForDate(tasks, date);
-  const listRef = useRef<HTMLUListElement>(null);
-  const animatedLayout = useAnimatedLayout({ containerRef: listRef });
 
   return (
     <List
-      ref={listRef}
-      animatedLayout={animatedLayout}
       density="compact"
       edge="padded"
       className="jig-task-card-list"
@@ -157,26 +153,32 @@ export function PlannerTaskPreviewList({
   tasks,
   recurrences,
   date,
-}: PlannerTaskPreviewListProps): React.ReactElement | null {
+}: PlannerTaskPreviewListProps): React.ReactElement {
   const outstanding = outstandingForDate(tasks, date);
-  if (outstanding.length === 0) {
-    return null;
-  }
 
   return (
     <div className="jig-week-preview-list">
+      <span
+        className="jig-week-preview-insertion-slot"
+        aria-hidden="true"
+      />
       {outstanding.map((task) => (
-        <TaskCardPassivePreview
-          key={task.id}
-          task={task}
-          recurrenceSeries={
-            task.recurrence_series_id === null
-              ? null
-              : recurrences.find(
-                  (series) => series.id === task.recurrence_series_id,
-                ) ?? null
-          }
-        />
+        <Fragment key={task.id}>
+          <TaskCardPassivePreview
+            task={task}
+            recurrenceSeries={
+              task.recurrence_series_id === null
+                ? null
+                : recurrences.find(
+                    (series) => series.id === task.recurrence_series_id,
+                  ) ?? null
+            }
+          />
+          <span
+            className="jig-week-preview-insertion-slot"
+            aria-hidden="true"
+          />
+        </Fragment>
       ))}
     </div>
   );

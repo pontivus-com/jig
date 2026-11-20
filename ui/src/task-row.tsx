@@ -315,8 +315,11 @@ export function TaskCardPassivePreview({
         "jig-week-preview-priority-" + task.priority.toLowerCase(),
       ].join(" ")}
     >
-      <span className="jig-week-preview-card-checkbox" aria-hidden="true">
-        □
+      <span className="jig-week-preview-card-leading" aria-hidden="true">
+        <span className="jig-week-preview-card-drag-handle">
+          <JigIcon name="drag" color="inherit" size="sm" />
+        </span>
+        <span className="jig-week-preview-card-checkbox">□</span>
       </span>
       <div className="jig-task-body">
         <span className="jig-task-title">{task.title}</span>
@@ -326,6 +329,9 @@ export function TaskCardPassivePreview({
           interactiveReference={false}
         />
       </div>
+      <span className="jig-week-preview-card-end" aria-hidden="true">
+        <Icon icon="moreHorizontal" color="secondary" />
+      </span>
     </div>
   );
 }

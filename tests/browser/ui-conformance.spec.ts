@@ -625,6 +625,45 @@ test("shared WeekPager commits one adjacent week and keeps previews inert", asyn
   await expect(range).not.toHaveText(beforeReduced ?? "");
 });
 
+test("WeekPager previews preserve active task geometry while remaining inert", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  const adjacent = await browserCivilDate(page, 7);
+  await createTask(page, "Pager geometry task", today);
+  await createTask(page, "Pager geometry task", adjacent);
+  await page.reload();
+  await page.setViewportSize({ width: 390, height: 1600 });
+
+  const activeCard = page.locator(
+    '.jig-week-slide[data-jig-week-page="active"] .jig-task-card',
+  );
+  const previewCard = page.locator(
+    '.jig-week-slide[data-jig-week-page="preview"] .jig-week-preview-card',
+  );
+  await expect(activeCard).toHaveCount(1);
+  await expect(previewCard).toHaveCount(1);
+
+  const activeBox = await activeCard.boundingBox();
+  const previewBox = await previewCard.boundingBox();
+  expect(activeBox).not.toBeNull();
+  expect(previewBox).not.toBeNull();
+  if (activeBox !== null && previewBox !== null) {
+    expect(Math.abs(activeBox.width - previewBox.width)).toBeLessThanOrEqual(1);
+    expect(Math.abs(activeBox.height - previewBox.height)).toBeLessThanOrEqual(1);
+  }
+  await expect(
+    page.locator(
+      '.jig-week-slide[data-jig-week-page="preview"] .jig-task-insertion-slot',
+    ),
+  ).toHaveCount(0);
+  await expect(
+    page.locator(
+      '.jig-week-slide[data-jig-week-page="preview"] .jig-week-preview-insertion-slot',
+    ),
+  ).toHaveCount(15);
+});
+
 test("desktop lanes keep equal widths but content-driven independent heights", async ({
   page,
 }) => {

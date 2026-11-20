@@ -851,8 +851,7 @@ body {
   }
 
   .jig-week-preview-card {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    display: flex;
     min-width: 0;
     min-height: 72px;
     align-items: center;
@@ -863,8 +862,49 @@ body {
     background: var(--color-background-surface);
   }
 
+  .jig-week-preview-card-leading {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--spacing-0-5);
+  }
+
+  .jig-week-preview-card-drag-handle,
   .jig-week-preview-card-checkbox {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
     color: var(--color-text-secondary);
+  }
+
+  .jig-week-preview-card-drag-handle {
+    font-size: var(--font-size-lg);
+    line-height: 1;
+  }
+
+  .jig-week-preview-card .jig-task-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .jig-week-preview-card-end {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .jig-week-preview-insertion-slot {
+    display: block;
+    min-height: 8px;
+    list-style: none;
   }
 
   .jig-week-preview-priority-high {
@@ -890,17 +930,20 @@ body {
     color: var(--color-text-secondary);
   }
 
-  .jig-week-column .jig-task-body {
+  .jig-week-column .jig-task-body,
+  .jig-week-preview-column .jig-task-body {
     width: 100%;
     min-width: 0;
     gap: var(--spacing-0-5);
   }
 
-  .jig-week-column .jig-task-title-row {
+  .jig-week-column .jig-task-title-row,
+  .jig-week-preview-column .jig-task-title-row {
     gap: var(--spacing-1);
   }
 
-  .jig-week-column .jig-task-title {
+  .jig-week-column .jig-task-title,
+  .jig-week-preview-column .jig-task-title {
     display: -webkit-box;
     overflow: hidden;
     font-size: var(--font-size-sm);
@@ -909,7 +952,8 @@ body {
     -webkit-line-clamp: 3;
   }
 
-  .jig-week-column .jig-task-meta {
+  .jig-week-column .jig-task-meta,
+  .jig-week-preview-column .jig-task-meta {
     gap: var(--spacing-0-5) var(--spacing-1);
     font-size: var(--font-size-sm);
     line-height: var(--text-heading-1-leading);
@@ -1763,6 +1807,17 @@ body {
     .jig-week-preview-list {
       gap: var(--spacing-1);
       padding: 0 0 var(--spacing-2);
+    }
+
+    .jig-week-preview-card-leading {
+      gap: 0;
+    }
+
+    .jig-week-preview-card-drag-handle,
+    .jig-week-preview-card-checkbox,
+    .jig-week-preview-card-end {
+      width: 48px;
+      height: 48px;
     }
 
     .jig-task-card-list {
