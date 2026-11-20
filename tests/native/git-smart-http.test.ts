@@ -56,7 +56,7 @@ import {
   acquireAndroidPortableRepository,
   alignAndroidPortableHead,
   cloneAndroidPortableRepository,
-  commitAndroidCanonicalState,
+  commitAndroidPortableSnapshot,
   observeAndroidPortableRemote,
   pushAndroidPortableRepository,
   reopenAndroidPortableRepository,
@@ -396,10 +396,14 @@ describe("Android Git smart-HTTP feasibility", () => {
       tasks: [firstTask],
       recurrences: [],
     };
-    await commitAndroidCanonicalState(
+    await commitAndroidPortableSnapshot(
       effects,
-      state,
-      DATASET_ID,
+      serializeSnapshot(
+        state.tasks,
+        DATASET_ID,
+        state.recurrences,
+      ),
+      state.revision,
     );
     await pushAndroidPortableRepository(effects, credential);
 
@@ -1116,14 +1120,10 @@ describe("Android Git smart-HTTP feasibility", () => {
       "Local divergent",
       0,
     );
-    await commitAndroidCanonicalState(
+    await commitAndroidPortableSnapshot(
       effects,
-      {
-        revision: 1,
-        tasks: [localTask],
-        recurrences: [],
-      },
-      DATASET_ID,
+      serializeSnapshot([localTask], DATASET_ID),
+      1,
     );
 
     const desktop = join(root ?? "", "divergent-desktop");

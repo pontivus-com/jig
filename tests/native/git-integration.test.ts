@@ -8,7 +8,7 @@ import type { CanonicalState } from "../../src/protocol";
 import { serializeSnapshot } from "../../src/portable";
 import type { Task } from "../../src/core/task";
 import {
-  commitAndroidCanonicalState,
+  commitAndroidPortableSnapshot,
   cloneAndroidPortableRepository,
   readAndroidPortableSnapshot,
   reopenAndroidPortableRepository,
@@ -123,10 +123,14 @@ describe("Android isomorphic-git integration", () => {
       tasks: [canonicalTask()],
       recurrences: [],
     };
-    const firstHead = await commitAndroidCanonicalState(
+    const firstHead = await commitAndroidPortableSnapshot(
       effects,
-      state,
-      DATASET_ID,
+      serializeSnapshot(
+        state.tasks,
+        DATASET_ID,
+        state.recurrences,
+      ),
+      state.revision,
     );
 
     const afterCommit = await readAndroidPortableSnapshot(
@@ -147,10 +151,14 @@ describe("Android isomorphic-git integration", () => {
     );
     expect(reopened.tasks).toStrictEqual(state.tasks);
 
-    const unchangedHead = await commitAndroidCanonicalState(
+    const unchangedHead = await commitAndroidPortableSnapshot(
       restarted,
-      state,
-      DATASET_ID,
+      serializeSnapshot(
+        state.tasks,
+        DATASET_ID,
+        state.recurrences,
+      ),
+      state.revision,
     );
     expect(unchangedHead).toBe(firstHead);
   });

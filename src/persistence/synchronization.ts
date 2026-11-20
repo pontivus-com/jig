@@ -49,6 +49,30 @@ export type ReadPersistedPortableSnapshot = (
   datasetId: string,
 ) => Promise<PersistedPortableSnapshot | null>;
 
+export type WritePersistedPortableSnapshot = (
+  snapshot: PortableSnapshot,
+  revision: number,
+) => Promise<string>;
+
+export async function exportCanonicalPortableSnapshot(
+  db: JigSqlConnection,
+  writeSnapshot: WritePersistedPortableSnapshot,
+): Promise<string> {
+  const state = await readCanonicalState(db);
+  const metadata = await readMetadata(db);
+  const head = await writeSnapshot(
+    serializeSnapshot(
+      state.tasks,
+      metadata.dataset_id,
+      state.recurrences,
+    ),
+    state.revision,
+  );
+  await markExported(db, state.revision, head);
+  return head;
+}
+
+
 export async function reconcilePersistedPortableSnapshot(
   db: JigSqlConnection,
   readCurrent: ReadPersistedPortableSnapshot,

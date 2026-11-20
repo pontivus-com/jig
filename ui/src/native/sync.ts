@@ -1,12 +1,11 @@
 import {
   markAdoptedHead,
-  markExported,
-  readCanonicalState,
   readMetadata,
   type JigSqlConnection,
 } from "../../../src/persistence/sqlite";
 import {
   adoptObservedSynchronizationRemote,
+  exportCanonicalPortableSnapshot,
   finishInterruptedSynchronizationAdoption,
   reconcilePersistedPortableSnapshot,
   synchronizationPending,
@@ -22,7 +21,7 @@ import {
   alignAndroidPortableHead,
   androidPortableHead,
   androidSynchronizationRemote,
-  commitAndroidCanonicalState,
+  commitAndroidPortableSnapshot,
   observeAndroidPortableRemote,
   pushAndroidPortableRepository,
   reopenAndroidPortableRepository,
@@ -138,14 +137,15 @@ export function createAndroidSyncController(
     );
 
   const exportCurrent = async (): Promise<void> => {
-    const state = await readCanonicalState(database);
-    const metadata = await readMetadata(database);
-    const head = await commitAndroidCanonicalState(
-      effects,
-      state,
-      metadata.dataset_id,
+    await exportCanonicalPortableSnapshot(
+      database,
+      (snapshot, revision) =>
+        commitAndroidPortableSnapshot(
+          effects,
+          snapshot,
+          revision,
+        ),
     );
-    await markExported(database, state.revision, head);
   };
 
   const observe = async (): Promise<ObservedAndroidRemote> => {

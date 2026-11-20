@@ -7,7 +7,6 @@ import {
   pushPortableDataRef,
   readCurrentPortableSnapshot,
   retryDelayMs,
-  serializeSnapshot,
   SYNC_HEALTHY_POLL_MS,
   writePortableSnapshot,
   type GitAdapterConfig,
@@ -21,13 +20,12 @@ import type {
 } from "../protocol";
 import {
   markAdoptedHead,
-  markExported,
-  readCanonicalState,
   readMetadata,
   type JigSqlConnection,
 } from "../persistence/sqlite";
 import {
   adoptObservedSynchronizationRemote,
+  exportCanonicalPortableSnapshot,
   finishInterruptedSynchronizationAdoption,
   reconcilePersistedPortableSnapshot,
   synchronizationPending,
@@ -220,21 +218,12 @@ export function createSyncController(
       (datasetId) => effects.readCurrentSnapshot(adapter, datasetId),
     );
 
-  const exportCurrent = async (): Promise<string> => {
-    const state = await readCanonicalState(db);
-    const metadata = await readMetadata(db);
-    const head = await effects.writeSnapshot(
-      adapter,
-      serializeSnapshot(
-        state.tasks,
-        metadata.dataset_id,
-        state.recurrences,
-      ),
-      state.revision,
+  const exportCurrent = (): Promise<string> =>
+    exportCanonicalPortableSnapshot(
+      db,
+      (snapshot, revision) =>
+        effects.writeSnapshot(adapter, snapshot, revision),
     );
-    await markExported(db, state.revision, head);
-    return head;
-  };
 
   const observe = async (
     environment: Readonly<Record<string, string>>,
