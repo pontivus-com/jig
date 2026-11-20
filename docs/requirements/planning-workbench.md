@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding functional design through v1.1, amended 2026-11-19 for physical-mobile UX remediation and governed onboarding/complete-Task-form authority. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract supersedes affected onboarding hierarchy, header/touch geometry, Task movement, Task-form Repeat, Settings, synchronization, reminder and Android behavior.
+**Status:** Binding functional design through v1.1, amended 2026-11-20 for physical-mobile UX remediation, governed onboarding/complete-Task-form authority and one cross-platform Planner WeekPager. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract supersedes affected onboarding hierarchy, header/touch geometry, Task movement, Task-form Repeat, Settings, synchronization, reminder and Android behavior.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -385,5 +385,6 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-30 | One configured destination-title owner supplies Planner/History/Settings. Compact/mobile always retains Jig identity and centers the active destination title; desktop History/Settings may also show the concise subtitle. Body surfaces do not duplicate page titles. |
 | JIG-110-FR-31 | Settings is one content-sized reading hierarchy: Data & sync combines repository home/local safety/continuity/action; Appearance contains only appearance; Notifications is separate; technical Git/service/database/path/manual-sync details are subordinate/collapsed Diagnostics. |
 | JIG-110-FR-32 | Eligible interaction/state events use restrained equivalent desktop/mobile motion; Astryx owns supported Drawer/BottomSheet/control transitions; Jig owns only product-specific card/Planner/status transitions; reduced motion removes travel/scaling/smooth scrolling/loops while retaining immediate semantic feedback; forbidden protocol/decorative/initial-load motion is absent. |
+| JIG-110-FR-33 | Planner uses one cross-platform adjacent-week paging interaction on desktop and narrow/mobile while preserving the existing seven-column versus seven-stacked-section compositions. Explicit Previous/Next and horizontal touch/trackpad paging converge on the same displayed-week owner; Today directly restores the current week. Only the canonical active week is interactive; adjacent pages are non-interactive visual previews and cannot add Task drag/drop, mutation, focus or navigation targets. |
 
 Older JIG-103/104/105/106 rows remain release-history provenance only when JIG-110 explicitly supersedes their affected behavior.
