@@ -13,6 +13,8 @@ import {
 import { FieldLabel } from "@astryxdesign/core/Field";
 import { useId, useState } from "react";
 import {
+  recurrenceSpecMatchesSeries,
+  validateRecurrenceSpec,
   WEEKDAYS,
   type RecurrenceSeries,
   type RecurrenceSpec,
@@ -20,6 +22,7 @@ import {
 } from "../../src/core/recurrence";
 import {
   isPriority,
+  TaskValidationError,
   type Priority,
   type Task,
   type TaskCommand,
@@ -155,6 +158,23 @@ export function draftFor(
       };
 }
 
+function recurrenceValidationMessage(
+  error: TaskValidationError,
+): string {
+  switch (error.message) {
+    case "recurrence end_date must not precede effective_from":
+      return "Repeat end date cannot be before this occurrence.";
+    case "interval_weeks must be a positive whole number":
+      return "Week interval must be a positive whole number.";
+    case "weekly recurrence requires at least one weekday":
+      return "Select at least one weekday.";
+    case "day_of_month must be an integer in 1..31":
+      return "Day of month must be a whole number from 1 to 31.";
+    default:
+      return "Repeat settings are invalid.";
+  }
+}
+
 function recurrenceSpecForDraft(
   task: Task | null,
   draft: TaskDraft,
@@ -169,81 +189,33 @@ function recurrenceSpecForDraft(
   if (draft.repeatEndDate.length === 0) {
     return "Repeat end date is required.";
   }
-  if (draft.repeatEndDate < anchor) {
-    return "Repeat end date cannot be before this occurrence.";
-  }
 
-  if (draft.repeatKind === "weekly") {
-    const intervalWeeks = Number(draft.repeatIntervalWeeks);
-    if (!Number.isInteger(intervalWeeks) || intervalWeeks <= 0) {
-      return "Week interval must be a positive whole number.";
+  const candidate: RecurrenceSpec =
+    draft.repeatKind === "weekly"
+      ? {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: Number(draft.repeatIntervalWeeks),
+            weekdays: draft.repeatWeekdays,
+          },
+          end_date: draft.repeatEndDate,
+        }
+      : {
+          pattern: {
+            kind: "monthly",
+            day_of_month: Number(draft.repeatDayOfMonth),
+          },
+          end_date: draft.repeatEndDate,
+        };
+
+  try {
+    return validateRecurrenceSpec(candidate, anchor);
+  } catch (error) {
+    if (error instanceof TaskValidationError) {
+      return recurrenceValidationMessage(error);
     }
-    if (draft.repeatWeekdays.length === 0) {
-      return "Select at least one weekday.";
-    }
-    return {
-      pattern: {
-        kind: "weekly",
-        interval_weeks: intervalWeeks,
-        weekdays: draft.repeatWeekdays,
-      },
-      end_date: draft.repeatEndDate,
-    };
+    throw error;
   }
-
-  const dayOfMonth = Number(draft.repeatDayOfMonth);
-  if (
-    !Number.isInteger(dayOfMonth) ||
-    dayOfMonth < 1 ||
-    dayOfMonth > 31
-  ) {
-    return "Day of month must be a whole number from 1 to 31.";
-  }
-
-  return {
-    pattern: {
-      kind: "monthly",
-      day_of_month: dayOfMonth,
-    },
-    end_date: draft.repeatEndDate,
-  };
-}
-
-function recurrenceMatchesSeries(
-  spec: RecurrenceSpec,
-  series: RecurrenceSeries,
-): boolean {
-  if (
-    spec.end_date !== series.end_date ||
-    spec.pattern.kind !== series.pattern.kind
-  ) {
-    return false;
-  }
-
-  if (
-    spec.pattern.kind === "monthly" &&
-    series.pattern.kind === "monthly"
-  ) {
-    return spec.pattern.day_of_month === series.pattern.day_of_month;
-  }
-
-  if (
-    spec.pattern.kind === "weekly" &&
-    series.pattern.kind === "weekly"
-  ) {
-    const specPattern = spec.pattern;
-    const seriesPattern = series.pattern;
-    return (
-      specPattern.interval_weeks === seriesPattern.interval_weeks &&
-      specPattern.weekdays.length === seriesPattern.weekdays.length &&
-      specPattern.weekdays.every(
-        (weekday, index) =>
-          weekday === seriesPattern.weekdays[index],
-      )
-    );
-  }
-
-  return false;
 }
 
 export function commandForDraft(
@@ -280,7 +252,7 @@ export function commandForDraft(
         : recurrence
       : recurrence === null
         ? null
-        : recurrenceMatchesSeries(recurrence, recurrenceSeries)
+        : recurrenceSpecMatchesSeries(recurrence, recurrenceSeries)
           ? undefined
           : recurrence;
 
