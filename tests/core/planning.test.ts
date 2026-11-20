@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Priority, Task } from "../../src/core/task";
 import {
+  assertActiveScheduleDate,
   assertTaskSet,
   completeTask,
   createTask,
@@ -53,6 +54,20 @@ function positions(tasks: readonly Task[], date: string): readonly string[] {
     )
     .sort((left, right) => (left.position ?? 0) - (right.position ?? 0))
     .map((candidate) => candidate.title);
+}
+
+function recurringTask(
+  suffix: number,
+  scheduledDate: string,
+  position: number,
+  seriesId: string,
+  occurrenceDate: string,
+): Task {
+  return {
+    ...task(suffix, scheduledDate, position),
+    recurrence_series_id: seriesId,
+    recurrence_occurrence_date: occurrenceDate,
+  };
 }
 
 describe("daily rollover", () => {
@@ -150,6 +165,131 @@ describe("daily rollover", () => {
 
     expect(result.moved_task_ids).toEqual([]);
     expect(result.tasks).toBe(existing);
+  });
+
+  it("supersedes older overdue recurring occurrences and rolls only the latest due survivor", () => {
+    const seriesId = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f9001";
+    const older = recurringTask(
+      1,
+      "2026-11-17",
+      0,
+      seriesId,
+      "2026-11-17",
+    );
+    const latestDue = recurringTask(
+      2,
+      "2026-11-19",
+      0,
+      seriesId,
+      "2026-11-19",
+    );
+    const future = recurringTask(
+      3,
+      "2026-11-23",
+      0,
+      seriesId,
+      "2026-11-23",
+    );
+
+    const result = rollForwardOutstanding(
+      [older, latestDue, future],
+      "2026-11-20",
+      "2026-11-20T01:00:00.000Z",
+    );
+
+    expect(result.superseded_task_ids).toEqual([older.id]);
+    expect(result.moved_task_ids).toEqual([latestDue.id]);
+    expect(
+      result.tasks.find((candidate) => candidate.id === older.id),
+    ).toBeUndefined();
+    expect(
+      result.tasks.find((candidate) => candidate.id === latestDue.id),
+    ).toMatchObject({
+      scheduled_date: "2026-11-20",
+      recurrence_occurrence_date: "2026-11-19",
+      position: 0,
+    });
+    expect(
+      result.tasks.find((candidate) => candidate.id === future.id),
+    ).toMatchObject({
+      scheduled_date: "2026-11-23",
+      recurrence_occurrence_date: "2026-11-23",
+    });
+    assertTaskSet(result.tasks);
+  });
+
+  it("preserves an explicitly future-rescheduled older recurring occurrence", () => {
+    const seriesId = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f9002";
+    const explicitlyFuture = recurringTask(
+      1,
+      "2026-11-25",
+      0,
+      seriesId,
+      "2026-11-17",
+    );
+    const latestDue = recurringTask(
+      2,
+      "2026-11-19",
+      0,
+      seriesId,
+      "2026-11-19",
+    );
+
+    const result = rollForwardOutstanding(
+      [explicitlyFuture, latestDue],
+      "2026-11-20",
+      "2026-11-20T01:00:00.000Z",
+    );
+
+    expect(result.superseded_task_ids).toEqual([]);
+    expect(result.moved_task_ids).toEqual([latestDue.id]);
+    expect(
+      result.tasks.find((candidate) => candidate.id === explicitlyFuture.id),
+    ).toMatchObject({ scheduled_date: "2026-11-25" });
+  });
+
+  it("supersedes stale recurring work without requiring another move", () => {
+    const seriesId = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f9003";
+    const older = recurringTask(
+      1,
+      "2026-11-19",
+      0,
+      seriesId,
+      "2026-11-19",
+    );
+    const latestDue = recurringTask(
+      2,
+      "2026-11-20",
+      0,
+      seriesId,
+      "2026-11-20",
+    );
+
+    const result = rollForwardOutstanding(
+      [older, latestDue],
+      "2026-11-20",
+      "2026-11-20T01:00:00.000Z",
+    );
+
+    expect(result.moved_task_ids).toEqual([]);
+    expect(result.superseded_task_ids).toEqual([older.id]);
+    expect(result.tasks).toEqual([latestDue]);
+  });
+});
+
+describe("active scheduling dates", () => {
+  it("accepts today and future dates and rejects past dates", () => {
+    expect(() =>
+      assertActiveScheduleDate("2026-11-20", "2026-11-20"),
+    ).not.toThrow();
+    expect(() =>
+      assertActiveScheduleDate("2026-11-20", "2026-11-21"),
+    ).not.toThrow();
+    expect(() =>
+      assertActiveScheduleDate("2026-11-20", "2026-11-19"),
+    ).toThrow(
+      "Outstanding Tasks can only be scheduled for today or a future date",
+    );
   });
 });
 
