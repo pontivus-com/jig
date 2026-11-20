@@ -526,24 +526,31 @@ describe("UI ownership architecture", () => {
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
   });
 
-  it("keeps adjacent-week paging in one Jig-owned native scroll owner", () => {
+  it("keeps adjacent-week visual presentation singular during the Carousel migration", () => {
     const pager = source("ui/src/week-pager.tsx");
     const week = source("ui/src/week.tsx");
+    const list = source("ui/src/planner-list.tsx");
+    const taskRow = source("ui/src/task-row.tsx");
     const planner = source("ui/src/planner.tsx");
     const app = source("ui/src/app.tsx");
     const css = source("ui/src/styles.css");
 
     expect(existsSync("ui/src/week-swipe.ts")).toBe(false);
     expect(pager).toContain('className="jig-week-pager"');
-    expect(pager).toContain('addEventListener("scrollend"');
-    expect(css).toContain("scroll-snap-type: x mandatory");
-    expect(css).toContain("scroll-snap-stop: always");
-    expect(pager).not.toContain("@astryxdesign/core");
     expect(pager).not.toContain("firstElementChild");
     expect(pager).not.toContain("usePanGesture");
-    expect(pager).not.toContain("setTimeout");
     expect(week).toContain("<WeekPager");
     expect(week).toContain("<PlannerTaskPreviewList");
+    expect(week).not.toContain("jig-week-preview");
+    expect(list).toContain("useAnimatedLayout");
+    expect(list.match(/className="jig-task-card-list"/g)?.length).toBe(2);
+    expect(list).toContain("<PassiveTaskRow");
+    expect(list).not.toContain("jig-week-preview");
+    expect(taskRow).toContain("function TaskCardPresentation");
+    expect(taskRow).toContain("export function PassiveTaskRow");
+    expect(taskRow).not.toContain("TaskCardPassivePreview");
+    expect(taskRow).not.toContain("jig-week-preview");
+    expect(css).not.toContain("jig-week-preview");
     expect(week).toContain("onDragActiveChange={setIsTaskDragging}");
     expect(planner).not.toContain("enableWeekSwipe");
     expect(app).toContain("weekPagingRequest");

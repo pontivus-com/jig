@@ -48,11 +48,11 @@ function stopPointer(event: React.PointerEvent): void {
 function TaskMetadata({
   task,
   recurrenceSeries = null,
-  interactiveReference = true,
+  isInteractive = true,
 }: Readonly<{
   task: Task;
   recurrenceSeries?: RecurrenceSeries | null;
-  interactiveReference?: boolean;
+  isInteractive?: boolean;
 }>): React.ReactElement {
   return (
     <div className="jig-task-meta">
@@ -90,12 +90,7 @@ function TaskMetadata({
           {task.priority.toLowerCase()}
         </span>
       )}
-      {task.reference === null ? null : !interactiveReference ? (
-        <span className="jig-task-reference-action jig-task-meta-item">
-          <Icon icon="externalLink" size="xsm" color="secondary" />
-          Reference
-        </span>
-      ) : isSafeWebReference(task.reference) ? (
+      {task.reference === null ? null : isSafeWebReference(task.reference) ? (
         <Link
           data-jig-drag-excluded="true"
           className="jig-task-reference-action jig-task-meta-item"
@@ -103,8 +98,12 @@ function TaskMetadata({
           target="_blank"
           type="inherit"
           hasUnderline
-          onPointerDown={stopPointer}
-          onClick={(event) => event.stopPropagation()}
+          {...(isInteractive
+            ? {
+                onPointerDown: stopPointer,
+                onClick: (event: React.MouseEvent) => event.stopPropagation(),
+              }
+            : {})}
         >
           <span className="jig-reference-link-content">
             <Icon icon="externalLink" size="xsm" color="inherit" />
@@ -118,11 +117,15 @@ function TaskMetadata({
           variant="ghost"
           icon={<Icon icon="copy" size="xsm" color="inherit" />}
           className="jig-task-reference-action jig-copy-reference jig-task-meta-item"
-          onPointerDown={stopPointer}
-          onClick={(event) => {
-            event.stopPropagation();
-            void navigator.clipboard.writeText(task.reference ?? "");
-          }}
+          {...(isInteractive
+            ? {
+                onPointerDown: stopPointer,
+                onClick: (event: React.MouseEvent) => {
+                  event.stopPropagation();
+                  void navigator.clipboard.writeText(task.reference ?? "");
+                },
+              }
+            : {})}
         >
           Reference
         </Button>
@@ -134,11 +137,13 @@ function TaskMetadata({
 function TaskCompletionControl({
   task,
   completed,
+  isInteractive,
   onToggleComplete,
 }: Readonly<{
   task: Task;
   completed: boolean;
-  onToggleComplete: () => void;
+  isInteractive: boolean;
+  onToggleComplete?: (() => void) | undefined;
 }>): React.ReactElement {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -146,26 +151,33 @@ function TaskCompletionControl({
     <span
       className="jig-task-completion-target"
       data-jig-drag-excluded="true"
-      onClick={(event) => {
-        // Astryx CheckboxInput intentionally keeps a label-hidden checkbox as
-        // a 24px marker and exposes no public control-class hook. The Task row
-        // cannot own that checkbox's hit area because the independent drag
-        // grip shares the same leading region. This wrapper is therefore the
-        // smallest Jig-owned semantic fallback: it retains Astryx's checkbox
-        // and native input semantics while forwarding only otherwise-empty
-        // 48px target space through the component's public input ref.
-        if (event.target === event.currentTarget) {
-          inputRef.current?.click();
-        }
-        event.stopPropagation();
-      }}
+      {...(isInteractive && onToggleComplete !== undefined
+        ? {
+            onClick: (event: React.MouseEvent<HTMLSpanElement>) => {
+              // Astryx CheckboxInput intentionally keeps a label-hidden checkbox as
+              // a 24px marker and exposes no public control-class hook. The Task row
+              // cannot own that checkbox's hit area because the independent drag
+              // grip shares the same leading region. This wrapper is therefore the
+              // smallest Jig-owned semantic fallback: it retains Astryx's checkbox
+              // and native input semantics while forwarding only otherwise-empty
+              // 48px target space through the component's public input ref.
+              if (event.target === event.currentTarget) {
+                inputRef.current?.click();
+              }
+              event.stopPropagation();
+            },
+          }
+        : {})}
     >
       <CheckboxInput
         ref={inputRef}
         label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
         isLabelHidden
         value={completed}
-        onChange={onToggleComplete}
+        isReadOnly={!isInteractive}
+        {...(isInteractive && onToggleComplete !== undefined
+          ? { onChange: onToggleComplete }
+          : {})}
       />
     </span>
   );
@@ -173,7 +185,7 @@ function TaskCompletionControl({
 
 function priorityMenuItems(
   task: Task,
-  onSetPriority: (priority: Priority) => void,
+  onSetPriority?: ((priority: Priority) => void) | undefined,
 ): DropdownMenuItemData[] {
   return ([
     ["HIGH", "High"],
@@ -188,16 +200,18 @@ function priorityMenuItems(
           <Icon icon="check" size="xsm" color="inherit" />
         </span>
       ) : undefined,
-    onClick: () => onSetPriority(priority),
+    ...(onSetPriority === undefined
+      ? {}
+      : { onClick: () => onSetPriority(priority) }),
   }));
 }
 
 export interface TaskActionMenuProps {
   readonly task: Task;
-  readonly onEdit: () => void;
-  readonly onToggleComplete: () => void;
-  readonly onSetPriority: (priority: Priority) => void;
-  readonly onDelete: () => void;
+  readonly onEdit?: (() => void) | undefined;
+  readonly onToggleComplete?: (() => void) | undefined;
+  readonly onSetPriority?: ((priority: Priority) => void) | undefined;
+  readonly onDelete?: (() => void) | undefined;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
 }
@@ -216,13 +230,15 @@ function taskActionMenuItems({
       id: "edit",
       label: "Open / edit",
       icon: <JigIcon name="edit" color="inherit" />,
-      onClick: onEdit,
+      ...(onEdit === undefined ? {} : { onClick: onEdit }),
     },
     {
       id: task.completed_at === null ? "complete" : "reopen",
       label: task.completed_at === null ? "Complete" : "Reopen",
       icon: <Icon icon="check" size="sm" color="inherit" />,
-      onClick: onToggleComplete,
+      ...(onToggleComplete === undefined
+        ? {}
+        : { onClick: onToggleComplete }),
     },
     ...priorityMenuItems(task, onSetPriority),
     ...(onMoveUp === undefined
@@ -249,7 +265,7 @@ function taskActionMenuItems({
       id: "delete",
       label: "Delete…",
       icon: <JigIcon name="delete" color="inherit" />,
-      onClick: onDelete,
+      ...(onDelete === undefined ? {} : { onClick: onDelete }),
     },
   ];
 }
@@ -296,54 +312,40 @@ export function TaskCardPreview({
         <span className="jig-task-title">{task.title}</span>
         <Icon icon="moreHorizontal" color="secondary" />
       </div>
-      <TaskMetadata task={task} interactiveReference={false} />
+      <TaskMetadata task={task} isInteractive={false} />
     </div>
   );
 }
 
-export function TaskCardPassivePreview({
-  task,
-  recurrenceSeries = null,
-}: Readonly<{
-  task: Task;
-  recurrenceSeries?: RecurrenceSeries | null;
-}>): React.ReactElement {
-  return (
-    <div
-      className={[
-        "jig-week-preview-card",
-        "jig-week-preview-priority-" + task.priority.toLowerCase(),
-      ].join(" ")}
-    >
-      <span className="jig-week-preview-card-leading" aria-hidden="true">
-        <span className="jig-week-preview-card-drag-handle">
-          <JigIcon name="drag" color="inherit" size="sm" />
-        </span>
-        <span className="jig-week-preview-card-checkbox">□</span>
-      </span>
-      <div className="jig-task-body">
-        <span className="jig-task-title">{task.title}</span>
-        <TaskMetadata
-          task={task}
-          recurrenceSeries={recurrenceSeries}
-          interactiveReference={false}
-        />
-      </div>
-      <span className="jig-week-preview-card-end" aria-hidden="true">
-        <Icon icon="moreHorizontal" color="secondary" />
-      </span>
-    </div>
-  );
+interface TaskCardPresentationProps {
+  readonly task: Task;
+  readonly recurrenceSeries: RecurrenceSeries | null;
+  readonly now: Date;
+  readonly isSelected: boolean;
+  readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
+  readonly isDragging: boolean;
+  readonly isInteractive: boolean;
+  readonly showDragHandle: boolean;
+  readonly onSelect?: (() => void) | undefined;
+  readonly onToggleComplete?: (() => void) | undefined;
+  readonly onEdit?: (() => void) | undefined;
+  readonly onSetPriority?: ((priority: Priority) => void) | undefined;
+  readonly onDelete?: (() => void) | undefined;
+  readonly onMoveUp?: (() => void) | undefined;
+  readonly onMoveDown?: (() => void) | undefined;
 }
 
-export function TaskRow({
+function TaskCardPresentation({
   task,
-  recurrenceSeries = null,
+  recurrenceSeries,
   now,
-  isSelected = false,
+  isSelected,
   rowRef,
   dragHandleRef,
-  isDragging = false,
+  isDragging,
+  isInteractive,
+  showDragHandle,
   onSelect,
   onToggleComplete,
   onEdit,
@@ -351,7 +353,7 @@ export function TaskRow({
   onDelete,
   onMoveUp,
   onMoveDown,
-}: TaskRowProps): React.ReactElement {
+}: TaskCardPresentationProps): React.ReactElement {
   const completed = task.completed_at !== null;
   const reminderLifecycle = useReminderLifecycle(task, now);
   const reminderDue = reminderLifecycle === "due";
@@ -360,38 +362,47 @@ export function TaskRow({
     <ListItem
       {...(rowRef === undefined ? {} : { ref: rowRef })}
       itemKey={task.id}
-      {...(onSelect === undefined ? {} : { onClick: onSelect })}
+      {...(isInteractive && onSelect !== undefined ? { onClick: onSelect } : {})}
       className={[
         "jig-task-card",
         `jig-task-priority-${task.priority.toLowerCase()}`,
-        isSelected ? "jig-task-card-selected" : "",
+        isInteractive && isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
         reminderDue ? "jig-task-card-reminder-due" : "",
         isDragging ? "jig-task-card-dragging" : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      isSelected={isSelected}
+      isSelected={isInteractive && isSelected}
       startContent={
         <span
           className="jig-task-card-leading"
           data-jig-drag-excluded="true"
         >
-          {dragHandleRef === undefined ? null : (
+          {showDragHandle ? (
             <span
-              ref={dragHandleRef}
+              {...(isInteractive && dragHandleRef !== undefined
+                ? { ref: dragHandleRef }
+                : {})}
               className="jig-task-drag-handle"
-              role="button"
-              tabIndex={0}
-              aria-label={`Move ${task.title}`}
-              onClick={(event) => event.stopPropagation()}
+              role={isInteractive ? "button" : undefined}
+              tabIndex={isInteractive ? 0 : undefined}
+              aria-label={isInteractive ? `Move ${task.title}` : undefined}
+              aria-hidden={isInteractive ? undefined : true}
+              {...(isInteractive
+                ? {
+                    onClick: (event: React.MouseEvent<HTMLSpanElement>) =>
+                      event.stopPropagation(),
+                  }
+                : {})}
             >
               <JigIcon name="drag" color="inherit" size="sm" />
             </span>
-          )}
+          ) : null}
           <TaskCompletionControl
             task={task}
             completed={completed}
+            isInteractive={isInteractive}
             onToggleComplete={onToggleComplete}
           />
         </span>
@@ -409,7 +420,11 @@ export function TaskRow({
               {task.title}
             </span>
           </div>
-          <TaskMetadata task={task} recurrenceSeries={recurrenceSeries} />
+          <TaskMetadata
+            task={task}
+            recurrenceSeries={recurrenceSeries}
+            isInteractive={isInteractive}
+          />
           {reminderLifecycle === "scheduled" ? (
             <span
               className="jig-reminder-due-indicator jig-reminder-scheduled-indicator"
@@ -440,14 +455,78 @@ export function TaskRow({
       endContent={
         <TaskActionMenu
           task={task}
-          onEdit={onEdit}
-          onToggleComplete={onToggleComplete}
-          onSetPriority={onSetPriority}
-          onDelete={onDelete}
-          {...(onMoveUp === undefined ? {} : { onMoveUp })}
-          {...(onMoveDown === undefined ? {} : { onMoveDown })}
+          {...(isInteractive && onEdit !== undefined ? { onEdit } : {})}
+          {...(isInteractive && onToggleComplete !== undefined
+            ? { onToggleComplete }
+            : {})}
+          {...(isInteractive && onSetPriority !== undefined
+            ? { onSetPriority }
+            : {})}
+          {...(isInteractive && onDelete !== undefined ? { onDelete } : {})}
+          {...(isInteractive && onMoveUp !== undefined ? { onMoveUp } : {})}
+          {...(isInteractive && onMoveDown !== undefined ? { onMoveDown } : {})}
         />
       }
+    />
+  );
+}
+
+export function PassiveTaskRow({
+  task,
+  recurrenceSeries = null,
+  now,
+}: Readonly<{
+  task: Task;
+  recurrenceSeries?: RecurrenceSeries | null;
+  now: Date;
+}>): React.ReactElement {
+  return (
+    <TaskCardPresentation
+      task={task}
+      recurrenceSeries={recurrenceSeries}
+      now={now}
+      isSelected={false}
+      isDragging={false}
+      isInteractive={false}
+      showDragHandle
+    />
+  );
+}
+
+export function TaskRow({
+  task,
+  recurrenceSeries = null,
+  now,
+  isSelected = false,
+  rowRef,
+  dragHandleRef,
+  isDragging = false,
+  onSelect,
+  onToggleComplete,
+  onEdit,
+  onSetPriority,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+}: TaskRowProps): React.ReactElement {
+  return (
+    <TaskCardPresentation
+      task={task}
+      recurrenceSeries={recurrenceSeries}
+      now={now}
+      isSelected={isSelected}
+      rowRef={rowRef}
+      dragHandleRef={dragHandleRef}
+      isDragging={isDragging}
+      isInteractive
+      showDragHandle={dragHandleRef !== undefined}
+      onSelect={onSelect}
+      onToggleComplete={onToggleComplete}
+      onEdit={onEdit}
+      onSetPriority={onSetPriority}
+      onDelete={onDelete}
+      onMoveUp={onMoveUp}
+      onMoveDown={onMoveDown}
     />
   );
 }

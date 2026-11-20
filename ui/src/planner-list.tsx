@@ -1,5 +1,5 @@
-import { List } from "@astryxdesign/core";
-import { Fragment } from "react";
+import { List, useAnimatedLayout } from "@astryxdesign/core";
+import { Fragment, useRef } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
@@ -7,7 +7,7 @@ import {
   DraggableTaskRow,
   TaskInsertionSlot,
 } from "./drag";
-import { TaskCardPassivePreview } from "./task-row";
+import { PassiveTaskRow } from "./task-row";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
@@ -102,11 +102,15 @@ export function PlannerTaskList({
   onSetPriority,
   onDelete,
   onMove,
-}: PlannerTaskListProps): React.ReactElement | null {
+}: PlannerTaskListProps): React.ReactElement {
   const outstanding = outstandingForDate(tasks, date);
+  const listRef = useRef<HTMLUListElement>(null);
+  const animatedLayout = useAnimatedLayout({ containerRef: listRef });
 
   return (
     <List
+      ref={listRef}
+      animatedLayout={animatedLayout}
       density="compact"
       edge="padded"
       className="jig-task-card-list"
@@ -142,29 +146,43 @@ export function PlannerTaskList({
   );
 }
 
+function PassiveTaskInsertionSlot(): React.ReactElement {
+  return (
+    <li
+      role="presentation"
+      className="jig-task-insertion-slot"
+      aria-hidden="true"
+    >
+      <span className="jig-task-drop-indicator" />
+    </li>
+  );
+}
 
 export interface PlannerTaskPreviewListProps {
   readonly tasks: readonly Task[];
   readonly recurrences: readonly RecurrenceSeries[];
+  readonly now: Date;
   readonly date: string;
 }
 
 export function PlannerTaskPreviewList({
   tasks,
   recurrences,
+  now,
   date,
 }: PlannerTaskPreviewListProps): React.ReactElement {
   const outstanding = outstandingForDate(tasks, date);
 
   return (
-    <div className="jig-week-preview-list">
-      <span
-        className="jig-week-preview-insertion-slot"
-        aria-hidden="true"
-      />
+    <List
+      density="compact"
+      edge="padded"
+      className="jig-task-card-list"
+    >
       {outstanding.map((task) => (
         <Fragment key={task.id}>
-          <TaskCardPassivePreview
+          <PassiveTaskInsertionSlot />
+          <PassiveTaskRow
             task={task}
             recurrenceSeries={
               task.recurrence_series_id === null
@@ -173,13 +191,11 @@ export function PlannerTaskPreviewList({
                     (series) => series.id === task.recurrence_series_id,
                   ) ?? null
             }
-          />
-          <span
-            className="jig-week-preview-insertion-slot"
-            aria-hidden="true"
+            now={now}
           />
         </Fragment>
       ))}
-    </div>
+      <PassiveTaskInsertionSlot />
+    </List>
   );
 }

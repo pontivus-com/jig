@@ -77,18 +77,13 @@ function DatedSection({
   todaySectionRef,
 }: DatedSectionProps): React.ReactElement {
   const dateTasks = outstandingForDate(tasks, date);
-  const columnClassName = interactive
-    ? ["jig-week-column", isToday ? "jig-week-column-today" : ""]
-        .filter(Boolean)
-        .join(" ")
-    : "jig-week-preview-column";
-  const headerClassName = interactive
-    ? "jig-week-column-header"
-    : "jig-week-preview-column-header";
-  const signifierClassName = interactive
-    ? "jig-week-date-signifier"
-    : "jig-week-preview-date-signifier";
-  const headingId = (interactive ? "week-date-" : "week-preview-date-") + date;
+  const columnClassName = [
+    "jig-week-column",
+    isToday ? "jig-week-column-today" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const headingId = "week-date-" + date;
 
   const taskContent = interactive ? (
     <DateDropZone date={date} className="jig-week-task-area">
@@ -107,10 +102,11 @@ function DatedSection({
       />
     </DateDropZone>
   ) : (
-    <div className="jig-week-preview-task-area">
+    <div className="jig-week-task-area">
       <PlannerTaskPreviewList
         tasks={tasks}
         recurrences={recurrences}
+        now={now}
         date={date}
       />
     </div>
@@ -123,25 +119,23 @@ function DatedSection({
       data-date={interactive ? date : undefined}
     >
       <section aria-labelledby={headingId}>
-        <header className={headerClassName}>
-          <div className={signifierClassName}>
+        <header className="jig-week-column-header">
+          <div className="jig-week-date-signifier">
             <strong id={headingId}>{formatPlannerDateHeader(date)}</strong>
-            {interactive ? (
-              <IconButton
-                label={
-                  "Add task to " +
-                  formatCivilDate(date, {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  })
-                }
-                icon={<JigIcon name="add" color="inherit" />}
-                variant="ghost"
-                className="jig-date-add"
-                onClick={() => onAdd(date)}
-              />
-            ) : null}
+            <IconButton
+              label={
+                "Add task to " +
+                formatCivilDate(date, {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })
+              }
+              icon={<JigIcon name="add" color="inherit" />}
+              variant="ghost"
+              className="jig-date-add"
+              {...(interactive ? { onClick: () => onAdd(date) } : {})}
+            />
           </div>
           <span
             className="jig-task-count"
@@ -177,16 +171,14 @@ function WeekBoard({
 
   return (
     <div
-      className={
-        interactive
-          ? [
-              "jig-week-board",
-              transition === "today" ? "jig-week-board-today" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")
-          : "jig-week-preview-board"
-      }
+      className={[
+        "jig-week-board",
+        interactive && transition === "today"
+          ? "jig-week-board-today"
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       {...region}
     >
       {dates.map((date) => (
@@ -227,24 +219,21 @@ function WeekPage({
   const content = (
     <>
       {isEmpty ? (
-        interactive ? (
-          <div className="jig-planner-empty-state">
-            <strong>Your week is clear</strong>
-            <p>Add the first task you want Jig to keep in this plan.</p>
-            <Button
-              label="Add your first task"
-              variant="primary"
-              className="jig-planner-empty-primary"
-              onClick={() =>
-                props.onAdd(defaultAddDate(firstDate, todayCivilDate()))
-              }
-            />
-          </div>
-        ) : (
-          <div className="jig-week-preview-empty-state" aria-hidden="true">
-            <strong>Your week is clear</strong>
-          </div>
-        )
+        <div className="jig-planner-empty-state">
+          <strong>Your week is clear</strong>
+          <p>Add the first task you want Jig to keep in this plan.</p>
+          <Button
+            label="Add your first task"
+            variant="primary"
+            className="jig-planner-empty-primary"
+            {...(interactive
+              ? {
+                  onClick: () =>
+                    props.onAdd(defaultAddDate(firstDate, todayCivilDate())),
+                }
+              : {})}
+          />
+        </div>
       ) : null}
       <WeekBoard
         {...props}

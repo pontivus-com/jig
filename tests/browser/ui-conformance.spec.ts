@@ -547,14 +547,17 @@ test("temporal group stays page-centered in one row and navigation has no select
   }
 
   const rangeBefore = await range.textContent();
-  await expect(page.locator(".jig-week-column-today")).toHaveCount(1);
+  const activeWeek = page.locator(
+    '.jig-week-slide[data-jig-week-page="active"]',
+  );
+  await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(1);
 
   await expect(page.locator(".jig-week-pager")).toHaveCount(1);
   await expect(page.locator('.jig-week-slide[data-jig-week-page="preview"]')).toHaveCount(2);
 
   await page.getByRole("button", { name: "Next week" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
-  await expect(page.locator(".jig-week-column-today")).toHaveCount(0);
+  await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(0);
   await expect(page.locator('[aria-current="date"]')).toHaveCount(0);
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
@@ -562,7 +565,7 @@ test("temporal group stays page-centered in one row and navigation has no select
   await expect(page.locator(".jig-week-board")).toHaveClass(
     /jig-week-board-today/,
   );
-  await expect(page.locator(".jig-week-column-today")).toHaveCount(1);
+  await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(1);
 
   await page.getByRole("button", { name: "Previous week" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
@@ -611,11 +614,19 @@ test("shared WeekPager commits one adjacent week and keeps previews inert", asyn
 
     await settleOnPage(2);
     await expect(range).not.toHaveText(rangeBefore ?? "");
-    await expect(page.locator(".jig-week-board")).toHaveCount(1);
+    await expect(
+      page.locator(
+        '.jig-week-slide[data-jig-week-page="active"] .jig-week-board',
+      ),
+    ).toHaveCount(1);
 
     await settleOnPage(0);
     await expect(range).toHaveText(rangeBefore ?? "");
-    await expect(page.locator(".jig-week-board")).toHaveCount(1);
+    await expect(
+      page.locator(
+        '.jig-week-slide[data-jig-week-page="active"] .jig-week-board',
+      ),
+    ).toHaveCount(1);
   }
 
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -625,43 +636,105 @@ test("shared WeekPager commits one adjacent week and keeps previews inert", asyn
   await expect(range).not.toHaveText(beforeReduced ?? "");
 });
 
-test("WeekPager previews preserve active task geometry while remaining inert", async ({
+test("WeekPager incoming week preserves canonical Task geometry through settlement", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
   const adjacent = await browserCivilDate(page, 7);
-  await createTask(page, "Pager geometry task", today);
-  await createTask(page, "Pager geometry task", adjacent);
+  await createTask(page, "Pager active geometry task", today);
+  await createTask(page, "Pager incoming geometry task", adjacent);
   await page.reload();
   await page.setViewportSize({ width: 390, height: 1600 });
 
-  const activeCard = page.locator(
-    '.jig-week-slide[data-jig-week-page="active"] .jig-task-card',
-  );
-  const previewCard = page.locator(
-    '.jig-week-slide[data-jig-week-page="preview"] .jig-week-preview-card',
-  );
+  const activeCard = page
+    .locator('.jig-week-slide[data-jig-week-page="active"] .jig-task-card')
+    .filter({ hasText: "Pager active geometry task" });
+  const incomingCard = page
+    .locator('.jig-week-slide[data-jig-week-page="preview"] .jig-task-card')
+    .filter({ hasText: "Pager incoming geometry task" });
   await expect(activeCard).toHaveCount(1);
-  await expect(previewCard).toHaveCount(1);
+  await expect(incomingCard).toHaveCount(1);
 
-  const activeBox = await activeCard.boundingBox();
-  const previewBox = await previewCard.boundingBox();
-  expect(activeBox).not.toBeNull();
-  expect(previewBox).not.toBeNull();
-  if (activeBox !== null && previewBox !== null) {
-    expect(Math.abs(activeBox.width - previewBox.width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(activeBox.height - previewBox.height)).toBeLessThanOrEqual(1);
-  }
+  const geometry = async (locator: typeof activeCard) =>
+    locator.evaluate((element) => {
+      const relative = (selector: string) => {
+        const target = element.querySelector(selector);
+        if (!(target instanceof HTMLElement)) {
+          return null;
+        }
+        const outer = element.getBoundingClientRect();
+        const box = target.getBoundingClientRect();
+        return {
+          x: box.x - outer.x,
+          y: box.y - outer.y,
+          width: box.width,
+          height: box.height,
+        };
+      };
+      const box = element.getBoundingClientRect();
+      return {
+        width: box.width,
+        height: box.height,
+        leading: relative(".jig-task-card-leading"),
+        body: relative(".jig-task-body"),
+        title: relative(".jig-task-title"),
+        end: relative(".jig-task-menu"),
+      };
+    });
+
+  const expectGeometryNear = (
+    actual: Awaited<ReturnType<typeof geometry>>,
+    expected: Awaited<ReturnType<typeof geometry>>,
+  ): void => {
+    expectNear(actual.width, expected.width, 1);
+    expectNear(actual.height, expected.height, 1);
+    for (const key of ["leading", "body", "title", "end"] as const) {
+      const actualPart = actual[key];
+      const expectedPart = expected[key];
+      expect(actualPart).not.toBeNull();
+      expect(expectedPart).not.toBeNull();
+      if (actualPart !== null && expectedPart !== null) {
+        expectNear(actualPart.x, expectedPart.x, 1);
+        expectNear(actualPart.y, expectedPart.y, 1);
+        expectNear(actualPart.width, expectedPart.width, 1);
+        expectNear(actualPart.height, expectedPart.height, 1);
+      }
+    }
+  };
+
+  const activeGeometry = await geometry(activeCard);
+  const incomingGeometry = await geometry(incomingCard);
+  expectGeometryNear(incomingGeometry, activeGeometry);
+
   await expect(
     page.locator(
-      '.jig-week-slide[data-jig-week-page="preview"] .jig-task-insertion-slot',
+      '.jig-week-slide[data-jig-week-page="preview"] [data-jig-drop-slot]',
     ),
   ).toHaveCount(0);
   await expect(
     page.locator(
-      '.jig-week-slide[data-jig-week-page="preview"] .jig-week-preview-insertion-slot',
+      '.jig-week-slide[data-jig-week-page="preview"] .jig-task-insertion-slot',
     ),
   ).toHaveCount(15);
+
+  await page.locator(".jig-week-pager").evaluate((element) => {
+    const pager = element as HTMLElement;
+    pager.scrollLeft = pager.clientWidth * 1.5;
+    pager.dispatchEvent(new Event("scroll"));
+  });
+  expectGeometryNear(await geometry(incomingCard), incomingGeometry);
+
+  await page.locator(".jig-week-pager").evaluate((element) => {
+    const pager = element as HTMLElement;
+    pager.scrollLeft = pager.clientWidth * 2;
+    pager.dispatchEvent(new Event("scrollend"));
+  });
+
+  const settledCard = page
+    .locator('.jig-week-slide[data-jig-week-page="active"] .jig-task-card')
+    .filter({ hasText: "Pager incoming geometry task" });
+  await expect(settledCard).toHaveCount(1);
+  expectGeometryNear(await geometry(settledCard), incomingGeometry);
 });
 
 test("desktop lanes keep equal widths but content-driven independent heights", async ({
