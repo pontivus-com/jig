@@ -114,11 +114,11 @@ The post-UX candidate is reviewed against `../../design/reference/jig-v1.1-appli
 
 | Gate | Evidence state |
 | --- | --- |
-| Linux/browser permanent Verify | **PASS — CURRENT** — run `44652277552` / #1598 on exact source head `3b60ad938f2173521c4eb2aa8b59603a15d930b1`; 41/41 test files and 261/261 core/integration/architecture tests passed; production build passed; browser bootstrap smoke passed; 79/79 real-browser tests passed; shell syntax and installer/lifecycle smoke passed. |
-| Governed browser screenshot evidence | **PASS / EXPLICITLY REVIEWED — CURRENT** — artifact `14591328349`, `jig-v1.1-browser-evidence-184c8c824b32ff53c53136eaf1c1e4ab78fe480a`, on exact source head `3b60ad938f2173521c4eb2aa8b59603a15d930b1`; artifact digest `sha256:67c64be9e1c13206aeecfeb5d303bdf10000a99f6220d3700fa2b0a18106310a`. Review confirms Jig identity + centered Planner/History/Settings title, compact/readable navigation typography, centered Task leading controls and no idle desktop-onboarding scrollbar. |
+| Linux/browser permanent Verify | **PASS — CURRENT** — run `44690410706` / #1632 on source head `59f7d1642211739df88dc188a4fdfe17af2c26c9` through GitHub PR merge candidate `7d4225312b9e6e3983b9a5d494977dcc4ae19782`; strict typecheck, 42/42 core/integration/architecture files with 267/267 tests, production build, browser bootstrap, 82/82 real-browser tests, shell syntax and installer/lifecycle smoke passed. |
+| Governed browser screenshot evidence | **PASS — CURRENT HOSTED EVIDENCE** — artifact `14607679872`, `jig-v1.1-browser-evidence-7d4225312b9e6e3983b9a5d494977dcc4ae19782`, workflow source head `59f7d1642211739df88dc188a4fdfe17af2c26c9`, archive digest `sha256:7d05a1d5561faa6433e2a4022f7415a8a537937504d15cb2e4943e9aa85b8a9e`. The governed browser matrix includes the WeekPager and operational-attention geometry regressions; earlier explicit visual-review artifact `14591328349` remains historical supporting evidence for the prior compact-shell remediation. |
 | Browser/native platform isolation | **PASS** — permanent architecture tests require lazy native-runtime/native-GitHub loading; hosted browser bootstrap smoke proves Android Git/isomorphic-git is not evaluated in the browser entrypoint. |
-| Android deterministic build certification | **PASS — CURRENT** — run `44652277552` / #1598; Gradle dependency locks, Android unit/static checks, FLOSS boundary, version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention passed. APK artifact id `14591926175`. |
-| Android API-24 instrumentation | **PASS — CURRENT** — run `44652277552` / #1598; current Android Emulator 37.3.10 booted under the explicit TCG software-emulation allowance, 5/5 instrumentation tests completed, and `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`. |
+| Android deterministic build certification | **PASS — CURRENT** — run `44690410706` / #1632; Android synchronization, Gradle dependency locks, unit/static checks, FLOSS boundary, version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention passed. APK artifact id `14608147658`; extracted `app-debug.apk` is 9,787,835 bytes with SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. |
+| Android API-24 instrumentation | **PASS — CURRENT** — run `44690410706` / #1632; API-24 emulator execution completed 5/5 instrumentation tests and `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`. |
 | Android bundled SQLite transaction/restart proof | **PASS at the native-driver/API-24 boundary** — covered by the committed API-24 instrumentation. Cross-platform physical-device continuity remains J110-IMP-15 evidence. |
 | Cross-installation synchronization convergence | **PASS for repository/host/emulator scope** — reciprocal Desktop→Android→Desktop and Android→Desktop→Android coverage, the four normal FR-24 outcomes, SYNC-E1..SYNC-E6, unrelated-repository preservation and architecture/strict-typing gates pass on the certified candidate. Physical same-repository confirmation remains J110-IMP-15 evidence. |
 | Android Git native HTTP transport | **PASS at the native-transport/API-24 boundary** — selected native smart-HTTP/isomorphic-git transport remains certified; live private-repository acquisition remains external/physical evidence. |
@@ -154,9 +154,9 @@ The real Linux/Desktop Device Flow/private-repository exercise is deliberately c
 
 ## Development APK identity
 
-The development APK retained by permanent Verify run `44652277552` / #1598 is the **current post-remediation physical-certification input**; it is not a GitHub Release asset or public Android distribution channel.
+The development APK retained by Verify run `44690410706` / #1632 is the **current physical-certification input**; it is not a GitHub Release asset or public Android distribution channel.
 
-- Certified executable/source head: `3b60ad938f2173521c4eb2aa8b59603a15d930b1`.
+- Current source head: `59f7d1642211739df88dc188a4fdfe17af2c26c9`.
 - GitHub Actions artifact id: `14591926175`.
 - Artifact name: `jig-android-debug-184c8c824b32ff53c53136eaf1c1e4ab78fe480a` (artifact naming uses the PR merge-ref SHA; source head is recorded above).
 - Artifact ZIP size: `7,173,854` bytes.
