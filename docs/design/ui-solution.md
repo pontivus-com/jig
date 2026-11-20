@@ -470,7 +470,8 @@ On mobile, the primary action area remains visible and comfortable at the end of
 | Application frame | Astryx AppShell with no SideNav and no automatic mobile drawer |
 | Global/header controls | Astryx Button/IconButton plus DropdownMenu or Popover mechanics; Jig owns only three-zone/centered geometry |
 | Planner temporal state | Jig pure presentation state: displayed week start only |
-| Lists, labels, fields, alerts and semantic theme | Astryx published primitives; reminder delivery itself is browser Notification, not Toast |
+| Lists, labels, fields and semantic theme | Astryx published primitives; reminder delivery itself is browser Notification, not Toast |
+| Operational attention banner | one Jig-owned `JigAttentionBanner` composition from public Astryx Icon/Button leaves + semantic tokens because the pinned Banner public API cannot vertically center icon/action with multi-line description content |
 | Desktop Task workspace | Astryx non-modal right Drawer |
 | Narrow Task workspace | Astryx BottomSheet rising from the bottom |
 | Task movement mechanics | Jig `ui/src/drag.tsx` adapter over the physically proven current dnd-kit candidate; one owner only, no Pangea/parallel sensors |
@@ -480,6 +481,18 @@ On mobile, the primary action area remains visible and comfortable at the end of
 | Task reads/writes and repository synchronization state | Bun service + SQLite + repository adapter |
 
 Jig CSS owns only the page-centered header grid, seven Planner tracks, narrow composition, drag state and restrained Task priority accent. It consumes public Astryx tokens/roles and must not target private component internals.
+
+### Shared operational attention banner — bounded fidelity correction
+
+The app's operation-error, synchronization-attention, load/setup failure and Settings-error banners are one cross-platform React presentation surface. They are not Android OS notifications and they do not change reminder delivery, notification permission, synchronization or operation-error state ownership.
+
+The pinned Astryx `Banner` public API is not sufficient for the governed geometry: when `description` is present its header uses top alignment, so the status icon and the complete end-action area sit against the top of a multi-line message. The component exposes no public header/end-area alignment prop or scroller/slot hook. Jig must not correct this by targeting Banner's private DOM, StyleX classes or descendant selectors.
+
+Use one narrow Jig-owned `JigAttentionBanner` for the currently required operational shape only: `error | warning` status, title, supporting description and optional recovery/navigation action. Compose it from public Astryx `Icon` and `Button` leaves plus public semantic status/background/text, spacing, radius and typography tokens. This is a documented public-API fallback, not a general replacement Banner component and not another design system.
+
+At ordinary widths, status icon, message block and optional action are vertically centered as peer regions. The message remains left-aligned and may wrap naturally. At narrow widths, the optional action may move to its own row without squeezing the message; its control remains vertically centered within that row and the status icon remains centered against the message block rather than pinned to its first text line. Error/warning semantics, focus order, recovery action labeling and the existing operation-feedback owner remain unchanged. Existing reveal motion remains subordinate and is removed under reduced motion.
+
+All current operational attention call sites must converge on this one component so Android WebView and Linux/Desktop browser cannot drift: durable operation failure, sync-needs-attention, initial load failure, setup failure and Settings operation failure. Separate browser/Android reminder delivery remains outside this component.
 
 Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop and narrow/mobile, **only the dedicated grip is the drag activator**. The Task card body remains normal click/tap/scroll content; completion checkbox, Task action menu, reference and other interactive descendants remain independent. The grip is part of the Task card layout, never an overlay that steals the whole card's pointer surface. The grip/checkbox leading group is vertically centered within the card and does not use first-line alignment as a substitute for control geometry.
 
@@ -529,6 +542,7 @@ Do not animate initial current-day anchoring, healthy-sync loops, protocol phase
 | In-application brand | one canonical inline Jig wordmark geometry on desktop/narrow; foreground and pin resolve through active theme semantic roles with required contrast; no fixed Light/Dark application-logo switching |
 | Reminder delivery | with granted permission an eligible due reminder creates browser Notification whether visible/hidden/focused/unfocused; no reminder Toast; unsupported/default/denied states do not claim delivery and successful keys do not duplicate |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
+| Operational attention banner geometry | shared desktop/Android banner uses one Jig-owned public-leaf composition; multi-line error/warning message keeps status icon vertically centered to the message block; inline recovery/navigation action is vertically centered, may wrap cleanly below on narrow widths, and no private Astryx Banner selector/anatomy is used |
 | Motion and reduced motion | eligible events use short interruptible Linux/Desktop-browser and Android-WebView-equivalent feedback; Drawer/BottomSheet/control transitions remain Astryx-owned; Task/Planner/status transitions remain Jig-owned; reduced motion removes travel/scaling/smooth scroll/loops while retaining immediate state, focus and accessible status; initial Planner load and forbidden protocol/decorative motion remain still |
 
 ### Cross-platform WeekPager — design correction
