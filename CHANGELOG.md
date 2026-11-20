@@ -34,7 +34,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Fixed
 
-- Governed a shared cross-platform operational-attention Banner correction after user-visible review found multi-line error/warning surfaces top-aligning their status icon and recovery action. The pinned Astryx Banner exposes no public alignment hook for that geometry, so IMP-24 uses one bounded Jig-owned composition from public Astryx leaves/tokens without changing reminder or OS notification behavior.
+- Replaced the misaligned shared operational-attention Banner surface with one bounded Jig-owned composition from public Astryx leaves/tokens: multi-line error/warning icon and inline action regions are vertically centered, actions wrap cleanly on narrow widths, all existing operation/sync/load/setup/Settings call sites converge on the same owner, and reminder/OS notification behavior is unchanged.
 - Removed the duplicated Android top safe-area inset from the narrow application and onboarding headers so the mobile Jig logo sits in the governed 52px application row without an empty band above it.
 - Fixed Android Task creation failing with `Illegal invocation` by passing the UUID generator through a callback at the native runtime boundary; one-off and recurring creation now commit and survive restart.
 - Added the governed narrow-screen horizontal inset to History and Settings so their mobile reading surfaces align with Planner instead of touching the viewport edges.
@@ -47,7 +47,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - Remote synchronization failure no longer obscures a successful local snapshot; primary feedback states that work is saved locally while exact Git commit/remote failure detail remains available in Diagnostics.
 - Android native status and navigation-bar indicators now follow Jig's resolved Light/Dark/System appearance, including an explicit Light selection while the device itself remains in Dark mode; desktop browser chrome continues to follow Astryx's root `color-scheme` projection.
 - Completed the motion audit corrections: History list mutations now use Astryx animated layout, desktop Today has an explicit week-content transition, and theme/status-surface changes use the shared reduced-motion-aware transition contract while canonical state changes remain immediate.
-- Recorded the earlier Astryx `usePanGesture` week-swipe implementation as superseded evidence after cross-platform review showed the required interaction is a direct-manipulation WeekPager, not a narrow-only gesture-to-command adapter. J110-IMP-23 is reopened for the FR-33/SD-43 hard cut and exact-head certification.
+- Completed the FR-33/SD-43 WeekPager hard cut: removed raw/usePanGesture and private Astryx Carousel ownership, unified desktop+narrow Previous/Next and direct paging on one native scroll/snap surface, kept adjacent pages inert/passive, isolated Task drag from paging, and removed duplicate previous/next board motion.
 - CLI status/sync output and browser/native runtime adapters consume the same structured repository status rather than rendering or maintaining a parallel scalar status.
 - GitHub installation/repository discovery now consumes every API page instead of silently truncating authorized choices at the first 100 results.
 - Returning from GitHub authorization/access no longer requires a manual Refresh action; desktop and Android orchestration resume/recheck automatically, and configured reconnect retries synchronization without re-running repository setup.

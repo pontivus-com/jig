@@ -1,12 +1,26 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** POST-REMEDIATION BASELINE EVIDENCE RETAINED / J110-IMP-09 + J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION ATTEMPTED AND BLOCKED / J110-IMP-23 REOPENED FOR FR-33/SD-43 CROSS-PLATFORM WEEKPAGER / J110-IMP-24 OPEN — SHARED OPERATIONAL ATTENTION BANNER ALIGNMENT / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — exact executable/certification head `3b60ad938f2173521c4eb2aa8b59603a15d930b1` passed permanent Verify `44652277552` / #1598 across Linux/browser, Android build certification and API-24 instrumentation and remains valid evidence for the bounded IMP-18..20 remediation. It does **not** certify the later WeekPager executable work or rewritten IMP-23. The hosted matrix passed 41/41 core/integration/architecture files (261/261 tests), production build, browser bootstrap, 79/79 real-browser tests, Android static/build/FLOSS/F-Droid checks and 5/5 API-24 instrumentation tests. Governed browser evidence artifact `14591328349` has been explicitly reviewed. Android artifact `14591926175` was physically launched on the connected Samsung SM-S901E: compact-shell and past-date rejection checks passed, but one-off and recurring Task creation both failed with `Illegal invocation`, so IMP-21 and J110-IMP-15 remain open. Live Linux/Desktop GitHub acceptance issue #31 remains open.
+**Status:** CURRENT V1.1 IMPLEMENTATION NON-DEVICE CERTIFIED / SOURCE HEAD `59f7d1642211739df88dc188a4fdfe17af2c26c9` / VERIFY `44690410706` #1632 PASS / J110-IMP-09 + J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22..24 IMPLEMENTED + NON-DEVICE CERTIFIED, PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — the hosted PR merge candidate `7d4225312b9e6e3983b9a5d494977dcc4ae19782` (second parent = source head `59f7d164…`) passed strict typecheck, 42/42 core/integration/architecture files with 267/267 tests, production build, browser bootstrap, 82/82 real-browser tests, shell/installer lifecycle, Android build/static/dependency-lock/FLOSS/F-Droid certification and 5/5 API-24 instrumentation tests. Browser artifact `14607679872` and Android artifact `14608147658` are retained for this hosted lineage. The generated APK is 9,787,835 bytes with SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. Physical Android WeekPager/banner/runtime confirmation and issue #31 remain open.
 
-**WeekPager evidence boundary (2026-11-20):** FR-33/SD-43 supersede the raw-pointer and `usePanGesture` week-navigation implementations. Any retained browser/APK result below that exercised either prior adapter remains historical evidence only. No existing artifact is WeekPager acceptance evidence. Rewritten J110-IMP-23 requires one new exact-head hosted/browser/physical lineage before closure.
+**WeekPager evidence boundary (2026-11-20):** FR-33/SD-43 supersede the raw-pointer and `usePanGesture` implementations. Verify #1632 is the first retained hosted/browser lineage for the rewritten WeekPager and proves the non-device contract only. Physical Android touch/vertical-scroll/drag arbitration and real-input confirmation remain required before IMP-23 closes.
 
-**Operational-attention Banner evidence boundary (2026-11-20):** retained screenshots/APKs predate IMP-24 and do not certify vertical centering of multi-line status icon/action geometry. The defect is in the shared React presentation and does not reopen browser/Android notification-delivery evidence. IMP-24 requires fresh desktop+narrow browser geometry review plus physical Android confirmation on the exact candidate.
+**Operational-attention Banner evidence boundary (2026-11-20):** Verify #1632/browser artifact `14607679872` now certifies the shared desktop+narrow geometry and ownership checks for IMP-24. The defect remains separate from browser/Android notification delivery. Physical Android WebView confirmation of the same exact candidate geometry remains required before IMP-24 closes.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
+
+## Current WeekPager + attention-banner non-device candidate
+
+- Source branch/head: `v1.1` / `59f7d1642211739df88dc188a4fdfe17af2c26c9`.
+- Permanent Verify: `44690410706` / #1632 — **PASS**.
+- GitHub PR merge-test candidate: `7d4225312b9e6e3983b9a5d494977dcc4ae19782`; parents are current `master` base `4046709…` and source head `59f7d164…`.
+- Core/integration/architecture: **42/42 files, 267/267 tests PASS**; strict typecheck and production build PASS.
+- Real browser: bootstrap PASS; **82/82 acceptance tests PASS**, including WeekPager active/preview isolation, settle→commit navigation, drag suppression, reduced motion and shared attention-banner alignment/wrapping.
+- Browser evidence: artifact `14607679872`, `jig-v1.1-browser-evidence-7d4225312b9e6e3983b9a5d494977dcc4ae19782`, archive digest `sha256:7d05a1d5561faa6433e2a4022f7415a8a537937504d15cb2e4943e9aa85b8a9e`.
+- Android build certification: synchronization, Gradle lock, unit/static, FLOSS boundary, version derivation, APK/native compile and F-Droid lint all PASS.
+- Android artifact: `14608147658`, `jig-android-debug-7d4225312b9e6e3983b9a5d494977dcc4ae19782`, archive digest `sha256:8b204c60911f1d62c4bceca14efcf313b60f735ea9a9718607761adb5acac114`.
+- Extracted `app-debug.apk`: **9,787,835 bytes**, SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`.
+- API-24 instrumentation: **5/5 PASS**, `BUILD SUCCESSFUL`.
+- Disposition: this is complete hosted/non-device implementation evidence for IMP-22..24, not physical acceptance.
 
 ## Prior certified post-UX non-device baseline
 
@@ -162,11 +176,11 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 
 ## Still required before release-candidate closure
 
-J110-IMP-18, IMP-19 and IMP-20 are implemented and non-device certified. Remaining order:
+J110-IMP-18..20 and the repository-executable portions of IMP-22..24 are implemented and non-device certified. Remaining order:
 
-1. Finish J110-IMP-23's cross-platform WeekPager hard cut, then produce a fresh hosted-certified artifact containing that exact pager implementation together with the mobile-header, History/Settings inset, Planner current-day anchoring and native UUID-callback corrections; do not add an Android-only gesture/workaround.
-2. Re-run the focused **J110-IMP-21 physical Android confirmation** on that exact candidate, including compact header/title/height, readable interactive labels, grip/checkbox centering, Task creation, past-date rejection feedback, recurrence non-accumulation, restart persistence and synchronization continuity.
-3. Complete the remaining **J110-IMP-15** physical/native matrix, including rewritten J110-IMP-23 WeekPager paging in both directions on populated/empty weeks, interruption, vertical-scroll arbitration and active-week drag isolation. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
+1. Run the focused **J110-IMP-21 physical Android confirmation** on the current exact APK candidate, including compact header/title/height, readable interactive labels, grip/checkbox centering, Task creation, past-date rejection feedback, recurrence non-accumulation, restart persistence and synchronization continuity.
+2. In the same exact-candidate physical wave, close IMP-23/IMP-24 real-device rows: populated/empty WeekPager both directions, repeated paging, interruption, vertical-scroll arbitration, active-week drag isolation, BottomSheet interaction, reduced motion, and multi-line attention-banner icon/action centering/wrapping.
+3. Complete the remaining **J110-IMP-15** physical/native matrix. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
 4. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
 5. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
 
@@ -174,8 +188,8 @@ Do not create a competing branch, platform-specific recurrence/scheduling rule o
 
 ## Physical-device evidence
 
-Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and preserves the 2026-11-20 Samsung/Android-16 session on source `222f2fe…` as partial historical IMP-15 evidence. The **current post-remediation physical candidate** is source `3b60ad938f2173521c4eb2aa8b59603a15d930b1`, APK artifact `14591926175`, unpacked APK SHA-256 `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`.
+Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and the earlier Samsung/Android-16 sessions as historical evidence. The **current candidate awaiting physical certification** is source `59f7d1642211739df88dc188a4fdfe17af2c26c9`, hosted APK artifact `14608147658`, extracted APK SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`.
 
-**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-23 REOPENED FOR FR-33/SD-43 IMPLEMENTATION + CERTIFICATION / J110-IMP-24 OPEN FOR SHARED OPERATIONAL ATTENTION BANNER ALIGNMENT / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. The `3b60ad9…` remediation remains certified for its tested scope only; WeekPager, IMP-24 banner geometry, their exact-head hosted/browser evidence, physical Android confirmation and the remaining IMP-15 matrix are still open.
+**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22..24 IMPLEMENTED + NON-DEVICE CERTIFIED / J110-IMP-23 + IMP-24 PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. Verify #1632 closes the repository-executable/non-device WeekPager and attention-banner work; physical Android confirmation and the remaining IMP-15 matrix are still open.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.

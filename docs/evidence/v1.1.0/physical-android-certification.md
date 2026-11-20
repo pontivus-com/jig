@@ -1,6 +1,6 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION ATTEMPTED AND BLOCKED / J110-IMP-23 REOPENED FOR FR-33/SD-43 CROSS-PLATFORM WEEKPAGER / J110-IMP-24 OPEN — SHARED OPERATIONAL ATTENTION BANNER ALIGNMENT / J110-IMP-15 PARTIAL — the bounded remediation remains hosted-certified on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598 for its tested scope only. That APK predates and cannot certify the rewritten WeekPager contract. The corrected APK was physically launched and the compact-shell/past-date checks passed, but physical Task creation failed with `Illegal invocation`; IMP-21 and IMP-15 remain open. Do not reconstruct unknown IMP-09 evidence.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22..24 IMPLEMENTED + NON-DEVICE CERTIFIED ON SOURCE `59f7d1642211739df88dc188a4fdfe17af2c26c9` / VERIFY #1632 / J110-IMP-23 + IMP-24 PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL — hosted certification is green across Linux/browser, Android build certification and API-24 runtime. The current physical target is APK artifact `14608147658`, extracted SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. No physical result for this candidate is recorded yet; earlier device sessions remain historical evidence only.
 
 **Partial-session executable source:** `222f2fe0e672b122424042b3fa39747efb991610`  
 **GitHub Actions APK artifact:** not retained in the session record  
@@ -10,6 +10,8 @@
 **Governed references:** `../../design/reference/jig-v1.1-application-ux-ui-governed-reference.html`, `../../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html`, `../../design/ui-solution.md`, `../../development/android-v1.1.md`.
 
 **IMP-24 physical boundary:** the Android application renders the same shared operational-attention component as desktop. A fresh candidate must physically confirm multi-line error/warning icon centering and optional recovery/navigation action alignment/wrapping in the WebView. No native Android notification/banner implementation is authorized; prior APKs do not close this geometry defect.
+
+**Current candidate awaiting physical execution:** source `59f7d1642211739df88dc188a4fdfe17af2c26c9`; Verify `44690410706` / #1632 PASS; Android artifact `14608147658`; `app-debug.apk` 9,787,835 bytes; SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. Hosted API-24 5/5 and browser 82/82 are non-device evidence and do not substitute for the checks below.
 
 ### Current post-remediation physical candidate — physical confirmation attempted
 
@@ -362,9 +364,9 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 | Gate | Result |
 |---|---|
 | J110-IMP-09 physical Task movement | **PASS — completed; detailed execution record lost** |
-| J110-IMP-23 FR-33/SD-43 cross-platform WeekPager | **REOPENED — no retained APK or physical evidence yet certifies the rewritten contract; prior raw/usePanGesture results are superseded history** |
-| J110-IMP-24 shared operational-attention Banner geometry | **OPEN — prior APKs/screenshots do not certify vertically centered multi-line icon/action geometry; requires exact-candidate WebView confirmation** |
-| J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS — local follow-up passes Task creation; exact hosted re-certification and remaining matrix are pending** |
+| J110-IMP-23 FR-33/SD-43 cross-platform WeekPager | **IMPLEMENTED + NON-DEVICE CERTIFIED — Verify #1632/browser 82/82/API-24 5/5 pass; exact-candidate physical touch/scroll/drag arbitration remains OPEN** |
+| J110-IMP-24 shared operational-attention Banner geometry | **IMPLEMENTED + NON-DEVICE CERTIFIED — desktop/narrow browser geometry passes; exact-candidate physical WebView confirmation remains OPEN** |
+| J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS — exact hosted re-certification is now green on Verify #1632; remaining physical matrix is pending** |
 | Issue #31 live Linux/Desktop GitHub acceptance | NOT RUN |
 
 **Release-candidate promotion authorized:** NO
