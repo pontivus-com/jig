@@ -21,7 +21,7 @@ import type { Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { todayCivilDate } from "./dates";
 import {
-  TaskCardPreview,
+  TaskDragOverlayCard,
   TaskRow,
   type ActiveTaskRowProps,
 } from "./task-row";
@@ -231,7 +231,7 @@ export function TaskDragProvider({
         </div>
         <DragOverlay>
           {activeTask === null ? null : (
-            <TaskCardPreview task={activeTask} />
+            <TaskDragOverlayCard task={activeTask} />
           )}
         </DragOverlay>
       </TaskDragContext.Provider>

@@ -830,7 +830,7 @@ body {
     place-items: center;
   }
 
-  .jig-task-card-preview-row {
+  .jig-task-drag-overlay-row {
     display: flex;
     align-items: center;
     gap: var(--spacing-1);
@@ -950,11 +950,11 @@ body {
     cursor: grabbing;
   }
 
-  .jig-task-card-preview-row {
+  .jig-task-drag-overlay-row {
     min-width: 0;
   }
 
-  .jig-task-card-preview-checkbox {
+  .jig-task-drag-overlay-checkbox {
     color: var(--color-text-secondary);
   }
 

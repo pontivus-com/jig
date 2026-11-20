@@ -321,7 +321,7 @@ export function TaskActionMenu(
   );
 }
 
-export function TaskCardPreview({
+export function TaskDragOverlayCard({
   task,
 }: Readonly<{ task: Task }>): React.ReactElement {
   return (
@@ -329,8 +329,8 @@ export function TaskCardPreview({
       className={`jig-task-card jig-task-priority-${task.priority.toLowerCase()} jig-drag-card-overlay`}
       aria-hidden="true"
     >
-      <div className="jig-task-card-preview-row">
-        <span className="jig-task-card-preview-checkbox">□</span>
+      <div className="jig-task-drag-overlay-row">
+        <span className="jig-task-drag-overlay-checkbox">□</span>
         <span className="jig-task-title">{task.title}</span>
         <Icon icon="moreHorizontal" color="secondary" />
       </div>
