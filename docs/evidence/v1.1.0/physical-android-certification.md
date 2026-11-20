@@ -1,6 +1,6 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION ATTEMPTED AND BLOCKED / J110-IMP-23 REOPENED FOR FR-33/SD-43 CROSS-PLATFORM WEEKPAGER / J110-IMP-15 PARTIAL — the bounded remediation remains hosted-certified on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598 for its tested scope only. That APK predates and cannot certify the rewritten WeekPager contract. The corrected APK was physically launched and the compact-shell/past-date checks passed, but physical Task creation failed with `Illegal invocation`; IMP-21 and IMP-15 remain open. Do not reconstruct unknown IMP-09 evidence.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION ATTEMPTED AND BLOCKED / J110-IMP-23 REOPENED FOR FR-33/SD-43 CROSS-PLATFORM WEEKPAGER / J110-IMP-24 OPEN — SHARED OPERATIONAL ATTENTION BANNER ALIGNMENT / J110-IMP-15 PARTIAL — the bounded remediation remains hosted-certified on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598 for its tested scope only. That APK predates and cannot certify the rewritten WeekPager contract. The corrected APK was physically launched and the compact-shell/past-date checks passed, but physical Task creation failed with `Illegal invocation`; IMP-21 and IMP-15 remain open. Do not reconstruct unknown IMP-09 evidence.
 
 **Partial-session executable source:** `222f2fe0e672b122424042b3fa39747efb991610`  
 **GitHub Actions APK artifact:** not retained in the session record  
@@ -8,6 +8,8 @@
 **Physical APK SHA-256:** `b3d134786827dea601f4f3cbd89ad4269578393151efd5dab056812a682c8d4b`  
 **Expected Android application ID:** `com.pontivus.jig`  
 **Governed references:** `../../design/reference/jig-v1.1-application-ux-ui-governed-reference.html`, `../../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html`, `../../design/ui-solution.md`, `../../development/android-v1.1.md`.
+
+**IMP-24 physical boundary:** the Android application renders the same shared operational-attention component as desktop. A fresh candidate must physically confirm multi-line error/warning icon centering and optional recovery/navigation action alignment/wrapping in the WebView. No native Android notification/banner implementation is authorized; prior APKs do not close this geometry defect.
 
 ### Current post-remediation physical candidate — physical confirmation attempted
 
