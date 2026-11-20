@@ -574,13 +574,16 @@ describe("UI ownership architecture", () => {
       }
     }
 
-    for (const testPath of [
-      "tests/browser/ui-conformance.spec.ts",
-      "tests/browser/interactions.spec.ts",
-    ]) {
+    for (const entry of readdirSync("tests/browser", { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith(".ts")) {
+        continue;
+      }
+      const testPath = join("tests/browser", entry.name);
       const content = source(testPath);
       expect(content, testPath).not.toContain(".jig-week-pager");
       expect(content, testPath).not.toContain(".jig-week-slide");
+      expect(content, testPath).not.toContain("data-jig-week-page");
+      expect(content, testPath).not.toContain("WeekPager");
       expect(content, testPath).not.toContain('new Event("scrollend")');
       expect(content, testPath).not.toContain("pager.scrollLeft");
     }
