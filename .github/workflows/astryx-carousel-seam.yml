@@ -114,9 +114,47 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Record tested patch boundary
+      - name: Commit exact validated Astryx candidate
+        working-directory: astryx
         shell: bash
         run: |
-          echo "Astryx Carousel lifecycle patch validated and retained as a workflow artifact."
-          echo "Upstream publication is intentionally a separate Actions phase after validation."
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(Carousel): expose settled paging lifecycle"
+          echo "ASTRYX_CANDIDATE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Publish validated Astryx branch
+        id: publish
+        working-directory: astryx
+        env:
+          ASTRYX_WRITE_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN || secrets.META_ASTRYX_TOKEN || secrets.GH_PAT || secrets.PAT || github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ASTRYX_WRITE_TOKEN"
+          branch="jig-imp-23-carousel-lifecycle-${GITHUB_RUN_ID}"
+          git branch -f "$branch" HEAD
+          git remote set-url origin "https://x-access-token:${ASTRYX_WRITE_TOKEN}@github.com/meta/astryx.git"
+          git push origin "refs/heads/$branch:refs/heads/$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open Astryx pull request
+        id: pr
+        working-directory: astryx
+        env:
+          GH_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN || secrets.META_ASTRYX_TOKEN || secrets.GH_PAT || secrets.PAT || github.token }}
+          UPSTREAM_BRANCH: ${{ steps.publish.outputs.branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(gh pr create             --repo meta/astryx             --base main             --head "$UPSTREAM_BRANCH"             --title "feat(Carousel): expose settled paging lifecycle"             --body "Expose SnapPaging final-rest notification and CarouselHandle.scrollTo(index, {animated:false}) using the existing Astryx pager lifecycle. This exact candidate passed the targeted Carousel/SnapPaging UI tests, core typecheck, core build, changeset validation, and package-boundary checks in the Jig IMP-23 Actions harness.")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Opened $url"
+
+      - name: Record tested publication boundary
+        shell: bash
+        run: |
+          echo "Astryx candidate: $ASTRYX_CANDIDATE_SHA"
+          echo "Astryx PR: ${{ steps.pr.outputs.url }}"
 
