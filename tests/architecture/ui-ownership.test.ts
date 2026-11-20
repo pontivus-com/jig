@@ -537,7 +537,8 @@ describe("UI ownership architecture", () => {
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
   });
 
-  it("keeps adjacent-week visual presentation singular while the Carousel cutover is pending", () => {
+  it("uses Astryx Carousel as the sole adjacent-week paging owner", () => {
+    const app = source("ui/src/app.tsx");
     const pager = source("ui/src/week-pager.tsx");
     const week = source("ui/src/week.tsx");
     const list = source("ui/src/planner-list.tsx");
@@ -547,9 +548,41 @@ describe("UI ownership architecture", () => {
     const css = source("ui/src/styles.css");
 
     expect(existsSync("ui/src/week-swipe.ts")).toBe(false);
+
+    expect(pager).toContain('from "@astryxdesign/core"');
+    expect(pager).toContain("Carousel,");
+    expect(pager).toContain("useSnapPaging,");
+    expect(pager).toContain("type CarouselHandle");
+    expect(pager).toContain("<Carousel");
+    expect(pager).toContain('pages: "item"');
+    expect(pager).toContain("onSettle:");
+    expect(pager).toContain("scrollTo(MIDDLE_PAGE, { animated: false })");
+    expect(pager).toContain('data-jig-week-page={isActive ? "active" : "passive"}');
+    expect(pager).not.toContain("scrollLeft");
+    expect(pager).not.toContain("clientWidth");
+    expect(pager).not.toContain('"scrollend"');
+    expect(pager).not.toContain("addEventListener");
     expect(pager).not.toContain("firstElementChild");
     expect(pager).not.toContain("usePanGesture");
-    expect(week).toContain("<WeekPager");
+    expect(pager).not.toContain("WeekPagingRequest");
+    expect(pager).not.toContain("navigationRequest");
+
+    expect(app).toContain("useRef<WeekPagerHandle>(null)");
+    expect(app).toContain("weekPagerRef.current?.previous()");
+    expect(app).toContain("weekPagerRef.current?.next()");
+    expect(app).toContain("weekPagerRef.current?.restoreCurrent()");
+    expect(app).not.toContain("WeekPagingRequest");
+    expect(app).not.toContain("weekPagingRequest");
+    expect(planner).toContain("weekPagerRef: Ref<WeekPagerHandle>");
+    expect(planner).not.toContain("WeekPagingRequest");
+    expect(week).toContain("handleRef={props.weekPagerRef}");
+    expect(week).not.toContain("navigationRequest");
+
+    expect(css).toContain(".jig-week-carousel {");
+    expect(css).toContain(".jig-week-carousel-page {");
+    expect(css).not.toContain(".jig-week-pager");
+    expect(css).not.toContain(".jig-week-slide");
+
     expect(week).toContain("interface ActiveWeekPageProps");
     expect(week).toContain("interface PassiveWeekPageProps");
     expect(week).toContain("type WeekInteraction");
