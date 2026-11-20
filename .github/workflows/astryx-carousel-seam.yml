@@ -62,8 +62,20 @@ jobs:
             esac
           done <<< "$changed"
 
-      - name: Set up Astryx governed toolchain
-        uses: ./astryx/.github/actions/setup
+      - name: Set up Astryx pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          version: 11.10.0
+
+      - name: Set up Astryx Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: astryx/.nvmrc
+          package-manager-cache: false
+
+      - name: Install exact Astryx dependency graph
+        working-directory: astryx
+        run: pnpm install --frozen-lockfile
 
       - name: Targeted Carousel and SnapPaging unit tests
         working-directory: astryx
