@@ -1,4 +1,3 @@
-import { Carousel, useSnapPaging } from "@astryxdesign/core";
 import {
   useEffect,
   useLayoutEffect,
@@ -8,131 +7,167 @@ import {
 } from "react";
 import { addCivilDays, weekDates } from "../../src/core/planning";
 
-// The strip rests on its middle slide with one week on either side. Paging to a
-// neighbour is one week change; the strip is then re-centred on the new middle,
-// which shows the same pixels the finger left, so no jump is visible.
 const MIDDLE_PAGE = 1;
 const WEEK_OFFSETS = [-7, 0, 7] as const;
-// A native scroll reports no completion. The row is at rest when it has not
-// scrolled for this long after the finger's snap has finished.
-const SETTLE_DELAY_MS = 120;
 
 export type WeekPagingDirection = "previous" | "next";
 
+export interface WeekPagingRequest {
+  readonly id: number;
+  readonly direction: WeekPagingDirection;
+}
+
 export interface WeekPagerProps {
-  /** Monday of the displayed week. A change re-centres the strip. */
   readonly weekStart: string;
+  readonly navigationRequest: WeekPagingRequest | null;
+  readonly isPagingDisabled: boolean;
   readonly onCommit: (direction: WeekPagingDirection) => void;
-  readonly renderWeek: (dates: readonly string[]) => ReactNode;
+  readonly renderWeek: (
+    dates: readonly string[],
+    isActive: boolean,
+  ) => ReactNode;
 }
 
-/**
- * The Carousel's scroll container is its first element child while the built-in
- * navigation buttons are off (Carousel anatomy: Scroll container, then Items).
- */
-function scrollerElement(root: HTMLElement | null): HTMLElement | null {
-  const child = root?.firstElementChild;
-  return child instanceof HTMLElement ? child : null;
-}
-
-/** Put the strip back on its middle slide without animating the travel. */
-function centreStrip(scroller: HTMLElement | null): void {
-  if (scroller === null) {
+function centerStrip(scroller: HTMLDivElement | null): void {
+  if (scroller === null || scroller.clientWidth <= 0) {
     return;
   }
-  const middle = scroller.clientWidth;
-  if (middle <= 0 || Math.abs(scroller.scrollLeft - middle) <= 1) {
+  const middle = scroller.clientWidth * MIDDLE_PAGE;
+  if (Math.abs(scroller.scrollLeft - middle) <= 1) {
     return;
   }
-  scroller.scrollLeft = middle;
+  scroller.scrollTo({ left: middle, behavior: "auto" });
 }
 
-/**
- * Narrow/mobile week paging over the public Astryx `Carousel`.
- *
- * The browser owns the gesture: native horizontal scrolling, its own touch
- * slop and axis lock, momentum, snapping, cancellation and interruption.
- * `useSnapPaging()` makes one flick move one view, so one gesture is at most
- * one week. Jig owns only which week is displayed and the strip's geometry.
- */
+function pageFor(scroller: HTMLDivElement): number | null {
+  if (scroller.clientWidth <= 0) {
+    return null;
+  }
+  return Math.round(scroller.scrollLeft / scroller.clientWidth);
+}
+
 export function WeekPager({
   weekStart,
+  navigationRequest,
+  isPagingDisabled,
   onCommit,
   renderWeek,
 }: WeekPagerProps): ReactElement {
-  const paging = useSnapPaging();
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const scrollerRef = useRef<HTMLElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const onCommitRef = useRef(onCommit);
+  const pagingDisabledRef = useRef(isPagingDisabled);
+  const committingRef = useRef(false);
+  const processedRequestRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
     onCommitRef.current = onCommit;
-  }, [onCommit]);
+    pagingDisabledRef.current = isPagingDisabled;
+  }, [isPagingDisabled, onCommit]);
 
-  useEffect(() => {
-    const root = rootRef.current;
-    if (root === null) {
+  const commitSettledPageRef = useRef<(scroller: HTMLDivElement) => void>(
+    () => undefined,
+  );
+  commitSettledPageRef.current = (scroller) => {
+    if (pagingDisabledRef.current || committingRef.current) {
       return;
     }
-    scrollerRef.current = scrollerElement(root);
+    const page = pageFor(scroller);
+    if (page === null || page === MIDDLE_PAGE) {
+      return;
+    }
+    committingRef.current = true;
+    onCommitRef.current(page < MIDDLE_PAGE ? "previous" : "next");
+  };
 
-    let settleTimer: number | undefined;
-    const onScroll = (event: Event): void => {
-      const target = event.target;
-      if (target instanceof HTMLElement && target !== root) {
-        scrollerRef.current = target;
-      }
-      window.clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(() => {
-        const scroller = scrollerRef.current;
-        if (scroller === null) {
-          return;
-        }
-        const pageWidth = scroller.clientWidth;
-        if (pageWidth <= 0) {
-          return;
-        }
-        const page = Math.round(scroller.scrollLeft / pageWidth);
-        if (page === MIDDLE_PAGE) {
-          return;
-        }
-        onCommitRef.current(page < MIDDLE_PAGE ? "previous" : "next");
-      }, SETTLE_DELAY_MS);
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (scroller === null) {
+      return;
+    }
+    const onScrollEnd = (): void => {
+      commitSettledPageRef.current(scroller);
     };
-
-    root.addEventListener("scroll", onScroll, true);
-    return () => {
-      window.clearTimeout(settleTimer);
-      root.removeEventListener("scroll", onScroll, true);
-    };
+    scroller.addEventListener("scrollend", onScrollEnd);
+    return () => scroller.removeEventListener("scrollend", onScrollEnd);
   }, []);
 
-  // Mount, and every later week change (paging or the Previous/Next controls),
-  // rests on the middle slide. Runs before paint so the strip never shows the
-  // travel it was re-centred over.
   useLayoutEffect(() => {
-    centreStrip(scrollerRef.current);
+    committingRef.current = false;
+    centerStrip(scrollerRef.current);
   }, [weekStart]);
+
+  useEffect(() => {
+    const onResize = (): void => centerStrip(scrollerRef.current);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    if (isPagingDisabled) {
+      centerStrip(scrollerRef.current);
+    }
+  }, [isPagingDisabled]);
+
+  useEffect(() => {
+    if (
+      navigationRequest === null ||
+      isPagingDisabled ||
+      processedRequestRef.current === navigationRequest.id
+    ) {
+      return;
+    }
+    const scroller = scrollerRef.current;
+    if (scroller === null || scroller.clientWidth <= 0) {
+      return;
+    }
+
+    processedRequestRef.current = navigationRequest.id;
+    const target =
+      navigationRequest.direction === "previous"
+        ? 0
+        : scroller.clientWidth * 2;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    scroller.scrollTo({
+      left: target,
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+
+    if (!reduceMotion) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      commitSettledPageRef.current(scroller);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isPagingDisabled, navigationRequest]);
 
   const slides = WEEK_OFFSETS.map((offset) =>
     weekDates(addCivilDays(weekStart, offset)),
   );
 
   return (
-    <Carousel
-      ref={rootRef}
+    <div
+      ref={scrollerRef}
       className="jig-week-pager"
-      aria-label="Planner week"
-      gap={0}
-      hasSnap={paging}
-      hasButtons={false}
-      hasEdgeFade={false}
+      aria-label="Planner week pager"
+      data-jig-paging-disabled={isPagingDisabled ? "true" : "false"}
     >
-      {slides.map((dates) => (
-        <div className="jig-week-slide" key={dates[0]}>
-          {renderWeek(dates)}
-        </div>
-      ))}
-    </Carousel>
+      {slides.map((dates, index) => {
+        const isActive = index === MIDDLE_PAGE;
+        return (
+          <div
+            key={dates[0]}
+            className="jig-week-slide"
+            data-jig-week-page={isActive ? "active" : "preview"}
+            aria-hidden={isActive ? undefined : true}
+            inert={isActive ? undefined : true}
+          >
+            {renderWeek(dates, isActive)}
+          </div>
+        );
+      })}
+    </div>
   );
 }

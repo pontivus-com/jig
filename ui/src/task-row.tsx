@@ -48,9 +48,11 @@ function stopPointer(event: React.PointerEvent): void {
 function TaskMetadata({
   task,
   recurrenceSeries = null,
+  interactiveReference = true,
 }: Readonly<{
   task: Task;
   recurrenceSeries?: RecurrenceSeries | null;
+  interactiveReference?: boolean;
 }>): React.ReactElement {
   return (
     <div className="jig-task-meta">
@@ -88,7 +90,12 @@ function TaskMetadata({
           {task.priority.toLowerCase()}
         </span>
       )}
-      {task.reference === null ? null : isSafeWebReference(task.reference) ? (
+      {task.reference === null ? null : !interactiveReference ? (
+        <span className="jig-task-reference-action jig-task-meta-item">
+          <Icon icon="externalLink" size="xsm" color="secondary" />
+          Reference
+        </span>
+      ) : isSafeWebReference(task.reference) ? (
         <Link
           data-jig-drag-excluded="true"
           className="jig-task-reference-action jig-task-meta-item"
@@ -289,7 +296,36 @@ export function TaskCardPreview({
         <span className="jig-task-title">{task.title}</span>
         <Icon icon="moreHorizontal" color="secondary" />
       </div>
-      <TaskMetadata task={task} />
+      <TaskMetadata task={task} interactiveReference={false} />
+    </div>
+  );
+}
+
+export function TaskCardPassivePreview({
+  task,
+  recurrenceSeries = null,
+}: Readonly<{
+  task: Task;
+  recurrenceSeries?: RecurrenceSeries | null;
+}>): React.ReactElement {
+  return (
+    <div
+      className={[
+        "jig-week-preview-card",
+        "jig-week-preview-priority-" + task.priority.toLowerCase(),
+      ].join(" ")}
+    >
+      <span className="jig-week-preview-card-checkbox" aria-hidden="true">
+        □
+      </span>
+      <div className="jig-task-body">
+        <span className="jig-task-title">{task.title}</span>
+        <TaskMetadata
+          task={task}
+          recurrenceSeries={recurrenceSeries}
+          interactiveReference={false}
+        />
+      </div>
     </div>
   );
 }

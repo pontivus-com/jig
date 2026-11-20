@@ -45,24 +45,6 @@ body {
   }
 }
 
-@keyframes jig-week-content-enter-previous {
-  from {
-    opacity: 0;
-    transform: translateX(-0.5rem);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes jig-week-content-enter-next {
-  from {
-    opacity: 0;
-    transform: translateX(0.5rem);
-  }
-
   to {
     opacity: 1;
     transform: translateX(0);
@@ -533,7 +515,35 @@ body {
     text-transform: uppercase;
   }
 
-  .jig-week-board {
+  .jig-week-pager {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .jig-week-pager::-webkit-scrollbar {
+    display: none;
+  }
+
+  .jig-week-pager[data-jig-paging-disabled="true"] {
+    overflow-x: hidden;
+  }
+
+  .jig-week-slide {
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .jig-week-board,
+  .jig-week-preview-board {
     display: grid;
     grid-template-columns: repeat(7, minmax(10rem, 1fr));
     align-items: start;
@@ -542,22 +552,13 @@ body {
     padding-block-end: var(--spacing-3);
   }
 
-  .jig-week-board-previous {
-    animation: jig-week-content-enter-previous var(--duration-fast-max)
-      var(--ease-standard) both;
-  }
-
-  .jig-week-board-next {
-    animation: jig-week-content-enter-next var(--duration-fast-max)
-      var(--ease-standard) both;
-  }
-
   .jig-week-board-today {
     animation: jig-week-content-enter-today var(--duration-fast-max)
       var(--ease-standard) both;
   }
 
-  .jig-week-column {
+  .jig-week-column,
+  .jig-week-preview-column {
     width: auto;
     min-width: 0;
     min-height: 18rem;
@@ -565,17 +566,20 @@ body {
     background: transparent;
   }
 
-  .jig-week-column + .jig-week-column {
+  .jig-week-column + .jig-week-column,
+  .jig-week-preview-column + .jig-week-preview-column {
     border-inline-start: var(--border-width) solid var(--color-border);
   }
 
-  .jig-week-column > section {
+  .jig-week-column > section,
+  .jig-week-preview-column > section {
     display: flex;
     min-height: 18rem;
     flex-direction: column;
   }
 
-  .jig-week-column-header {
+  .jig-week-column-header,
+  .jig-week-preview-column-header {
     display: flex;
     min-height: 3.25rem;
     align-items: center;
@@ -595,14 +599,16 @@ body {
     font-weight: var(--font-weight-bold);
   }
 
-  .jig-week-date-signifier {
+  .jig-week-date-signifier,
+  .jig-week-preview-date-signifier {
     display: flex;
     min-width: 0;
     align-items: center;
     gap: var(--spacing-1);
   }
 
-  .jig-week-date-signifier strong {
+  .jig-week-date-signifier strong,
+  .jig-week-preview-date-signifier strong {
     min-width: 0;
     white-space: nowrap;
     transition: color var(--duration-fast) var(--ease-standard);
@@ -612,7 +618,8 @@ body {
     flex: 0 0 auto;
   }
 
-  .jig-week-task-area {
+  .jig-week-task-area,
+  .jig-week-preview-task-area {
     min-height: 12rem;
   }
 
@@ -841,6 +848,52 @@ body {
     display: flex;
     align-items: center;
     gap: var(--spacing-1);
+  }
+
+  .jig-week-preview-list {
+    display: grid;
+    gap: var(--spacing-2);
+    padding: calc(var(--spacing-2) + var(--spacing-0-5)) var(--spacing-1-5);
+  }
+
+  .jig-week-preview-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-width: 0;
+    min-height: 72px;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-element);
+    background: var(--color-background-surface);
+  }
+
+  .jig-week-preview-card-checkbox {
+    color: var(--color-text-secondary);
+  }
+
+  .jig-week-preview-priority-high {
+    border-inline-start-color: var(--jig-priority-high);
+    border-inline-start-width: calc(3 * var(--border-width));
+  }
+
+  .jig-week-preview-priority-normal {
+    border-inline-start-color: var(--jig-priority-normal);
+    border-inline-start-width: calc(2 * var(--border-width));
+  }
+
+  .jig-week-preview-priority-low {
+    border-inline-start-color: var(--jig-priority-low);
+    border-inline-start-width: calc(2 * var(--border-width));
+  }
+
+  .jig-week-preview-empty-state {
+    display: grid;
+    justify-items: center;
+    margin: var(--spacing-6) auto var(--spacing-2);
+    padding: var(--spacing-5);
+    color: var(--color-text-secondary);
   }
 
   .jig-week-column .jig-task-body {
@@ -1623,34 +1676,45 @@ body {
       font-weight: var(--font-weight-bold);
     }
 
-    .jig-week-board {
+    .jig-week-board,
+    .jig-week-preview-board {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
       gap: 0;
       padding-block-end: var(--spacing-1);
     }
 
-    .jig-week-board .jig-week-column {
+    .jig-week-board .jig-week-column,
+    .jig-week-preview-board .jig-week-preview-column {
       min-height: 0;
       padding-block: 0;
       border-inline-start: 0;
     }
 
-    .jig-week-board .jig-week-column + .jig-week-column {
+    .jig-week-board .jig-week-column + .jig-week-column,
+    .jig-week-preview-board .jig-week-preview-column + .jig-week-preview-column {
       border-block-start: var(--border-width) solid var(--color-border);
     }
 
-    .jig-week-board .jig-week-column > section {
+    .jig-week-board .jig-week-column > section,
+    .jig-week-preview-board .jig-week-preview-column > section {
       min-height: 0;
     }
 
-    .jig-week-board .jig-week-column-header {
+    .jig-week-board .jig-week-column-header,
+    .jig-week-preview-board .jig-week-preview-column-header {
       min-height: 52px;
       padding: var(--spacing-1) var(--spacing-2);
     }
 
-    .jig-week-board .jig-week-task-area {
+    .jig-week-board .jig-week-task-area,
+    .jig-week-preview-board .jig-week-preview-task-area {
       min-height: 0;
+    }
+
+    .jig-week-preview-list {
+      gap: var(--spacing-1);
+      padding: 0 0 var(--spacing-2);
     }
 
     .jig-task-card-list {
@@ -1773,8 +1837,6 @@ body {
     }
 
     .jig-content-configured-transition,
-    .jig-week-board-previous,
-    .jig-week-board-next,
     .jig-week-board-today,
     .jig-attention-banner {
       animation: none;

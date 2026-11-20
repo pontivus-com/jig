@@ -12,6 +12,7 @@ import {
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -56,6 +57,7 @@ export interface TaskDragProviderProps {
     destinationDate: string,
     destinationIndex: number,
   ) => Promise<boolean>;
+  readonly onDragActiveChange?: ((active: boolean) => void) | undefined;
 }
 
 function destinationIndexForSlot(
@@ -123,8 +125,14 @@ export function TaskDragProvider({
   tasks,
   children,
   onMove,
+  onDragActiveChange,
 }: TaskDragProviderProps): React.ReactElement {
   const [state, setState] = useState<TaskDragState>(EMPTY_DRAG_STATE);
+
+  useEffect(
+    () => () => onDragActiveChange?.(false),
+    [onDragActiveChange],
+  );
   const activeTask =
     state.activeTaskId === null
       ? null
@@ -161,6 +169,7 @@ export function TaskDragProvider({
           sourceDate: task?.scheduled_date ?? null,
           intent: null,
         });
+        onDragActiveChange?.(taskId !== null);
       }}
       onDragOver={(event) => {
         event.preventDefault();
@@ -185,6 +194,7 @@ export function TaskDragProvider({
             ? null
             : dropIntent(tasks, String(source.id), target);
         setState(EMPTY_DRAG_STATE);
+        onDragActiveChange?.(false);
 
         if (event.canceled || source === null || intent === null) {
           return;

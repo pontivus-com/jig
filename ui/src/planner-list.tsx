@@ -7,6 +7,7 @@ import {
   DraggableTaskRow,
   TaskInsertionSlot,
 } from "./drag";
+import { TaskCardPassivePreview } from "./task-row";
 
 export interface PlannerTaskListProps {
   readonly tasks: readonly Task[];
@@ -142,5 +143,41 @@ export function PlannerTaskList({
       ))}
       <TaskInsertionSlot date={date} slotIndex={outstanding.length} />
     </List>
+  );
+}
+
+
+export interface PlannerTaskPreviewListProps {
+  readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
+  readonly date: string;
+}
+
+export function PlannerTaskPreviewList({
+  tasks,
+  recurrences,
+  date,
+}: PlannerTaskPreviewListProps): React.ReactElement | null {
+  const outstanding = outstandingForDate(tasks, date);
+  if (outstanding.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="jig-week-preview-list">
+      {outstanding.map((task) => (
+        <TaskCardPassivePreview
+          key={task.id}
+          task={task}
+          recurrenceSeries={
+            task.recurrence_series_id === null
+              ? null
+              : recurrences.find(
+                  (series) => series.id === task.recurrence_series_id,
+                ) ?? null
+          }
+        />
+      ))}
+    </div>
   );
 }
