@@ -17,11 +17,15 @@ function applyTaskCommand(
   now: string,
   createId: () => string = crypto.randomUUID,
 ): ReturnType<typeof applyTaskCommandAtLocalDate> {
+  const currentLocalDate =
+    command.type === "create"
+      ? command.scheduled_date
+      : now.slice(0, 10);
   return applyTaskCommandAtLocalDate(
     connection,
     command,
     expectedRevision,
-    now.slice(0, 10),
+    currentLocalDate,
     now,
     createId,
   );
