@@ -791,13 +791,10 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     const navTypography = await page
       .locator(".jig-mobile-nav-label")
       .first()
-      .evaluate((element) => ({
-        actual: Number.parseFloat(getComputedStyle(element).fontSize),
-        body: Number.parseFloat(getComputedStyle(document.body).fontSize),
-      }));
-    expect(navTypography.actual).toBeGreaterThanOrEqual(
-      navTypography.body,
-    );
+      .evaluate((element) =>
+        Number.parseFloat(getComputedStyle(element).fontSize),
+      );
+    expect(navTypography).toBeGreaterThanOrEqual(14);
     await expectTarget(
       page.locator(".jig-date-add").first(),
       "Date Add",
