@@ -220,12 +220,12 @@ test("governed onboarding adapts from desktop to narrow touch geometry", async (
 
   await page.setViewportSize({ width: 1440, height: 420 });
   const shortViewport = page.locator(".jig-content-frame-onboarding");
-  await expect(
-    page.getByRole("button", { name: "Connect GitHub repository" }),
-  ).toBeVisible();
   await page
     .getByRole("button", { name: "Connect GitHub repository" })
     .scrollIntoViewIfNeeded();
+  await expect(
+    page.getByRole("button", { name: "Connect GitHub repository" }),
+  ).toBeVisible();
   const shortGeometry = await shortViewport.evaluate((element) => ({
     clientHeight: element.clientHeight,
     scrollHeight: element.scrollHeight,
