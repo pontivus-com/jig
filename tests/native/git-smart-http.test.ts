@@ -19,10 +19,28 @@ import {
   validateSnapshot,
 } from "../../src/portable";
 import {
-  applyTaskCommand,
+  applyTaskCommand as applyTaskCommandAtLocalDate,
   readCanonicalState,
   readMetadata,
 } from "../../src/persistence/sqlite";
+
+function applyTaskCommand(
+  connection: Parameters<typeof applyTaskCommandAtLocalDate>[0],
+  command: Parameters<typeof applyTaskCommandAtLocalDate>[1],
+  expectedRevision: number,
+  now: string,
+  createId: () => string = crypto.randomUUID,
+): ReturnType<typeof applyTaskCommandAtLocalDate> {
+  return applyTaskCommandAtLocalDate(
+    connection,
+    command,
+    expectedRevision,
+    now.slice(0, 10),
+    now,
+    createId,
+  );
+}
+
 import {
   initializeDatabase,
   openDatabase,
