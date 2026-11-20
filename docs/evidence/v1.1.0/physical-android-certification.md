@@ -1,6 +1,6 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-15 PARTIAL — REMEDIATION BLOCKED — the 2026-11-20 physical session captured real Android synchronization/restart/UI evidence on source `222f2fe…` but also exposed defects governed by J110-IMP-18..21. J110-IMP-15 is not PASS and final certification must use the post-remediation executable candidate. Do not reconstruct unknown IMP-09 evidence.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-15 PARTIAL — the bounded remediation is implemented and hosted-certified on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598. The earlier Samsung/API36 session on `222f2fe…` remains valid partial historical IMP-15 evidence, but the corrected APK has not yet received its focused physical IMP-21 confirmation. Do not reconstruct unknown IMP-09 evidence.
 
 **Partial-session executable source:** `222f2fe0e672b122424042b3fa39747efb991610`  
 **GitHub Actions APK artifact:** not retained in the session record  
@@ -9,11 +9,23 @@
 **Expected Android application ID:** `com.pontivus.jig`  
 **Governed references:** `../../design/reference/jig-v1.1-application-ux-ui-governed-reference.html`, `../../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html`, `../../design/ui-solution.md`, `../../development/android-v1.1.md`.
 
-IMP-18..20 necessarily establish a later executable candidate. The source/APK above is retained as partial physical evidence only and must not be reused as final certification lineage after those corrections.
+### Current post-remediation physical candidate — not yet physically confirmed
+
+- Source/head: `3b60ad938f2173521c4eb2aa8b59603a15d930b1`.
+- Permanent Verify: `44652277552` / #1598 — **PASS** across Linux/browser, Android build certification and API-24 runtime.
+- Android artifact: `14591926175`, `jig-android-debug-184c8c824b32ff53c53136eaf1c1e4ab78fe480a`.
+- Artifact digest: `sha256:dbb4f96a39af353adfee7360d2b0ebe36ae954d119407273a486fd66e6b610b9`.
+- APK: `app-debug.apk`, 9,780,552 bytes.
+- APK SHA-256: `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`.
+- Hosted API-24 proof: 5/5 instrumentation tests, `BUILD SUCCESSFUL`.
+- This identity is the required input for the focused J110-IMP-21 physical confirmation. Do not copy the earlier Samsung-session PASS values onto this candidate; record new physical observations explicitly.
+
+
+The source/APK above is retained as partial historical physical evidence only. J110-IMP-18..20 are now complete; the corrected physical candidate identity is recorded below and must be used for the focused IMP-21 confirmation and remaining IMP-15 work.
 
 ## 1. Physical certification environment
 
-Record the exact device and certification host for the remaining J110-IMP-15 testing. The historical J110-IMP-09 device/toolchain metadata was not retained and remains explicitly unknown.
+The table below preserves the recorded 2026-11-20 partial Samsung session. For the next physical run, record the exact device/host against the **current post-remediation candidate** below. The historical J110-IMP-09 device/toolchain metadata was not retained and remains explicitly unknown.
 
 | Fact | Recorded value |
 |---|---|
@@ -108,11 +120,11 @@ This session is retained as real-device evidence but **does not close IMP-15**.
 - Android Git path: local changes committed, remote push completed, Settings showed **Up to date**, restart/relaunch preserved Planner data and synchronization state.
 - UI evidence was captured for Planner, Task form/IME, Repeat states, History, Settings and healthy synchronization.
 - Physical review found blockers: compact Planner has no centered title; History/Settings replace Jig identity; header chrome is taller than needed; interactive button/navigation text is too small in places; grip/checkbox are vertically top-biased; past-date drag rejection has no clear feedback; recurring rollover can accumulate stale outstanding occurrences.
-- These findings are now governed by J110-IMP-18..20 and must be re-tested under J110-IMP-21 on the later corrected APK.
+- These findings are now implemented and non-device certified under J110-IMP-18..20. They must be physically confirmed under J110-IMP-21 on the corrected APK recorded below.
 
 ## 3. J110-IMP-15 — physical mobile UX/runtime certification
 
-J110-IMP-09 is already complete. Run the remaining J110-IMP-15 matrix on the governed current candidate lineage; do not rerun IMP-09 solely to reconstruct its lost detailed record.
+J110-IMP-09 is already complete. First run the focused J110-IMP-21 physical confirmation on the governed post-remediation candidate, then continue the remaining J110-IMP-15 matrix on that lineage. Do not rerun IMP-09 solely to reconstruct its lost detailed record.
 
 ### Configured shell and Planner
 
@@ -208,8 +220,8 @@ Record paths, attachment IDs or URLs for at least:
 
 **Evidence locations:**  
 
-**IMP-15 verdict:** **IN PROGRESS / BLOCKED pending J110-IMP-18..21**  
-**Blocking findings:** compact header/title/chrome + interactive-label legibility; Task grip/checkbox vertical alignment; past-date scheduling feedback; recurrence rollover non-accumulation.  
+**IMP-15 verdict:** **IN PROGRESS — post-remediation physical confirmation pending.**  
+**Remaining confirmation:** J110-IMP-21 must physically confirm the corrected compact header/title/height, label readability, grip/checkbox centering, past-date rejection feedback, recurrence non-accumulation, restart persistence and sync continuity before the remainder of IMP-15 can close.  
 
 ## 4. External acceptance still separate from this device record
 
@@ -223,7 +235,7 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 | Gate | Result |
 |---|---|
 | J110-IMP-09 physical Task movement | **PASS — completed; detailed execution record lost** |
-| J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS / BLOCKED — partial 2026-11-20 evidence retained; IMP-18..21 open** |
+| J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS — prior partial evidence retained; IMP-18..20 complete; IMP-21 focused physical confirmation open** |
 | Issue #31 live Linux/Desktop GitHub acceptance | NOT RUN |
 
 **Release-candidate promotion authorized:** NO
