@@ -358,4 +358,147 @@ def main() -> None:
       scroller.scrollBy = scrollBy;
 
       handle.current?.scrollTo(1, {animated: false});
-      ex
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith(
+        expect.objectContaining({behavior: 'instant'}),
+      );
+    });
+
+""",
+    )
+
+    snap_test = root / "packages/core/src/SnapPaging/SnapPaging.test.tsx"
+    insert_before(
+        snap_test,
+        """    it('moves the row through the paging for a scroll to an item', () => {
+""",
+        """    it('forwards immediate scrollTo intent through snap paging', () => {
+      let animated: bolean | undefined;
+      const value = makeSnapPaging(() => ({
+        ...attachment(),
+        move: (_target, options) => {
+          animated = options?.animated;
+        },
+      }));
+      const handle = createRef<CarouselHandle>();
+      render(
+        <Carousel aria-label="Items" hasSnap={value} handleRef={handle}>
+          <div>One</div>
+          <div>Two</div>
+        </Carousel>,
+      );
+      act(() => handle.current?.scrollTo(1, {animated: false}));
+      expect(animated).toBe(false);
+    });
+
+""",
+    )
+    insert_before(
+        snap_test,
+        """  describe("a held row's stops", () => {
+""",
+        """  it('reports only the final current rest through onSettle', async () => {
+    const element = document.createElement('div');
+    Object.defineProperty(element, 'clientWidth', {value: 100});
+    Object.defineProperty(element, 'offsetWidth', {value: 100});
+    Object.defineProperty(element, 'scrollWidth', {value: 300});
+    Object.defineProperty(element, 'scrollLeft', {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+    element.getBoundingClientRect = () => new DOMRect(0, 0, 100, 100);
+    Array.from({length: 3}, (_, index) => {
+      const child = document.createElement('div');
+      child.getBoundingClientRect = () =>
+        new DOMRect(index * 100, 0, 100, 100);
+      element.append(child);
+    });
+    element.scrollTo = ({left}: ScrollToOptions) => {
+      if (typeof left === 'number') {
+        element.scrollLeft = left;
+      }
+    };
+    document.body.append(element);
+
+    const settles: [number, number][] = [];
+    const {result} = renderHook(() =>
+      useSnapPaging({
+        pages: 'item',
+        onSettle: (index, previous) => settles.push([index, previous]),
+      }),
+    );
+    const detach = attachSnapPaging(result.current, element);
+    try {
+      act(() => {
+        moveSnapPaging(element, () => 200, {animated: false});
+      });
+      await act(
+        async () =>
+          new Promise<void>(resolve => requestAnimationFrame(() => resolve())),
+      );
+      expect(settles).toEqual([[2, 0]]);
+    } finally {
+      detach();
+    }
+  });
+
+""",
+    )
+
+    changeset = root / ".changeset/carousel-settled-reposition.md"
+    if changeset.exists():
+        raise SystemExit(f"{changeset}: already exists")
+    changeset.write_text(
+        """---
+'@astryxdesign/core': patch
+---
+
+[feature] Carousel snap paging can report the page after it fully settles, and `CarouselHandle.scrollTo` can reposition without animation. The lifecycle stays inside Carousel/SnapPaging instead of requiring consumers to inspect the scroll container.
+
+@rpstreef
+"""
+    )
+
+    print(f"Applied Astryx Carousel lifecycle seam patch to {root}")
+    print(f"Expected base: {BASE_SHA}")
+
+
+if __name__ == "__main__":
+    main()
+ {
+        moveSnapPaging(element, () => 200, {animated: false});
+      });
+      await act(
+        async () =>
+          new Promise<void>(resolve => requestAnimationFrame(() => resolve())),
+      );
+      expect(settles).toEqual([[2, 0]]);
+    } finally {
+      detach();
+    }
+  });
+
+""",
+    )
+
+    changeset = root / ".changeset/carousel-settled-reposition.md"
+    if changeset.exists():
+        raise SystemExit(f"{changeset}: already exists")
+    changeset.write_text(
+        """---
+'@astryxdesign/core': patch
+---
+
+[feature] Carousel snap paging can report the page after it fully settles, and `CarouselHandle.scrollTo` can reposition without animation. The lifecycle stays inside Carousel/SnapPaging instead of requiring consumers to inspect the scroll container.
+
+@rpstreef
+"""
+    )
+
+    print(f"Applied Astryx Carousel lifecycle seam patch to {root}")
+    print(f"Expected base: {BASE_SHA}")
+
+
+if __name__ == "__main__":
+    main()
