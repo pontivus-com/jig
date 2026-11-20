@@ -109,8 +109,11 @@ export function WeekPager({
   }, [isPagingDisabled]);
 
   useEffect(() => {
+    if (navigationRequest === null) {
+      processedRequestRef.current = null;
+      return;
+    }
     if (
-      navigationRequest === null ||
       isPagingDisabled ||
       processedRequestRef.current === navigationRequest.id
     ) {

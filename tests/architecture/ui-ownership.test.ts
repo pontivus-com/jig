@@ -531,11 +531,13 @@ describe("UI ownership architecture", () => {
     const week = source("ui/src/week.tsx");
     const planner = source("ui/src/planner.tsx");
     const app = source("ui/src/app.tsx");
+    const css = source("ui/src/styles.css");
 
     expect(existsSync("ui/src/week-swipe.ts")).toBe(false);
     expect(pager).toContain('className="jig-week-pager"');
     expect(pager).toContain('addEventListener("scrollend"');
-    expect(pager).toContain('scroll-snap');
+    expect(css).toContain("scroll-snap-type: x mandatory");
+    expect(css).toContain("scroll-snap-stop: always");
     expect(pager).not.toContain("@astryxdesign/core");
     expect(pager).not.toContain("firstElementChild");
     expect(pager).not.toContain("usePanGesture");

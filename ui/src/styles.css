@@ -45,12 +45,6 @@ body {
   }
 }
 
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 @keyframes jig-week-content-enter-today {
   from {
     opacity: 0;
