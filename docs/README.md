@@ -15,7 +15,7 @@ Jig is a small, local-first, just-in-time daily planner. It schedules attention 
 7. [v1.1 complete implementation plan](implementation/v1.1-complete-implementation-plan.md) — binding execution authority only. J110-IMP-23 consumes FR-33/SD-43 and contains only remaining Carousel publication/pinning, atomic hard cutover and legacy deletion, SoC/DRY/strict-typing/loose-coupling cleanup, and exact-candidate certification. Superseded implementation designs are not fallback tasks. Earlier release plans are historical provenance only.
 8. [Installation](install.md) — supported existing-repository installation, upgrade, Git-native continuity and uninstall.
 9. [Releases](releases/README.md) — **canonical release authority**: mandatory `release/vX.Y.Z` metadata transition, explicit `package.json.version = X.Y.Z`, immutable tag/publication validity criteria, binary asset contract and publication channel.
-10. [v1.1.0 implementation evidence](evidence/v1.1.0/README.md) — current evidence ledger: retains prior historical candidates, pins the post-remediation certified source `3b60ad9…` / Verify #1598, reviewed browser artifact `14591328349`, Android artifact `14591926175`, API-24 PASS, the retained partial Samsung session, the focused IMP-21 physical confirmation still required, and remaining live Desktop acceptance.
+10. [v1.1.0 implementation evidence](evidence/v1.1.0/README.md) — current evidence ledger. Earlier adjacent-week candidates are historical only and do not certify FR-33/SD-43; final WeekPager evidence must come from the exact post-Carousel-cutover candidate. Unaffected retained evidence and remaining physical/live acceptance are qualified in that ledger.
 11. [v1.0.6 implementation evidence](evidence/v1.0.6/README.md) — current released implementation certification: exact product/test candidate, permanent Verify result, 13-theme semantic matrix, combined-state, Notification, geometry and architecture gates. The [v1.0.5 evidence](evidence/v1.0.5/README.md), [v1.0.4 evidence](evidence/v1.0.4/README.md) and [v1 release-candidate evidence](evidence/v1/README.md) remain historical.
 
 Functional requirements define *what* users can observe. Technical solution owns *how* data and runtime behave. UI solution owns *how* users see and manipulate those functions. No part of the design inherits Order's workflow/lifecycle domain, creates DTO hierarchies, or introduces duplicate task authority.
@@ -42,7 +42,7 @@ The versioned SVGs under `design/reference/` retain structural provenance. The v
 
 ## Android development
 
-- [Android v1.1 development and physical-device certification](development/android-v1.1.md) — repeatable J110-IMP-08 debug-APK loop, closed J110-IMP-09 history, the retained partial Samsung IMP-15 evidence, current certified APK artifact `14591926175`, focused J110-IMP-21 physical confirmation procedure, and remaining IMP-15 certification matrix.
+- [Android v1.1 development and physical-device certification](development/android-v1.1.md) — repeatable Android build/device loop, retained qualified physical evidence, and the remaining exact-candidate certification matrix. Adjacent-week acceptance applies only to the final SD-43 Carousel candidate.
 
 ## Verification and implementation boundary
 
