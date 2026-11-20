@@ -2,7 +2,9 @@ import {
   Icon,
   List,
   ListItem,
+  useAnimatedLayout,
 } from "@astryxdesign/core";
+import { useRef } from "react";
 import type { Priority, Task } from "../../src/core/task";
 import { historyByCompletionDate } from "../../src/core/planning";
 import { formatCivilDate } from "./dates";
@@ -89,6 +91,48 @@ function HistoryTaskRow({
   );
 }
 
+interface HistoryTaskListProps {
+  readonly tasks: readonly Task[];
+  readonly onSelect: (task: Task) => void;
+  readonly onEdit: (task: Task) => void;
+  readonly onReopen: (task: Task) => Promise<boolean>;
+  readonly onSetPriority: (task: Task, priority: Priority) => Promise<boolean>;
+  readonly onDelete: (task: Task) => void;
+}
+
+function HistoryTaskList({
+  tasks,
+  onSelect,
+  onEdit,
+  onReopen,
+  onSetPriority,
+  onDelete,
+}: HistoryTaskListProps): React.ReactElement {
+  const listRef = useRef<HTMLUListElement>(null);
+  const animatedLayout = useAnimatedLayout({ containerRef: listRef });
+
+  return (
+    <List
+      ref={listRef}
+      animatedLayout={animatedLayout}
+      density="compact"
+      edge="padded"
+    >
+      {tasks.map((task) => (
+        <HistoryTaskRow
+          key={task.id}
+          task={task}
+          onSelect={onSelect}
+          onEdit={onEdit}
+          onReopen={onReopen}
+          onSetPriority={onSetPriority}
+          onDelete={onDelete}
+        />
+      ))}
+    </List>
+  );
+}
+
 export function HistoryView({
   tasks,
   onSelect,
@@ -126,19 +170,14 @@ export function HistoryView({
                   {group.tasks.length} completed
                 </span>
               </div>
-              <List density="compact" edge="padded">
-                {group.tasks.map((task) => (
-                  <HistoryTaskRow
-                    key={task.id}
-                    task={task}
-                    onSelect={onSelect}
-                    onEdit={onEdit}
-                    onReopen={onReopen}
-                    onSetPriority={onSetPriority}
-                    onDelete={onDelete}
-                  />
-                ))}
-              </List>
+              <HistoryTaskList
+                tasks={group.tasks}
+                onSelect={onSelect}
+                onEdit={onEdit}
+                onReopen={onReopen}
+                onSetPriority={onSetPriority}
+                onDelete={onDelete}
+              />
             </section>
           ))}
         </div>

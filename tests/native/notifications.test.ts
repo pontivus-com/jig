@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
   androidReminderFingerprint,
+  deliverAndroidTaskReminder,
   isFutureAndroidReminder,
   readAndroidReminderPermission,
   scheduleAndroidTaskReminder,
@@ -82,6 +83,23 @@ function port(options: {
 }
 
 describe("Android reminder scheduling adapter", () => {
+  it("requests an immediate foreground notification for an already-due Task", async () => {
+    const fixture = port();
+    await expect(
+      deliverAndroidTaskReminder(task(), 100000, fixture.port),
+    ).resolves.toBe("display-requested");
+
+    expect(fixture.scheduled[0]).toMatchObject({
+      notifications: [
+        {
+          id: 100000,
+          foreground: true,
+          autoCancel: true,
+        },
+      ],
+    });
+  });
+
   it("reports exact scheduling only when permission and exact settings allow it", async () => {
     const fixture = port();
     await expect(

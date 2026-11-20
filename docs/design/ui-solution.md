@@ -482,6 +482,21 @@ Jig CSS owns only the page-centered header grid, seven Planner tracks, narrow co
 
 Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop and narrow/mobile, **only the dedicated grip is the drag activator**. The Task card body remains normal click/tap/scroll content; completion checkbox, Task action menu, reference and other interactive descendants remain independent. The grip is part of the Task card layout, never an overlay that steals the whole card's pointer surface. The grip/checkbox leading group is vertically centered within the card and does not use first-line alignment as a substitute for control geometry.
 
+### 5.1 Motion ownership and interaction map
+
+Motion is a restrained feedback layer over the existing composition. The event/state meaning is shared across the Linux/Desktop browser and Android application; only the public Astryx surface, input modality or Jig-owned placement changes:
+
+| Event | Linux/Desktop browser | Android application | Owner |
+|---|---|---|---|
+| Destination navigation | Header content/active-indicator transition; hover/focus may apply | Bottom-navigation content/indicator transition; touch press/focus may apply | Astryx controls plus Jig destination composition |
+| Open/close Task or Add workspace | Drawer enter/exit from the right | BottomSheet enter/exit from the bottom | Astryx Drawer/BottomSheet |
+| Save, complete/reopen, delete | Task-card insertion/update/completion/removal feedback | Same card feedback without avoidable layout shift | Jig Task-card/Planner composition |
+| Drag start/slot/drop | Grip/source lift, slot emphasis, invalid feedback and settling | Same through the Android touch grip | Existing drag and operation-feedback owners |
+| Week navigation/Today | Controlled content transition or explicit settle | Same, with current-day WebView scroll on explicit Today; narrow/mobile week surface also accepts deliberate horizontal touch swipe | Planner composition |
+| Sync/reminder/theme/focus state | Subordinate status/metadata/control transition | Same semantic transition in the WebView/native shell | Existing status, Task-row, Theme and Astryx control owners |
+
+Do not animate initial current-day anchoring, healthy-sync loops, protocol phases, reminder Toasts, large destination slides, decorative identity/header/navigation elements or repeated due pulses. Motion must not be the only error/state signal and must never block a mutation or recovery action. The detailed functional and technical contract is JIG-110-FR-32 / JIG-110-SD-42.
+
 ## 6. Required browser/UX validation
 
 | Case | Acceptance |
@@ -513,6 +528,13 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 | In-application brand | one canonical inline Jig wordmark geometry on desktop/narrow; foreground and pin resolve through active theme semantic roles with required contrast; no fixed Light/Dark application-logo switching |
 | Reminder delivery | with granted permission an eligible due reminder creates browser Notification whether visible/hidden/focused/unfocused; no reminder Toast; unsupported/default/denied states do not claim delivery and successful keys do not duplicate |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
+| Motion and reduced motion | eligible events use short interruptible Linux/Desktop-browser and Android-WebView-equivalent feedback; Drawer/BottomSheet/control transitions remain Astryx-owned; Task/Planner/status transitions remain Jig-owned; reduced motion removes travel/scaling/smooth scroll/loops while retaining immediate state, focus and accessible status; initial Planner load and forbidden protocol/decorative motion remain still |
+
+### Narrow/mobile week swipe — design correction
+
+The current Jig raw pointer-event detector is rejected: it relies on a lift-time `pointerup`/duration heuristic, has no movement-phase ownership and can lose the touch when the browser/WebView claims scrolling. Its Task/control/drag-grip start-exclusion boundary is not the defect and is retained: week navigation must still never begin from a Task card, control or drag grip. The replacement uses Astryx's public `usePanGesture` hook with a horizontal axis. Astryx owns touch slop, native `touch-action` negotiation, browser/WebView cancellation and gesture interruption; Jig owns one deliberate-intent threshold (48px of travel, or 24px at 500px/s or faster) and maps one completed horizontal gesture to the existing Previous/Next intent.
+
+The swipe remains an optional accelerator, not the only temporal-navigation path. Only a primary touch press can start it; a mouse or pen drag keeps its ordinary selection/pointer behavior, and a primary press rewrites start-target eligibility so a tap cannot leave stale eligibility behind. It must not begin from Task cards, controls or drag grips; a horizontal drag below the deliberate-intent threshold changes no week; vertical movement remains native Planner scrolling; one completed gesture produces at most one week change; cancellation produces no week change; and reduced motion removes any associated travel while retaining the same immediate week change and accessible Previous/Next controls.
 
 Final production evidence is the running Astryx UI in Playwright/browser screenshots **plus explicit visual-fidelity review against the governed references**. Automated geometry/interaction assertions and screenshot capture are necessary but neither alone closes hierarchy, density, prominence or design-language fidelity. Reference assets govern product composition, not pixel-perfect Astryx internals.
 

@@ -102,6 +102,17 @@ describe("repository status presentation", () => {
     });
   });
 
+  it("escalates remote sync failure above a pending local snapshot", () => {
+    expect(
+      repositoryStatusPresentation(configured("sync-issue", "pending")),
+    ).toMatchObject({
+      key: "sync-issue",
+      label: "Needs attention",
+      icon: "error",
+      iconColor: "error",
+    });
+  });
+
   it("uses one Syncing state while retaining exact pending/retrying diagnostics", () => {
     expect(repositoryStatusPresentation(configured("pending"))).toMatchObject({
       key: "pending",

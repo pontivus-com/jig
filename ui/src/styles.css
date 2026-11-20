@@ -35,6 +35,62 @@ body {
   font-family: var(--font-family-body);
 }
 
+@keyframes jig-destination-content-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jig-week-content-enter-previous {
+  from {
+    opacity: 0;
+    transform: translateX(-0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes jig-week-content-enter-next {
+  from {
+    opacity: 0;
+    transform: translateX(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes jig-week-content-enter-today {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jig-attention-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -46,12 +102,21 @@ body {
   background: var(--color-background-body);
 }
 
+.jig-app-shell-motion-ready {
+  transition:
+    background-color var(--duration-fast-max) var(--ease-standard),
+    color var(--duration-fast-max) var(--ease-standard);
+}
+
 .jig-content-frame {
   width: 100%;
   min-width: 0;
   height: 100%;
   min-height: 0;
   overflow: auto;
+  transition:
+    background-color var(--duration-fast-max) var(--ease-standard),
+    color var(--duration-fast-max) var(--ease-standard);
 }
 
 .jig-content {
@@ -61,11 +126,20 @@ body {
   padding: 0;
 }
 
+.jig-content-configured-transition {
+  animation: jig-destination-content-enter var(--duration-fast-max)
+    var(--ease-standard) both;
+}
+
   .jig-app-header {
     width: 100%;
     margin: 0;
     border-block-end: var(--border-width) solid var(--color-border);
     background: var(--color-background-body);
+    transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      border-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
   }
 
   .jig-app-header-desktop {
@@ -173,6 +247,12 @@ body {
     white-space: nowrap;
   }
 
+  .jig-header-nav-item {
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+  }
+
   .jig-header-nav-active {
     background: var(--jig-state-nav-active-bg);
     color: var(--jig-state-nav-active-text);
@@ -186,7 +266,7 @@ body {
     height: auto;
     min-height: 0;
     grid-template-columns: minmax(0, 1fr);
-    padding: env(safe-area-inset-top, 0px) 0 0;
+    padding: 0;
   }
 
   .jig-header-mobile-application-row {
@@ -286,6 +366,10 @@ body {
     border-radius: var(--radius-full);
     background: var(--color-background-muted);
     font-weight: var(--font-weight-bold);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-status-synchronized,
@@ -318,6 +402,10 @@ body {
     background: transparent;
     box-shadow: none;
     font-weight: var(--font-weight-semibold);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
   }
 
   .jig-status-indicator.jig-status-synchronized,
@@ -351,6 +439,9 @@ body {
     padding: 0;
     border-radius: var(--radius-element);
     color: var(--color-text-secondary);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-mobile-nav-content {
@@ -366,6 +457,9 @@ body {
     min-height: 28px;
     place-items: center;
     border-radius: var(--radius-full);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-mobile-nav-label {
@@ -448,6 +542,21 @@ body {
     padding-block-end: var(--spacing-3);
   }
 
+  .jig-week-board-previous {
+    animation: jig-week-content-enter-previous var(--duration-fast-max)
+      var(--ease-standard) both;
+  }
+
+  .jig-week-board-next {
+    animation: jig-week-content-enter-next var(--duration-fast-max)
+      var(--ease-standard) both;
+  }
+
+  .jig-week-board-today {
+    animation: jig-week-content-enter-today var(--duration-fast-max)
+      var(--ease-standard) both;
+  }
+
   .jig-week-column {
     width: auto;
     min-width: 0;
@@ -474,6 +583,7 @@ body {
     gap: var(--spacing-2);
     padding: var(--spacing-2);
     border-block-end: var(--border-width) solid transparent;
+    transition: border-color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-week-column-today .jig-week-column-header {
@@ -495,6 +605,7 @@ body {
   .jig-week-date-signifier strong {
     min-width: 0;
     white-space: nowrap;
+    transition: color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-date-add {
@@ -533,7 +644,9 @@ body {
 
   .jig-date-drop-zone {
     position: relative;
-    transition: background-color var(--duration-fast-min) var(--ease-standard);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
   }
 
   .jig-date-drop-zone-active,
@@ -563,6 +676,11 @@ body {
     border: var(--border-width) solid var(--jig-task-border, var(--color-border));
     border-radius: var(--radius-element);
     background: var(--jig-task-surface, var(--color-background-surface));
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-standard);
   }
 
   .jig-task-card:hover {
@@ -596,6 +714,8 @@ body {
 
   .jig-task-card-dragging {
     opacity: 0.4;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-low);
   }
 
   .jig-task-drag-handle {
@@ -610,6 +730,10 @@ body {
     cursor: grab;
     touch-action: none;
     user-select: none;
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-standard);
   }
 
   .jig-task-drag-handle:hover {
@@ -620,6 +744,7 @@ body {
   .jig-task-drag-handle:active {
     cursor: grabbing;
     background: var(--jig-state-pressed-bg);
+    transform: scale(0.96);
   }
 
   .jig-task-drop-indicator {
@@ -658,6 +783,7 @@ body {
     border-block-color: var(--jig-state-task-selected-border);
     border-inline-end-color: var(--jig-state-task-selected-border);
     background: var(--jig-state-task-selected-bg);
+    box-shadow: var(--shadow-low);
   }
 
   .jig-task-card-completed {
@@ -673,6 +799,10 @@ body {
       var(--jig-task-surface, var(--color-background-surface)) 88%,
       var(--color-warning-muted) 12%
     );
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
   }
 
   .jig-reminder-due-indicator {
@@ -682,6 +812,15 @@ body {
     color: var(--color-text-warning);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-semibold);
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-reminder-scheduled-indicator,
+  .jig-reminder-notified-indicator {
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-normal);
   }
 
   .jig-task-card-leading {
@@ -829,6 +968,9 @@ body {
   .jig-planner-surface {
     position: relative;
     min-height: 100%;
+    transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
   }
 
   .jig-planner-empty-state {
@@ -854,6 +996,7 @@ body {
     min-height: 8px;
     list-style: none;
     opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
   }
 
   .jig-task-drag-scope[data-jig-drag-active="true"] .jig-task-insertion-slot {
@@ -865,6 +1008,9 @@ body {
     inset-block-start: 50%;
     transform: translateY(-50%);
     opacity: 0;
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
   }
 
   .jig-task-insertion-slot-active .jig-task-drop-indicator {
@@ -882,6 +1028,14 @@ body {
     max-width: 50rem;
     margin-block: 0;
     margin-inline: auto;
+    transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
+  }
+
+  .jig-attention-banner {
+    animation: jig-attention-reveal var(--duration-fast-max)
+      var(--ease-standard) both;
   }
 
   .jig-task-sheet-header {
@@ -1363,8 +1517,8 @@ body {
     }
 
     .jig-app-header-onboarding {
-      min-height: calc(56px + env(safe-area-inset-top, 0px));
-      padding: env(safe-area-inset-top, 0px) var(--spacing-2) 0;
+      min-height: 56px;
+      padding: 0 var(--spacing-2);
     }
 
     .jig-setup {
@@ -1420,6 +1574,10 @@ body {
       border-radius: 0;
       background: transparent;
       box-shadow: none;
+    }
+
+    .jig-content-frame-today-smooth {
+      scroll-behavior: smooth;
     }
 
     .jig-content {
@@ -1520,6 +1678,11 @@ body {
       margin-block-start: var(--spacing-5);
     }
 
+    .jig-history-view,
+    .jig-settings-view {
+      padding-inline: var(--spacing-1);
+    }
+
     .jig-settings-row,
     .jig-settings-section-heading,
     .jig-settings-notifications {
@@ -1605,7 +1768,44 @@ body {
 
 
   @media (prefers-reduced-motion: reduce) {
-    .jig-date-drop-zone {
+    .jig-content-frame {
+      scroll-behavior: auto;
+    }
+
+    .jig-content-configured-transition,
+    .jig-week-board-previous,
+    .jig-week-board-next,
+    .jig-week-board-today,
+    .jig-attention-banner {
+      animation: none;
+    }
+
+    .jig-app-shell,
+    .jig-content-frame,
+    .jig-planner-surface,
+    .jig-history-view,
+    .jig-settings-view {
       transition: none;
+    }
+
+    .jig-header-nav-item,
+    .jig-status-control,
+    .jig-status-indicator,
+    .jig-mobile-nav-item,
+    .jig-mobile-nav-icon,
+    .jig-week-column-header,
+    .jig-week-date-signifier strong,
+    .jig-date-drop-zone,
+    .jig-task-card,
+    .jig-task-drag-handle,
+    .jig-reminder-due-indicator,
+    .jig-task-insertion-slot,
+    .jig-task-insertion-slot .jig-task-drop-indicator {
+      transition: none;
+    }
+
+    .jig-task-card-dragging,
+    .jig-task-drag-handle:active {
+      transform: none;
     }
   }

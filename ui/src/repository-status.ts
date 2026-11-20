@@ -183,6 +183,16 @@ export function repositoryStatusPresentation(
     };
   }
 
+  if (status.repository_status.remote.state === "sync-issue") {
+    return {
+      key: "sync-issue",
+      label: "Needs attention",
+      message: "Saved locally · Sync needs attention.",
+      icon: "error",
+      iconColor: "error",
+    };
+  }
+
   if (status.repository_status.local_git === "pending") {
     return {
       key: "pending",
@@ -225,14 +235,6 @@ export function repositoryStatusPresentation(
         message: "Saved locally and up to date remotely.",
         icon: "success",
         iconColor: "success",
-      };
-    case "sync-issue":
-      return {
-        key: "sync-issue",
-        label: "Needs attention",
-        message: "Saved locally · Sync needs attention.",
-        icon: "error",
-        iconColor: "error",
       };
   }
 }

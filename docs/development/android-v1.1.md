@@ -2,7 +2,7 @@
 
 **Status:** v1.1 implementation support document, amended 2026-11-20 after the bounded remediation was implemented and hosted-certified. J110-IMP-09 remains complete with its detailed historical record lost. J110-IMP-18..20 are complete on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598. J110-IMP-21 now requires focused physical Android confirmation on artifact `14591926175` before the remaining J110-IMP-15 matrix can close. The earlier Samsung SM-S901E / Android 16 session on `222f2fe…` remains partial historical evidence.
 
-**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39 and SD-40; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..21 and J110-IMP-15.
+**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39, SD-40 and SD-42; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..23 and J110-IMP-15.
 
 ## 1. Governed Android baseline
 

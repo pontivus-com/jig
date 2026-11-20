@@ -377,7 +377,7 @@ test("retains governed synchronization-attention evidence without exposing techn
         ready: true,
         repository_path: "/tmp/private/jig-repository",
         repository_status: {
-          local_git: "committed",
+          local_git: "pending",
           remote: {
             state: "sync-issue",
             remote_name: "origin",
@@ -396,6 +396,10 @@ test("retains governed synchronization-attention evidence without exposing techn
   await expect(
     page.getByText("Sync needs attention", { exact: true }),
   ).toBeVisible();
+  await expect(page.locator(".jig-attention-banner")).toHaveCSS(
+    "animation-name",
+    "jig-attention-reveal",
+  );
   await page.screenshot({
     path: testInfo.outputPath("v1.1-sync-attention-planner-desktop.png"),
     fullPage: true,
@@ -471,12 +475,151 @@ test("temporal group stays page-centered in one row and navigation has no select
 
   await page.getByRole("button", { name: "Next week" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
+  await expect(page.locator(".jig-week-board")).toHaveClass(
+    /jig-week-board-next/,
+  );
   await expect(page.locator(".jig-week-column-today")).toHaveCount(0);
   await expect(page.locator('[aria-current="date"]')).toHaveCount(0);
 
   await page.getByRole("button", { name: "Today", exact: true }).click();
   await expect(range).toHaveText(rangeBefore ?? "");
+  await expect(page.locator(".jig-week-board")).toHaveClass(
+    /jig-week-board-today/,
+  );
+  await expect(page.locator(".jig-week-board")).not.toHaveClass(
+    /jig-week-board-(previous|next)/,
+  );
   await expect(page.locator(".jig-week-column-today")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Previous week" }).click();
+  await expect(page.locator(".jig-week-board")).toHaveClass(
+    /jig-week-board-previous/,
+  );
+});
+
+test("narrow Planner maps only deliberate touch swipes to one week change", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 1600 });
+  await createTask(page, "Swipe exclusion task", await browserCivilDate(page));
+  await page.reload();
+  const range = page.locator(".jig-header-week-range");
+  const board = page.locator(".jig-week-board");
+  const rangeBefore = await range.textContent();
+
+  const dispatchGesture = async (options: {
+    readonly moves: Array<readonly [number, number]>;
+    readonly pointerType?: "touch" | "mouse";
+    readonly selector?: string;
+    readonly terminalEvent?: "pointerup" | "pointercancel";
+  }): Promise<void> => {
+    const {
+      moves,
+      pointerType = "touch",
+      selector = ".jig-week-board",
+      terminalEvent = "pointerup",
+    } = options;
+    await page.evaluate(
+      ({ moves: nextMoves, pointerType: nextPointerType, selector: targetSelector, terminalEvent: finalEvent }) => {
+        const target = document.querySelector<HTMLElement>(targetSelector);
+        if (target === null) {
+          throw new Error(`Swipe target is unavailable: ${targetSelector}`);
+        }
+        const startX = 180;
+        const startY = 700;
+        const pointerId = nextPointerType === "mouse" ? 8 : 7;
+        const event = (type: string, clientX: number, clientY: number) =>
+          target.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              pointerId,
+              pointerType: nextPointerType,
+              isPrimary: true,
+              clientX,
+              clientY,
+              buttons:
+                type === "pointerup" || type === "pointercancel" ? 0 : 1,
+            }),
+          );
+        event("pointerdown", startX, startY);
+        let clientX = startX;
+        let clientY = startY;
+        for (const [deltaX, deltaY] of nextMoves) {
+          clientX = startX + deltaX;
+          clientY = startY + deltaY;
+          event("pointermove", clientX, clientY);
+        }
+        event(finalEvent, clientX, clientY);
+      },
+      { moves, pointerType, selector, terminalEvent },
+    );
+  };
+
+  // Task-card starts never initiate week navigation.
+  await dispatchGesture({ moves: [[-96, 4]], selector: ".jig-task-card" });
+  await expect(range).toHaveText(rangeBefore ?? "");
+
+  // A short horizontal drag stays a short drag.
+  await dispatchGesture({ moves: [[-20, 4]] });
+  await expect(range).toHaveText(rangeBefore ?? "");
+
+  // A tap must not leave eligibility behind for a later mouse drag.
+  await dispatchGesture({ moves: [] });
+  await dispatchGesture({
+    moves: [
+      [-32, 2],
+      [-64, 3],
+      [-96, 4],
+    ],
+    pointerType: "mouse",
+  });
+  await expect(range).toHaveText(rangeBefore ?? "");
+
+  // One completed touch gesture with several moves changes exactly one week.
+  await dispatchGesture({
+    moves: [
+      [-32, 2],
+      [-64, 3],
+      [-96, 4],
+    ],
+  });
+  await expect(range).not.toHaveText(rangeBefore ?? "");
+  await expect(board).toHaveClass(/jig-week-board-next/);
+
+  // One gesture back returns to the original week.
+  await dispatchGesture({
+    moves: [
+      [32, 2],
+      [64, 3],
+      [96, 4],
+    ],
+  });
+  await expect(range).toHaveText(rangeBefore ?? "");
+  await expect(board).toHaveClass(/jig-week-board-previous/);
+
+  // A cancelled pan is a no-op.
+  await dispatchGesture({ moves: [[96, 4]], terminalEvent: "pointercancel" });
+  await expect(range).toHaveText(rangeBefore ?? "");
+
+  // A predominantly vertical drag is not a week change.
+  await dispatchGesture({ moves: [[4, 96]] });
+  await expect(range).toHaveText(rangeBefore ?? "");
+
+  // A diagonal drag that is not clearly horizontal is not a week change.
+  await dispatchGesture({ moves: [[40, 56]] });
+  await expect(range).toHaveText(rangeBefore ?? "");
+
+  // Reduced motion keeps the same immediate semantic week change.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await dispatchGesture({
+    moves: [
+      [-32, 2],
+      [-64, 3],
+      [-96, 4],
+    ],
+  });
+  await expect(range).not.toHaveText(rangeBefore ?? "");
+  await expect(board).toHaveClass(/jig-week-board-next/);
 });
 
 test("desktop lanes keep equal widths but content-driven independent heights", async ({
@@ -510,6 +653,63 @@ test("desktop lanes keep equal widths but content-driven independent heights", a
 
   const todayColumn = page.locator(`[data-date="${today}"]`);
   await expect(todayColumn.getByRole("button", { name: /^Add task to / })).toBeVisible();
+});
+
+test("narrow Planner opens with the current day at the top", async ({
+  page,
+}) => {
+  const todayDate = await browserCivilDate(page);
+  for (let index = 0; index < 8; index += 1) {
+    await createTask(page, `Current-day scroll task ${index + 1}`, todayDate);
+  }
+  await page.reload();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+
+  const frame = page.locator(".jig-content-frame");
+  const today = page.locator(".jig-week-column-today");
+  await expect(today).toBeVisible();
+
+  const initialGeometry = await page.evaluate(() => {
+    const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+    const today = document.querySelector<HTMLElement>(
+      ".jig-week-column-today",
+    );
+    if (frame === null || today === null) {
+      throw new Error("Narrow Planner scroll geometry unavailable");
+    }
+    return {
+      frameTop: frame.getBoundingClientRect().top,
+      todayTop: today.getBoundingClientRect().top,
+      scrollTop: frame.scrollTop,
+    };
+  });
+
+  expectNear(initialGeometry.todayTop, initialGeometry.frameTop, 1);
+  expect(initialGeometry.scrollTop).toBeGreaterThan(0);
+
+  await frame.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await expect
+    .poll(() => today.boundingBox())
+    .not.toBeNull();
+  const scrolledUpGeometry = await page.evaluate(() => {
+    const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+    const today = document.querySelector<HTMLElement>(
+      ".jig-week-column-today",
+    );
+    if (frame === null || today === null) {
+      throw new Error("Narrow Planner scroll geometry unavailable");
+    }
+    return {
+      frameTop: frame.getBoundingClientRect().top,
+      todayTop: today.getBoundingClientRect().top,
+    };
+  });
+  expect(scrolledUpGeometry.todayTop).toBeGreaterThan(
+    scrolledUpGeometry.frameTop,
+  );
 });
 
 test("global Add exposes the full form and derives the current weekday in the displayed week", async ({
@@ -1506,6 +1706,18 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
         expectNear(box.x, (width - expectedWidth) / 2, 1);
       }
 
+      if (width < 1168) {
+        const padding = await page.locator(selector).evaluate((element) => {
+          const style = getComputedStyle(element);
+          return {
+            left: Number.parseFloat(style.paddingInlineStart),
+            right: Number.parseFloat(style.paddingInlineEnd),
+          };
+        });
+        expect(padding.left).toBeGreaterThan(0);
+        expect(padding.right).toBe(padding.left);
+      }
+
       if (destination === "Settings") {
         const settings = page.locator(".jig-settings-sections");
         await expect(settings).toBeVisible();
@@ -1732,7 +1944,7 @@ test("Settings leads with continuity and keeps Git mechanics in Diagnostics", as
   ).toBeVisible();
   await expect(dataSync).not.toContainText("/tmp/jig-playwright-remote.git");
   await expect(
-    dataSync.getByText("Syncing", { exact: true }),
+    dataSync.getByText(/^(Syncing|Up to date)$/),
   ).toBeVisible();
   await expect(dataSync.getByText("Local Git", { exact: true }))
     .toHaveCount(0);
@@ -1832,6 +2044,10 @@ test("Theme and Appearance controls exist only in Settings and apply independent
   ]);
   await page.getByRole("option", { name: "Dracula", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-astryx-theme", "dracula");
+  const themeTransitionProperties = await page.locator(".jig-app-shell").evaluate(
+    (element) => getComputedStyle(element).transitionProperty,
+  );
+  expect(themeTransitionProperties).toContain("background-color");
 
   const appearance = page.getByText("Appearance", { exact: true });
   await expect(appearance).toBeVisible();

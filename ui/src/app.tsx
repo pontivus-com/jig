@@ -11,6 +11,7 @@ import { Theme } from "@astryxdesign/core/theme";
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
@@ -40,13 +41,15 @@ import {
   submitTaskCommand,
   triggerSync,
 } from "./runtime";
-import { Planner } from "./planner";
+import { Planner, type WeekTransitionDirection } from "./planner";
 import {
   CompactApplicationNavigation,
   PlannerHeader,
-  type Destination,
 } from "./planner-header";
-import { ReminderMonitor, useReminderClock } from "./reminder";
+import {
+  ReminderMonitor,
+  useReminderClock,
+} from "./reminder";
 import { repositoryStatusPresentation } from "./repository-status";
 import { SettingsView } from "./settings";
 import {
@@ -72,7 +75,17 @@ import {
 import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
-import { installNativeActiveListener } from "./native/app-lifecycle";
+import {
+  installNativeActiveListener,
+  installNativeBackButtonListener,
+} from "./native/app-lifecycle";
+import { NativeSystemBars } from "./native/system-bars";
+import {
+  initialDestinationNavigation,
+  navigateDestination as navigateDestinationState,
+  previousDestination,
+  type Destination,
+} from "./navigation";
 import {
   readGitHubCapabilityStatus,
   readGitHubReconnectState,
@@ -108,9 +121,15 @@ function ApplicationShell({
   banner,
   children,
 }: ApplicationShellProps): React.ReactElement {
+  const [motionReady, setMotionReady] = useState(false);
+
+  useEffect(() => {
+    setMotionReady(true);
+  }, []);
+
   return (
     <AppShell
-      className="jig-app-shell"
+      className={motionReady ? "jig-app-shell jig-app-shell-motion-ready" : "jig-app-shell"}
       topNav={topNav}
       mobileNav={false}
       banner={banner}
@@ -154,10 +173,21 @@ function ConfiguredApp({
   onThemePresetChange,
   onAppearanceModeChange,
 }: ConfiguredAppProps): React.ReactElement {
+  const [, setReminderDeliveryRevision] = useState(0);
+  const onReminderNotified = useCallback(() => {
+    setReminderDeliveryRevision((revision) => revision + 1);
+  }, []);
   const reminderNow = useReminderClock();
-  const [destination, setDestination] = useState<Destination>("planner");
+  const [destinationNavigation, setDestinationNavigation] = useState(
+    initialDestinationNavigation,
+  );
+  const [destinationTransition, setDestinationTransition] =
+    useState<Destination | null>(null);
   const [plannerState, setPlannerState] =
     useState<PlannerState>(initialPlannerState);
+  const [todayScrollRequest, setTodayScrollRequest] = useState(0);
+  const [weekTransitionDirection, setWeekTransitionDirection] =
+    useState<WeekTransitionDirection | null>(null);
   const [observedToday, setObservedToday] = useState(todayCivilDate);
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
@@ -320,6 +350,7 @@ function ConfiguredApp({
 
       const previousCurrentWeek = startOfWeekMonday(observedToday);
       const nextCurrentWeek = startOfWeekMonday(nextToday);
+      setWeekTransitionDirection(null);
       setPlannerState((current) =>
         current.displayedWeekStart === previousCurrentWeek &&
         previousCurrentWeek !== nextCurrentWeek
@@ -515,9 +546,57 @@ function ConfiguredApp({
   }, []);
 
   const navigateDestination = useCallback((next: Destination): void => {
-    setDestination(next);
+    if (destinationNavigation.current !== next) {
+      setDestinationTransition(next);
+    }
+    setDestinationNavigation((current) =>
+      navigateDestinationState(current, next),
+    );
     setWorkspace({ mode: "closed" });
+  }, [destinationNavigation]);
+
+  const handleBack = useCallback((): boolean => {
+    if (workspace.mode !== "closed") {
+      closeWorkspace();
+      return true;
+    }
+
+    const previous = previousDestination(destinationNavigation);
+    if (previous === null) {
+      return false;
+    }
+
+    setDestinationTransition(previous.current);
+    setDestinationNavigation(previous);
+    return true;
+  }, [closeWorkspace, destinationNavigation, workspace.mode]);
+
+  const backHandlerRef = useRef<() => boolean>(() => false);
+  backHandlerRef.current = handleBack;
+
+  useEffect(() => {
+    let disposed = false;
+    let cleanup: (() => Promise<void>) | null = null;
+
+    void installNativeBackButtonListener(() => backHandlerRef.current()).then(
+      (remove) => {
+        if (disposed) {
+          void remove();
+          return;
+        }
+        cleanup = remove;
+      },
+    );
+
+    return () => {
+      disposed = true;
+      if (cleanup !== null) {
+        void cleanup();
+      }
+    };
   }, []);
+
+  const destination = destinationNavigation.current;
 
   const syncNow = useCallback(async (): Promise<void> => {
     if (isOperating) {
@@ -593,22 +672,32 @@ function ConfiguredApp({
   }, [githubReconnect !== null, refreshOperationalState]);
 
   const previousWeek = useCallback((): void => {
+    setWeekTransitionDirection("previous");
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
     }));
   }, []);
 
   const nextWeek = useCallback((): void => {
+    setWeekTransitionDirection("next");
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, 7),
     }));
   }, []);
 
   const goToToday = useCallback((): void => {
+    const todayWeekStart = startOfWeekMonday(todayCivilDate());
+    setWeekTransitionDirection(
+      layoutMode === "narrow" ||
+        plannerState.displayedWeekStart === todayWeekStart
+        ? null
+        : "today",
+    );
     setPlannerState({
-      displayedWeekStart: startOfWeekMonday(todayCivilDate()),
+      displayedWeekStart: todayWeekStart,
     });
-  }, []);
+    setTodayScrollRequest((current) => current + 1);
+  }, [layoutMode, plannerState.displayedWeekStart]);
 
   const repositoryStatus = repositoryStatusPresentation(status);
   const statusClassName =
@@ -648,6 +737,7 @@ function ConfiguredApp({
       description={operationError}
       container="section"
       collapsible={false}
+      className="jig-attention-banner"
     />
   ) : repositoryStatus.key === "sync-issue" &&
     destination !== "settings" ? (
@@ -657,6 +747,7 @@ function ConfiguredApp({
       description={repositoryStatus.message}
       container="section"
       collapsible={false}
+      className="jig-attention-banner"
       endContent={
         <Button
           label="Open Settings"
@@ -715,6 +806,7 @@ function ConfiguredApp({
               title="Jig could not load local planning data"
               description={loadError}
               collapsible={false}
+              className="jig-attention-banner"
             />
             <Button
               label="Retry"
@@ -728,6 +820,12 @@ function ConfiguredApp({
       </div>
     ) : destination === "planner" ? (
       <Planner
+        focusCurrentDayOnMount={layoutMode === "narrow"}
+        todayScrollRequest={todayScrollRequest}
+        weekTransitionDirection={weekTransitionDirection}
+        enableWeekSwipe={layoutMode === "narrow"}
+        onPreviousWeek={previousWeek}
+        onNextWeek={nextWeek}
         tasks={tasks}
         recurrences={canonical.recurrences}
         now={reminderNow}
@@ -823,9 +921,27 @@ function ConfiguredApp({
           }
           banner={durableBanner ?? undefined}
         >
-          <div className="jig-content-frame">
+          <div
+            className={[
+              "jig-content-frame",
+              layoutMode === "narrow" && todayScrollRequest > 0
+                ? "jig-content-frame-today-smooth"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <div
-              className="jig-content jig-content-configured"
+              key={destination}
+              className={[
+                "jig-content",
+                "jig-content-configured",
+                destinationTransition === destination
+                  ? "jig-content-configured-transition"
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               onPointerDown={dismissWorkspaceFromContent}
             >
               {content}
@@ -886,7 +1002,11 @@ function ConfiguredApp({
           }}
         />
 
-        <ReminderMonitor tasks={tasks} now={reminderNow} />
+        <ReminderMonitor
+          tasks={tasks}
+          now={reminderNow}
+          onReminderNotified={onReminderNotified}
+        />
     </>
   );
 }
@@ -952,6 +1072,7 @@ export function App(): React.ReactElement {
 
   return (
     <Theme theme={themeFor(themePreset)} mode={appearanceMode}>
+      <NativeSystemBars />
       <LayerProvider>
         {setupStatus?.mode === "configured" ? (
           <ConfiguredApp

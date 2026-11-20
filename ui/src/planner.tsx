@@ -8,7 +8,15 @@ import type { Priority, Task } from "../../src/core/task";
 import { todayCivilDate } from "./dates";
 import { WeekView } from "./week";
 
+export type WeekTransitionDirection = "previous" | "next" | "today";
+
 export interface PlannerProps {
+  readonly focusCurrentDayOnMount: boolean;
+  readonly todayScrollRequest: number;
+  readonly weekTransitionDirection: WeekTransitionDirection | null;
+  readonly enableWeekSwipe: boolean;
+  readonly onPreviousWeek: () => void;
+  readonly onNextWeek: () => void;
   readonly tasks: readonly Task[];
   readonly recurrences: readonly RecurrenceSeries[];
   readonly now: Date;
@@ -50,6 +58,12 @@ export function Planner(props: PlannerProps): React.ReactElement {
         </div>
       ) : null}
       <WeekView
+        focusCurrentDayOnMount={props.focusCurrentDayOnMount}
+        todayScrollRequest={props.todayScrollRequest}
+        weekTransitionDirection={props.weekTransitionDirection}
+        enableWeekSwipe={props.enableWeekSwipe}
+        onPreviousWeek={props.onPreviousWeek}
+        onNextWeek={props.onNextWeek}
         tasks={props.tasks}
         recurrences={props.recurrences}
         now={props.now}

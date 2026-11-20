@@ -107,6 +107,29 @@ test("due reminder uses the service-worker delivery path once and edited time ge
   await expect.poll(async () => (await deliveredKeys(page)).length).toBe(2);
 });
 
+test("future reminder card exposes the scheduled lifecycle", async ({
+  page,
+}) => {
+  await apiCommand(page, {
+    type: "create",
+    title: "Future reminder",
+    scheduled_date: civilDate(reminderStart()),
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: "09:01",
+  });
+  await page.reload();
+
+  const card = page
+    .getByText("Future reminder", { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  await expect(
+    card.getByText("Reminder scheduled", { exact: true }),
+  ).toBeVisible();
+});
+
 test("a reminder already due before this browser session remains visible and gets one catch-up delivery attempt", async ({
   page,
 }) => {
@@ -141,10 +164,12 @@ test("a reminder already due before this browser session remains visible and get
   const pastCard = page
     .getByText("Past reminder", { exact: true })
     .locator("xpath=ancestor::li[1]");
-  await expect(pastCard).toHaveClass(/jig-task-card-reminder-due/);
-  await expect(pastCard.getByText("Reminder due", { exact: true })).toBeVisible();
-
   await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
+  await page.reload();
+  await expect(
+    pastCard.getByText("Reminder notified", { exact: true }),
+  ).toBeVisible();
+  await expect(pastCard).not.toHaveClass(/jig-task-card-reminder-due/);
   await page.clock.runFor(60_000);
   await expect.poll(async () => (await deliveredKeys(page)).length).toBe(1);
 });
@@ -171,9 +196,7 @@ test("an open Planner enters reminder-due attention when local time crosses the 
 
   await page.clock.runFor(60_000);
 
-  await expect(card).toHaveClass(/jig-task-card-reminder-due/);
-  await expect(card.getByText("Reminder due", { exact: true })).toBeVisible();
-
+  await expect(card).not.toHaveClass(/jig-task-card-reminder-due/);
   const task = await taskByTitle(page, "Open app boundary");
   const expectedKey = [
     "jig-reminder-delivered:",
@@ -184,4 +207,8 @@ test("an open Planner enters reminder-due attention when local time crosses the 
   await expect
     .poll(() => page.evaluate((key) => localStorage.getItem(key), expectedKey))
     .toBe("1");
+  await expect(
+    card.getByText("Reminder notified", { exact: true }),
+  ).toBeVisible();
+  await expect(card).not.toHaveClass(/jig-task-card-reminder-due/);
 });

@@ -7,6 +7,11 @@ import {
 import type { Task } from "../../src/core/task";
 import { isReminderDue } from "../../src/core/reminder";
 import {
+  deliverAndroidTaskReminder,
+  listenForAndroidReminderDisplay,
+} from "./native/notifications";
+import { allocateAndroidReminderId } from "./native/reminder-registry";
+import {
   browserNotificationState,
   displayBrowserNotification,
   prepareBrowserNotificationServiceWorker,
@@ -16,7 +21,13 @@ import { todayCivilDate } from "./dates";
 const REMINDER_INTERVAL_MS = 30_000;
 const REMINDER_KEY_PREFIX = "jig-reminder-delivered:";
 
-function reminderKey(task: Task): string | null {
+export type ReminderLifecycle =
+  | "none"
+  | "scheduled"
+  | "due"
+  | "notified";
+
+export function reminderDeliveryKey(task: Task): string | null {
   if (task.reminder_time === null) {
     return null;
   }
@@ -54,12 +65,40 @@ function wasDelivered(key: string): boolean {
   }
 }
 
-function markDelivered(key: string): void {
+export function markReminderNotified(key: string): void {
   try {
     localStorage.setItem(key, "1");
   } catch {
-    // Suppression persistence is best effort and never affects Task state.
+    // Presentation bookkeeping is best effort and never affects Task state.
   }
+}
+
+export function isReminderNotified(task: Task): boolean {
+  const key = reminderDeliveryKey(task);
+  return key !== null && wasDelivered(key);
+}
+
+function isFutureOrCurrentDate(task: Task, now: Date): boolean {
+  return task.scheduled_date >= todayCivilDate(now);
+}
+
+export function useReminderLifecycle(
+  task: Task,
+  now: Date,
+): ReminderLifecycle {
+  const notified = isReminderNotified(task);
+
+  if (
+    task.completed_at !== null ||
+    task.reminder_time === null ||
+    !isFutureOrCurrentDate(task, now)
+  ) {
+    return "none";
+  }
+  if (isReminderDue(task, now)) {
+    return notified ? "notified" : "due";
+  }
+  return "scheduled";
 }
 
 export function useReminderClock(): Date {
@@ -92,11 +131,111 @@ export function useReminderClock(): Date {
 export function ReminderMonitor({
   tasks,
   now,
+  onReminderNotified,
 }: Readonly<{
   tasks: readonly Task[];
   now: Date;
+  onReminderNotified: () => void;
 }>): null {
   const attemptingKeys = useRef(new Set<string>());
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
+  const nativeListenerReady = useRef<Promise<boolean> | null>(null);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    let active = true;
+    let listener: { remove: () => Promise<void> } | null = null;
+    const ready = listenForAndroidReminderDisplay((notification) => {
+      const extra =
+        notification.extra !== null &&
+        typeof notification.extra === "object" &&
+        !Array.isArray(notification.extra)
+          ? Object.fromEntries(Object.entries(notification.extra))
+          : null;
+      const taskId =
+        extra !== null && typeof extra.jig_task_id === "string"
+          ? extra.jig_task_id
+          : null;
+      const fingerprint =
+        extra !== null &&
+        typeof extra.jig_reminder_fingerprint === "string"
+          ? extra.jig_reminder_fingerprint
+          : null;
+      const task = tasksRef.current.find(
+        (candidate) =>
+          candidate.id === taskId &&
+          reminderDeliveryKey(candidate) !== null &&
+          `${candidate.scheduled_date}|${candidate.reminder_time}` ===
+            fingerprint,
+      );
+      const key = task === undefined ? null : reminderDeliveryKey(task);
+      if (key !== null) {
+        markReminderNotified(key);
+        onReminderNotified();
+        attemptingKeys.current.delete(key);
+      }
+    }).then((handle) => {
+      if (!active) {
+        void handle.remove();
+        return false;
+      }
+      listener = handle;
+      return true;
+    }).catch(() => false);
+    nativeListenerReady.current = ready;
+
+    return () => {
+      active = false;
+      if (listener !== null) {
+        void listener.remove();
+      }
+    };
+  }, [onReminderNotified]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    const ready = nativeListenerReady.current;
+    if (ready === null) {
+      return;
+    }
+    void ready.then((listening) => {
+      if (!listening) {
+        return;
+      }
+      for (const task of tasks) {
+        if (!isReminderDue(task, now)) {
+          continue;
+        }
+        const key = reminderDeliveryKey(task);
+        if (
+          key === null ||
+          wasDelivered(key) ||
+          attemptingKeys.current.has(key)
+        ) {
+          continue;
+        }
+        attemptingKeys.current.add(key);
+        void allocateAndroidReminderId()
+          .then((notificationId) =>
+            deliverAndroidTaskReminder(task, notificationId),
+          )
+          .then((outcome) => {
+            if (outcome !== "display-requested") {
+              attemptingKeys.current.delete(key);
+            }
+          })
+          .catch(() => {
+            attemptingKeys.current.delete(key);
+          });
+      }
+    });
+  }, [now, tasks]);
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -116,7 +255,7 @@ export function ReminderMonitor({
         continue;
       }
 
-      const key = reminderKey(task);
+      const key = reminderDeliveryKey(task);
       if (
         key === null ||
         wasDelivered(key) ||
@@ -132,7 +271,8 @@ export function ReminderMonitor({
         tag: key,
       }).then((outcome) => {
         if (outcome === "displayed") {
-          markDelivered(key);
+          markReminderNotified(key);
+          onReminderNotified();
         }
       }).finally(() => {
         attemptingKeys.current.delete(key);

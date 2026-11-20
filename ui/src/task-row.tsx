@@ -10,9 +10,9 @@ import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
 import { useRef, type Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
-import { isReminderDue } from "../../src/core/reminder";
 import { formatReminderTime } from "./dates";
 import { JigIcon } from "./jig-icons";
+import { useReminderLifecycle } from "./reminder";
 import { recurrenceSummary } from "./task-editor";
 
 export interface TaskRowProps {
@@ -311,7 +311,8 @@ export function TaskRow({
   onMoveDown,
 }: TaskRowProps): React.ReactElement {
   const completed = task.completed_at !== null;
-  const reminderDue = isReminderDue(task, now);
+  const reminderLifecycle = useReminderLifecycle(task, now);
+  const reminderDue = reminderLifecycle === "due";
 
   return (
     <ListItem
@@ -367,10 +368,29 @@ export function TaskRow({
             </span>
           </div>
           <TaskMetadata task={task} recurrenceSeries={recurrenceSeries} />
-          {reminderDue ? (
-            <span className="jig-reminder-due-indicator" aria-label="Reminder due">
+          {reminderLifecycle === "scheduled" ? (
+            <span
+              className="jig-reminder-due-indicator jig-reminder-scheduled-indicator"
+              aria-label="Reminder scheduled"
+            >
               <Icon icon="clock" size="xsm" color="inherit" />
-              Reminder due
+              Reminder scheduled
+            </span>
+          ) : reminderLifecycle === "due" ? (
+            <span
+              className="jig-reminder-due-indicator"
+              aria-label="Reminder due; reminder time has passed"
+            >
+              <Icon icon="clock" size="xsm" color="inherit" />
+              Reminder due · time passed
+            </span>
+          ) : reminderLifecycle === "notified" ? (
+            <span
+              className="jig-reminder-due-indicator jig-reminder-notified-indicator"
+              aria-label="Reminder due; notification displayed"
+            >
+              <Icon icon="clock" size="xsm" color="inherit" />
+              Reminder notified
             </span>
           ) : null}
         </div>

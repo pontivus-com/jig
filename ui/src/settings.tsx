@@ -147,6 +147,7 @@ export function SettingsView({
           title="Operation failed"
           description={operationError}
           collapsible={false}
+          className="jig-attention-banner"
         />
       )}
 

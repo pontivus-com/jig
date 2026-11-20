@@ -1,6 +1,6 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** POST-REMEDIATION NON-DEVICE CERTIFIED / J110-IMP-09 + J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — exact executable/certification head `3b60ad938f2173521c4eb2aa8b59603a15d930b1` passed permanent Verify `44652277552` / #1598 across Linux/browser, Android build certification and API-24 instrumentation. The hosted matrix passed 41/41 core/integration/architecture files (261/261 tests), production build, browser bootstrap, 79/79 real-browser tests, Android static/build/FLOSS/F-Droid checks and 5/5 API-24 instrumentation tests. Governed browser evidence artifact `14591328349` has been explicitly reviewed. Android artifact `14591926175` contains the current physical candidate APK. IMP-21 now remains open only for focused physical Android confirmation; J110-IMP-15 and live Linux/Desktop GitHub acceptance issue #31 remain open.
+**Status:** POST-REMEDIATION NON-DEVICE CERTIFIED / J110-IMP-09 + J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION ATTEMPTED AND BLOCKED / J110-IMP-23 NON-DEVICE CHECKS PASS, PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — exact executable/certification head `3b60ad938f2173521c4eb2aa8b59603a15d930b1` passed permanent Verify `44652277552` / #1598 across Linux/browser, Android build certification and API-24 instrumentation. The hosted matrix passed 41/41 core/integration/architecture files (261/261 tests), production build, browser bootstrap, 79/79 real-browser tests, Android static/build/FLOSS/F-Droid checks and 5/5 API-24 instrumentation tests. Governed browser evidence artifact `14591328349` has been explicitly reviewed. Android artifact `14591926175` was physically launched on the connected Samsung SM-S901E: compact-shell and past-date rejection checks passed, but one-off and recurring Task creation both failed with `Illegal invocation`, so IMP-21 and J110-IMP-15 remain open. Live Linux/Desktop GitHub acceptance issue #31 remains open.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
@@ -18,7 +18,7 @@
 - Android API-24 instrumentation: `cd android && ./gradlew :app:connectedDebugAndroidTest` ended **`BUILD SUCCESSFUL`**.
 - `package.json.version` remains `1.0.6` by design; the `1.1.0` version transition remains owned by the later `release/v1.1.0` metadata PR.
 
-This candidate remains valid provenance for the gates it actually passed, but it is **not** the current release-candidate lineage after later executable changes. J110-IMP-09 remains complete, but the 2026-11-20 executable/session evidence and the amended IMP-18..21 authority supersede this baseline for final certification.
+This candidate remains valid provenance for the gates it actually passed, but it is **not** the current release-candidate lineage after later executable changes. J110-IMP-09 remains complete, but the 2026-11-20 executable/session evidence and the amended IMP-18..23 authority supersede this baseline for final certification.
 
 ## Current post-remediation certified candidate — 2026-11-20
 
@@ -31,6 +31,32 @@ This candidate remains valid provenance for the gates it actually passed, but it
 - API-24 runtime: **PASS** — Android Emulator 37.3.10 booted with `ANDROID_I_WANT_MY_TCG=yes`; 5/5 instrumentation tests completed; Gradle ended `BUILD SUCCESSFUL`.
 - The TCG environment flag is a narrow hosted-runner compatibility correction. Emulator 37.3.10 had begun rejecting the action's software `-accel off` fallback before instrumentation; the prior product/test code was not implicated.
 - J110-IMP-18, IMP-19 and IMP-20 are **COMPLETE**. J110-IMP-21 is **IN PROGRESS** only for focused physical Android confirmation.
+
+### Local follow-up correction — mobile header safe-area inset
+
+- The focused physical review found a redundant Android top safe-area inset above the mobile Jig logo. The follow-up source correction removes that duplicate inset from the narrow application and onboarding headers; the governed mobile application row remains 52px.
+- Initial local header-only rebuild: SHA-256 `128bc37c2c2a10024d2b665b92a5ad74336086479f154a5d845de1d8fb733571`.
+- Connected Samsung SM-S901E verification: application row measured **52px**, narrow header computed top padding **0px**, and the captured screen shows no empty band above the Jig logo.
+- This is a new executable change after certified candidate `3b60ad…`; it requires a fresh hosted Verify and exact APK artifact before it can amend release-candidate certification. The `Illegal invocation` failure remains recorded against the older hosted artifact until that new exact artifact is certified.
+- The same local follow-up APK also contains the native UUID-callback correction: physical one-off creation, Weekly recurring creation through the end-date form, and restart persistence all passed; the error did not recur. Local APK SHA-256 is `2755064c364fb1e54b958d6a32848510037cd651323e826fbd36a928606bf338`.
+- The final local follow-up also adds the mobile History/Settings inset correction. On Samsung SM-S901E, both destinations measured `padding-inline-start/end: 4px`, matching the narrow Planner track inset; final local APK SHA-256 is `e5ea7fb1b229adfcdbc39f44e6285af858fcbc00a799aeafcb103240e489181c`.
+- The latest local follow-up adds narrow Planner current-day anchoring. On Samsung SM-S901E, Planner launch/relaunch measured the current-day section at the content viewport top with `scrollTop: 293.33px`; an active downward swipe exposed the preceding Monday–Thursday sections. Final local APK SHA-256 is `b7d86d3355ed5d41bf8b2cd77364c2f6182fa38584fba73f795deb5de02e12db`.
+- The latest local follow-up adds the reminder lifecycle correction. Future cards show `Reminder scheduled`; elapsed incomplete current-day reminders show `Reminder due · time passed`; after the browser service-worker or Android local-notification adapter reports display, the card shows `Reminder notified`. Android already-due reminders now request an immediate foreground notification with an explicitly non-exact request, avoiding an unnecessary exact-alarm settings detour.
+- On Samsung SM-S901E / Android 16, the connected foreground app produced a real `Jig reminder` notification for the already-due `Audit Workflow` Task while the app was open; returning to Jig showed `Reminder notified` on the card. Evidence screenshots: `/tmp/jig-reminder-after-rebuild.png` and `/tmp/jig-reminder-notified-card.png`. Final local APK SHA-256 is `f3ddc820d7519a7aff32841e3dda1e886eaba2f4db1e1041c5dc20d79d02387f`.
+- The latest local follow-up adds Android Back navigation through the existing destination owner: Back returns Settings → History → Planner, closes the Task workspace after Android first dismisses the focused keyboard, and exits at the Planner root. The installed local APK SHA-256 is `e28953853c242fd68ab41e533ff40567cddf57b7f4d8d5eccf52c37fe538141f`; source tests/typecheck passed at 42 files / 264 tests. Hosted re-certification remains required for this executable change.
+- Hosted re-certification is still required before this local result can close IMP-21/IMP-15; issue #31 live Linux/Desktop acceptance and the remaining physical synchronization/notification matrix remain open.
+
+### Local follow-up correction — Android system-bar appearance
+
+- Android now applies the resolved Astryx Light/Dark/System mode to native status/navigation-bar indicator contrast through the narrow `JigSystemBars` adapter.
+- Physical Samsung SM-S901E verification passed while the device remained Dark: Jig Light produced light-indicator window flags (`vsysui=2010`), Jig Dark produced `vsysui=1612`, and System followed the device's dark mode with `vsysui=1612`.
+- Local debug APK SHA-256: `54bf1cefae429196e7622bfdc6cf33e544b0853ecd927760fb443db0d8cc6237`. Hosted re-certification remains required.
+
+### Local follow-up correction — notified reminder card highlight
+
+- The Task card warning highlight now represents unresolved elapsed reminder attention only; it is removed when the lifecycle reaches `Reminder notified`, while the lifecycle label remains visible.
+- Browser reminder coverage passed 12/12 tests. On Samsung SM-S901E / Android 16, both physically visible `Reminder notified` cards had no `jig-task-card-reminder-due` class.
+- Local debug APK SHA-256: `e656f2751c243f245c54b307285b4975b5b4aacf3ad283c318383369f7f79440`. Hosted re-certification remains required.
 
 ## Current executable / physical-session evidence — 2026-11-20
 
@@ -51,7 +77,7 @@ This candidate remains valid provenance for the gates it actually passed, but it
 3. explicit current/future scheduling rule plus past-date rejection feedback;
 4. recurring rollover non-accumulation.
 
-These findings were governed by J110-IMP-18..21. IMP-18..20 are now implemented/non-device certified; IMP-21 owns the remaining focused physical confirmation. They did not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture or dnd-kit framework ownership.
+These findings were governed by J110-IMP-18..23. IMP-18..20 are now implemented/non-device certified; IMP-21 owns the remaining focused physical confirmation, IMP-22 owns the newly documented motion implementation and IMP-23 owns the Astryx week-swipe replacement whose physical acceptance is still open. They did not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture or dnd-kit framework ownership.
 
 ## Historical pre-remediation candidate
 
@@ -134,9 +160,9 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 
 J110-IMP-18, IMP-19 and IMP-20 are implemented and non-device certified. Remaining order:
 
-1. Complete the focused **J110-IMP-21 physical Android confirmation** on APK artifact `14591926175`: compact header/title/height, readable interactive labels, grip/checkbox centering, past-date rejection feedback, recurrence non-accumulation in a controlled scenario, restart persistence and synchronization continuity.
-2. Update the physical evidence disposition and close IMP-21 if those checks pass.
-3. Complete the remaining **J110-IMP-15** physical/native matrix. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
+1. Produce a fresh hosted-certified artifact containing the mobile-header, History/Settings inset, Planner current-day anchoring, native UUID-callback and Astryx week-swipe replacements; do not add an Android-only workaround.
+2. Re-run the focused **J110-IMP-21 physical Android confirmation** on that exact candidate, including compact header/title/height, readable interactive labels, grip/checkbox centering, Task creation, past-date rejection feedback, recurrence non-accumulation, restart persistence and synchronization continuity.
+3. Complete the remaining **J110-IMP-15** physical/native matrix, including the J110-IMP-23 populated-region week swipe in both directions with interruption and vertical-scroll checks. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
 4. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
 5. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
 
@@ -146,6 +172,6 @@ Do not create a competing branch, platform-specific recurrence/scheduling rule o
 
 Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and preserves the 2026-11-20 Samsung/Android-16 session on source `222f2fe…` as partial historical IMP-15 evidence. The **current post-remediation physical candidate** is source `3b60ad938f2173521c4eb2aa8b59603a15d930b1`, APK artifact `14591926175`, unpacked APK SHA-256 `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`.
 
-**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. The latest remediation is hosted-certified; only its focused physical confirmation and the remaining IMP-15 matrix remain.
+**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-23 PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. The latest remediation is hosted-certified; only its focused physical confirmation and the remaining IMP-15 matrix remain.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.

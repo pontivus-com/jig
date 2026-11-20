@@ -424,6 +424,9 @@ describe("architecture compliance", () => {
     expect(nativeGit).toContain("...authenticationCallbacks(credential)");
     expect(nativeGit).toContain("onAuthFailure");
     expect(nativeGit).toContain("onAuthSuccess");
+    expect(nativeGit).toContain(
+      "createDatasetId: () => string = () => crypto.randomUUID()",
+    );
     expect(nativeGit).not.toMatch(
       /https?:\/\/[^"']*(?:token|password|secret)@/i,
     );
@@ -602,6 +605,9 @@ describe("architecture compliance", () => {
     ]) {
       expect(native, operation).toContain(operation);
     }
+
+    expect(native).toContain("() => crypto.randomUUID()");
+    expect(native).not.toContain("crypto.randomUUID,\n  );");
   });
 
   it("isolates justified third-party assertions to boundary adapters", () => {

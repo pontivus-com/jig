@@ -107,7 +107,7 @@ export async function submitTaskCommand(
     expectedRevision,
     todayCivilDate(),
     new Date().toISOString(),
-    crypto.randomUUID,
+    () => crypto.randomUUID(),
   );
   try {
     const state = await readCanonicalState(connection);

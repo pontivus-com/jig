@@ -10,6 +10,7 @@ import type {
 import type { ReactNode } from "react";
 import { JIG_ICON_KEYS, JigIcon } from "./jig-icons";
 import { JigLogo } from "./jig-logo";
+import type { Destination } from "./navigation";
 import type { LayoutMode } from "./use-layout-mode";
 
 const DESTINATIONS = [
@@ -32,13 +33,12 @@ const DESTINATIONS = [
     icon: "wrench",
   },
 ] as const satisfies readonly {
-  readonly id: string;
+  readonly id: Destination;
   readonly label: string;
   readonly subtitle: string | null;
   readonly icon: IconName | NamespacedIconName;
 }[];
 
-export type Destination = (typeof DESTINATIONS)[number]["id"];
 type DestinationDefinition = (typeof DESTINATIONS)[number];
 type DestinationIconName = DestinationDefinition["icon"];
 
@@ -190,7 +190,12 @@ function DestinationNav({
           variant="ghost"
           size="sm"
           aria-current={destination === item.id ? "page" : undefined}
-          className={destination === item.id ? "jig-header-nav-active" : ""}
+          className={[
+            "jig-header-nav-item",
+            destination === item.id ? "jig-header-nav-active" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
           onClick={() => onNavigate(item.id)}
         />
       ))}

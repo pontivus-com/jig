@@ -223,7 +223,8 @@ describe("UI ownership architecture", () => {
     expect(app).toContain("<ApplicationShell topNav={<OnboardingHeader />}>");
     expect(app).toContain("mobileNav={false}");
     expect(app).not.toContain("<SideNav");
-    expect(app).toContain('useState<Destination>("planner")');
+    expect(app).toContain("initialDestinationNavigation");
+    expect(app).toContain("installNativeBackButtonListener");
 
     expect(header).toContain("const DESTINATIONS = [");
     expect(header).toContain('id: "planner"');
@@ -232,7 +233,8 @@ describe("UI ownership architecture", () => {
     expect(header).toContain('label: "History"');
     expect(header).toContain('id: "settings"');
     expect(header).toContain('label: "Settings"');
-    expect(header).toContain("type Destination = (typeof DESTINATIONS)[number]");
+    expect(header).toContain('import type { Destination } from "./navigation"');
+    expect(header).not.toContain("export type Destination =");
     expect(header).toContain("IconName");
     expect(header).toContain("NamespacedIconName");
     expect(header).toContain("function NarrowHeader");
@@ -297,7 +299,7 @@ describe("UI ownership architecture", () => {
     expect(css).toContain("height: 2.75rem;");
     expect(css).toContain(".jig-app-header-narrow {");
     expect(css).toContain("position: sticky;");
-    expect(css).toContain("padding: env(safe-area-inset-top, 0px) 0 0;");
+    expect(css).toContain("padding: 0;");
     expect(css).toContain(".jig-header-mobile-application-row {");
     expect(css).toContain(".jig-header-mobile-temporal-row {");
     expect(css).toContain("min-height: 56px;");
@@ -316,6 +318,7 @@ describe("UI ownership architecture", () => {
     expect(css).toContain(".jig-settings-view {");
     expect(css).toContain("max-width: 50rem;");
     expect(css).toContain("margin-inline: auto;");
+    expect(css).toContain("padding-inline: var(--spacing-1);");
     expect(css).toContain(".jig-settings-sections {");
     expect(css).not.toContain(".jig-settings-grid {");
     expect(css).not.toContain("grid-template-columns: 560px minmax(0, 580px);");
@@ -486,7 +489,7 @@ describe("UI ownership architecture", () => {
 
     expect(week).toContain("<TaskDragProvider");
     expect(week).toContain("<DateDropZone");
-    expect(week).toContain('className="jig-week-board"');
+    expect(week).toContain('"jig-week-board"');
     expect(week).toContain("<PlannerTaskList");
     expect(week).not.toContain("enableDrag");
     expect(week).not.toContain("jig-planner-narrow");
@@ -521,5 +524,19 @@ describe("UI ownership architecture", () => {
 
     expect(existsSync("ui/src/date-strip.tsx")).toBe(false);
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
+  });
+
+  it("keeps mobile week gestures in the public Astryx gesture owner", () => {
+    const weekSwipe = source("ui/src/week-swipe.ts");
+    const week = source("ui/src/week.tsx");
+
+    expect(weekSwipe).toContain('usePanGesture');
+    expect(weekSwipe).toContain('from "@astryxdesign/core"');
+    expect(weekSwipe).toContain('axis: "x"');
+    expect(weekSwipe).not.toContain("performance.now");
+    expect(weekSwipe).not.toContain("onPointerUp");
+    expect(weekSwipe).not.toContain("setTimeout");
+    expect(week).toContain("onPointerDownCapture");
+    expect(week).not.toContain("touch-action");
   });
 });

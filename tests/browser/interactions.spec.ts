@@ -1446,6 +1446,14 @@ test("reduced motion preserves non-drag movement semantics", async ({
   await expect(
     page.locator(".jig-date-drop-zone").first(),
   ).toHaveCSS("transition-property", "none");
+  await expect(page.locator(".jig-content-configured")).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+  await expect(page.locator(".jig-task-card").first()).toHaveCSS(
+    "transition-property",
+    "none",
+  );
 });
 
 test("long Planner lanes grow with content without an internal lane scroller", async ({

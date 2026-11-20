@@ -195,6 +195,9 @@ test("due reminder without permission stays visible until explicit grant", async
     .getByText("Permission-gated reminder", { exact: true })
     .locator("xpath=ancestor::li[1]");
   await expect(card).toHaveClass(/jig-task-card-reminder-due/);
+  await expect(
+    card.getByText("Reminder due · time passed", { exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Enable", exact: true }).click();

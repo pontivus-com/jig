@@ -1,13 +1,21 @@
 import type { PermissionState } from "@capacitor/core";
 import {
   LocalNotifications,
+  type LocalNotificationSchema,
   type LocalNotificationsPlugin,
 } from "@capacitor/local-notifications";
+import type { PluginListenerHandle } from "@capacitor/core";
 import type { Task } from "../../../src/core/task";
 
 export type AndroidReminderSchedulingOutcome =
   | "scheduled-exact"
   | "scheduled-inexact"
+  | "permission-required"
+  | "denied"
+  | "failed";
+
+export type AndroidReminderDeliveryOutcome =
+  | "display-requested"
   | "permission-required"
   | "denied"
   | "failed";
@@ -29,6 +37,11 @@ export type AndroidLocalNotificationsPort = Pick<
   | "requestPermissions"
   | "checkExactNotificationSetting"
   | "changeExactNotificationSetting"
+>;
+
+export type AndroidReminderListenerPort = Pick<
+  LocalNotificationsPlugin,
+  "addListener"
 >;
 
 function permissionMeaning(
@@ -164,6 +177,68 @@ export async function scheduleAndroidTaskReminder(
   } catch {
     return "failed";
   }
+}
+
+/**
+ * Ask Android to display a reminder immediately when an already-due Task is
+ * being evaluated while Jig is open. The platform's received event remains
+ * the only evidence used to project the notification as displayed.
+ */
+export async function deliverAndroidTaskReminder(
+  task: Task,
+  notificationId: number,
+  port: AndroidLocalNotificationsPort = LocalNotifications,
+): Promise<AndroidReminderDeliveryOutcome> {
+  if (task.completed_at !== null || task.reminder_time === null) {
+    return "failed";
+  }
+
+  let settings: AndroidReminderPermissionStatus;
+  try {
+    settings = await readAndroidReminderPermission(port);
+  } catch {
+    return "failed";
+  }
+  if (settings.permission === "denied") {
+    return "denied";
+  }
+  if (settings.permission !== "granted") {
+    return "permission-required";
+  }
+
+  try {
+    await port.schedule({
+      notifications: [
+        {
+          id: notificationId,
+          title: "Jig reminder",
+          body: task.title,
+          foreground: true,
+          autoCancel: true,
+          isExactNotification: false,
+          isExactMandatory: false,
+          extra: {
+            jig_task_id: task.id,
+            jig_reminder_fingerprint:
+              androidReminderFingerprint(task),
+          },
+        },
+      ],
+    });
+    return "display-requested";
+  } catch {
+    return "failed";
+  }
+}
+
+export function listenForAndroidReminderDisplay(
+  onReceived: (notification: LocalNotificationSchema) => void,
+  port: AndroidReminderListenerPort = LocalNotifications,
+): Promise<PluginListenerHandle> {
+  return port.addListener(
+    "localNotificationReceived",
+    onReceived,
+  );
 }
 
 export async function cancelAndroidReminder(

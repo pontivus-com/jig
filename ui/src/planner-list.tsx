@@ -1,5 +1,5 @@
-import { List } from "@astryxdesign/core";
-import { Fragment } from "react";
+import { List, useAnimatedLayout } from "@astryxdesign/core";
+import { Fragment, useRef } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
@@ -103,9 +103,17 @@ export function PlannerTaskList({
   onMove,
 }: PlannerTaskListProps): React.ReactElement | null {
   const outstanding = outstandingForDate(tasks, date);
+  const listRef = useRef<HTMLUListElement>(null);
+  const animatedLayout = useAnimatedLayout({ containerRef: listRef });
 
   return (
-    <List density="compact" edge="padded" className="jig-task-card-list">
+    <List
+      ref={listRef}
+      animatedLayout={animatedLayout}
+      density="compact"
+      edge="padded"
+      className="jig-task-card-list"
+    >
       {outstanding.map((task, index) => (
         <Fragment key={task.id}>
           <TaskInsertionSlot date={date} slotIndex={index} />

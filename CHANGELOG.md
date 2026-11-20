@@ -14,6 +14,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - Added the pinned browser `buffer` runtime dependency required for native `isomorphic-git` onboarding to mount correctly in the Android WebView.
 - Fresh Linux installation now supports a no-repository bootstrap mode with in-application local-repository or GitHub onboarding while retaining existing `--repo` and `--repo-url` automation.
 - Settings now presents the planning-data home, local safety and continuity in user language; exact Local Git, Remote Git, service, database, repository-path and manual synchronization facts remain available as secondary diagnostics.
+- Added the shared desktop/Android motion system: Astryx-owned Drawer/BottomSheet transitions, destination navigation, directional week transitions, Task/list and drag/drop feedback, status/reminder/theme/control transitions and reduced-motion suppression, while keeping initial Planner loading and semantic state changes immediate.
+- Added the documented narrow/mobile Planner week-swipe interaction contract: right-to-left advances one week and left-to-right returns one week, while Task controls, drag grips and vertical scrolling remain independent. Implementation is reopened under J110-IMP-23 after physical evaluation rejected the raw pointer adapter.
 
 ### Changed
 
@@ -32,9 +34,19 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Fixed
 
+- Removed the duplicated Android top safe-area inset from the narrow application and onboarding headers so the mobile Jig logo sits in the governed 52px application row without an empty band above it.
+- Fixed Android Task creation failing with `Illegal invocation` by passing the UUID generator through a callback at the native runtime boundary; one-off and recurring creation now commit and survive restart.
+- Added the governed narrow-screen horizontal inset to History and Settings so their mobile reading surfaces align with Planner instead of touching the viewport edges.
+- Narrow Planner now opens and reloads with the current day aligned to the content viewport top; earlier days remain available through deliberate upward scrolling.
+- Android Back now follows Jig's prior-screen order: it closes an open Task workspace first, then returns through prior Planner/History/Settings destinations, and exits only when no Jig screen remains.
+- Reminder lifecycle presentation now distinguishes future reminders (`Reminder scheduled`), elapsed reminder times (`Reminder due · time passed`) and a platform-confirmed notification (`Reminder notified`) without promoting delivery into canonical Task state. Browser delivery remains service-worker based, and Android delivers already-due foreground reminders through the local-notification adapter.
+- Reminder cards now remove the due-attention highlight once the lifecycle reaches `Reminder notified`; unresolved elapsed reminders retain the highlight.
 - Android GitHub acquisition now applies the stored credential to every managed Git smart-HTTP operation, normalizes native response-header casing and provides the browser Buffer boundary required by isomorphic-git, so an already-authorized repository reaches Planner instead of the generic connection error.
 - Stored GitHub authorization is now restored from the governed secure-credential adapter before onboarding can start Device Flow; repeated or concurrent Connect requests continue repository discovery/acquisition instead of re-presenting authorization or resetting an active selection.
 - Remote synchronization failure no longer obscures a successful local snapshot; primary feedback states that work is saved locally while exact Git commit/remote failure detail remains available in Diagnostics.
+- Android native status and navigation-bar indicators now follow Jig's resolved Light/Dark/System appearance, including an explicit Light selection while the device itself remains in Dark mode; desktop browser chrome continues to follow Astryx's root `color-scheme` projection.
+- Completed the motion audit corrections: History list mutations now use Astryx animated layout, desktop Today has an explicit week-content transition, and theme/status-surface changes use the shared reduced-motion-aware transition contract while canonical state changes remain immediate.
+- Replaced the unreliable narrow/mobile week swipe with Astryx public `usePanGesture` recognition, framework-owned touch slop/scroll negotiation/cancellation, the retained Task/control start-target exclusions and one deliberate completed gesture per week-navigation intent; browser and architecture checks pass, with hosted re-certification and physical Android acceptance still open.
 - CLI status/sync output and browser/native runtime adapters consume the same structured repository status rather than rendering or maintaining a parallel scalar status.
 - GitHub installation/repository discovery now consumes every API page instead of silently truncating authorized choices at the first 100 results.
 - Returning from GitHub authorization/access no longer requires a manual Refresh action; desktop and Android orchestration resume/recheck automatically, and configured reconnect retries synchronization without re-running repository setup.
@@ -50,6 +62,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - Restored the API-24 hosted certification lane after Android Emulator 37.3.10 changed its software-acceleration behavior by explicitly allowing TCG for that isolated emulator step; this is CI compatibility only and does not change product/runtime architecture.
 - Added binding v1.1 app-wide configured-application UX authority and the UX-F0 desktop/mobile fidelity audit alongside the existing onboarding/Task-form references; the new authority governs compact bottom navigation, Planner FAB, action prominence, Planner density, History/Settings composition and the reviewed visual-evidence matrix.
 - Reconciled the functional, UI, technical, repository-governance, implementation-plan and evidence authorities around the reopened mobile UX remediation; the previous green hosted candidate is no longer closure evidence for the amended mobile interaction/Settings/Repeat/drag contracts.
+- Reopened the narrow/mobile week-swipe design after physical evaluation rejected the raw pointer-event detector; the replacement uses Astryx public `usePanGesture` with native scroll negotiation, cancellation and WebView-safe interruption, while retaining the existing Task/control start-target exclusions.
 
 - Canonicalized product, functional, technical, UI/theme and repository-governance authorities for v1.1 while retaining v1.0.6 clauses as historical release provenance where superseded.
 - Reopened the v1.1 onboarding/reconnect/Settings implementation against the corrected intent-first authority and made all non-device implementation/certification complete before the final physical-device wave; permanent hosted verification remains the authoritative CI gate and local `act` remains optional preflight.

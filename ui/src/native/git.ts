@@ -252,7 +252,7 @@ export async function acquireAndroidPortableRepository(
   effects: AndroidGitEffects,
   remoteUrl: string,
   credential: GitCredentialProvider,
-  createDatasetId: () => string = crypto.randomUUID,
+  createDatasetId: () => string = () => crypto.randomUUID(),
 ): Promise<PortableSnapshot> {
   assertCredentialFreeHttpsRemote(remoteUrl);
   if (await pathExists(effects, effects.dir)) {

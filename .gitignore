@@ -1,0 +1,83 @@
+# Dependencies and package-manager state
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+*.jks
+*.keystore
+
+# Production/build output
+/dist/
+/release/
+/out/
+/build/
+.vite/
+.parcel-cache/
+.cache/
+
+# Test, coverage and browser-runner output
+/test-results/
+/playwright-report/
+/blob-report/
+/coverage/
+/.nyc_output/
+*.lcov
+*.trace.zip
+
+# Android/Gradle and Capacitor generated output
+/android/.gradle/
+/android/.kotlin/
+/android/build/
+/android/app/build/
+/android/capacitor-cordova-android-plugins/build/
+/android/local.properties
+/android/app/src/main/assets/public/
+/android/app/src/main/assets/capacitor.config.json
+/android/app/src/main/assets/capacitor.plugins.json
+/android/app/src/main/res/xml/config.xml
+*.apk
+*.aab
+*.aar
+*.ap_
+*.dex
+*.class
+*.hprof
+
+# Distribution archives and generated checksums
+*.tar.gz
+*.tgz
+*.zip
+*.sha256
+*.sha256sum
+
+# Jig-owned local runtime data when a repository is used in-place
+**/.jig/
+
+# Temporary files and local reports
+/.tmp/
+/tmp/
+/temp/
+*.tmp
+*.temp
+*.pid
+*.seed
+*.log
+*.log.*
+
+# Editor and operating-system files
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Generated theme artifacts under ui/src are intentionally committed.
