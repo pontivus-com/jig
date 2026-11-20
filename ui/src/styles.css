@@ -540,6 +540,14 @@ body {
     background: var(--jig-state-drag-bg);
   }
 
+  .jig-date-drop-zone-unavailable {
+    background: color-mix(
+      in srgb,
+      var(--color-background-body) 88%,
+      var(--color-warning-muted) 12%
+    );
+  }
+
   .jig-task-card-list {
     display: grid;
     gap: var(--spacing-2);
@@ -860,6 +868,11 @@ body {
 
   .jig-task-insertion-slot-active .jig-task-drop-indicator {
     opacity: 1;
+  }
+
+  .jig-task-insertion-slot-unavailable-active .jig-task-drop-indicator,
+  .jig-task-insertion-slot-unavailable-active .jig-task-drop-indicator::before {
+    background: var(--color-border-warning);
   }
 
   .jig-history-view,
