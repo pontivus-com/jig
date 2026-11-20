@@ -61,7 +61,6 @@ const JIG_PRODUCT_TOKENS = new Set([
   "--jig-status-healthy-bg",
   "--jig-status-healthy-border",
   "--jig-status-healthy-text",
-  "--jig-lane-surface",
   "--jig-chrome-surface",
   "--jig-state-hover-bg",
   "--jig-state-pressed-bg",
@@ -141,6 +140,10 @@ describe("UI ownership architecture", () => {
     for (const token of JIG_PRODUCT_TOKENS) {
       expect(common).toContain(`"${token}"`);
     }
+    expect(common).not.toContain('"--jig-lane-surface"');
+    expect(common).toContain(
+      '"--jig-chrome-surface": "var(--color-background-body)"',
+    );
 
     expect(css).toMatch(
       /\.jig-app-header\s*\{[^}]*background:\s*var\(--jig-chrome-surface\)/s,
@@ -148,8 +151,8 @@ describe("UI ownership architecture", () => {
     expect(css).toMatch(
       /\.jig-mobile-bottom-navigation\s*\{[^}]*background:\s*var\(--jig-chrome-surface\)/s,
     );
-    expect(css).toMatch(
-      /\.jig-week-column\s*\{[^}]*background:\s*var\(--jig-lane-surface\)/s,
+    expect(css).not.toMatch(
+      /\.jig-week-column\s*\{[^}]*\bbackground:/s,
     );
     expect(css).toMatch(
       /\.jig-task-card\s*\{[^}]*background:\s*var\(--jig-task-surface/s,
