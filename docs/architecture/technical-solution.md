@@ -9,7 +9,7 @@
 
 ## 1. v1.0.x decisions, baseline and user experience — historical where v1.1 supersedes
 
-**Historical-baseline rule:** Sections 1–11 retain the released v1.0.x architecture as provenance. For v1.1 forward implementation, `## v1.1 binding architecture` and the linked JIG-110-SD-01..42 contracts supersede every conflicting v1.0.x statement in these sections, including repository-required startup, browser-only notification delivery, one-row/56px narrow-header assumptions, whole-card drag activation and deferred standalone phone installation.
+**Historical-baseline rule:** Sections 1–11 retain the released v1.0.x architecture as provenance. For v1.1 forward implementation, `## v1.1 binding architecture` and the linked JIG-110-SD-01..43 contracts supersede every conflicting v1.0.x statement in these sections, including repository-required startup, browser-only notification delivery, one-row/56px narrow-header assumptions, whole-card drag activation and deferred standalone phone installation.
 
 Jig is a date-based personal planner, not a project manager or an Order lifecycle client. **The user chooses an existing personal or organizational Git repository during installation. All authoritative planning data, including the live SQLite database, lives under a dedicated directory inside that selected repository.** The public pontivus-com/jig source code repository contains no personal data and is not a valid default data target.
 
@@ -1620,7 +1620,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 
 ## v1.1 binding architecture
 
-The detailed normative solution contracts are [JIG-110-SD-01..42](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
+The detailed normative solution contracts are [JIG-110-SD-01..43](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
 
 - runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error; both modes render inside the same canonical Jig application frame, with onboarding as a distinct body state rather than a standalone technical setup page; the governed v1.1 references own the user-visible composition: Android/narrow uses the bounded single-column flow, desktop uses the stable value/context region plus bounded setup pane, and successful setup transitions directly to Planner without persisted onboarding progress; Astryx remains reusable component authority;
 - Linux and Android share one governed **Jig Desktop & Mobile** public GitHub App registration and the same intent-level onboarding contract. One Connect GitHub repository action starts automatic authorization/access/acquisition/adoption orchestration; provider-owned consent and repository selection when genuinely required are the only normal user interruptions. Linux additionally supports the genuine choice of an existing local repository;
