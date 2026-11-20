@@ -200,10 +200,41 @@ test("governed onboarding adapts from desktop to narrow touch geometry", async (
   await expect(page.locator(".jig-setup-benefit")).toHaveCount(3);
   await expect(page.locator(".jig-setup-benefit-icon svg")).toHaveCount(3);
   await expect(page.locator(".jig-setup-choice-desktop")).toBeVisible();
+
+  const desktopScrollGeometry = await page
+    .locator(".jig-content-frame-onboarding")
+    .evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      overflowY: getComputedStyle(element).overflowY,
+    }));
+  expect(desktopScrollGeometry.overflowY).toBe("auto");
+  expect(desktopScrollGeometry.scrollHeight).toBeLessThanOrEqual(
+    desktopScrollGeometry.clientHeight + 1,
+  );
+
   await page.screenshot({
     path: testInfo.outputPath("v1.1-onboarding-desktop.png"),
     fullPage: true,
   });
+
+  await page.setViewportSize({ width: 1440, height: 420 });
+  const shortViewport = page.locator(".jig-content-frame-onboarding");
+  await expect(
+    page.getByRole("button", { name: "Connect GitHub repository" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Connect GitHub repository" })
+    .scrollIntoViewIfNeeded();
+  const shortGeometry = await shortViewport.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    overflowY: getComputedStyle(element).overflowY,
+  }));
+  expect(shortGeometry.overflowY).toBe("auto");
+  expect(shortGeometry.scrollHeight).toBeGreaterThanOrEqual(
+    shortGeometry.clientHeight,
+  );
 
   for (const width of [320, 360, 390, 414] as const) {
     await page.setViewportSize({ width, height: 844 });
