@@ -218,6 +218,55 @@ describe("daily rollover", () => {
     assertTaskSet(result.tasks);
   });
 
+  it("preserves completed recurring History while superseding only stale outstanding siblings", () => {
+    const seriesId = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f9004";
+    const completed = {
+      ...recurringTask(
+        1,
+        "2026-11-17",
+        0,
+        seriesId,
+        "2026-11-17",
+      ),
+      position: null,
+      completed_at: "2026-11-17T18:00:00.000Z",
+      updated_at: "2026-11-17T18:00:00.000Z",
+    } satisfies Task;
+    const staleOutstanding = recurringTask(
+      2,
+      "2026-11-18",
+      0,
+      seriesId,
+      "2026-11-18",
+    );
+    const latestDue = recurringTask(
+      3,
+      "2026-11-19",
+      0,
+      seriesId,
+      "2026-11-19",
+    );
+
+    const result = rollForwardOutstanding(
+      [completed, staleOutstanding, latestDue],
+      "2026-11-20",
+      "2026-11-20T01:00:00.000Z",
+    );
+
+    expect(result.superseded_task_ids).toEqual([staleOutstanding.id]);
+    expect(result.moved_task_ids).toEqual([latestDue.id]);
+    expect(
+      result.tasks.find((candidate) => candidate.id === completed.id),
+    ).toStrictEqual(completed);
+    expect(
+      result.tasks.find((candidate) => candidate.id === latestDue.id),
+    ).toMatchObject({
+      scheduled_date: "2026-11-20",
+      recurrence_occurrence_date: "2026-11-19",
+    });
+    assertTaskSet(result.tasks);
+  });
+
   it("preserves an explicitly future-rescheduled older recurring occurrence", () => {
     const seriesId = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f9002";
     const explicitlyFuture = recurringTask(
