@@ -419,16 +419,20 @@ function TaskCardPresentation(
               <JigIcon name="drag" color="inherit" size="sm" />
             </span>
           ) : null}
-          <TaskCompletionControl
-            task={props.task}
-            completed={completed}
-            {...(isActive
-              ? {
-                  mode: "active" as const,
-                  onToggleComplete: props.onToggleComplete,
-                }
-              : { mode: "passive" as const })}
-          />
+          {isActive ? (
+            <TaskCompletionControl
+              mode="active"
+              task={props.task}
+              completed={completed}
+              onToggleComplete={props.onToggleComplete}
+            />
+          ) : (
+            <TaskCompletionControl
+              mode="passive"
+              task={props.task}
+              completed={completed}
+            />
+          )}
         </span>
       }
       label={
