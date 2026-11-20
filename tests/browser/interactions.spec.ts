@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 function activeWeek(page: Page): Locator {
-  return page.locator('.jig-week-slide[data-jig-week-page="active"]');
+  return page.locator(".jig-planner-surface");
 }
 
 async function taskCard(page: Page, title: string) {
