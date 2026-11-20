@@ -1,6 +1,6 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** PHYSICAL-ACCEPTANCE REMEDIATION OPEN / J110-IMP-09 COMPLETE / J110-IMP-18..21 OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — prior post-UX candidate `611c8ced6a854a80f24bf727c53d792f5c5d556c` remains certified historical non-device evidence. Executable head `222f2fe0e672b122424042b3fa39747efb991610` adds the Desktop Secret Service and Android Git synchronization corrections and has 41/41 local test files / 252/252 tests plus physical Samsung SM-S901E synchronization/restart evidence. Hosted Verify #1541 passed Linux/browser and Android build certification but the API-24 emulator failed to boot before instrumentation. Physical use exposed bounded UX/domain defects now governed by IMP-18..21; J110-IMP-15 cannot close until those corrections are implemented and re-certified. Live Linux/Desktop GitHub acceptance remains issue #31.
+**Status:** POST-REMEDIATION NON-DEVICE CERTIFIED / J110-IMP-09 + J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — exact executable/certification head `3b60ad938f2173521c4eb2aa8b59603a15d930b1` passed permanent Verify `44652277552` / #1598 across Linux/browser, Android build certification and API-24 instrumentation. The hosted matrix passed 41/41 core/integration/architecture files (261/261 tests), production build, browser bootstrap, 79/79 real-browser tests, Android static/build/FLOSS/F-Droid checks and 5/5 API-24 instrumentation tests. Governed browser evidence artifact `14591328349` has been explicitly reviewed. Android artifact `14591926175` contains the current physical candidate APK. IMP-21 now remains open only for focused physical Android confirmation; J110-IMP-15 and live Linux/Desktop GitHub acceptance issue #31 remain open.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
@@ -19,6 +19,18 @@
 - `package.json.version` remains `1.0.6` by design; the `1.1.0` version transition remains owned by the later `release/v1.1.0` metadata PR.
 
 This candidate remains valid provenance for the gates it actually passed, but it is **not** the current release-candidate lineage after later executable changes. J110-IMP-09 remains complete, but the 2026-11-20 executable/session evidence and the amended IMP-18..21 authority supersede this baseline for final certification.
+
+## Current post-remediation certified candidate — 2026-11-20
+
+- Exact certified source/head: `3b60ad938f2173521c4eb2aa8b59603a15d930b1`.
+- Permanent Verify: `44652277552` / #1598 — **PASS** across all three required jobs.
+- Linux/browser: strict typecheck **PASS**; 41/41 core/integration/architecture files, 261/261 tests **PASS**; production build **PASS**; browser bootstrap **PASS**; 79/79 real-browser tests **PASS**; installer/lifecycle smoke **PASS**.
+- Reviewed browser evidence: artifact `14591328349`, digest `sha256:67c64be9e1c13206aeecfeb5d303bdf10000a99f6220d3700fa2b0a18106310a`, size 2,600,766 bytes. Explicit review confirms the amended compact header/title ownership, body-scale interactive typography, centered Task leading controls and no idle desktop-onboarding scrollbar.
+- Android build certification: **PASS**; artifact `14591926175`, digest `sha256:dbb4f96a39af353adfee7360d2b0ebe36ae954d119407273a486fd66e6b610b9`, ZIP size 7,173,854 bytes.
+- Unpacked `app-debug.apk`: 9,780,552 bytes; SHA-256 `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`.
+- API-24 runtime: **PASS** — Android Emulator 37.3.10 booted with `ANDROID_I_WANT_MY_TCG=yes`; 5/5 instrumentation tests completed; Gradle ended `BUILD SUCCESSFUL`.
+- The TCG environment flag is a narrow hosted-runner compatibility correction. Emulator 37.3.10 had begun rejecting the action's software `-accel off` fallback before instrumentation; the prior product/test code was not implicated.
+- J110-IMP-18, IMP-19 and IMP-20 are **COMPLETE**. J110-IMP-21 is **IN PROGRESS** only for focused physical Android confirmation.
 
 ## Current executable / physical-session evidence — 2026-11-20
 
@@ -39,7 +51,7 @@ This candidate remains valid provenance for the gates it actually passed, but it
 3. explicit current/future scheduling rule plus past-date rejection feedback;
 4. recurring rollover non-accumulation.
 
-These are governed by J110-IMP-18..21. They do not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture or dnd-kit framework ownership.
+These findings were governed by J110-IMP-18..21. IMP-18..20 are now implemented/non-device certified; IMP-21 owns the remaining focused physical confirmation. They did not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture or dnd-kit framework ownership.
 
 ## Historical pre-remediation candidate
 
@@ -58,11 +70,11 @@ The post-UX candidate is reviewed against `../../design/reference/jig-v1.1-appli
 
 | Gate | Evidence state |
 | --- | --- |
-| Linux/browser permanent Verify | **PASS** — run `44547579822` / #1521 on source head `611c8ced6a854a80f24bf727c53d792f5c5d556c`; 41/41 test files and 250/250 core/integration/architecture tests passed; production build passed; browser bootstrap smoke passed; 80/80 real-browser tests passed; shell syntax and installer/lifecycle smoke passed. |
-| Governed browser screenshot evidence | **PASS / EXPLICITLY REVIEWED** — artifact `14539814508` on exact source head `611c8ced6a854a80f24bf727c53d792f5c5d556c` contains the governed desktop/mobile UX-F7 state matrix and was reviewed against the UX-F0 authority for hierarchy, density, prominence, legibility, design-language consistency, semantic states and active-surface focus. Artifact digest `sha256:000c80a107353d1e38d796fe82dce5b292dfd444fd944ba9aad424351b147b4f`. |
+| Linux/browser permanent Verify | **PASS — CURRENT** — run `44652277552` / #1598 on exact source head `3b60ad938f2173521c4eb2aa8b59603a15d930b1`; 41/41 test files and 261/261 core/integration/architecture tests passed; production build passed; browser bootstrap smoke passed; 79/79 real-browser tests passed; shell syntax and installer/lifecycle smoke passed. |
+| Governed browser screenshot evidence | **PASS / EXPLICITLY REVIEWED — CURRENT** — artifact `14591328349`, `jig-v1.1-browser-evidence-184c8c824b32ff53c53136eaf1c1e4ab78fe480a`, on exact source head `3b60ad938f2173521c4eb2aa8b59603a15d930b1`; artifact digest `sha256:67c64be9e1c13206aeecfeb5d303bdf10000a99f6220d3700fa2b0a18106310a`. Review confirms Jig identity + centered Planner/History/Settings title, compact/readable navigation typography, centered Task leading controls and no idle desktop-onboarding scrollbar. |
 | Browser/native platform isolation | **PASS** — permanent architecture tests require lazy native-runtime/native-GitHub loading; hosted browser bootstrap smoke proves Android Git/isomorphic-git is not evaluated in the browser entrypoint. |
-| Android deterministic build certification | **PASS** — run `44547579822`; Gradle dependency locks, Android unit/static checks, FLOSS boundary, version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention passed. APK artifact id `14541004265`. |
-| Android API-24 instrumentation | **PASS** — run `44547579822`; `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`. |
+| Android deterministic build certification | **PASS — CURRENT** — run `44652277552` / #1598; Gradle dependency locks, Android unit/static checks, FLOSS boundary, version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention passed. APK artifact id `14591926175`. |
+| Android API-24 instrumentation | **PASS — CURRENT** — run `44652277552` / #1598; current Android Emulator 37.3.10 booted under the explicit TCG software-emulation allowance, 5/5 instrumentation tests completed, and `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`. |
 | Android bundled SQLite transaction/restart proof | **PASS at the native-driver/API-24 boundary** — covered by the committed API-24 instrumentation. Cross-platform physical-device continuity remains J110-IMP-15 evidence. |
 | Cross-installation synchronization convergence | **PASS for repository/host/emulator scope** — reciprocal Desktop→Android→Desktop and Android→Desktop→Android coverage, the four normal FR-24 outcomes, SYNC-E1..SYNC-E6, unrelated-repository preservation and architecture/strict-typing gates pass on the certified candidate. Physical same-repository confirmation remains J110-IMP-15 evidence. |
 | Android Git native HTTP transport | **PASS at the native-transport/API-24 boundary** — selected native smart-HTTP/isomorphic-git transport remains certified; live private-repository acquisition remains external/physical evidence. |
@@ -78,7 +90,7 @@ The post-UX candidate is reviewed against `../../design/reference/jig-v1.1-appli
 
 ## Non-device functional + UX/UI closure audit
 
-The current candidate retains the already-certified synchronization convergence, recurrence/domain semantics, bootstrap/GitHub orchestration, Android build/runtime boundaries and replacement dnd-kit movement candidate, and now additionally closes the reopened presentation-fidelity scope through UX-F0..UX-F7. Geometry assertions and screenshots remain supporting evidence; closure is based on the governed state matrix plus explicit visual review.
+The current candidate retains the already-certified synchronization convergence, bootstrap/GitHub orchestration, Android build/runtime boundaries and replacement dnd-kit movement owner, and additionally closes the latest IMP-18 presentation remediation, IMP-19 active-scheduling rule and IMP-20 recurrence-rollover non-accumulation. Geometry assertions and screenshots remain supporting evidence; presentation closure is based on the governed state matrix plus explicit visual review.
 
 The closure audit confirms:
 
@@ -98,44 +110,42 @@ The real Linux/Desktop Device Flow/private-repository exercise is deliberately c
 
 ## Development APK identity
 
-The development APK retained by permanent Verify run `44547579822` is the **post-UX physical-certification input**; it is not a GitHub Release asset or public Android distribution channel.
+The development APK retained by permanent Verify run `44652277552` / #1598 is the **current post-remediation physical-certification input**; it is not a GitHub Release asset or public Android distribution channel.
 
-- Certified executable source head: `611c8ced6a854a80f24bf727c53d792f5c5d556c`.
-- GitHub Actions artifact id: `14541004265`.
-- Artifact name: `jig-android-debug-b9a9f8f5abdc428247551e5f6ce20c98230d1427` (artifact naming uses the PR merge-ref SHA; source head is recorded above).
-- Artifact ZIP size: `7,172,937` bytes.
-- Artifact digest: `sha256:e6f12bf275b921ea2cc2e9ff5094dea71b9c5c6cc441dd910a8f85515cb662ca`.
+- Certified executable/source head: `3b60ad938f2173521c4eb2aa8b59603a15d930b1`.
+- GitHub Actions artifact id: `14591926175`.
+- Artifact name: `jig-android-debug-184c8c824b32ff53c53136eaf1c1e4ab78fe480a` (artifact naming uses the PR merge-ref SHA; source head is recorded above).
+- Artifact ZIP size: `7,173,854` bytes.
+- Artifact digest: `sha256:dbb4f96a39af353adfee7360d2b0ebe36ae954d119407273a486fd66e6b610b9`.
 - APK file in the artifact: `app-debug.apk`.
-- Unpacked `app-debug.apk` size: `9,779,844` bytes.
-- Unpacked `app-debug.apk` SHA-256: `27449f443a5617bd1cd7bbfec2ac0971e4104d647ff77c6975df06139e15c52d`, computed directly from artifact `14541004265`.
+- Unpacked `app-debug.apk` size: `9,780,552` bytes.
+- Unpacked `app-debug.apk` SHA-256: `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`, computed directly from artifact `14591926175`.
 - Repository package authority expects Android application ID `com.pontivus.jig` with package-derived version identity. The physical preflight must still verify those APK badging fields with governed Build Tools `aapt`; the recorded SHA does not substitute for that check.
 
 Before physical certification, the device preflight must record/verify the unpacked APK identity/hash for this exact artifact. Any later **executable** change invalidates that APK identity and requires a new certified artifact; later documentation-only closure commits do not change the recorded executable/APK lineage.
 
 ## Known corrective evidence
 
-The candidate includes a browser-bootstrap correction for the Android Git runtime boundary. Static reachability from the browser entrypoint had pulled `isomorphic-git`'s Node `Buffer` path into the production browser bundle, causing module-evaluation failure before React mounted. The corrected boundary dynamically loads `runtime-native` only after `Capacitor.isNativePlatform()` is true, and dynamically loads Android GitHub onboarding only on the native path. Permanent architecture tests forbid the static native imports, and the hosted bootstrap smoke plus the current 80/80 browser suite pass prove the browser surface mounts correctly.
+The candidate includes a browser-bootstrap correction for the Android Git runtime boundary. Static reachability from the browser entrypoint had pulled `isomorphic-git`'s Node `Buffer` path into the production browser bundle, causing module-evaluation failure before React mounted. The corrected boundary dynamically loads `runtime-native` only after `Capacitor.isNativePlatform()` is true, and dynamically loads Android GitHub onboarding only on the native path. Permanent architecture tests forbid the static native imports, and the hosted bootstrap smoke plus the current 79/79 browser suite pass prove the browser surface mounts correctly.
 
 The 2026-11-19 authority remediation also replaced the superseded process-shaped setup/reconnect presentation. The certified candidate keeps onboarding inside the canonical Jig shell, presents one Connect GitHub repository intent plus GitHub's required user code/Copy/Open-GitHub handoff, automatically polls and rechecks provider access, consumes complete pagination, routes restricted installations to GitHub-owned access surfaces, auto-continues an unambiguous repository, limits React to coarse-state observation, and exposes reconnect only when managed GitHub authorization actually requires user action. Browser and architecture acceptance explicitly forbid the old Refresh/Grant/Manage/manual-acquire workflow.
 
 ## Still required before release-candidate closure
 
-The 2026-11-20 physical session has reopened bounded implementation work. Required order:
+J110-IMP-18, IMP-19 and IMP-20 are implemented and non-device certified. Remaining order:
 
-1. Implement and close **J110-IMP-18** compact shell/typography/Task-leading alignment.
-2. Implement and close **J110-IMP-19** canonical current/future scheduling + past-date feedback.
-3. Implement and close **J110-IMP-20** recurrence-aware rollover non-accumulation.
-4. Close **J110-IMP-21** with complete automated/browser/hosted/physical recertification on one exact executable head; permanent hosted Verify must be green.
-5. Complete the remaining **J110-IMP-15** physical/native matrix and formal evidence disposition. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
-6. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
-7. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
+1. Complete the focused **J110-IMP-21 physical Android confirmation** on APK artifact `14591926175`: compact header/title/height, readable interactive labels, grip/checkbox centering, past-date rejection feedback, recurrence non-accumulation in a controlled scenario, restart persistence and synchronization continuity.
+2. Update the physical evidence disposition and close IMP-21 if those checks pass.
+3. Complete the remaining **J110-IMP-15** physical/native matrix. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
+4. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
+5. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
 
 Do not create a competing branch, platform-specific recurrence/scheduling rule or substitute UI/error architecture to close these findings.
 
 ## Physical-device evidence
 
-Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and now records the 2026-11-20 **partial IMP-15** session on source `222f2fe0e672b122424042b3fa39747efb991610`, Samsung SM-S901E / Android 16 API 36, package `com.pontivus.jig`, APK SHA-256 `b3d134786827dea601f4f3cbd89ad4269578393151efd5dab056812a682c8d4b`. This is partial evidence only; a new final candidate lineage is required after IMP-18..20.
+Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and preserves the 2026-11-20 Samsung/Android-16 session on source `222f2fe…` as partial historical IMP-15 evidence. The **current post-remediation physical candidate** is source `3b60ad938f2173521c4eb2aa8b59603a15d930b1`, APK artifact `14591926175`, unpacked APK SHA-256 `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`.
 
-**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation was exercised successfully on physical Android and remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. The 2026-11-20 physical session additionally produced partial IMP-15 evidence but opened J110-IMP-18..21; those tasks must close before the remaining IMP-15 matrix can be completed.
+**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. The latest remediation is hosted-certified; only its focused physical confirmation and the remaining IMP-15 matrix remain.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.
