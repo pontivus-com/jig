@@ -136,6 +136,48 @@ replace_once(
 '''
 )
 
+# Chromium may preserve color-mix results as color(srgb ...); extend the existing
+# contrast helper without changing its RGB semantics.
+replace_once(
+    "tests/browser/ui-conformance.spec.ts",
+    '''function rgbChannels(value: string): readonly [number, number, number] {
+  const match = value.match(
+    /rgba?\\(\\s*([\\d.]+)[, ]+\\s*([\\d.]+)[, ]+\\s*([\\d.]+)/,
+  );
+  if (match?.[1] === undefined || match[2] === undefined || match[3] === undefined) {
+    throw new Error(`Unsupported computed color: ${value}`);
+  }
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+''',
+    '''function rgbChannels(value: string): readonly [number, number, number] {
+  const rgb = value.match(
+    /rgba?\\(\\s*([\\d.]+)[, ]+\\s*([\\d.]+)[, ]+\\s*([\\d.]+)/,
+  );
+  if (rgb?.[1] !== undefined && rgb[2] !== undefined && rgb[3] !== undefined) {
+    return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+  }
+
+  const srgb = value.match(
+    /color\\(srgb\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)/,
+  );
+  if (
+    srgb?.[1] !== undefined &&
+    srgb[2] !== undefined &&
+    srgb[3] !== undefined
+  ) {
+    return [
+      Number(srgb[1]) * 255,
+      Number(srgb[2]) * 255,
+      Number(srgb[3]) * 255,
+    ];
+  }
+
+  throw new Error(`Unsupported computed color: ${value}`);
+}
+'''
+)
+
 # Browser matrix proves all themes/modes retain three distinct persistent surfaces.
 replace_once(
     "tests/browser/ui-conformance.spec.ts",
