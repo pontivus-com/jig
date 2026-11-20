@@ -217,14 +217,13 @@ function PassivePlannerTaskList(
     props.recurrences,
     props.date,
   );
+  const isPastDate = props.date < todayCivilDate();
 
   return (
     <PlannerTaskSequence
       items={items}
       renderInsertionSlot={() => (
-        <TaskInsertionSlotPresentation
-          isPastDate={props.date < todayCivilDate()}
-        />
+        <TaskInsertionSlotPresentation isPastDate={isPastDate} />
       )}
       renderTaskRow={(item) => (
         <TaskRow
