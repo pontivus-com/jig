@@ -550,8 +550,9 @@ describe("UI ownership architecture", () => {
     expect(pager).not.toContain("firstElementChild");
     expect(pager).not.toContain("usePanGesture");
     expect(week).toContain("<WeekPager");
-    expect(week).toContain("interface ActiveWeekProps");
-    expect(week).toContain("interface PassiveWeekProps");
+    expect(week).toContain("interface ActiveWeekPageProps");
+    expect(week).toContain("interface PassiveWeekPageProps");
+    expect(week).toContain("type WeekInteraction");
     expect(week).not.toContain("readonly interactive: boolean");
     expect(week).not.toContain("interactive={isActive}");
     expect(week.match(/<WeekPage/g)?.length).toBe(2);
