@@ -58,6 +58,7 @@ describe("architecture compliance", () => {
       expect(content, path).not.toMatch(/\bas\s+unknown\s+as\b/);
       expect(content, path).not.toMatch(/\bas\s+any\b/);
       expect(content, path).not.toMatch(/:\s*any\b/);
+      expect(content, path).not.toMatch(/JSON\.parse\([^;\n]+\)\s+as\s+/);
       expect(content, path).not.toMatch(/<any>/);
       expect(content, path).not.toMatch(/\bArray<any>\b/);
       expect(content, path).not.toMatch(

@@ -202,13 +202,13 @@ async function writeToken(config: JigConfig): Promise<string> {
   }
   const html = await response.text();
   const match =
-    /window\.__JIG_WRITE_TOKEN__=("[0-9a-f]{64}");/.exec(html);
+    /window\.__JIG_WRITE_TOKEN__="([0-9a-f]{64})";/.exec(html);
   if (match?.[1] === undefined) {
     throw new CliError(
       "Jig application bootstrap did not contain the current write token",
     );
   }
-  return JSON.parse(match[1]) as string;
+  return match[1];
 }
 
 async function postOperation(
