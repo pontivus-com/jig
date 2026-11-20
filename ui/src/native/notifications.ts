@@ -8,6 +8,7 @@ import type { PluginListenerHandle } from "@capacitor/core";
 import type { Task } from "../../../src/core/task";
 import {
   isReminderScheduledInFuture,
+  reminderFingerprint,
   reminderScheduledAt,
 } from "../../../src/core/reminder";
 
@@ -97,12 +98,6 @@ export async function openAndroidExactAlarmSettings(
   return readAndroidReminderPermission(port);
 }
 
-export function androidReminderFingerprint(task: Task): string | null {
-  return task.reminder_time === null
-    ? null
-    : `${task.scheduled_date}|${task.reminder_time}`;
-}
-
 export async function scheduleAndroidTaskReminder(
   task: Task,
   notificationId: number,
@@ -147,7 +142,7 @@ export async function scheduleAndroidTaskReminder(
           extra: {
             jig_task_id: task.id,
             jig_reminder_fingerprint:
-              androidReminderFingerprint(task),
+              reminderFingerprint(task),
           },
         },
       ],
@@ -201,7 +196,7 @@ export async function deliverAndroidTaskReminder(
           extra: {
             jig_task_id: task.id,
             jig_reminder_fingerprint:
-              androidReminderFingerprint(task),
+              reminderFingerprint(task),
           },
         },
       ],

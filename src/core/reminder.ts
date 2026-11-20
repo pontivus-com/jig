@@ -15,6 +15,12 @@ function localTime(now: Date): string {
   ].join(":");
 }
 
+export function reminderFingerprint(task: Task): string | null {
+  return task.reminder_time === null
+    ? null
+    : `${task.scheduled_date}|${task.reminder_time}`;
+}
+
 export function reminderScheduledAt(task: Task): Date | null {
   if (task.reminder_time === null) {
     return null;

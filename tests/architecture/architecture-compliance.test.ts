@@ -467,6 +467,7 @@ describe("architecture compliance", () => {
     expect(reminder).toContain(
       "export function isReminderScheduledInFuture",
     );
+    expect(reminder).toContain("export function reminderFingerprint");
     expect(reminder).toContain("export function reminderScheduledAt");
     expect(uiReminder).toContain("isReminderDue");
     expect(uiReminder).toContain("isReminderScheduledInFuture");
@@ -478,11 +479,15 @@ describe("architecture compliance", () => {
       "isFutureAndroidReminder",
     );
     expect(nativeNotifications).not.toContain(
+      "androidReminderFingerprint",
+    );
+    expect(nativeNotifications).not.toContain(
       "function androidReminderDate",
     );
     expect(nativeReconciliation).toContain(
       "isReminderScheduledInFuture",
     );
+    expect(nativeReconciliation).toContain("reminderFingerprint");
     expect(nativeReconciliation).not.toContain(
       "isFutureAndroidReminder",
     );

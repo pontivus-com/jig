@@ -1,5 +1,8 @@
 import type { Task } from "../../../src/core/task";
-import { isReminderScheduledInFuture } from "../../../src/core/reminder";
+import {
+  isReminderScheduledInFuture,
+  reminderFingerprint,
+} from "../../../src/core/reminder";
 import {
   allocateAndroidReminderId,
   readAndroidReminderRegistry,
@@ -10,7 +13,6 @@ import {
 } from "./reminder-registry";
 import {
   cancelAndroidReminder,
-  androidReminderFingerprint,
   scheduleAndroidTaskReminder,
   type AndroidLocalNotificationsPort,
   type AndroidReminderSchedulingOutcome,
@@ -68,7 +70,7 @@ export async function reconcileAndroidReminders(
     const fingerprint =
       task === undefined
         ? null
-        : androidReminderFingerprint(task);
+        : reminderFingerprint(task);
     const pendingNotification = pendingById.get(
       entry.notification_id,
     );
@@ -120,7 +122,7 @@ export async function reconcileAndroidReminders(
     if (registryByTask.has(task.id)) {
       continue;
     }
-    const fingerprint = androidReminderFingerprint(task);
+    const fingerprint = reminderFingerprint(task);
     if (fingerprint === null) {
       continue;
     }

@@ -3,6 +3,7 @@ import type { Task } from "../../src/core/task";
 import {
   isReminderDue,
   isReminderScheduledInFuture,
+  reminderFingerprint,
   reminderScheduledAt,
 } from "../../src/core/reminder";
 
@@ -24,6 +25,13 @@ const BASE: Task = {
 };
 
 describe("reminder schedule semantics", () => {
+  it("projects one stable cross-platform reminder fingerprint", () => {
+    expect(reminderFingerprint(BASE)).toBe("2026-11-18|09:30");
+    expect(
+      reminderFingerprint({ ...BASE, reminder_time: null }),
+    ).toBeNull();
+  });
+
   it("projects the Task reminder into the local scheduled instant", () => {
     expect(reminderScheduledAt(BASE)).toEqual(
       new Date(2026, 10, 18, 9, 30),
