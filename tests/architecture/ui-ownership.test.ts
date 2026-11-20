@@ -537,35 +537,46 @@ describe("UI ownership architecture", () => {
     expect(existsSync("ui/src/task-inspector.tsx")).toBe(false);
   });
 
-  it("keeps adjacent-week visual presentation singular during the Carousel migration", () => {
+  it("keeps adjacent-week visual presentation singular while the Carousel cutover is pending", () => {
     const pager = source("ui/src/week-pager.tsx");
     const week = source("ui/src/week.tsx");
     const list = source("ui/src/planner-list.tsx");
     const taskRow = source("ui/src/task-row.tsx");
+    const drag = source("ui/src/drag.tsx");
     const planner = source("ui/src/planner.tsx");
-    const app = source("ui/src/app.tsx");
     const css = source("ui/src/styles.css");
 
     expect(existsSync("ui/src/week-swipe.ts")).toBe(false);
-    expect(pager).toContain('className="jig-week-pager"');
     expect(pager).not.toContain("firstElementChild");
     expect(pager).not.toContain("usePanGesture");
     expect(week).toContain("<WeekPager");
-    expect(week).toContain("<PlannerTaskPreviewList");
+    expect(week.match(/<PlannerTaskList/g)?.length).toBe(2);
+    expect(week).toContain('mode="active"');
+    expect(week).toContain('mode="passive"');
+    expect(week).not.toContain("PlannerTaskPreviewList");
     expect(week).not.toContain("jig-week-preview");
+
+    expect(list).toContain("function PlannerTaskSequence");
+    expect(list).toContain("plannerTaskPresentationItems");
     expect(list).toContain("useAnimatedLayout");
-    expect(list.match(/className="jig-task-card-list"/g)?.length).toBe(2);
-    expect(list).toContain("<PassiveTaskRow");
+    expect(list.match(/className="jig-task-card-list"/g)?.length).toBe(1);
+    expect(list).toContain("<TaskInsertionSlotPresentation");
+    expect(list).toContain('mode="passive"');
+    expect(list).not.toContain("PassiveTaskRow");
+    expect(list).not.toContain("PlannerTaskPreviewList");
     expect(list).not.toContain("jig-week-preview");
+
+    expect(drag).toContain("export function TaskInsertionSlotPresentation");
     expect(taskRow).toContain("function TaskCardPresentation");
-    expect(taskRow).toContain("export function PassiveTaskRow");
+    expect(taskRow).toContain('readonly mode: "active"');
+    expect(taskRow).toContain('readonly mode: "passive"');
+    expect(taskRow).not.toContain("export function PassiveTaskRow");
     expect(taskRow).not.toContain("TaskCardPassivePreview");
     expect(taskRow).not.toContain("jig-week-preview");
     expect(css).not.toContain("jig-week-preview");
+
     expect(week).toContain("onDragActiveChange={setIsTaskDragging}");
     expect(planner).not.toContain("enableWeekSwipe");
-    expect(app).toContain("weekPagingRequest");
-    expect(app).toContain("commitWeek");
   });
 
   it("keeps operational attention in one public-leaf Jig composition", () => {
