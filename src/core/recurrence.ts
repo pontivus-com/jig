@@ -194,14 +194,16 @@ export function recurrenceSpecMatchesSeries(
     normalized.pattern.kind === "weekly" &&
     current.pattern.kind === "weekly"
   ) {
+    const normalizedPattern = normalized.pattern;
+    const currentPattern = current.pattern;
     return (
-      normalized.pattern.interval_weeks ===
-        current.pattern.interval_weeks &&
-      normalized.pattern.weekdays.length ===
-        current.pattern.weekdays.length &&
-      normalized.pattern.weekdays.every(
+      normalizedPattern.interval_weeks ===
+        currentPattern.interval_weeks &&
+      normalizedPattern.weekdays.length ===
+        currentPattern.weekdays.length &&
+      normalizedPattern.weekdays.every(
         (weekday, index) =>
-          weekday === current.pattern.weekdays[index],
+          weekday === currentPattern.weekdays[index],
       )
     );
   }
