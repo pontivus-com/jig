@@ -164,7 +164,7 @@ J110-IMP-18, IMP-19 and IMP-20 are implemented and non-device certified. Remaini
 
 1. Finish J110-IMP-23's cross-platform WeekPager hard cut, then produce a fresh hosted-certified artifact containing that exact pager implementation together with the mobile-header, History/Settings inset, Planner current-day anchoring and native UUID-callback corrections; do not add an Android-only gesture/workaround.
 2. Re-run the focused **J110-IMP-21 physical Android confirmation** on that exact candidate, including compact header/title/height, readable interactive labels, grip/checkbox centering, Task creation, past-date rejection feedback, recurrence non-accumulation, restart persistence and synchronization continuity.
-3. Complete the remaining **J110-IMP-15** physical/native matrix, including the J110-IMP-23 populated-region week swipe in both directions with interruption and vertical-scroll checks. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
+3. Complete the remaining **J110-IMP-15** physical/native matrix, including rewritten J110-IMP-23 WeekPager paging in both directions on populated/empty weeks, interruption, vertical-scroll arbitration and active-week drag isolation. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
 4. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
 5. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
 
