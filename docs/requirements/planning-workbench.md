@@ -355,7 +355,7 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 |---|---|
 | JIG-110-FR-01 | Narrow/mobile header is persistent/sticky and safe-area aware. |
 | JIG-110-FR-02 | Compact configured header keeps Jig identity left + centered Planner/History/Settings title + restrained sync right; Planner alone adds the temporal row and Planner-only FAB. |
-| JIG-110-FR-03 | Mobile interaction geometry is application-wide: ordinary touch targets are >=48×48px, standalone adjacent controls are visibly separated, compact header rows target 52px and stay <=56px at normal text sizing, interactive labels use at least normal small/body action typography, and onboarding/Task BottomSheet/directly analogous mobile forms conform to the governed v1.1 hierarchy rather than compressed desktop controls. |
+| JIG-110-FR-03 | Mobile interaction geometry is application-wide: ordinary touch targets are >=48×48px, standalone adjacent controls are visibly separated, compact header rows target 52px and stay <=56px at normal text sizing, interactive labels use at least normal base/body action typography, and onboarding/Task BottomSheet/directly analogous mobile forms conform to the governed v1.1 hierarchy rather than compressed desktop controls. |
 | JIG-110-FR-04 | Reminder due state is derived from incomplete/current-date/reminder-time-passed state, independent of delivery. |
 | JIG-110-FR-05 | Past-due/current reminders remain visible; session-start suppression is removed and open Jig transitions to due state as time passes. |
 | JIG-110-FR-06 | Due Tasks have persistent accessible in-card attention until the underlying Task/reminder changes. |
