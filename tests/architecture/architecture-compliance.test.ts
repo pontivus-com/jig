@@ -125,6 +125,26 @@ describe("architecture compliance", () => {
     expect(planning).toContain("setTaskRecurrence");
     expect(editor).toContain("type RecurrenceSeries");
     expect(editor).toContain("type RecurrenceSpec");
+    expect(editor).toContain("validateRecurrenceSpec");
+    expect(editor).toContain("recurrenceSpecMatchesSeries");
+    expect(editor).not.toContain("function recurrenceMatchesSeries");
+    const recurrenceDraftStart = editor.indexOf(
+      "function recurrenceSpecForDraft",
+    );
+    const commandStart = editor.indexOf(
+      "export function commandForDraft",
+      recurrenceDraftStart,
+    );
+    expect(recurrenceDraftStart).toBeGreaterThanOrEqual(0);
+    expect(commandStart).toBeGreaterThan(recurrenceDraftStart);
+    const recurrenceDraft = editor.slice(
+      recurrenceDraftStart,
+      commandStart,
+    );
+    expect(recurrenceDraft).toContain("validateRecurrenceSpec");
+    expect(recurrenceDraft).not.toContain("draft.repeatEndDate < anchor");
+    expect(recurrenceDraft).not.toContain("intervalWeeks <= 0");
+    expect(recurrenceDraft).not.toContain("dayOfMonth < 1");
     expect(editor).toContain('label="Repeat"');
     expect(editor).not.toContain("Enable repeat");
     expect(editor).not.toContain("Save repeat");

@@ -163,6 +163,52 @@ export function validateRecurrenceSpec(
   };
 }
 
+export function recurrenceSpecMatchesSeries(
+  spec: RecurrenceSpec,
+  series: RecurrenceSeries,
+): boolean {
+  const normalized = validateRecurrenceSpec(
+    spec,
+    series.effective_from,
+  );
+  const current = validateRecurrenceSeries(series);
+
+  if (
+    normalized.end_date !== current.end_date ||
+    normalized.pattern.kind !== current.pattern.kind
+  ) {
+    return false;
+  }
+
+  if (
+    normalized.pattern.kind === "monthly" &&
+    current.pattern.kind === "monthly"
+  ) {
+    return (
+      normalized.pattern.day_of_month ===
+      current.pattern.day_of_month
+    );
+  }
+
+  if (
+    normalized.pattern.kind === "weekly" &&
+    current.pattern.kind === "weekly"
+  ) {
+    return (
+      normalized.pattern.interval_weeks ===
+        current.pattern.interval_weeks &&
+      normalized.pattern.weekdays.length ===
+        current.pattern.weekdays.length &&
+      normalized.pattern.weekdays.every(
+        (weekday, index) =>
+          weekday === current.pattern.weekdays[index],
+      )
+    );
+  }
+
+  return false;
+}
+
 export function validateRecurrenceSeries(
   series: RecurrenceSeries,
 ): RecurrenceSeries {
