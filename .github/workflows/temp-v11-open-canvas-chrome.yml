@@ -28,7 +28,8 @@ jobs:
         run: |
           test ! -e .github/workflows/theme-surface-hierarchy.yml
           test ! -e .github/scripts/apply-theme-surface-hierarchy.py
-          ! grep -R --line-number --fixed-strings -- '--jig-lane-surface' ui/src tests docs/design/brand-and-theme.md
+          ! grep -R --line-number --fixed-strings -- '--jig-lane-surface' ui/src
+          grep -Fq "expect(common).not.toContain('\"--jig-lane-surface\"')" tests/architecture/ui-ownership.test.ts
 
       - name: Verify generated theme artifacts
         run: bun run theme:check
