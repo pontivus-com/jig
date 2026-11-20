@@ -216,7 +216,7 @@ body {
   }
 
   .jig-header-mobile-title .jig-header-destination-title {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-base);
     line-height: 1.15;
     font-weight: var(--font-weight-bold);
   }
@@ -371,7 +371,7 @@ body {
   .jig-mobile-nav-label {
     overflow: hidden;
     max-width: 100%;
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-base);
     font-weight: var(--font-weight-semibold);
     line-height: 1.1;
     text-overflow: ellipsis;
@@ -406,6 +406,7 @@ body {
 
   .jig-mobile-today {
     min-width: 64px;
+    font-size: var(--font-size-base);
     font-weight: var(--font-weight-semibold);
   }
 
