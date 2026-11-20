@@ -1,6 +1,6 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION ATTEMPTED AND BLOCKED / J110-IMP-23 NON-DEVICE CHECKS PASS, PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL — the bounded remediation is implemented and hosted-certified on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598. The corrected APK was physically launched and the compact-shell/past-date checks passed, but physical Task creation failed with `Illegal invocation`; IMP-21 and IMP-15 remain open. Do not reconstruct unknown IMP-09 evidence.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION ATTEMPTED AND BLOCKED / J110-IMP-23 REOPENED FOR FR-33/SD-43 CROSS-PLATFORM WEEKPAGER / J110-IMP-15 PARTIAL — the bounded remediation remains hosted-certified on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598 for its tested scope only. That APK predates and cannot certify the rewritten WeekPager contract. The corrected APK was physically launched and the compact-shell/past-date checks passed, but physical Task creation failed with `Illegal invocation`; IMP-21 and IMP-15 remain open. Do not reconstruct unknown IMP-09 evidence.
 
 **Partial-session executable source:** `222f2fe0e672b122424042b3fa39747efb991610`  
 **GitHub Actions APK artifact:** not retained in the session record  
@@ -141,7 +141,7 @@ Focused physical observations:
 - **PASS — reduced-motion WebView contract on the physical device:** Chrome DevTools Protocol emulation of `prefers-reduced-motion: reduce` in the installed Android WebView reported `matchMedia(...).matches === true`, `scroll-behavior: auto` and no Planner board animation. This exercised the same built WebView CSS used by the APK, not a second native motion implementation.
 - **Boundary recorded:** Android's `secure/remove_animations=1` setting did not cause the WebView media query to become true on this Samsung build. Jig therefore does not claim that the OS setting itself is a WebView CSS preference bridge; the browser/WebView media-query contract remains the authoritative reduced-motion boundary, and native system animation settings remain OS-owned.
 
-**J110-IMP-23 swipe replacement — NOT RETAINED in this APK.** The Astryx `usePanGesture` adapter landed after this APK was built. Local typecheck, architecture and focused browser checks pass, but physical populated-region swipes in both directions, interruption and vertical scrolling remain unconfirmed; this APK still contains the rejected raw adapter and must not be cited as swipe acceptance.
+**Historical J110-IMP-23 swipe replacement — SUPERSEDED / NOT RETAINED in this APK.** The Astryx `usePanGesture` adapter landed after this APK was built and was later superseded by FR-33/SD-43. Its former local typecheck/architecture/browser checks are historical implementation evidence only. This APK still contains the rejected raw adapter and must not be cited as WeekPager acceptance. Rewritten IMP-23 requires a new exact-head APK exercising the shared desktop+narrow WeekPager, physical horizontal paging, vertical scroll arbitration and active-week drag isolation.
 
 This resolves the motion audit's implementation, ownership, interruption and physical-WebView reduced-motion findings. Hosted re-certification of the combined executable changes and the broader J110-IMP-15 matrix remain required before release promotion.
 
@@ -360,7 +360,7 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 | Gate | Result |
 |---|---|
 | J110-IMP-09 physical Task movement | **PASS — completed; detailed execution record lost** |
-| J110-IMP-23 Astryx week-swipe replacement | **OPEN — not contained in the recorded APK; local non-device checks only** |
+| J110-IMP-23 FR-33/SD-43 cross-platform WeekPager | **REOPENED — no retained APK or physical evidence yet certifies the rewritten contract; prior raw/usePanGesture results are superseded history** |
 | J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS — local follow-up passes Task creation; exact hosted re-certification and remaining matrix are pending** |
 | Issue #31 live Linux/Desktop GitHub acceptance | NOT RUN |
 
