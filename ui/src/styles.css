@@ -509,31 +509,15 @@ body {
     text-transform: uppercase;
   }
 
-  .jig-week-pager {
-    display: flex;
+  .jig-week-carousel {
     width: 100%;
     min-width: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+    container-type: inline-size;
   }
 
-  .jig-week-pager::-webkit-scrollbar {
-    display: none;
-  }
-
-  .jig-week-pager[data-jig-paging-disabled="true"] {
-    overflow-x: hidden;
-  }
-
-  .jig-week-slide {
-    width: 100%;
+  .jig-week-carousel-page {
+    width: 100cqi;
     min-width: 0;
-    flex: 0 0 100%;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
   }
 
   .jig-week-board {
