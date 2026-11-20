@@ -555,7 +555,7 @@ describe("UI ownership architecture", () => {
     expect(week).toContain("type WeekInteraction");
     expect(week).not.toContain("readonly interactive: boolean");
     expect(week).not.toContain("interactive={isActive}");
-    expect(week.match(/<WeekPage/g)?.length).toBe(2);
+    expect(week.match(/<WeekPage(?:\\s|>)/g)?.length).toBe(2);
     expect(week.match(/<PlannerTaskList/g)?.length).toBe(2);
     expect(week).toContain('mode="active"');
     expect(week).toContain('mode="passive"');
