@@ -2,7 +2,7 @@
 
 **Status:** v1.1 implementation support document, amended 2026-11-20 after the bounded remediation was implemented and hosted-certified. J110-IMP-09 remains complete with its detailed historical record lost. J110-IMP-18..20 are complete on exact source `3b60ad938f2173521c4eb2aa8b59603a15d930b1` / Verify #1598. J110-IMP-21 now requires focused physical Android confirmation on artifact `14591926175` before the remaining J110-IMP-15 matrix can close. The earlier Samsung SM-S901E / Android 16 session on `222f2fe…` remains partial historical evidence.
 
-**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39, SD-40 and SD-42; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..23 and J110-IMP-15.
+**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39, SD-40, SD-42 and SD-43; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..23 and J110-IMP-15.
 
 ## 1. Governed Android baseline
 
@@ -131,6 +131,10 @@ The repository package authority expects application ID `com.pontivus.jig`; the 
 13. repeat after scrolling and after opening/closing the BottomSheet.
 
 The checklist above is retained as the historical IMP-09 gate definition. Its detailed execution results were not retained. If new physical evidence during IMP-15 shows a repeated missed drop, floating-card residue, unstable slot or scroll conflict, reopen SD-34/35 from that new evidence. Do not add Pangea, another drag library or a platform-only sensor stack.
+
+### Cross-platform WeekPager physical boundary
+
+J110-IMP-23 / JIG-110-SD-43 now govern adjacent-week paging on both desktop and Android/narrow. Android physical certification must use the exact hosted candidate and confirm repeated previous/next horizontal paging on populated and empty weeks, ordinary vertical Planner scrolling, interruption, BottomSheet open/close, and that dedicated-grip Task dragging never pages or exposes an adjacent preview as a drop target. The active week must remain the only interactive/dnd domain. Prior raw-pointer or `usePanGesture` APK evidence is historical only. Do not add an Android `GestureDetector`, native week state, private Astryx Carousel integration or platform-specific paging workaround.
 
 ### 2026-11-20 partial physical acceptance findings
 
