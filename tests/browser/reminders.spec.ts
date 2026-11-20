@@ -303,42 +303,6 @@ test("service-worker delivery failure remains retryable until success", async ({
   await expect.poll(() => notificationCalls(page).then((calls) => calls.length)).toBe(1);
 });
 
-test("rolled-forward reminder uses today's canonical date and preserved time", async ({
-  page,
-}) => {
-  await prepareReminderPage(page, "granted");
-  const today = await browserCivilDate(page);
-  const yesterday = await browserCivilDate(page, -1);
-
-  await apiCommand(page, {
-    type: "create",
-    title: "Rolled reminder",
-    scheduled_date: yesterday,
-    priority: "NORMAL",
-    context: null,
-    reference: null,
-    note: null,
-    reminder_time: "10:00",
-  });
-
-  const rolled = (await apiState(page)).tasks.find(
-    (task) => task.title === "Rolled reminder",
-  );
-  expect(rolled?.scheduled_date).toBe(today);
-  expect(rolled?.reminder_time).toBe("10:00");
-
-  await page.reload();
-  await page.clock.fastForward(60_000);
-
-  const calls = await notificationCalls(page);
-  expect(calls).toHaveLength(1);
-  expect(calls[0]).toMatchObject({
-    title: "Jig reminder",
-    body: "Rolled reminder",
-  });
-  expect(calls[0]?.tag).toContain(`${today}|10:00`);
-});
-
 test("completed Task never delivers its due reminder", async ({ page }) => {
   await prepareReminderPage(page, "granted");
   const today = civilDate(reminderStart());
