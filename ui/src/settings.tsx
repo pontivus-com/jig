@@ -1,5 +1,4 @@
 import {
-  Banner,
   Button,
   Section,
   Selector,
@@ -7,6 +6,8 @@ import {
   SegmentedControlItem,
   VStack,
 } from "@astryxdesign/core";
+
+import { JigAttentionBanner } from "./attention-banner";
 import { useEffect, useState } from "react";
 import type {
   Diagnostics,
@@ -142,12 +143,10 @@ export function SettingsView({
   return (
     <div className="jig-settings-view">
       {operationError === null ? null : (
-        <Banner
+        <JigAttentionBanner
           status="error"
           title="Operation failed"
           description={operationError}
-          collapsible={false}
-          className="jig-attention-banner"
         />
       )}
 

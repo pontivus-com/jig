@@ -1,7 +1,6 @@
 import {
   AlertDialog,
   AppShell,
-  Banner,
   Button,
   Icon,
   IconButton,
@@ -79,6 +78,7 @@ import {
 import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
+import { JigAttentionBanner } from "./attention-banner";
 import {
   installNativeActiveListener,
   installNativeBackButtonListener,
@@ -750,23 +750,19 @@ function ConfiguredApp({
 
   const durableBanner =
     operationError !== null && workspace.mode === "closed" ? (
-    <Banner
+    <JigAttentionBanner
       status="error"
       title="Jig could not complete the operation"
       description={operationError}
       container="section"
-      collapsible={false}
-      className="jig-attention-banner"
     />
   ) : repositoryStatus.key === "sync-issue" &&
     destination !== "settings" ? (
-    <Banner
+    <JigAttentionBanner
       status="warning"
       title="Sync needs attention"
       description={repositoryStatus.message}
       container="section"
-      collapsible={false}
-      className="jig-attention-banner"
       endContent={
         <Button
           label="Open Settings"
@@ -820,13 +816,11 @@ function ConfiguredApp({
           <p>Loading local planning data…</p>
         ) : (
           <>
-            <Banner
+            <JigAttentionBanner
               status="error"
               title="Jig could not load local planning data"
               description={loadError}
-              collapsible={false}
-              className="jig-attention-banner"
-            />
+                            />
             <Button
               label="Retry"
               variant="primary"
@@ -1070,12 +1064,11 @@ export function App(): React.ReactElement {
           <p>Opening Jig…</p>
         ) : (
           <>
-            <Banner
+            <JigAttentionBanner
               status="error"
               title="Jig could not open"
               description={setupError}
-              collapsible={false}
-            />
+                    />
             <Button
               label="Retry"
               variant="primary"

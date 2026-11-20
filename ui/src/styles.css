@@ -1087,8 +1087,62 @@ body {
   }
 
   .jig-attention-banner {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--spacing-2);
+    row-gap: var(--spacing-2);
+    padding: var(--spacing-3) var(--spacing-4);
     animation: jig-attention-reveal var(--duration-fast-max)
       var(--ease-standard) both;
+  }
+
+  .jig-attention-banner-card {
+    border-radius: var(--radius-element);
+  }
+
+  .jig-attention-banner-error {
+    color: var(--color-on-error-muted);
+    background: var(--color-error-muted);
+  }
+
+  .jig-attention-banner-warning {
+    color: var(--color-on-warning-muted);
+    background: var(--color-warning-muted);
+  }
+
+  .jig-attention-banner-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .jig-attention-banner-message {
+    display: grid;
+    min-width: 12rem;
+    flex: 1 1 12rem;
+    gap: var(--spacing-0-5);
+  }
+
+  .jig-attention-banner-title,
+  .jig-attention-banner-description {
+    margin: 0;
+  }
+
+  .jig-attention-banner-description {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-normal);
+  }
+
+  .jig-attention-banner-action {
+    display: flex;
+    max-width: 100%;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    margin-inline-start: auto;
   }
 
   .jig-task-sheet-header {

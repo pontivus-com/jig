@@ -1,11 +1,12 @@
 import {
-  Banner,
   Button,
   Icon,
   Section,
   TextInput,
   VStack,
 } from "@astryxdesign/core";
+
+import { JigAttentionBanner } from "./attention-banner";
 import {
   useCallback,
   useEffect,
@@ -279,11 +280,10 @@ export function SetupView({
 
         <section className="jig-setup-pane" aria-label="Set up planning data">
           {error === null ? null : (
-            <Banner
+            <JigAttentionBanner
               status="error"
               title="Jig needs attention"
               description={error}
-              collapsible={false}
             />
           )}
 
