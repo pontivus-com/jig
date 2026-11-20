@@ -548,6 +548,7 @@ describe("UI ownership architecture", () => {
     const taskRow = source("ui/src/task-row.tsx");
     const css = source("ui/src/styles.css");
     const browser = source("tests/browser/ui-conformance.spec.ts");
+    const interactions = source("tests/browser/interactions.spec.ts");
 
     expect(existsSync("ui/src/week-pager.tsx")).toBe(false);
     expect(existsSync("ui/src/week-swipe.ts")).toBe(false);
@@ -577,6 +578,8 @@ describe("UI ownership architecture", () => {
     expect(browser).not.toContain(".jig-week-slide");
     expect(browser).not.toContain('new Event("scrollend")');
     expect(browser).not.toContain("pager.scrollLeft");
+    expect(interactions).not.toContain(".jig-week-pager");
+    expect(interactions).not.toContain(".jig-week-slide");
   });
 
   it("keeps operational attention in one public-leaf Jig composition", () => {
