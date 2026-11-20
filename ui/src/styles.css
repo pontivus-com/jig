@@ -111,7 +111,7 @@ body {
     width: 100%;
     margin: 0;
     border-block-end: var(--border-width) solid var(--color-border);
-    background: var(--color-background-body);
+    background: var(--jig-chrome-surface);
     transition:
       background-color var(--duration-fast-max) var(--ease-standard),
       border-color var(--duration-fast-max) var(--ease-standard),
@@ -406,7 +406,7 @@ body {
     padding: var(--spacing-1) var(--spacing-1)
       env(safe-area-inset-bottom, 0px);
     border-block-start: var(--border-width) solid var(--color-border);
-    background: var(--color-background-surface);
+    background: var(--jig-chrome-surface);
   }
 
   .jig-mobile-nav-item {
@@ -555,7 +555,7 @@ body {
     min-width: 0;
     min-height: 18rem;
     padding-inline: var(--spacing-1);
-    background: transparent;
+    background: var(--jig-lane-surface);
   }
 
   .jig-week-column + .jig-week-column {

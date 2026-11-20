@@ -61,6 +61,8 @@ const JIG_PRODUCT_TOKENS = new Set([
   "--jig-status-healthy-bg",
   "--jig-status-healthy-border",
   "--jig-status-healthy-text",
+  "--jig-lane-surface",
+  "--jig-chrome-surface",
   "--jig-state-hover-bg",
   "--jig-state-pressed-bg",
   "--jig-task-surface",
@@ -137,12 +139,21 @@ describe("UI ownership architecture", () => {
 
     const common = source("ui/src/themes/product-tokens.ts");
     for (const token of JIG_PRODUCT_TOKENS) {
-      if (token === "--jig-task-surface") {
-        expect(source("ui/src/jig-theme.source.ts")).toContain(`"${token}"`);
-      } else {
-        expect(common).toContain(`"${token}"`);
-      }
+      expect(common).toContain(`"${token}"`);
     }
+
+    expect(css).toMatch(
+      /\.jig-app-header\s*\{[^}]*background:\s*var\(--jig-chrome-surface\)/s,
+    );
+    expect(css).toMatch(
+      /\.jig-mobile-bottom-navigation\s*\{[^}]*background:\s*var\(--jig-chrome-surface\)/s,
+    );
+    expect(css).toMatch(
+      /\.jig-week-column\s*\{[^}]*background:\s*var\(--jig-lane-surface\)/s,
+    );
+    expect(css).toMatch(
+      /\.jig-task-card\s*\{[^}]*background:\s*var\(--jig-task-surface/s,
+    );
   });
 
   it("keeps ordinary visual values on Astryx scales", () => {

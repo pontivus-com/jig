@@ -10,6 +10,5 @@ export const tokyoNightTheme = defineTheme({
   tokens: communityColorTokens(tokyoNightPalette),
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

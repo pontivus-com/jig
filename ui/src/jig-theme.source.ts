@@ -126,9 +126,5 @@ export const jigTheme = defineTheme({
   },
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": [
-      "var(--jig-white)",
-      "var(--jig-ink-800)",
-    ],
   },
 });

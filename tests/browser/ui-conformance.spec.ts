@@ -56,13 +56,29 @@ async function setAppearance(
 }
 
 function rgbChannels(value: string): readonly [number, number, number] {
-  const match = value.match(
+  const rgb = value.match(
     /rgba?\(\s*([\d.]+)[, ]+\s*([\d.]+)[, ]+\s*([\d.]+)/,
   );
-  if (match?.[1] === undefined || match[2] === undefined || match[3] === undefined) {
-    throw new Error(`Unsupported computed color: ${value}`);
+  if (rgb?.[1] !== undefined && rgb[2] !== undefined && rgb[3] !== undefined) {
+    return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
   }
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
+
+  const srgb = value.match(
+    /color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/,
+  );
+  if (
+    srgb?.[1] !== undefined &&
+    srgb[2] !== undefined &&
+    srgb[3] !== undefined
+  ) {
+    return [
+      Number(srgb[1]) * 255,
+      Number(srgb[2]) * 255,
+      Number(srgb[3]) * 255,
+    ];
+  }
+
+  throw new Error(`Unsupported computed color: ${value}`);
 }
 
 function relativeLuminance(value: string): number {
@@ -92,6 +108,8 @@ async function themeSnapshot(page: Page): Promise<{
   readonly explicitMode: string | null;
   readonly bodyBackground: string;
   readonly bodyText: string;
+  readonly chromeBackground: string;
+  readonly laneBackground: string;
   readonly taskBackground: string;
   readonly taskText: string;
   readonly taskBorder: string;
@@ -114,6 +132,8 @@ async function themeSnapshot(page: Page): Promise<{
     const active = document.querySelector<HTMLElement>(
       '.jig-week-slide[data-jig-week-page="active"]',
     );
+    const header = document.querySelector<HTMLElement>(".jig-app-header");
+    const lane = active?.querySelector<HTMLElement>(".jig-week-column") ?? null;
     const task = active?.querySelector<HTMLElement>(".jig-task-card") ?? null;
     const today =
       active?.querySelector<HTMLElement>(
@@ -122,6 +142,8 @@ async function themeSnapshot(page: Page): Promise<{
     const logoPrimary = document.querySelector<SVGElement>(".jig-logo path");
     const logoAccent = document.querySelector<SVGElement>(".jig-logo circle");
     if (
+      header === null ||
+      lane === null ||
       task === null ||
       today === null ||
       logoPrimary === null ||
@@ -154,6 +176,8 @@ async function themeSnapshot(page: Page): Promise<{
       explicitMode: document.documentElement.getAttribute("data-theme"),
       bodyBackground: bodyStyle.backgroundColor,
       bodyText: bodyStyle.color,
+      chromeBackground: getComputedStyle(header).backgroundColor,
+      laneBackground: getComputedStyle(lane).backgroundColor,
       taskBackground: taskStyle.backgroundColor,
       taskText: taskStyle.color,
       taskBorder: taskStyle.borderColor,
@@ -2032,8 +2056,12 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       }
       expect(snapshot.rootTheme).toBe(preset);
       expect(snapshot.explicitMode).toBe(mode);
-      expect(snapshot.taskBackground, `${preset}/${mode} task vs canvas`)
-        .not.toBe(snapshot.bodyBackground);
+      expect(snapshot.chromeBackground, `${preset}/${mode} chrome vs lane`)
+        .not.toBe(snapshot.laneBackground);
+      expect(snapshot.taskBackground, `${preset}/${mode} task vs lane`)
+        .not.toBe(snapshot.laneBackground);
+      expect(snapshot.taskBackground, `${preset}/${mode} task vs chrome`)
+        .not.toBe(snapshot.chromeBackground);
       expect(snapshot.taskBorder).not.toBe("rgba(0, 0, 0, 0)");
       expect(
         contrastRatio(snapshot.bodyText, snapshot.bodyBackground),
@@ -2045,12 +2073,16 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       ).toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
       expect(
-        contrastRatio(snapshot.logoPrimary, snapshot.bodyBackground),
-        `${preset}/${mode} logo primary contrast`,
+        contrastRatio(snapshot.bodyText, snapshot.laneBackground),
+        `${preset}/${mode} lane text contrast`,
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(snapshot.logoPrimary, snapshot.chromeBackground),
+        `${preset}/${mode} logo primary contrast on chrome`,
       ).toBeGreaterThanOrEqual(3);
       expect(
-        contrastRatio(snapshot.logoAccent, snapshot.bodyBackground),
-        `${preset}/${mode} logo accent contrast`,
+        contrastRatio(snapshot.logoAccent, snapshot.chromeBackground),
+        `${preset}/${mode} logo accent contrast on chrome`,
       ).toBeGreaterThanOrEqual(3);
       for (const [index, pair] of snapshot.statusPairs.entries()) {
         expect(
@@ -2073,7 +2105,9 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
     const systemDark = await themeSnapshot(page);
     expect(systemDark.rootTheme).toBe(preset);
     expect(systemDark.explicitMode).toBeNull();
-    expect(systemDark.taskBackground).not.toBe(systemDark.bodyBackground);
+    expect(systemDark.chromeBackground).not.toBe(systemDark.laneBackground);
+    expect(systemDark.taskBackground).not.toBe(systemDark.laneBackground);
+    expect(systemDark.taskBackground).not.toBe(systemDark.chromeBackground);
   }
 
   await page.emulateMedia({ colorScheme: "no-preference" });

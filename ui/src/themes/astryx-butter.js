@@ -234,12 +234,14 @@ export const astryxButterTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
+    "--jig-lane-surface": "var(--color-background-body)",
+    "--jig-chrome-surface": "color-mix(in srgb, var(--color-background-surface) 60%, color-mix(in srgb, var(--color-background-muted) 50%, var(--color-background-body) 50%) 40%)",
+    "--jig-task-surface": "color-mix(in srgb, var(--color-background-surface) 97%, var(--color-background-card) 3%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)",
-    "--jig-task-surface": "var(--color-background-surface)"
+    "--jig-brand-accent": "var(--color-icon-accent)"
   },
   __localTokenOwners: {
     "--jig-state-today-border": "astryx-butter",
@@ -256,12 +258,14 @@ export const astryxButterTheme = {
     "--jig-status-healthy-bg": "astryx-butter",
     "--jig-status-healthy-border": "astryx-butter",
     "--jig-status-healthy-text": "astryx-butter",
+    "--jig-lane-surface": "astryx-butter",
+    "--jig-chrome-surface": "astryx-butter",
+    "--jig-task-surface": "astryx-butter",
     "--jig-state-hover-bg": "astryx-butter",
     "--jig-state-pressed-bg": "astryx-butter",
     "--jig-task-border": "astryx-butter",
     "--jig-brand-primary": "astryx-butter",
-    "--jig-brand-accent": "astryx-butter",
-    "--jig-task-surface": "astryx-butter"
+    "--jig-brand-accent": "astryx-butter"
   },
   __localTokenLineage: ["astryx-butter"],
   components: {

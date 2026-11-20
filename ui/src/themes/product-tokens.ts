@@ -15,6 +15,11 @@ export const jigProductLocalTokens = {
   "--jig-status-healthy-bg": "var(--color-success-muted)",
   "--jig-status-healthy-border": "var(--color-border-success)",
   "--jig-status-healthy-text": "var(--color-text-success)",
+  "--jig-lane-surface": "var(--color-background-body)",
+  "--jig-chrome-surface":
+    "color-mix(in srgb, var(--color-background-surface) 60%, color-mix(in srgb, var(--color-background-muted) 50%, var(--color-background-body) 50%) 40%)",
+  "--jig-task-surface":
+    "color-mix(in srgb, var(--color-background-surface) 97%, var(--color-background-card) 3%)",
   "--jig-state-hover-bg":
     "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
   "--jig-state-pressed-bg":

@@ -244,12 +244,14 @@ export const catppuccinTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
+    "--jig-lane-surface": "var(--color-background-body)",
+    "--jig-chrome-surface": "color-mix(in srgb, var(--color-background-surface) 60%, color-mix(in srgb, var(--color-background-muted) 50%, var(--color-background-body) 50%) 40%)",
+    "--jig-task-surface": "color-mix(in srgb, var(--color-background-surface) 97%, var(--color-background-card) 3%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)",
-    "--jig-task-surface": "var(--color-background-surface)"
+    "--jig-brand-accent": "var(--color-icon-accent)"
   },
   __localTokenOwners: {
     "--astryx-theme-neutral-color-status-fill-accent": "neutral",
@@ -267,12 +269,14 @@ export const catppuccinTheme = {
     "--jig-status-healthy-bg": "catppuccin",
     "--jig-status-healthy-border": "catppuccin",
     "--jig-status-healthy-text": "catppuccin",
+    "--jig-lane-surface": "catppuccin",
+    "--jig-chrome-surface": "catppuccin",
+    "--jig-task-surface": "catppuccin",
     "--jig-state-hover-bg": "catppuccin",
     "--jig-state-pressed-bg": "catppuccin",
     "--jig-task-border": "catppuccin",
     "--jig-brand-primary": "catppuccin",
-    "--jig-brand-accent": "catppuccin",
-    "--jig-task-surface": "catppuccin"
+    "--jig-brand-accent": "catppuccin"
   },
   __localTokenLineage: ["neutral","catppuccin"],
   components: {

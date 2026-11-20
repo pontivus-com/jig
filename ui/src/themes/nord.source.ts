@@ -10,6 +10,5 @@ export const nordTheme = defineTheme({
   tokens: communityColorTokens(nordPalette),
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

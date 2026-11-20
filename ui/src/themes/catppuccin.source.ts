@@ -10,6 +10,5 @@ export const catppuccinTheme = defineTheme({
   tokens: communityColorTokens(catppuccinPalette),
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

@@ -244,12 +244,14 @@ export const nordTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
+    "--jig-lane-surface": "var(--color-background-body)",
+    "--jig-chrome-surface": "color-mix(in srgb, var(--color-background-surface) 60%, color-mix(in srgb, var(--color-background-muted) 50%, var(--color-background-body) 50%) 40%)",
+    "--jig-task-surface": "color-mix(in srgb, var(--color-background-surface) 97%, var(--color-background-card) 3%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)",
-    "--jig-task-surface": "var(--color-background-surface)"
+    "--jig-brand-accent": "var(--color-icon-accent)"
   },
   __localTokenOwners: {
     "--astryx-theme-neutral-color-status-fill-accent": "neutral",
@@ -267,12 +269,14 @@ export const nordTheme = {
     "--jig-status-healthy-bg": "nord",
     "--jig-status-healthy-border": "nord",
     "--jig-status-healthy-text": "nord",
+    "--jig-lane-surface": "nord",
+    "--jig-chrome-surface": "nord",
+    "--jig-task-surface": "nord",
     "--jig-state-hover-bg": "nord",
     "--jig-state-pressed-bg": "nord",
     "--jig-task-border": "nord",
     "--jig-brand-primary": "nord",
-    "--jig-brand-accent": "nord",
-    "--jig-task-surface": "nord"
+    "--jig-brand-accent": "nord"
   },
   __localTokenLineage: ["neutral","nord"],
   components: {

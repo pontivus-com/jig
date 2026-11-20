@@ -7,6 +7,5 @@ export const astryxY2kTheme = defineTheme({
   extends: y2kTheme,
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });
