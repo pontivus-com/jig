@@ -1,9 +1,5 @@
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
-import type {
-  WeekPagingDirection,
-  WeekPagingRequest,
-} from "./week-pager";
 import { WeekView } from "./week";
 
 export type WeekTransitionDirection = "today";
@@ -12,8 +8,6 @@ export interface PlannerProps {
   readonly focusCurrentDayOnMount: boolean;
   readonly todayScrollRequest: number;
   readonly weekTransitionDirection: WeekTransitionDirection | null;
-  readonly weekPagingRequest: WeekPagingRequest | null;
-  readonly onCommitWeek: (direction: WeekPagingDirection) => void;
   readonly tasks: readonly Task[];
   readonly recurrences: readonly RecurrenceSeries[];
   readonly now: Date;
@@ -39,8 +33,6 @@ export function Planner(props: PlannerProps): React.ReactElement {
         focusCurrentDayOnMount={props.focusCurrentDayOnMount}
         todayScrollRequest={props.todayScrollRequest}
         weekTransitionDirection={props.weekTransitionDirection}
-        weekPagingRequest={props.weekPagingRequest}
-        onCommitWeek={props.onCommitWeek}
         tasks={props.tasks}
         recurrences={props.recurrences}
         now={props.now}
