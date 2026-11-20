@@ -1,0 +1,149 @@
+name: Prepare Astryx Carousel lifecycle seam
+
+on:
+  push:
+    branches: [v1.1]
+    paths:
+      - .github/workflows/astryx-carousel-seam.yml
+      - scripts/astryx-carousel-seam.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: astryx-carousel-seam-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch-test-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      ASTRYX_BASE_SHA: f58e64459aa0aa534e8e5913eea8e9c277f3118b
+    steps:
+      - name: Checkout Jig harness
+        uses: actions/checkout@v4
+        with:
+          path: jig
+          persist-credentials: false
+
+      - name: Checkout exact Astryx authority
+        uses: actions/checkout@v4
+        with:
+          repository: meta/astryx
+          ref: ${{ env.ASTRYX_BASE_SHA }}
+          path: astryx
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Prove exact Astryx base
+        working-directory: astryx
+        run: test "$(git rev-parse HEAD)" = "$ASTRYX_BASE_SHA"
+
+      - name: Apply IMP-23 public lifecycle seam
+        run: python3 jig/scripts/astryx-carousel-seam.py astryx
+
+      - name: Reject whitespace and accidental unrelated edits
+        working-directory: astryx
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git diff --name-only)"
+          printf '%s
+' "$changed"
+          while IFS= read -r path; do
+            case "$path" in
+              packages/core/src/Carousel/Carousel.tsx|packages/core/src/Carousel/index.ts|packages/core/src/Carousel/Carousel.doc.mjs|packages/core/src/Carousel/Carousel.test.tsx|packages/core/src/SnapPaging/SnapPaging.ts|packages/core/src/SnapPaging/snapPagingValue.ts|packages/core/src/SnapPaging/useSnapPaging.doc.mjs|packages/core/src/SnapPaging/SnapPaging.test.tsx|.changeset/carousel-settled-reposition.md) ;;
+              *) echo "::error::Unexpected Astryx patch path: $path"; exit 1 ;;
+            esac
+          done <<< "$changed"
+
+      - name: Set up Astryx governed toolchain
+        uses: ./astryx/.github/actions/setup
+
+      - name: Targeted Carousel and SnapPaging unit tests
+        working-directory: astryx
+        run: pnpm vitest run packages/core/src/Carousel/Carousel.test.tsx packages/core/src/SnapPaging/SnapPaging.test.tsx --project node
+
+      - name: Astryx core typecheck
+        working-directory: astryx
+        run: pnpm -F @astryxdesign/core typecheck
+
+      - name: Astryx core build
+        working-directory: astryx
+        run: pnpm -F @astryxdesign/core build
+
+      - name: Changeset and package-boundary checks
+        working-directory: astryx
+        run: |
+          pnpm check:changesets
+          pnpm check:package-boundaries
+
+      - name: Create tested patch artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C astryx diff --binary "$ASTRYX_BASE_SHA" > astryx-carousel-lifecycle.patch
+          test -s astryx-carousel-lifecycle.patch
+          sha256sum astryx-carousel-lifecycle.patch > astryx-carousel-lifecycle.patch.sha256
+
+      - name: Retain tested Astryx patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: astryx-carousel-lifecycle-${{ env.ASTRYX_BASE_SHA }}
+          path: |
+            astryx-carousel-lifecycle.patch
+            astryx-carousel-lifecycle.patch.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Commit tested upstream candidate
+        working-directory: astryx
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/core/src/Carousel packages/core/src/SnapPaging .changeset/carousel-settled-reposition.md
+          git commit -m "feat(Carousel): expose settled paging lifecycle"
+
+      - name: Attempt upstream branch publication
+        id: publish
+        working-directory: astryx
+        continue-on-error: true
+        env:
+          ASTRYX_WRITE_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN }}
+          FALLBACK_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$ASTRYX_WRITE_TOKEN"
+          if [[ -z "$token" ]]; then token="$FALLBACK_TOKEN"; fi
+          branch="jig-imp-23-carousel-lifecycle-${GITHUB_RUN_ID}"
+          git branch -f "$branch" HEAD
+          git remote set-url origin "https://x-access-token:${token}@github.com/meta/astryx.git"
+          git push origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open upstream pull request
+        if: steps.publish.outcome == 'success'
+        working-directory: astryx
+        env:
+          GH_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN != '' && secrets.ASTRYX_WRITE_TOKEN || github.token }}
+          UPSTREAM_BRANCH: ${{ steps.publish.outputs.branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr create             --repo meta/astryx             --base main             --head "$UPSTREAM_BRANCH"             --title "feat(Carousel): expose settled paging lifecycle"             --body "Expose the existing SnapPaging/usePager settle lifecycle through public SnapPaging options and allow CarouselHandle.scrollTo(..., {animated:false}) for immediate bounded-window recentering. The patch is exercised by Carousel/SnapPaging unit tests, core typecheck/build, changeset validation and package-boundary checks."
+
+      - name: Record publication boundary
+        if: always()
+        shell: bash
+        run: |
+          if [[ "${{ steps.publish.outcome }}" == "success" ]]; then
+            echo "Upstream branch publication succeeded."
+          else
+            echo "::notice::The tested patch artifact is valid, but this Actions token cannot publish to meta/astryx. Configure ASTRYX_WRITE_TOKEN with upstream branch/PR permission or apply the retained artifact from an authorized workflow."
+          fi
