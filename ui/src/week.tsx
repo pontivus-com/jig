@@ -18,8 +18,8 @@ import { JigIcon } from "./jig-icons";
 import type { WeekTransitionDirection } from "./planner";
 import {
   WeekPager,
+  type WeekPagerHandle,
   type WeekPagingDirection,
-  type WeekPagingRequest,
 } from "./week-pager";
 
 interface WeekPresentationProps {
@@ -60,7 +60,7 @@ export interface WeekViewProps extends WeekTaskProps {
   readonly focusCurrentDayOnMount: boolean;
   readonly todayScrollRequest: number;
   readonly weekTransitionDirection: WeekTransitionDirection | null;
-  readonly weekPagingRequest: WeekPagingRequest | null;
+  readonly weekPagerRef: Ref<WeekPagerHandle>;
   readonly onCommitWeek: (direction: WeekPagingDirection) => void;
   readonly displayedDates: readonly string[];
 }
@@ -331,7 +331,7 @@ export function WeekView(props: WeekViewProps): React.ReactElement {
   return (
     <WeekPager
       weekStart={weekStart}
-      navigationRequest={props.weekPagingRequest}
+      handleRef={props.weekPagerRef}
       isPagingDisabled={isTaskDragging}
       onCommit={props.onCommitWeek}
       renderWeek={(dates, isActive) =>
