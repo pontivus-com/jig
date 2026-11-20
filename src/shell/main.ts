@@ -118,7 +118,10 @@ async function runConfigured(config: JigConfig): Promise<void> {
       localCivilDate(now),
       now.toISOString(),
     );
-    if (result.moved_task_ids.length > 0) {
+    if (
+      result.moved_task_ids.length > 0 ||
+      result.superseded_task_ids.length > 0
+    ) {
       sync.notifyMutation();
     }
   };
@@ -164,6 +167,7 @@ async function runConfigured(config: JigConfig): Promise<void> {
     repository_path: config.repository_path,
     ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
     now: () => new Date().toISOString(),
+    current_local_date: () => localCivilDate(new Date()),
     create_id: () => crypto.randomUUID(),
     get_status: () => createStatus(config, sync.status()),
     get_diagnostics: () => createDiagnostics(config, sync.status()),
