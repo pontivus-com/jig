@@ -16,9 +16,9 @@ replace_once(
     '  "--jig-status-healthy-text": "var(--color-text-success)",\n'
     '  "--jig-lane-surface": "var(--color-background-body)",\n'
     '  "--jig-chrome-surface":\n'
-    '    "color-mix(in srgb, var(--color-background-surface) 50%, var(--color-background-muted) 50%)",\n'
+    '    "color-mix(in srgb, var(--color-background-surface) 70%, var(--color-background-muted) 30%)",\n'
     '  "--jig-task-surface":\n'
-    '    "color-mix(in srgb, var(--color-background-card) 75%, var(--color-background-surface) 25%)",\n'
+    '    "color-mix(in srgb, var(--color-background-card) 60%, color-mix(in srgb, var(--color-background-surface) 50%, var(--color-background-popover) 50%) 40%)",\n'
 )
 
 # Remove per-theme Task-surface overrides: all themes consume the shared product role.
@@ -328,8 +328,8 @@ The shared Jig product-token mapping owns this hierarchy for all thirteen themes
 | Alias | Cross-theme derivation | Purpose |
 |---|---|---|
 | `--jig-lane-surface` | `--color-background-body` | Planner Monday–Sunday lane canvas |
-| `--jig-chrome-surface` | 50% theme surface + 50% theme muted surface | desktop/narrow application header and narrow/Android persistent bottom navigation |
-| `--jig-task-surface` | 75% theme card + 25% theme surface | ordinary outstanding/completed Task-card elevation across Planner and History |
+| `--jig-chrome-surface` | 70% theme surface + 30% theme muted surface | desktop/narrow application header and narrow/Android persistent bottom navigation |
+| `--jig-task-surface` | 60% theme card + 20% theme surface + 20% theme popover | ordinary outstanding/completed Task-card elevation across Planner and History |
 | `--jig-task-border` | emphasized neutral border | Task-card edge separation |
 
 The mixes stay entirely within the selected theme's background-role family. They preserve the theme's hue and contrast direction while creating separation even where an upstream theme intentionally aliases two of body, surface, card or muted roles.
