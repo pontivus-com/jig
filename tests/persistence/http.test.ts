@@ -182,6 +182,75 @@ describe("loopback HTTP admission", () => {
     expect((await readCanonicalState(db)).revision).toBe(1);
   });
 
+  it("rejects intentional past scheduling without mutating canonical state", async () => {
+    const handle = handler();
+    const created = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 0,
+        command: {
+          type: "create",
+          title: "Date guard",
+          scheduled_date: "2026-11-16",
+        },
+      }),
+    );
+    expect(created.status).toBe(200);
+
+    const createPast = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "create",
+          title: "Past create",
+          scheduled_date: "2026-11-15",
+        },
+      }),
+    );
+    expect(createPast.status).toBe(400);
+    expect(await createPast.json()).toStrictEqual({
+      error: "Outstanding Tasks can only be scheduled for today or a future date",
+    });
+
+    const movePast = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "move",
+          task_id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
+          destination_date: "2026-11-15",
+          destination_index: 0,
+        },
+      }),
+    );
+    expect(movePast.status).toBe(400);
+
+    const editPast = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "edit",
+          task_id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
+          changes: {
+            scheduled_date: "2026-11-15",
+          },
+        },
+      }),
+    );
+    expect(editPast.status).toBe(400);
+
+    expect(await readCanonicalState(db)).toMatchObject({
+      revision: 1,
+      tasks: [
+        {
+          title: "Date guard",
+          scheduled_date: "2026-11-16",
+          position: 0,
+          completed_at: null,
+        },
+      ],
+    });
+  });
+
   it("runs rollover before revision admission and rejects a pre-rollover command", async () => {
     await applyTaskCommand(
       db,
@@ -191,6 +260,7 @@ describe("loopback HTTP admission", () => {
         scheduled_date: "2026-11-15",
       },
       0,
+      "2026-11-15",
       "2026-11-15T18:00:00.000Z",
       () => "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
     );
@@ -202,7 +272,7 @@ describe("loopback HTTP admission", () => {
       repository_path: root,
       ui_directory: root,
       now: () => "2026-11-16T01:00:00.000Z",
-    current_local_date: () => "2026-11-16",
+      current_local_date: () => "2026-11-16",
       create_id: () =>
         "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0102",
       get_status: () => ({
@@ -267,7 +337,7 @@ describe("loopback HTTP admission", () => {
       repository_path: root,
       ui_directory: root,
       now: () => "2026-11-16T01:00:00.000Z",
-    current_local_date: () => "2026-11-16",
+      current_local_date: () => "2026-11-16",
       create_id: () => {
         const id = ids[index];
         if (id === undefined) {
@@ -382,7 +452,7 @@ describe("loopback HTTP admission", () => {
       repository_path: root,
       ui_directory: root,
       now: () => "2026-11-16T01:00:00.000Z",
-    current_local_date: () => "2026-11-16",
+      current_local_date: () => "2026-11-16",
       create_id: crypto.randomUUID,
       get_status: () => ({
         ready: true,
