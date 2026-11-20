@@ -15,10 +15,14 @@ import { JigIcon } from "./jig-icons";
 import { useReminderLifecycle } from "./reminder";
 import { recurrenceSummary } from "./task-editor";
 
-export interface TaskRowProps {
+interface TaskRowBaseProps {
   readonly task: Task;
   readonly recurrenceSeries?: RecurrenceSeries | null;
   readonly now: Date;
+}
+
+export interface ActiveTaskRowProps extends TaskRowBaseProps {
+  readonly mode: "active";
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
   readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
@@ -31,6 +35,12 @@ export interface TaskRowProps {
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
 }
+
+export interface PassiveTaskRowProps extends TaskRowBaseProps {
+  readonly mode: "passive";
+}
+
+export type TaskRowProps = ActiveTaskRowProps | PassiveTaskRowProps;
 
 function isSafeWebReference(value: string): boolean {
   try {
@@ -134,24 +144,31 @@ function TaskMetadata({
   );
 }
 
-function TaskCompletionControl({
-  task,
-  completed,
-  isInteractive,
-  onToggleComplete,
-}: Readonly<{
+type TaskCompletionControlProps = Readonly<{
   task: Task;
   completed: boolean;
-  isInteractive: boolean;
-  onToggleComplete?: (() => void) | undefined;
-}>): React.ReactElement {
+}> &
+  (
+    | Readonly<{
+        mode: "active";
+        onToggleComplete: () => void;
+      }>
+    | Readonly<{
+        mode: "passive";
+      }>
+  );
+
+function TaskCompletionControl(
+  props: TaskCompletionControlProps,
+): React.ReactElement {
   const inputRef = useRef<HTMLInputElement>(null);
+  const isActive = props.mode === "active";
 
   return (
     <span
       className="jig-task-completion-target"
       data-jig-drag-excluded="true"
-      {...(isInteractive && onToggleComplete !== undefined
+      {...(isActive
         ? {
             onClick: (event: React.MouseEvent<HTMLSpanElement>) => {
               // Astryx CheckboxInput intentionally keeps a label-hidden checkbox as
@@ -171,13 +188,15 @@ function TaskCompletionControl({
     >
       <CheckboxInput
         ref={inputRef}
-        label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
+        label={
+          props.completed
+            ? `Reopen ${props.task.title}`
+            : `Complete ${props.task.title}`
+        }
         isLabelHidden
-        value={completed}
-        isReadOnly={!isInteractive}
-        {...(isInteractive && onToggleComplete !== undefined
-          ? { onChange: onToggleComplete }
-          : {})}
+        value={props.completed}
+        isReadOnly={!isActive}
+        {...(isActive ? { onChange: props.onToggleComplete } : {})}
       />
     </span>
   );
@@ -317,79 +336,80 @@ export function TaskCardPreview({
   );
 }
 
-interface TaskCardPresentationProps {
+interface TaskCardPresentationBaseProps {
   readonly task: Task;
   readonly recurrenceSeries: RecurrenceSeries | null;
   readonly now: Date;
+  readonly showDragHandle: boolean;
+}
+
+interface ActiveTaskCardPresentationProps
+  extends TaskCardPresentationBaseProps {
+  readonly mode: "active";
   readonly isSelected: boolean;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
   readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
   readonly isDragging: boolean;
-  readonly isInteractive: boolean;
-  readonly showDragHandle: boolean;
   readonly onSelect?: (() => void) | undefined;
-  readonly onToggleComplete?: (() => void) | undefined;
-  readonly onEdit?: (() => void) | undefined;
-  readonly onSetPriority?: ((priority: Priority) => void) | undefined;
-  readonly onDelete?: (() => void) | undefined;
+  readonly onToggleComplete: () => void;
+  readonly onEdit: () => void;
+  readonly onSetPriority: (priority: Priority) => void;
+  readonly onDelete: () => void;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
 }
 
-function TaskCardPresentation({
-  task,
-  recurrenceSeries,
-  now,
-  isSelected,
-  rowRef,
-  dragHandleRef,
-  isDragging,
-  isInteractive,
-  showDragHandle,
-  onSelect,
-  onToggleComplete,
-  onEdit,
-  onSetPriority,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-}: TaskCardPresentationProps): React.ReactElement {
-  const completed = task.completed_at !== null;
-  const reminderLifecycle = useReminderLifecycle(task, now);
+interface PassiveTaskCardPresentationProps
+  extends TaskCardPresentationBaseProps {
+  readonly mode: "passive";
+}
+
+type TaskCardPresentationProps =
+  | ActiveTaskCardPresentationProps
+  | PassiveTaskCardPresentationProps;
+
+function TaskCardPresentation(
+  props: TaskCardPresentationProps,
+): React.ReactElement {
+  const completed = props.task.completed_at !== null;
+  const reminderLifecycle = useReminderLifecycle(props.task, props.now);
   const reminderDue = reminderLifecycle === "due";
+  const isActive = props.mode === "active";
 
   return (
     <ListItem
-      {...(rowRef === undefined ? {} : { ref: rowRef })}
-      itemKey={task.id}
-      {...(isInteractive && onSelect !== undefined ? { onClick: onSelect } : {})}
+      {...(isActive && props.rowRef !== undefined ? { ref: props.rowRef } : {})}
+      itemKey={props.task.id}
+      {...(isActive && props.onSelect !== undefined
+        ? { onClick: props.onSelect }
+        : {})}
       className={[
         "jig-task-card",
-        `jig-task-priority-${task.priority.toLowerCase()}`,
-        isInteractive && isSelected ? "jig-task-card-selected" : "",
+        `jig-task-priority-${props.task.priority.toLowerCase()}`,
+        isActive && props.isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
         reminderDue ? "jig-task-card-reminder-due" : "",
-        isDragging ? "jig-task-card-dragging" : "",
+        isActive && props.isDragging ? "jig-task-card-dragging" : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      isSelected={isInteractive && isSelected}
+      isSelected={isActive && props.isSelected}
       startContent={
         <span
           className="jig-task-card-leading"
           data-jig-drag-excluded="true"
         >
-          {showDragHandle ? (
+          {props.showDragHandle ? (
             <span
-              {...(isInteractive && dragHandleRef !== undefined
-                ? { ref: dragHandleRef }
+              {...(isActive && props.dragHandleRef !== undefined
+                ? { ref: props.dragHandleRef }
                 : {})}
               className="jig-task-drag-handle"
-              role={isInteractive ? "button" : undefined}
-              tabIndex={isInteractive ? 0 : undefined}
-              aria-label={isInteractive ? `Move ${task.title}` : undefined}
-              aria-hidden={isInteractive ? undefined : true}
-              {...(isInteractive
+              role={isActive ? "button" : undefined}
+              tabIndex={isActive ? 0 : undefined}
+              aria-label={isActive ? `Move ${props.task.title}` : undefined}
+              aria-hidden={isActive ? undefined : true}
+              {...(isActive
                 ? {
                     onClick: (event: React.MouseEvent<HTMLSpanElement>) =>
                       event.stopPropagation(),
@@ -400,10 +420,14 @@ function TaskCardPresentation({
             </span>
           ) : null}
           <TaskCompletionControl
-            task={task}
+            task={props.task}
             completed={completed}
-            isInteractive={isInteractive}
-            onToggleComplete={onToggleComplete}
+            {...(isActive
+              ? {
+                  mode: "active" as const,
+                  onToggleComplete: props.onToggleComplete,
+                }
+              : { mode: "passive" as const })}
           />
         </span>
       }
@@ -417,13 +441,13 @@ function TaskCardPresentation({
                   : "jig-task-title"
               }
             >
-              {task.title}
+              {props.task.title}
             </span>
           </div>
           <TaskMetadata
-            task={task}
-            recurrenceSeries={recurrenceSeries}
-            isInteractive={isInteractive}
+            task={props.task}
+            recurrenceSeries={props.recurrenceSeries}
+            isInteractive={isActive}
           />
           {reminderLifecycle === "scheduled" ? (
             <span
@@ -454,79 +478,62 @@ function TaskCardPresentation({
       }
       endContent={
         <TaskActionMenu
-          task={task}
-          {...(isInteractive && onEdit !== undefined ? { onEdit } : {})}
-          {...(isInteractive && onToggleComplete !== undefined
-            ? { onToggleComplete }
+          task={props.task}
+          {...(isActive
+            ? {
+                onEdit: props.onEdit,
+                onToggleComplete: props.onToggleComplete,
+                onSetPriority: props.onSetPriority,
+                onDelete: props.onDelete,
+                ...(props.onMoveUp === undefined
+                  ? {}
+                  : { onMoveUp: props.onMoveUp }),
+                ...(props.onMoveDown === undefined
+                  ? {}
+                  : { onMoveDown: props.onMoveDown }),
+              }
             : {})}
-          {...(isInteractive && onSetPriority !== undefined
-            ? { onSetPriority }
-            : {})}
-          {...(isInteractive && onDelete !== undefined ? { onDelete } : {})}
-          {...(isInteractive && onMoveUp !== undefined ? { onMoveUp } : {})}
-          {...(isInteractive && onMoveDown !== undefined ? { onMoveDown } : {})}
         />
       }
     />
   );
 }
 
-export function PassiveTaskRow({
-  task,
-  recurrenceSeries = null,
-  now,
-}: Readonly<{
-  task: Task;
-  recurrenceSeries?: RecurrenceSeries | null;
-  now: Date;
-}>): React.ReactElement {
-  return (
-    <TaskCardPresentation
-      task={task}
-      recurrenceSeries={recurrenceSeries}
-      now={now}
-      isSelected={false}
-      isDragging={false}
-      isInteractive={false}
-      showDragHandle
-    />
-  );
-}
+export function TaskRow(props: TaskRowProps): React.ReactElement {
+  if (props.mode === "passive") {
+    return (
+      <TaskCardPresentation
+        mode="passive"
+        task={props.task}
+        recurrenceSeries={props.recurrenceSeries ?? null}
+        now={props.now}
+        showDragHandle
+      />
+    );
+  }
 
-export function TaskRow({
-  task,
-  recurrenceSeries = null,
-  now,
-  isSelected = false,
-  rowRef,
-  dragHandleRef,
-  isDragging = false,
-  onSelect,
-  onToggleComplete,
-  onEdit,
-  onSetPriority,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-}: TaskRowProps): React.ReactElement {
   return (
     <TaskCardPresentation
-      task={task}
-      recurrenceSeries={recurrenceSeries}
-      now={now}
-      isSelected={isSelected}
-      rowRef={rowRef}
-      dragHandleRef={dragHandleRef}
-      isDragging={isDragging}
-      isInteractive
-      showDragHandle={dragHandleRef !== undefined}
-      onSelect={onSelect}
-      onToggleComplete={onToggleComplete}
-      onEdit={onEdit}
-      onSetPriority={onSetPriority}
-      onDelete={onDelete}
-      onMoveUp={onMoveUp}
-      onMoveDown={onMoveDown}
+      mode="active"
+      task={props.task}
+      recurrenceSeries={props.recurrenceSeries ?? null}
+      now={props.now}
+      isSelected={props.isSelected ?? false}
+      {...(props.rowRef === undefined ? {} : { rowRef: props.rowRef })}
+      {...(props.dragHandleRef === undefined
+        ? {}
+        : { dragHandleRef: props.dragHandleRef })}
+      isDragging={props.isDragging ?? false}
+      showDragHandle={props.dragHandleRef !== undefined}
+      {...(props.onSelect === undefined ? {} : { onSelect: props.onSelect })}
+      onToggleComplete={props.onToggleComplete}
+      onEdit={props.onEdit}
+      onSetPriority={props.onSetPriority}
+      onDelete={props.onDelete}
+      {...(props.onMoveUp === undefined ? {} : { onMoveUp: props.onMoveUp })}
+      {...(props.onMoveDown === undefined
+        ? {}
+        : { onMoveDown: props.onMoveDown })}
     />
   );
 }
