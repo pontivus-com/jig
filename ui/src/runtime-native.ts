@@ -105,6 +105,7 @@ export async function submitTaskCommand(
     connection,
     command,
     expectedRevision,
+    todayCivilDate(),
     new Date().toISOString(),
     crypto.randomUUID,
   );
