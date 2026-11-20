@@ -963,7 +963,7 @@ export function App(): React.ReactElement {
           />
         ) : (
           <ApplicationShell topNav={<OnboardingHeader />}>
-            <div className="jig-content-frame">
+            <div className="jig-content-frame jig-content-frame-onboarding">
               <div className="jig-content">{bootstrapBody}</div>
             </div>
           </ApplicationShell>
