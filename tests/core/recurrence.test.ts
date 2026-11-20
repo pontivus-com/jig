@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   enumerateRecurrenceDates,
+  recurrenceSpecMatchesSeries,
+  type RecurrenceSeries,
   type RecurrenceSpec,
 } from "../../src/core/recurrence";
 import {
@@ -141,6 +143,45 @@ describe("bounded recurrence enumeration", () => {
       "2028-01-29",
       "2028-02-29",
     ]);
+  });
+});
+
+describe("recurrence semantic equivalence", () => {
+  const series: RecurrenceSeries = {
+    id: uuid(100),
+    effective_from: "2026-11-16",
+    end_date: "2026-12-31",
+    pattern: {
+      kind: "weekly",
+      interval_weeks: 1,
+      weekdays: ["MON", "WED"],
+    },
+    created_at: NOW,
+    updated_at: NOW,
+  };
+
+  it("normalizes valid recurrence specs before comparing them with a series", () => {
+    expect(
+      recurrenceSpecMatchesSeries(
+        weekly(["WED", "MON"], 1, "2026-12-31"),
+        series,
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects recurrence specs with different bounds or patterns", () => {
+    expect(
+      recurrenceSpecMatchesSeries(
+        weekly(["MON", "WED"], 2, "2026-12-31"),
+        series,
+      ),
+    ).toBe(false);
+    expect(
+      recurrenceSpecMatchesSeries(
+        weekly(["MON", "WED"], 1, "2026-12-30"),
+        series,
+      ),
+    ).toBe(false);
   });
 });
 
