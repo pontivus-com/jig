@@ -79,7 +79,7 @@ jobs:
 
       - name: Targeted Carousel and SnapPaging unit tests
         working-directory: astryx
-        run: pnpm vitest run packages/core/src/Carousel/Carousel.test.tsx packages/core/src/SnapPaging/SnapPaging.test.tsx --project node
+        run: pnpm vitest run packages/core/src/Carousel/Carousel.test.tsx packages/core/src/SnapPaging/SnapPaging.test.tsx --project ui
 
       - name: Astryx core typecheck
         working-directory: astryx
