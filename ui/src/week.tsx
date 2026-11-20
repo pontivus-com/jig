@@ -1,11 +1,10 @@
 import { Button, IconButton } from "@astryxdesign/core";
-import { useEffect, useRef, useState, type Ref } from "react";
+import { useEffect, useRef, type Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import {
   defaultAddDate,
   outstandingForDate,
-  startOfWeekMonday,
 } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
 import {
@@ -16,11 +15,6 @@ import {
 import { PlannerTaskList } from "./planner-list";
 import { JigIcon } from "./jig-icons";
 import type { WeekTransitionDirection } from "./planner";
-import {
-  WeekPager,
-  type WeekPagingDirection,
-  type WeekPagingRequest,
-} from "./week-pager";
 
 interface WeekPresentationProps {
   readonly tasks: readonly Task[];
@@ -45,30 +39,17 @@ interface WeekMutationProps {
 
 interface WeekTaskProps extends WeekPresentationProps, WeekMutationProps {}
 
-interface ActiveWeekInteraction extends WeekMutationProps {
-  readonly mode: "active";
-  readonly todaySectionRef: Ref<HTMLDivElement>;
-}
-
-interface PassiveWeekInteraction {
-  readonly mode: "passive";
-}
-
-type WeekInteraction = ActiveWeekInteraction | PassiveWeekInteraction;
-
 export interface WeekViewProps extends WeekTaskProps {
   readonly focusCurrentDayOnMount: boolean;
   readonly todayScrollRequest: number;
   readonly weekTransitionDirection: WeekTransitionDirection | null;
-  readonly weekPagingRequest: WeekPagingRequest | null;
-  readonly onCommitWeek: (direction: WeekPagingDirection) => void;
   readonly displayedDates: readonly string[];
 }
 
-interface DatedSectionProps extends WeekPresentationProps {
+interface DatedSectionProps extends WeekTaskProps {
   readonly date: string;
   readonly isToday: boolean;
-  readonly interaction: WeekInteraction;
+  readonly todaySectionRef: Ref<HTMLDivElement>;
 }
 
 function DatedSection({
@@ -77,9 +58,16 @@ function DatedSection({
   now,
   date,
   isToday,
-  interaction,
+  todaySectionRef,
+  selectedTask,
+  onSelectTask,
+  onAdd,
+  onEdit,
+  onToggleComplete,
+  onSetPriority,
+  onDelete,
+  onMove,
 }: DatedSectionProps): React.ReactElement {
-  const activeInteraction = interaction.mode === "active" ? interaction : null;
   const dateTasks = outstandingForDate(tasks, date);
   const columnClassName = [
     "jig-week-column",
@@ -89,45 +77,11 @@ function DatedSection({
     .join(" ");
   const headingId = "week-date-" + date;
 
-  const taskContent =
-    activeInteraction === null ? (
-      <div className="jig-week-task-area">
-        <PlannerTaskList
-          mode="passive"
-          tasks={tasks}
-          recurrences={recurrences}
-          now={now}
-          date={date}
-        />
-      </div>
-    ) : (
-      <DateDropZone date={date} className="jig-week-task-area">
-        <PlannerTaskList
-          mode="active"
-          tasks={tasks}
-          recurrences={recurrences}
-          now={now}
-          date={date}
-          selectedTask={activeInteraction.selectedTask}
-          onSelectTask={activeInteraction.onSelectTask}
-          onEdit={activeInteraction.onEdit}
-          onToggleComplete={activeInteraction.onToggleComplete}
-          onSetPriority={activeInteraction.onSetPriority}
-          onDelete={activeInteraction.onDelete}
-          onMove={activeInteraction.onMove}
-        />
-      </DateDropZone>
-    );
-
   return (
     <div
-      ref={
-        activeInteraction !== null && isToday
-          ? activeInteraction.todaySectionRef
-          : undefined
-      }
+      ref={isToday ? todaySectionRef : undefined}
       className={columnClassName}
-      data-date={activeInteraction === null ? undefined : date}
+      data-date={date}
     >
       <section aria-labelledby={headingId}>
         <header className="jig-week-column-header">
@@ -145,9 +99,7 @@ function DatedSection({
               icon={<JigIcon name="add" color="inherit" />}
               variant="ghost"
               className="jig-date-add"
-              {...(activeInteraction === null
-                ? {}
-                : { onClick: () => activeInteraction.onAdd(date) })}
+              onClick={() => onAdd(date)}
             />
           </div>
           <span
@@ -157,92 +109,83 @@ function DatedSection({
             {dateTasks.length}
           </span>
         </header>
-        {taskContent}
+        <DateDropZone date={date} className="jig-week-task-area">
+          <PlannerTaskList
+            tasks={tasks}
+            recurrences={recurrences}
+            now={now}
+            date={date}
+            selectedTask={selectedTask}
+            onSelectTask={onSelectTask}
+            onEdit={onEdit}
+            onToggleComplete={onToggleComplete}
+            onSetPriority={onSetPriority}
+            onDelete={onDelete}
+            onMove={onMove}
+          />
+        </DateDropZone>
       </section>
     </div>
   );
 }
 
-interface WeekBoardProps extends WeekPresentationProps {
+interface WeekBoardProps extends WeekTaskProps {
   readonly dates: readonly string[];
-  readonly interaction: WeekInteraction;
   readonly transition: WeekTransitionDirection | null;
+  readonly todaySectionRef: Ref<HTMLDivElement>;
 }
 
 function WeekBoard({
   dates,
-  interaction,
   transition,
-  ...presentation
+  todaySectionRef,
+  ...taskProps
 }: WeekBoardProps): React.ReactElement {
   const today = todayCivilDate();
-  const isActive = interaction.mode === "active";
-  const region = isActive
-    ? ({ role: "group", "aria-label": "Planner week" } as const)
-    : {};
 
   return (
     <div
       className={[
         "jig-week-board",
-        isActive && transition === "today" ? "jig-week-board-today" : "",
+        transition === "today" ? "jig-week-board-today" : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      {...region}
+      role="group"
+      aria-label="Planner week"
     >
       {dates.map((date) => (
         <DatedSection
           key={date}
-          {...presentation}
+          {...taskProps}
           date={date}
           isToday={date === today}
-          interaction={interaction}
+          todaySectionRef={todaySectionRef}
         />
       ))}
     </div>
   );
 }
 
-interface ActiveWeekPageProps extends WeekPresentationProps, WeekMutationProps {
-  readonly mode: "active";
+interface WeekPageProps extends WeekTaskProps {
   readonly dates: readonly string[];
   readonly transition: WeekTransitionDirection | null;
   readonly todaySectionRef: Ref<HTMLDivElement>;
-  readonly onDragActiveChange: (active: boolean) => void;
 }
 
-interface PassiveWeekPageProps extends WeekPresentationProps {
-  readonly mode: "passive";
-  readonly dates: readonly string[];
-}
-
-type WeekPageProps = ActiveWeekPageProps | PassiveWeekPageProps;
-
-function WeekPage(props: WeekPageProps): React.ReactElement {
-  const activeProps = props.mode === "active" ? props : null;
-  const firstDate = props.dates[0] ?? todayCivilDate();
-  const isEmpty = props.dates.every(
-    (date) => outstandingForDate(props.tasks, date).length === 0,
+function WeekPage({
+  dates,
+  transition,
+  todaySectionRef,
+  ...taskProps
+}: WeekPageProps): React.ReactElement {
+  const firstDate = dates[0] ?? todayCivilDate();
+  const isEmpty = dates.every(
+    (date) => outstandingForDate(taskProps.tasks, date).length === 0,
   );
-  const interaction: WeekInteraction =
-    activeProps === null
-      ? { mode: "passive" }
-      : {
-          mode: "active",
-          todaySectionRef: activeProps.todaySectionRef,
-          selectedTask: activeProps.selectedTask,
-          onSelectTask: activeProps.onSelectTask,
-          onAdd: activeProps.onAdd,
-          onEdit: activeProps.onEdit,
-          onToggleComplete: activeProps.onToggleComplete,
-          onSetPriority: activeProps.onSetPriority,
-          onDelete: activeProps.onDelete,
-          onMove: activeProps.onMove,
-        };
 
-  const content = (
-    <>
+  return (
+    <TaskDragProvider tasks={taskProps.tasks} onMove={taskProps.onMove}>
       {isEmpty ? (
         <div className="jig-planner-empty-state">
           <strong>Your week is clear</strong>
@@ -251,37 +194,18 @@ function WeekPage(props: WeekPageProps): React.ReactElement {
             label="Add your first task"
             variant="primary"
             className="jig-planner-empty-primary"
-            {...(activeProps === null
-              ? {}
-              : {
-                  onClick: () =>
-                    activeProps.onAdd(
-                      defaultAddDate(firstDate, todayCivilDate()),
-                    ),
-                })}
+            onClick={() =>
+              taskProps.onAdd(defaultAddDate(firstDate, todayCivilDate()))
+            }
           />
         </div>
       ) : null}
       <WeekBoard
-        tasks={props.tasks}
-        recurrences={props.recurrences}
-        now={props.now}
-        dates={props.dates}
-        interaction={interaction}
-        transition={activeProps?.transition ?? null}
+        {...taskProps}
+        dates={dates}
+        transition={transition}
+        todaySectionRef={todaySectionRef}
       />
-    </>
-  );
-
-  return activeProps === null ? (
-    content
-  ) : (
-    <TaskDragProvider
-      tasks={props.tasks}
-      onMove={activeProps.onMove}
-      onDragActiveChange={activeProps.onDragActiveChange}
-    >
-      {content}
     </TaskDragProvider>
   );
 }
@@ -289,10 +213,7 @@ function WeekPage(props: WeekPageProps): React.ReactElement {
 export function WeekView(props: WeekViewProps): React.ReactElement {
   const today = todayCivilDate();
   const todaySectionRef = useRef<HTMLDivElement>(null);
-  const [isTaskDragging, setIsTaskDragging] = useState(false);
   const displayedWeekKey = props.displayedDates.join("|");
-  const weekStart =
-    props.displayedDates[0] ?? startOfWeekMonday(todayCivilDate());
 
   useEffect(() => {
     if (
@@ -329,41 +250,21 @@ export function WeekView(props: WeekViewProps): React.ReactElement {
   }, [displayedWeekKey, props.todayScrollRequest, today]);
 
   return (
-    <WeekPager
-      weekStart={weekStart}
-      navigationRequest={props.weekPagingRequest}
-      isPagingDisabled={isTaskDragging}
-      onCommit={props.onCommitWeek}
-      renderWeek={(dates, isActive) =>
-        isActive ? (
-          <WeekPage
-            mode="active"
-            dates={dates}
-            transition={props.weekTransitionDirection}
-            todaySectionRef={todaySectionRef}
-            onDragActiveChange={setIsTaskDragging}
-            tasks={props.tasks}
-            recurrences={props.recurrences}
-            now={props.now}
-            selectedTask={props.selectedTask}
-            onSelectTask={props.onSelectTask}
-            onAdd={props.onAdd}
-            onEdit={props.onEdit}
-            onToggleComplete={props.onToggleComplete}
-            onSetPriority={props.onSetPriority}
-            onDelete={props.onDelete}
-            onMove={props.onMove}
-          />
-        ) : (
-          <WeekPage
-            mode="passive"
-            dates={dates}
-            tasks={props.tasks}
-            recurrences={props.recurrences}
-            now={props.now}
-          />
-        )
-      }
+    <WeekPage
+      dates={props.displayedDates}
+      transition={props.weekTransitionDirection}
+      todaySectionRef={todaySectionRef}
+      tasks={props.tasks}
+      recurrences={props.recurrences}
+      now={props.now}
+      selectedTask={props.selectedTask}
+      onSelectTask={props.onSelectTask}
+      onAdd={props.onAdd}
+      onEdit={props.onEdit}
+      onToggleComplete={props.onToggleComplete}
+      onSetPriority={props.onSetPriority}
+      onDelete={props.onDelete}
+      onMove={props.onMove}
     />
   );
 }
