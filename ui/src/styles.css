@@ -515,6 +515,10 @@ body {
     container-type: inline-size;
   }
 
+  .jig-week-carousel-dragging {
+    touch-action: none;
+  }
+
   .jig-week-carousel-page {
     width: 100cqi;
     min-width: 0;
