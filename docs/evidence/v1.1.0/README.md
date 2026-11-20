@@ -43,7 +43,7 @@ This candidate remains valid provenance for the gates it actually passed, but it
 - Physical-device preflight: **PASS**.
 - Android Git synchronization: **PASS for the exercised path** — local Android changes committed, remote push completed, Settings reported **Up to date**, and restart/relaunch preserved Planner data and synchronization state.
 - Physical UI evidence was captured for Planner, Task form/IME, Repeat states, History, Settings and healthy synchronization, but review exposed the IMP-18/19/20 defects recorded below; this evidence therefore cannot close IMP-15.
-- Hosted Verify run `44635494793` / #1541 on exact head `222f2fe…`: Linux/browser **PASS**, Android build certification **PASS**, API-24 runtime **INFRASTRUCTURE FAILURE before instrumentation** because `emulator-5554` never appeared and the boot wait timed out. A green permanent Verify is still required for the final executable candidate.
+- Hosted Verify run `44635494793` / #1541 on exact head `222f2fe…`: Linux/browser **PASS**, Android build certification **PASS**, API-24 runtime **INFRASTRUCTURE FAILURE before instrumentation** because `emulator-5554` never appeared and the boot wait timed out. This remains historical session evidence; the later exact post-remediation candidate satisfied the permanent hosted requirement in run #1598.
 
 **Physical acceptance findings that reopen implementation:**
 1. compact header identity/title/chrome and interactive-label legibility;
