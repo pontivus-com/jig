@@ -324,6 +324,9 @@ describe("architecture compliance", () => {
   it("keeps synchronization semantics in one strict functional core and effects in platform shells", () => {
     const policy = source("src/core/synchronization.ts");
     const persistence = source("src/persistence/sqlite.ts");
+    const synchronizationPersistence = source(
+      "src/persistence/synchronization.ts",
+    );
     const desktopSync = source("src/shell/sync.ts");
     const desktopGit = source("src/shell/git.ts");
     const androidSync = source("ui/src/native/sync.ts");
@@ -345,8 +348,35 @@ describe("architecture compliance", () => {
     expect(androidSync).toContain(
       'from "../../../src/core/synchronization"',
     );
+    expect(desktopSync).toContain(
+      'from "../persistence/synchronization"',
+    );
+    expect(androidSync).toContain(
+      'from "../../../src/persistence/synchronization"',
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function synchronizationPending",
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function reconcilePersistedPortableSnapshot",
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function finishInterruptedSynchronizationAdoption",
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function adoptObservedSynchronizationRemote",
+    );
+    expect(synchronizationPersistence).not.toMatch(
+      /from\s+["'][^"']*\/shell\/|from\s+["'][^"']*\/ui\/|@capacitor|isomorphic-git|Bun\.|setTimeout|retryDelayMs/,
+    );
     for (const sync of [desktopSync, androidSync]) {
       expect(sync).toContain("decideSynchronization");
+      expect(sync).toContain("synchronizationPending");
+      expect(sync).toContain("reconcilePersistedPortableSnapshot");
+      expect(sync).toContain("finishInterruptedSynchronizationAdoption");
+      expect(sync).toContain("adoptObservedSynchronizationRemote");
+      expect(sync).not.toContain("adoptCanonicalSnapshot");
+      expect(sync).not.toContain("portableSnapshotsEqual");
       expect(sync).not.toMatch(
         /reconcileCanonicalPlanning|three-way|adoptEmptyDatasetIdentity|applySynchronizedCanonicalState/,
       );

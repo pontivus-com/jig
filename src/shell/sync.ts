@@ -19,15 +19,19 @@ import type {
   RemoteGitSynchronization,
   RepositorySynchronizationStatus,
 } from "../protocol";
-import { portableSnapshotsEqual } from "../portable";
 import {
-  adoptCanonicalSnapshot,
   markAdoptedHead,
   markExported,
   readCanonicalState,
   readMetadata,
   type JigSqlConnection,
 } from "../persistence/sqlite";
+import {
+  adoptObservedSynchronizationRemote,
+  finishInterruptedSynchronizationAdoption,
+  reconcilePersistedPortableSnapshot,
+  synchronizationPending,
+} from "../persistence/synchronization";
 import {
   decideSynchronization,
   type SynchronizationFacts,
@@ -49,11 +53,6 @@ interface ObservedPortableRemote {
   readonly revision: number;
   readonly observation: PortableRemoteObservation;
 }
-
-type InterruptedAdoptionResult =
-  | "not-applicable"
-  | "finished"
-  | "unsafe";
 
 export interface SyncEffects {
   readonly ensurePortableData: typeof ensurePortableData;
@@ -175,14 +174,8 @@ export function createSyncController(
     }, delayMs);
   };
 
-  const isPending = async (): Promise<boolean> => {
-    const metadata = await readMetadata(db);
-    return (
-      metadata.revision !== metadata.last_exported_revision ||
-      metadata.last_exported_head === null ||
-      metadata.pending_sync
-    );
-  };
+  const isPending = (): Promise<boolean> =>
+    synchronizationPending(db);
 
   const setStatus = async (
     remoteState: "pending" | "retrying" | "synchronized" | "sync-issue",
@@ -221,46 +214,11 @@ export function createSyncController(
     return status;
   };
 
-  const reconcileLocalSnapshot = async (): Promise<void> => {
-    const metadata = await readMetadata(db);
-    const state = await readCanonicalState(db);
-    const current = await effects.readCurrentSnapshot(
-      adapter,
-      metadata.dataset_id,
-    );
-    if (current === null) return;
-
-    const canonical = serializeSnapshot(
-      state.tasks,
-      metadata.dataset_id,
-      state.recurrences,
-    );
-    if (portableSnapshotsEqual(current.snapshot, canonical)) {
-      if (
-        metadata.last_exported_head !== current.head ||
-        metadata.last_exported_revision !== state.revision
-      ) {
-        await markExported(db, state.revision, current.head);
-      }
-      return;
-    }
-
-    if (
-      state.revision !== metadata.last_exported_revision ||
-      metadata.pending_sync
-    ) {
-      return;
-    }
-
-    const adopted = await adoptCanonicalSnapshot(
+  const reconcileLocalSnapshot = (): Promise<void> =>
+    reconcilePersistedPortableSnapshot(
       db,
-      current.snapshot.tasks,
-      current.snapshot.recurrences,
-      null,
-      state.revision,
+      (datasetId) => effects.readCurrentSnapshot(adapter, datasetId),
     );
-    await markExported(db, adopted.revision, current.head);
-  };
 
   const exportCurrent = async (): Promise<string> => {
     const state = await readCanonicalState(db);
@@ -293,81 +251,33 @@ export function createSyncController(
     };
   };
 
-  const finishInterruptedAdoption = async (
+  const finishInterruptedAdoption = (
     observation: Extract<
       PortableRemoteObservation,
       { readonly state: "present" }
     >,
-  ): Promise<InterruptedAdoptionResult> => {
-    const state = await readCanonicalState(db);
-    const metadata = await readMetadata(db);
-    if (metadata.last_adopted_head !== observation.remote_head) {
-      return "not-applicable";
-    }
-
-    const canonical = serializeSnapshot(
-      state.tasks,
-      metadata.dataset_id,
-      state.recurrences,
+  ) =>
+    finishInterruptedSynchronizationAdoption(
+      db,
+      observation,
+      (expectedHead, targetHead) =>
+        effects.alignLocal(adapter, expectedHead, targetHead),
     );
-    if (
-      !portableSnapshotsEqual(
-        canonical,
-        observation.remote_snapshot,
-      )
-    ) {
-      return "not-applicable";
-    }
 
-    if (
-      observation.local_head === null ||
-      (
-        observation.lineage !== "equal" &&
-        observation.lineage !== "remote-ahead"
-      )
-    ) {
-      return "unsafe";
-    }
-
-    if (observation.local_head !== observation.remote_head) {
-      try {
-        await effects.alignLocal(
-          adapter,
-          observation.local_head,
-          observation.remote_head,
-        );
-      } catch {
-        return "unsafe";
-      }
-    }
-    await markExported(db, state.revision, observation.remote_head);
-    return "finished";
-  };
-
-  const adoptRemote = async (
+  const adoptRemote = (
     observation: Extract<
       PortableRemoteObservation,
       { readonly state: "present" }
     >,
     expectedRevision: number,
-  ): Promise<void> => {
-    if (observation.local_head === null) {
-      throw new Error("Local jig-data head is unavailable");
-    }
-    const adopted = await adoptCanonicalSnapshot(
+  ) =>
+    adoptObservedSynchronizationRemote(
       db,
-      observation.remote_snapshot.tasks,
-      observation.remote_snapshot.recurrences,
-      observation.remote_head,
+      observation,
       expectedRevision,
+      (expectedHead, targetHead) =>
+        effects.alignLocal(adapter, expectedHead, targetHead),
     );
-    await effects.alignLocal(
-      adapter,
-      observation.local_head,
-      observation.remote_head,
-    );
-    await markExported(db, adopted.revision, observation.remote_head);
-  };
 
   const processObservation = async (
     observed: ObservedPortableRemote,
