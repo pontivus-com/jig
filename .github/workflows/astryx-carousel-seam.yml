@@ -28,6 +28,9 @@ jobs:
           path: jig
           persist-credentials: false
 
+      - name: Compile Astryx patch harness
+        run: python3 -m py_compile jig/scripts/astryx-carousel-seam.py
+
       - name: Checkout exact Astryx authority
         uses: actions/checkout@v4
         with:
