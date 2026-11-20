@@ -45,16 +45,20 @@ export async function synchronizationPending(
   );
 }
 
+export type ReadPersistedPortableSnapshot = (
+  datasetId: string,
+) => Promise<PersistedPortableSnapshot | null>;
+
 export async function reconcilePersistedPortableSnapshot(
   db: JigSqlConnection,
-  current: PersistedPortableSnapshot | null,
+  readCurrent: ReadPersistedPortableSnapshot,
 ): Promise<void> {
+  const metadata = await readMetadata(db);
+  const state = await readCanonicalState(db);
+  const current = await readCurrent(metadata.dataset_id);
   if (current === null) {
     return;
   }
-
-  const metadata = await readMetadata(db);
-  const state = await readCanonicalState(db);
   const canonical = serializeSnapshot(
     state.tasks,
     metadata.dataset_id,
