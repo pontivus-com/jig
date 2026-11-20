@@ -230,7 +230,7 @@ def main() -> None:
     index: number,
     options?: CarouselScrollToOptions,
   ) => {
-"",
+""",
     )
     replace_once(
         carousel,
