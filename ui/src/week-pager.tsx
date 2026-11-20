@@ -102,7 +102,19 @@ export function WeekPager({
   return (
     <Carousel
       aria-label="Planner week pager"
-      className="jig-week-carousel"
+      className={[
+        "jig-week-carousel",
+        isPagingDisabled ? "jig-week-carousel-dragging" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onWheelCapture={
+        isPagingDisabled
+          ? (event) => {
+              event.preventDefault();
+            }
+          : undefined
+      }
       gap={0}
       hasButtons={false}
       hasEdgeFade={false}
