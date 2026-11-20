@@ -13,10 +13,10 @@
 
 **Current candidate awaiting physical execution:** source `59f7d1642211739df88dc188a4fdfe17af2c26c9`; Verify `44690410706` / #1632 PASS; Android artifact `14608147658`; `app-debug.apk` 9,787,835 bytes; SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. Hosted API-24 5/5 and browser 82/82 are non-device evidence and do not substitute for the checks below.
 
-### Current post-remediation physical candidate — physical confirmation attempted
+### Historical post-remediation candidate — physical confirmation attempted
 
-- Source/head: `3b60ad938f2173521c4eb2aa8b59603a15d930b1`.
-- Permanent Verify: `44652277552` / #1598 — **PASS** across Linux/browser, Android build certification and API-24 runtime.
+- Historical source/head: `3b60ad938f2173521c4eb2aa8b59603a15d930b1`.
+- Historical permanent Verify: `44652277552` / #1598 — **PASS** across Linux/browser, Android build certification and API-24 runtime for that candidate.
 - Android artifact: `14591926175`, `jig-android-debug-184c8c824b32ff53c53136eaf1c1e4ab78fe480a`.
 - Artifact digest: `sha256:dbb4f96a39af353adfee7360d2b0ebe36ae954d119407273a486fd66e6b610b9`.
 - APK: `app-debug.apk`, 9,780,552 bytes.
