@@ -329,7 +329,6 @@ export function TaskRow({
         .filter(Boolean)
         .join(" ")}
       isSelected={isSelected}
-      align="first-line"
       startContent={
         <span
           className="jig-task-card-leading"
