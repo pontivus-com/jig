@@ -99,16 +99,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git -C astryx diff --binary "$ASTRYX_BASE_SHA" > astryx-carousel-lifecycle.patch
-          test -s astrx-carousel-lifecycle.patch
-          sha256sum astrx-carousel-lifecycle.patch > astrx-carousel-lifecycle.patch.sha256
+          git -C astryx add packages/core/src/Carousel packages/core/src/SnapPaging .changeset/carousel-settled-reposition.md
+          git -C astryx diff --binary --cached "$ASTRYX_BASE_SHA" > astryx-carousel-lifecycle.patch
+          test -s astryx-carousel-lifecycle.patch
+          sha256sum astryx-carousel-lifecycle.patch > astryx-carousel-lifecycle.patch.sha256
 
       - name: Retain tested Astryx patch
         uses: actions/upload-artifact@v4
         with:
           name: astryx-carousel-lifecycle-${{ env.ASTRYX_BASE_SHA }}
           path: |
-            astrx-carousel-lifecycle.patch
+            astryx-carousel-lifecycle.patch
             astryx-carousel-lifecycle.patch.sha256
           if-no-files-found: error
           retention-days: 14
