@@ -363,6 +363,7 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 |---|---|
 | J110-IMP-09 physical Task movement | **PASS — completed; detailed execution record lost** |
 | J110-IMP-23 FR-33/SD-43 cross-platform WeekPager | **REOPENED — no retained APK or physical evidence yet certifies the rewritten contract; prior raw/usePanGesture results are superseded history** |
+| J110-IMP-24 shared operational-attention Banner geometry | **OPEN — prior APKs/screenshots do not certify vertically centered multi-line icon/action geometry; requires exact-candidate WebView confirmation** |
 | J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS — local follow-up passes Task creation; exact hosted re-certification and remaining matrix are pending** |
 | Issue #31 live Linux/Desktop GitHub acceptance | NOT RUN |
 
