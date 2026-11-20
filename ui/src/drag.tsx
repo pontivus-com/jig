@@ -17,6 +17,7 @@ import {
 } from "react";
 import type { Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
+import { todayCivilDate } from "./dates";
 import {
   TaskCardPreview,
   TaskRow,
@@ -276,6 +277,7 @@ export function TaskInsertionSlot({
   date,
   slotIndex,
 }: TaskInsertionSlotProps): React.ReactElement {
+  const isPastDate = date < todayCivilDate();
   const { ref, isDropTarget } = useDroppable({
     id: `jig-slot-${date}-${slotIndex}`,
     type: "jig-insertion-slot",
@@ -297,10 +299,15 @@ export function TaskInsertionSlot({
       className={[
         "jig-task-insertion-slot",
         isDropTarget ? "jig-task-insertion-slot-active" : "",
+        isPastDate ? "jig-task-insertion-slot-unavailable" : "",
+        isPastDate && isDropTarget
+          ? "jig-task-insertion-slot-unavailable-active"
+          : "",
       ]
         .filter(Boolean)
         .join(" ")}
       data-jig-drop-slot={slotIndex}
+      data-jig-drop-allowed={isPastDate ? "false" : "true"}
       aria-hidden="true"
     >
       <span className="jig-task-drop-indicator" />
@@ -324,6 +331,8 @@ export function DateDropZone({
     state.intent?.destination_date === date &&
     state.sourceDate !== null &&
     state.sourceDate !== date;
+  const unavailableActive =
+    crossDateActive && date < todayCivilDate();
 
   return (
     <div
@@ -331,6 +340,7 @@ export function DateDropZone({
         className,
         "jig-date-drop-zone",
         crossDateActive ? "jig-date-drop-zone-active" : "",
+        unavailableActive ? "jig-date-drop-zone-unavailable" : "",
       ]
         .filter(Boolean)
         .join(" ")}
