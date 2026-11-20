@@ -35,7 +35,7 @@ jobs:
           ref: ${{ env.ASTRYX_BASE_SHA }}
           path: astryx
           persist-credentials: false
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Prove exact Astryx base
         working-directory: astryx
