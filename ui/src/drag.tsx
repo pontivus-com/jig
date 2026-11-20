@@ -23,7 +23,7 @@ import { todayCivilDate } from "./dates";
 import {
   TaskCardPreview,
   TaskRow,
-  type TaskRowProps,
+  type ActiveTaskRowProps,
 } from "./task-row";
 
 export interface TaskDropIntent {
@@ -241,8 +241,8 @@ export function TaskDragProvider({
 
 export interface DraggableTaskRowProps
   extends Omit<
-    TaskRowProps,
-    "rowRef" | "dragHandleRef" | "isDragging"
+    ActiveTaskRowProps,
+    "mode" | "rowRef" | "dragHandleRef" | "isDragging"
   > {
   readonly index: number;
 }
@@ -271,6 +271,7 @@ export function DraggableTaskRow({
   return (
     <TaskRow
       {...rowProps}
+      mode="active"
       task={task}
       rowRef={rowRef}
       dragHandleRef={dragHandleRef}
