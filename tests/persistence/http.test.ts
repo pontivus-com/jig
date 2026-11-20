@@ -57,6 +57,7 @@ function handler() {
     repository_path: root,
     ui_directory: root,
     now: () => "2026-11-16T01:00:00.000Z",
+    current_local_date: () => "2026-11-16",
     create_id: () =>
       "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
     get_status: () => ({
@@ -201,6 +202,7 @@ describe("loopback HTTP admission", () => {
       repository_path: root,
       ui_directory: root,
       now: () => "2026-11-16T01:00:00.000Z",
+    current_local_date: () => "2026-11-16",
       create_id: () =>
         "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0102",
       get_status: () => ({
@@ -265,6 +267,7 @@ describe("loopback HTTP admission", () => {
       repository_path: root,
       ui_directory: root,
       now: () => "2026-11-16T01:00:00.000Z",
+    current_local_date: () => "2026-11-16",
       create_id: () => {
         const id = ids[index];
         if (id === undefined) {
@@ -379,6 +382,7 @@ describe("loopback HTTP admission", () => {
       repository_path: root,
       ui_directory: root,
       now: () => "2026-11-16T01:00:00.000Z",
+    current_local_date: () => "2026-11-16",
       create_id: crypto.randomUUID,
       get_status: () => ({
         ready: true,
