@@ -36,6 +36,7 @@ export interface HttpDependencies {
   readonly repository_path: string;
   readonly ui_directory: string;
   readonly now: () => string;
+  readonly current_local_date: () => string;
   readonly create_id: () => string;
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
@@ -526,6 +527,7 @@ export function createHttpHandler(
             dependencies.db,
             parseCommand(body.command),
             body.expected_revision,
+            dependencies.current_local_date(),
             dependencies.now(),
             dependencies.create_id,
           );
