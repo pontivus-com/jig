@@ -34,6 +34,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Fixed
 
+- Governed a shared cross-platform operational-attention Banner correction after user-visible review found multi-line error/warning surfaces top-aligning their status icon and recovery action. The pinned Astryx Banner exposes no public alignment hook for that geometry, so IMP-24 uses one bounded Jig-owned composition from public Astryx leaves/tokens without changing reminder or OS notification behavior.
 - Removed the duplicated Android top safe-area inset from the narrow application and onboarding headers so the mobile Jig logo sits in the governed 52px application row without an empty band above it.
 - Fixed Android Task creation failing with `Illegal invocation` by passing the UUID generator through a callback at the native runtime boundary; one-off and recurring creation now commit and survive restart.
 - Added the governed narrow-screen horizontal inset to History and Settings so their mobile reading surfaces align with Planner instead of touching the viewport edges.
