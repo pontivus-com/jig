@@ -5,10 +5,28 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
 import {
   adoptCanonicalSnapshot,
-  applyTaskCommand,
+  applyTaskCommand as applyTaskCommandAtLocalDate,
   readCanonicalState,
   type JigSqlConnection,
 } from "../../src/persistence/sqlite";
+
+function applyTaskCommand(
+  connection: Parameters<typeof applyTaskCommandAtLocalDate>[0],
+  command: Parameters<typeof applyTaskCommandAtLocalDate>[1],
+  expectedRevision: number,
+  now: string,
+  createId: () => string = crypto.randomUUID,
+): ReturnType<typeof applyTaskCommandAtLocalDate> {
+  return applyTaskCommandAtLocalDate(
+    connection,
+    command,
+    expectedRevision,
+    now.slice(0, 10),
+    now,
+    createId,
+  );
+}
+
 import { initializeDatabase } from "../../src/shell/sqlite-bun";
 import {
   serializeSnapshot,
