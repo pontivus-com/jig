@@ -13,10 +13,7 @@ import {
   formatPlannerDateHeader,
   todayCivilDate,
 } from "./dates";
-import {
-  PlannerTaskList,
-  PlannerTaskPreviewList,
-} from "./planner-list";
+import { PlannerTaskList } from "./planner-list";
 import { JigIcon } from "./jig-icons";
 import type { WeekTransitionDirection } from "./planner";
 import {
@@ -88,6 +85,7 @@ function DatedSection({
   const taskContent = interactive ? (
     <DateDropZone date={date} className="jig-week-task-area">
       <PlannerTaskList
+        mode="active"
         tasks={tasks}
         recurrences={recurrences}
         now={now}
@@ -103,7 +101,8 @@ function DatedSection({
     </DateDropZone>
   ) : (
     <div className="jig-week-task-area">
-      <PlannerTaskPreviewList
+      <PlannerTaskList
+        mode="passive"
         tasks={tasks}
         recurrences={recurrences}
         now={now}

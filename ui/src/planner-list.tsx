@@ -1,19 +1,25 @@
 import { List, useAnimatedLayout } from "@astryxdesign/core";
-import { Fragment, useRef } from "react";
+import { Fragment, useRef, type Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
+import { todayCivilDate } from "./dates";
 import {
   DraggableTaskRow,
   TaskInsertionSlot,
+  TaskInsertionSlotPresentation,
 } from "./drag";
-import { PassiveTaskRow } from "./task-row";
+import { TaskRow } from "./task-row";
 
-export interface PlannerTaskListProps {
+interface PlannerTaskListBaseProps {
   readonly tasks: readonly Task[];
   readonly recurrences: readonly RecurrenceSeries[];
   readonly now: Date;
   readonly date: string;
+}
+
+export interface ActivePlannerTaskListProps extends PlannerTaskListBaseProps {
+  readonly mode: "active";
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
@@ -27,14 +33,87 @@ export interface PlannerTaskListProps {
   ) => Promise<boolean>;
 }
 
+export interface PassivePlannerTaskListProps extends PlannerTaskListBaseProps {
+  readonly mode: "passive";
+}
+
+export type PlannerTaskListProps =
+  | ActivePlannerTaskListProps
+  | PassivePlannerTaskListProps;
+
 interface PlannerSequenceRowProps
-  extends Omit<PlannerTaskListProps, "tasks" | "recurrences" | "date" | "selectedTask"> {
+  extends Omit<
+    ActivePlannerTaskListProps,
+    "mode" | "tasks" | "recurrences" | "date" | "selectedTask"
+  > {
   readonly task: Task;
   readonly recurrenceSeries: RecurrenceSeries | null;
   readonly index: number;
   readonly date: string;
   readonly sequenceLength: number;
   readonly isSelected: boolean;
+}
+
+interface PlannerTaskPresentationItem {
+  readonly task: Task;
+  readonly recurrenceSeries: RecurrenceSeries | null;
+  readonly index: number;
+  readonly sequenceLength: number;
+}
+
+interface PlannerTaskSequenceProps {
+  readonly items: readonly PlannerTaskPresentationItem[];
+  readonly listRef?: Ref<HTMLUListElement> | undefined;
+  readonly animatedLayout?: ReturnType<typeof useAnimatedLayout> | undefined;
+  readonly renderInsertionSlot: (slotIndex: number) => React.ReactNode;
+  readonly renderTaskRow: (
+    item: PlannerTaskPresentationItem,
+  ) => React.ReactNode;
+}
+
+function plannerTaskPresentationItems(
+  tasks: readonly Task[],
+  recurrences: readonly RecurrenceSeries[],
+  date: string,
+): readonly PlannerTaskPresentationItem[] {
+  const outstanding = outstandingForDate(tasks, date);
+  return outstanding.map((task, index) => ({
+    task,
+    recurrenceSeries:
+      task.recurrence_series_id === null
+        ? null
+        : recurrences.find(
+            (series) => series.id === task.recurrence_series_id,
+          ) ?? null,
+    index,
+    sequenceLength: outstanding.length,
+  }));
+}
+
+function PlannerTaskSequence({
+  items,
+  listRef,
+  animatedLayout,
+  renderInsertionSlot,
+  renderTaskRow,
+}: PlannerTaskSequenceProps): React.ReactElement {
+  return (
+    <List
+      {...(listRef === undefined ? {} : { ref: listRef })}
+      {...(animatedLayout === undefined ? {} : { animatedLayout })}
+      density="compact"
+      edge="padded"
+      className="jig-task-card-list"
+    >
+      {items.map((item) => (
+        <Fragment key={item.task.id}>
+          {renderInsertionSlot(item.index)}
+          {renderTaskRow(item)}
+        </Fragment>
+      ))}
+      {renderInsertionSlot(items.length)}
+    </List>
+  );
 }
 
 function PlannerSequenceRow({
@@ -90,112 +169,80 @@ function PlannerSequenceRow({
   );
 }
 
-export function PlannerTaskList({
-  tasks,
-  recurrences,
-  now,
-  date,
-  selectedTask,
-  onSelectTask,
-  onEdit,
-  onToggleComplete,
-  onSetPriority,
-  onDelete,
-  onMove,
-}: PlannerTaskListProps): React.ReactElement {
-  const outstanding = outstandingForDate(tasks, date);
+function ActivePlannerTaskList(
+  props: ActivePlannerTaskListProps,
+): React.ReactElement {
+  const items = plannerTaskPresentationItems(
+    props.tasks,
+    props.recurrences,
+    props.date,
+  );
   const listRef = useRef<HTMLUListElement>(null);
   const animatedLayout = useAnimatedLayout({ containerRef: listRef });
 
   return (
-    <List
-      ref={listRef}
+    <PlannerTaskSequence
+      items={items}
+      listRef={listRef}
       animatedLayout={animatedLayout}
-      density="compact"
-      edge="padded"
-      className="jig-task-card-list"
-    >
-      {outstanding.map((task, index) => (
-        <Fragment key={task.id}>
-          <TaskInsertionSlot date={date} slotIndex={index} />
-          <PlannerSequenceRow
-            task={task}
-            recurrenceSeries={
-              task.recurrence_series_id === null
-                ? null
-                : recurrences.find(
-                    (series) => series.id === task.recurrence_series_id,
-                  ) ?? null
-            }
-            now={now}
-            index={index}
-            date={date}
-            sequenceLength={outstanding.length}
-            isSelected={selectedTask?.id === task.id}
-            onSelectTask={onSelectTask}
-            onEdit={onEdit}
-            onToggleComplete={onToggleComplete}
-            onSetPriority={onSetPriority}
-            onDelete={onDelete}
-            onMove={onMove}
-          />
-        </Fragment>
-      ))}
-      <TaskInsertionSlot date={date} slotIndex={outstanding.length} />
-    </List>
+      renderInsertionSlot={(slotIndex) => (
+        <TaskInsertionSlot date={props.date} slotIndex={slotIndex} />
+      )}
+      renderTaskRow={(item) => (
+        <PlannerSequenceRow
+          task={item.task}
+          recurrenceSeries={item.recurrenceSeries}
+          now={props.now}
+          index={item.index}
+          date={props.date}
+          sequenceLength={item.sequenceLength}
+          isSelected={props.selectedTask?.id === item.task.id}
+          onSelectTask={props.onSelectTask}
+          onEdit={props.onEdit}
+          onToggleComplete={props.onToggleComplete}
+          onSetPriority={props.onSetPriority}
+          onDelete={props.onDelete}
+          onMove={props.onMove}
+        />
+      )}
+    />
   );
 }
 
-function PassiveTaskInsertionSlot(): React.ReactElement {
+function PassivePlannerTaskList(
+  props: PassivePlannerTaskListProps,
+): React.ReactElement {
+  const items = plannerTaskPresentationItems(
+    props.tasks,
+    props.recurrences,
+    props.date,
+  );
+  const isPastDate = props.date < todayCivilDate();
+
   return (
-    <li
-      role="presentation"
-      className="jig-task-insertion-slot"
-      aria-hidden="true"
-    >
-      <span className="jig-task-drop-indicator" />
-    </li>
+    <PlannerTaskSequence
+      items={items}
+      renderInsertionSlot={() => (
+        <TaskInsertionSlotPresentation isPastDate={isPastDate} />
+      )}
+      renderTaskRow={(item) => (
+        <TaskRow
+          mode="passive"
+          task={item.task}
+          recurrenceSeries={item.recurrenceSeries}
+          now={props.now}
+        />
+      )}
+    />
   );
 }
 
-export interface PlannerTaskPreviewListProps {
-  readonly tasks: readonly Task[];
-  readonly recurrences: readonly RecurrenceSeries[];
-  readonly now: Date;
-  readonly date: string;
-}
-
-export function PlannerTaskPreviewList({
-  tasks,
-  recurrences,
-  now,
-  date,
-}: PlannerTaskPreviewListProps): React.ReactElement {
-  const outstanding = outstandingForDate(tasks, date);
-
-  return (
-    <List
-      density="compact"
-      edge="padded"
-      className="jig-task-card-list"
-    >
-      {outstanding.map((task) => (
-        <Fragment key={task.id}>
-          <PassiveTaskInsertionSlot />
-          <PassiveTaskRow
-            task={task}
-            recurrenceSeries={
-              task.recurrence_series_id === null
-                ? null
-                : recurrences.find(
-                    (series) => series.id === task.recurrence_series_id,
-                  ) ?? null
-            }
-            now={now}
-          />
-        </Fragment>
-      ))}
-      <PassiveTaskInsertionSlot />
-    </List>
+export function PlannerTaskList(
+  props: PlannerTaskListProps,
+): React.ReactElement {
+  return props.mode === "active" ? (
+    <ActivePlannerTaskList {...props} />
+  ) : (
+    <PassivePlannerTaskList {...props} />
   );
 }

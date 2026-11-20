@@ -15,6 +15,7 @@ import {
   useEffect,
   useState,
   type ReactNode,
+  type Ref,
 } from "react";
 import type { Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
@@ -22,7 +23,7 @@ import { todayCivilDate } from "./dates";
 import {
   TaskCardPreview,
   TaskRow,
-  type TaskRowProps,
+  type ActiveTaskRowProps,
 } from "./task-row";
 
 export interface TaskDropIntent {
@@ -240,8 +241,8 @@ export function TaskDragProvider({
 
 export interface DraggableTaskRowProps
   extends Omit<
-    TaskRowProps,
-    "rowRef" | "dragHandleRef" | "isDragging"
+    ActiveTaskRowProps,
+    "mode" | "rowRef" | "dragHandleRef" | "isDragging"
   > {
   readonly index: number;
 }
@@ -270,11 +271,52 @@ export function DraggableTaskRow({
   return (
     <TaskRow
       {...rowProps}
+      mode="active"
       task={task}
       rowRef={rowRef}
       dragHandleRef={dragHandleRef}
       isDragging={draggable.isDragging}
     />
+  );
+}
+
+export interface TaskInsertionSlotPresentationProps {
+  readonly slotRef?: Ref<HTMLLIElement> | undefined;
+  readonly slotIndex?: number | undefined;
+  readonly isDropTarget?: boolean | undefined;
+  readonly isPastDate?: boolean | undefined;
+}
+
+export function TaskInsertionSlotPresentation({
+  slotRef,
+  slotIndex,
+  isDropTarget = false,
+  isPastDate = false,
+}: TaskInsertionSlotPresentationProps): React.ReactElement {
+  return (
+    <li
+      {...(slotRef === undefined ? {} : { ref: slotRef })}
+      role="presentation"
+      className={[
+        "jig-task-insertion-slot",
+        isDropTarget ? "jig-task-insertion-slot-active" : "",
+        isPastDate ? "jig-task-insertion-slot-unavailable" : "",
+        isPastDate && isDropTarget
+          ? "jig-task-insertion-slot-unavailable-active"
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      {...(slotIndex === undefined
+        ? {}
+        : {
+            "data-jig-drop-slot": slotIndex,
+            "data-jig-drop-allowed": isPastDate ? "false" : "true",
+          })}
+      aria-hidden="true"
+    >
+      <span className="jig-task-drop-indicator" />
+    </li>
   );
 }
 
@@ -303,25 +345,12 @@ export function TaskInsertionSlot({
   };
 
   return (
-    <li
-      ref={slotRef}
-      role="presentation"
-      className={[
-        "jig-task-insertion-slot",
-        isDropTarget ? "jig-task-insertion-slot-active" : "",
-        isPastDate ? "jig-task-insertion-slot-unavailable" : "",
-        isPastDate && isDropTarget
-          ? "jig-task-insertion-slot-unavailable-active"
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      data-jig-drop-slot={slotIndex}
-      data-jig-drop-allowed={isPastDate ? "false" : "true"}
-      aria-hidden="true"
-    >
-      <span className="jig-task-drop-indicator" />
-    </li>
+    <TaskInsertionSlotPresentation
+      slotRef={slotRef}
+      slotIndex={slotIndex}
+      isDropTarget={isDropTarget}
+      isPastDate={isPastDate}
+    />
   );
 }
 
