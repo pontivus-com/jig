@@ -81,7 +81,7 @@ This candidate remains valid provenance for the gates it actually passed, but it
 3. explicit current/future scheduling rule plus past-date rejection feedback;
 4. recurring rollover non-accumulation.
 
-These findings were governed by J110-IMP-18..23. IMP-18..20 remain implemented/non-device certified; IMP-21 owns the remaining focused physical confirmation, IMP-22 owns non-paging motion closure, and IMP-23 is now reopened for the FR-33/SD-43 cross-platform WeekPager refactor. This redesign does not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture or SD-34/35 dnd-kit framework ownership.
+The original physical findings were governed by J110-IMP-18..23. IMP-18..20 remain implemented/non-device certified; IMP-21 owns their remaining focused physical confirmation, IMP-22 owns non-paging motion closure, and IMP-23 is reopened for the FR-33/SD-43 cross-platform WeekPager refactor. A later shared-UI review additionally opened IMP-24 for operational-attention Banner alignment. These bounded presentation changes do not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture, reminder/notification-delivery architecture or SD-34/35 dnd-kit framework ownership.
 
 ## Historical pre-remediation candidate
 
@@ -176,6 +176,6 @@ Do not create a competing branch, platform-specific recurrence/scheduling rule o
 
 Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and preserves the 2026-11-20 Samsung/Android-16 session on source `222f2fe…` as partial historical IMP-15 evidence. The **current post-remediation physical candidate** is source `3b60ad938f2173521c4eb2aa8b59603a15d930b1`, APK artifact `14591926175`, unpacked APK SHA-256 `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`.
 
-**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-23 REOPENED FOR FR-33/SD-43 IMPLEMENTATION + CERTIFICATION / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. The `3b60ad9…` remediation remains certified for its tested scope only; WeekPager, its exact-head hosted run, physical Android paging/scroll/drag arbitration and the remaining IMP-15 matrix are still open.
+**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-23 REOPENED FOR FR-33/SD-43 IMPLEMENTATION + CERTIFICATION / J110-IMP-24 OPEN FOR SHARED OPERATIONAL ATTENTION BANNER ALIGNMENT / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. The `3b60ad9…` remediation remains certified for its tested scope only; WeekPager, IMP-24 banner geometry, their exact-head hosted/browser evidence, physical Android confirmation and the remaining IMP-15 matrix are still open.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.
