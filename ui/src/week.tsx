@@ -45,13 +45,16 @@ interface WeekMutationProps {
 
 interface WeekTaskProps extends WeekPresentationProps, WeekMutationProps {}
 
-interface ActiveWeekProps extends WeekPresentationProps, WeekMutationProps {
+interface ActiveWeekInteraction extends WeekMutationProps {
   readonly mode: "active";
+  readonly todaySectionRef: Ref<HTMLDivElement>;
 }
 
-interface PassiveWeekProps extends WeekPresentationProps {
+interface PassiveWeekInteraction {
   readonly mode: "passive";
 }
+
+type WeekInteraction = ActiveWeekInteraction | PassiveWeekInteraction;
 
 export interface WeekViewProps extends WeekTaskProps {
   readonly focusCurrentDayOnMount: boolean;
@@ -62,54 +65,56 @@ export interface WeekViewProps extends WeekTaskProps {
   readonly displayedDates: readonly string[];
 }
 
-type DatedSectionProps =
-  | (ActiveWeekProps & {
-      readonly date: string;
-      readonly isToday: boolean;
-      readonly todaySectionRef?: Ref<HTMLDivElement> | undefined;
-    })
-  | (PassiveWeekProps & {
-      readonly date: string;
-      readonly isToday: boolean;
-    });
+interface DatedSectionProps extends WeekPresentationProps {
+  readonly date: string;
+  readonly isToday: boolean;
+  readonly interaction: WeekInteraction;
+}
 
-function DatedSection(props: DatedSectionProps): React.ReactElement {
-  const activeProps = props.mode === "active" ? props : null;
-  const dateTasks = outstandingForDate(props.tasks, props.date);
+function DatedSection({
+  tasks,
+  recurrences,
+  now,
+  date,
+  isToday,
+  interaction,
+}: DatedSectionProps): React.ReactElement {
+  const activeInteraction = interaction.mode === "active" ? interaction : null;
+  const dateTasks = outstandingForDate(tasks, date);
   const columnClassName = [
     "jig-week-column",
-    props.isToday ? "jig-week-column-today" : "",
+    isToday ? "jig-week-column-today" : "",
   ]
     .filter(Boolean)
     .join(" ");
-  const headingId = "week-date-" + props.date;
+  const headingId = "week-date-" + date;
 
   const taskContent =
-    activeProps === null ? (
+    activeInteraction === null ? (
       <div className="jig-week-task-area">
         <PlannerTaskList
           mode="passive"
-          tasks={props.tasks}
-          recurrences={props.recurrences}
-          now={props.now}
-          date={props.date}
+          tasks={tasks}
+          recurrences={recurrences}
+          now={now}
+          date={date}
         />
       </div>
     ) : (
-      <DateDropZone date={props.date} className="jig-week-task-area">
+      <DateDropZone date={date} className="jig-week-task-area">
         <PlannerTaskList
           mode="active"
-          tasks={props.tasks}
-          recurrences={props.recurrences}
-          now={props.now}
-          date={props.date}
-          selectedTask={activeProps.selectedTask}
-          onSelectTask={activeProps.onSelectTask}
-          onEdit={activeProps.onEdit}
-          onToggleComplete={activeProps.onToggleComplete}
-          onSetPriority={activeProps.onSetPriority}
-          onDelete={activeProps.onDelete}
-          onMove={activeProps.onMove}
+          tasks={tasks}
+          recurrences={recurrences}
+          now={now}
+          date={date}
+          selectedTask={activeInteraction.selectedTask}
+          onSelectTask={activeInteraction.onSelectTask}
+          onEdit={activeInteraction.onEdit}
+          onToggleComplete={activeInteraction.onToggleComplete}
+          onSetPriority={activeInteraction.onSetPriority}
+          onDelete={activeInteraction.onDelete}
+          onMove={activeInteraction.onMove}
         />
       </DateDropZone>
     );
@@ -117,21 +122,21 @@ function DatedSection(props: DatedSectionProps): React.ReactElement {
   return (
     <div
       ref={
-        activeProps !== null && props.isToday
-          ? activeProps.todaySectionRef
+        activeInteraction !== null && isToday
+          ? activeInteraction.todaySectionRef
           : undefined
       }
       className={columnClassName}
-      data-date={activeProps === null ? undefined : props.date}
+      data-date={activeInteraction === null ? undefined : date}
     >
       <section aria-labelledby={headingId}>
         <header className="jig-week-column-header">
           <div className="jig-week-date-signifier">
-            <strong id={headingId}>{formatPlannerDateHeader(props.date)}</strong>
+            <strong id={headingId}>{formatPlannerDateHeader(date)}</strong>
             <IconButton
               label={
                 "Add task to " +
-                formatCivilDate(props.date, {
+                formatCivilDate(date, {
                   weekday: "long",
                   month: "long",
                   day: "numeric",
@@ -140,9 +145,9 @@ function DatedSection(props: DatedSectionProps): React.ReactElement {
               icon={<JigIcon name="add" color="inherit" />}
               variant="ghost"
               className="jig-date-add"
-              {...(activeProps === null
+              {...(activeInteraction === null
                 ? {}
-                : { onClick: () => activeProps.onAdd(props.date) })}
+                : { onClick: () => activeInteraction.onAdd(date) })}
             />
           </div>
           <span
@@ -158,82 +163,61 @@ function DatedSection(props: DatedSectionProps): React.ReactElement {
   );
 }
 
-type WeekBoardProps =
-  | (ActiveWeekProps & {
-      readonly dates: readonly string[];
-      readonly transition: WeekTransitionDirection | null;
-      readonly todaySectionRef?: Ref<HTMLDivElement> | undefined;
-    })
-  | (PassiveWeekProps & {
-      readonly dates: readonly string[];
-    });
+interface WeekBoardProps extends WeekPresentationProps {
+  readonly dates: readonly string[];
+  readonly interaction: WeekInteraction;
+  readonly transition: WeekTransitionDirection | null;
+}
 
-function WeekBoard(props: WeekBoardProps): React.ReactElement {
-  const activeProps = props.mode === "active" ? props : null;
+function WeekBoard({
+  dates,
+  interaction,
+  transition,
+  ...presentation
+}: WeekBoardProps): React.ReactElement {
   const today = todayCivilDate();
-  const region =
-    activeProps === null
-      ? {}
-      : ({ role: "group", "aria-label": "Planner week" } as const);
+  const isActive = interaction.mode === "active";
+  const region = isActive
+    ? ({ role: "group", "aria-label": "Planner week" } as const)
+    : {};
 
   return (
     <div
       className={[
         "jig-week-board",
-        activeProps?.transition === "today" ? "jig-week-board-today" : "",
+        isActive && transition === "today" ? "jig-week-board-today" : "",
       ]
         .filter(Boolean)
         .join(" ")}
       {...region}
     >
-      {props.dates.map((date) =>
-        activeProps === null ? (
-          <DatedSection
-            key={date}
-            mode="passive"
-            tasks={props.tasks}
-            recurrences={props.recurrences}
-            now={props.now}
-            date={date}
-            isToday={date === today}
-          />
-        ) : (
-          <DatedSection
-            key={date}
-            mode="active"
-            tasks={props.tasks}
-            recurrences={props.recurrences}
-            now={props.now}
-            selectedTask={activeProps.selectedTask}
-            onSelectTask={activeProps.onSelectTask}
-            onAdd={activeProps.onAdd}
-            onEdit={activeProps.onEdit}
-            onToggleComplete={activeProps.onToggleComplete}
-            onSetPriority={activeProps.onSetPriority}
-            onDelete={activeProps.onDelete}
-            onMove={activeProps.onMove}
-            date={date}
-            isToday={date === today}
-            {...(activeProps.todaySectionRef === undefined
-              ? {}
-              : { todaySectionRef: activeProps.todaySectionRef })}
-          />
-        ),
-      )}
+      {dates.map((date) => (
+        <DatedSection
+          key={date}
+          {...presentation}
+          date={date}
+          isToday={date === today}
+          interaction={interaction}
+        />
+      ))}
     </div>
   );
 }
 
-type WeekPageProps =
-  | (ActiveWeekProps & {
-      readonly dates: readonly string[];
-      readonly transition: WeekTransitionDirection | null;
-      readonly todaySectionRef: Ref<HTMLDivElement>;
-      readonly onDragActiveChange: (active: boolean) => void;
-    })
-  | (PassiveWeekProps & {
-      readonly dates: readonly string[];
-    });
+interface ActiveWeekPageProps extends WeekPresentationProps, WeekMutationProps {
+  readonly mode: "active";
+  readonly dates: readonly string[];
+  readonly transition: WeekTransitionDirection | null;
+  readonly todaySectionRef: Ref<HTMLDivElement>;
+  readonly onDragActiveChange: (active: boolean) => void;
+}
+
+interface PassiveWeekPageProps extends WeekPresentationProps {
+  readonly mode: "passive";
+  readonly dates: readonly string[];
+}
+
+type WeekPageProps = ActiveWeekPageProps | PassiveWeekPageProps;
 
 function WeekPage(props: WeekPageProps): React.ReactElement {
   const activeProps = props.mode === "active" ? props : null;
@@ -241,35 +225,21 @@ function WeekPage(props: WeekPageProps): React.ReactElement {
   const isEmpty = props.dates.every(
     (date) => outstandingForDate(props.tasks, date).length === 0,
   );
-
-  const weekBoard =
-    activeProps === null ? (
-      <WeekBoard
-        mode="passive"
-        tasks={props.tasks}
-        recurrences={props.recurrences}
-        now={props.now}
-        dates={props.dates}
-      />
-    ) : (
-      <WeekBoard
-        mode="active"
-        tasks={props.tasks}
-        recurrences={props.recurrences}
-        now={props.now}
-        selectedTask={activeProps.selectedTask}
-        onSelectTask={activeProps.onSelectTask}
-        onAdd={activeProps.onAdd}
-        onEdit={activeProps.onEdit}
-        onToggleComplete={activeProps.onToggleComplete}
-        onSetPriority={activeProps.onSetPriority}
-        onDelete={activeProps.onDelete}
-        onMove={activeProps.onMove}
-        dates={props.dates}
-        transition={activeProps.transition}
-        todaySectionRef={activeProps.todaySectionRef}
-      />
-    );
+  const interaction: WeekInteraction =
+    activeProps === null
+      ? { mode: "passive" }
+      : {
+          mode: "active",
+          todaySectionRef: activeProps.todaySectionRef,
+          selectedTask: activeProps.selectedTask,
+          onSelectTask: activeProps.onSelectTask,
+          onAdd: activeProps.onAdd,
+          onEdit: activeProps.onEdit,
+          onToggleComplete: activeProps.onToggleComplete,
+          onSetPriority: activeProps.onSetPriority,
+          onDelete: activeProps.onDelete,
+          onMove: activeProps.onMove,
+        };
 
   const content = (
     <>
@@ -292,7 +262,14 @@ function WeekPage(props: WeekPageProps): React.ReactElement {
           />
         </div>
       ) : null}
-      {weekBoard}
+      <WeekBoard
+        tasks={props.tasks}
+        recurrences={props.recurrences}
+        now={props.now}
+        dates={props.dates}
+        interaction={interaction}
+        transition={activeProps?.transition ?? null}
+      />
     </>
   );
 
