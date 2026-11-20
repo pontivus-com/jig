@@ -541,45 +541,49 @@ describe("UI ownership architecture", () => {
   });
 
   it("contains no deprecated Jig-owned adjacent-week pager implementation", () => {
-    const app = source("ui/src/app.tsx");
-    const planner = source("ui/src/planner.tsx");
-    const week = source("ui/src/week.tsx");
-    const list = source("ui/src/planner-list.tsx");
-    const taskRow = source("ui/src/task-row.tsx");
-    const css = source("ui/src/styles.css");
-    const browser = source("tests/browser/ui-conformance.spec.ts");
-    const interactions = source("tests/browser/interactions.spec.ts");
-
     expect(existsSync("ui/src/week-pager.tsx")).toBe(false);
     expect(existsSync("ui/src/week-swipe.ts")).toBe(false);
 
-    for (const runtime of [app, planner, week]) {
-      expect(runtime).not.toContain("WeekPager");
-      expect(runtime).not.toContain("WeekPagingRequest");
-      expect(runtime).not.toContain("weekPagingRequest");
-      expect(runtime).not.toContain("WeekPagingDirection");
-      expect(runtime).not.toContain("scrollend");
-      expect(runtime).not.toContain("scrollLeft");
+    const forbiddenRuntimeFragments = [
+      "WeekPager",
+      "WeekPagingRequest",
+      "weekPagingRequest",
+      "WeekPagingDirection",
+      "jig-week-pager",
+      "jig-week-slide",
+      "data-jig-week-page",
+      "scrollend",
+      ".scrollLeft",
+      "scroll-snap-type",
+      "scroll-snap-align",
+      'mode="passive"',
+      'mode: "passive"',
+      "PassiveWeek",
+      "PassivePlanner",
+      "PassiveTask",
+      "PlannerTaskPreviewList",
+      "TaskCardPassivePreview",
+      "jig-week-preview",
+      "usePanGesture",
+    ] as const;
+
+    for (const [path, content] of authoredUiSources()) {
+      for (const fragment of forbiddenRuntimeFragments) {
+        expect(content, `${path} must not retain deprecated pager fragment: ${fragment}`)
+          .not.toContain(fragment);
+      }
     }
 
-    expect(week).not.toContain('mode="passive"');
-    expect(week).not.toContain("PassiveWeek");
-    expect(list).not.toContain('mode="passive"');
-    expect(list).not.toContain("PassivePlanner");
-    expect(taskRow).not.toContain('mode: "passive"');
-    expect(taskRow).not.toContain("PassiveTask");
-
-    expect(css).not.toContain(".jig-week-pager");
-    expect(css).not.toContain(".jig-week-slide");
-    expect(css).not.toContain("scroll-snap-type");
-    expect(css).not.toContain("scroll-snap-align");
-
-    expect(browser).not.toContain(".jig-week-pager");
-    expect(browser).not.toContain(".jig-week-slide");
-    expect(browser).not.toContain('new Event("scrollend")');
-    expect(browser).not.toContain("pager.scrollLeft");
-    expect(interactions).not.toContain(".jig-week-pager");
-    expect(interactions).not.toContain(".jig-week-slide");
+    for (const testPath of [
+      "tests/browser/ui-conformance.spec.ts",
+      "tests/browser/interactions.spec.ts",
+    ]) {
+      const content = source(testPath);
+      expect(content, testPath).not.toContain(".jig-week-pager");
+      expect(content, testPath).not.toContain(".jig-week-slide");
+      expect(content, testPath).not.toContain('new Event("scrollend")');
+      expect(content, testPath).not.toContain("pager.scrollLeft");
+    }
   });
 
   it("keeps operational attention in one public-leaf Jig composition", () => {
