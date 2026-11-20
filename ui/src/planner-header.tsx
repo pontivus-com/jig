@@ -158,7 +158,7 @@ function DestinationHeading({
   destination,
   compact = false,
 }: Readonly<{
-  destination: Exclude<Destination, "planner">;
+  destination: Destination;
   compact?: boolean;
 }>): React.ReactElement {
   const definition = destinationDefinition(destination);
@@ -263,11 +263,10 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
     <header className="jig-app-header jig-app-header-narrow">
       <div className="jig-header-mobile-application-row">
         <div className="jig-header-mobile-identity">
-          {destination === "planner" ? (
-            <BrandHome onHome={onHome} />
-          ) : (
-            <DestinationHeading destination={destination} compact />
-          )}
+          <BrandHome onHome={onHome} />
+        </div>
+        <div className="jig-header-mobile-title">
+          <DestinationHeading destination={destination} compact />
         </div>
         <div className="jig-header-mobile-actions">
           {compactStatusControl}
