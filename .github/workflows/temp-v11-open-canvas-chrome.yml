@@ -57,26 +57,28 @@ jobs:
           text = tests.read_text()
           text = text.replace('  "--jig-lane-surface",\n', "")
           old_block = '''    expect(css).toMatch(
-              /\\.jig-week-column\\s*\\{[^}]*background:\\s*var\\(--jig-lane-surface\\)/s,
-            );'''
+      /\\.jig-week-column\\s*\\{[^}]*background:\\s*var\\(--jig-lane-surface\\)/s,
+    );'''
           new_block = '''    expect(css).not.toMatch(
-              /\\.jig-week-column\\s*\\{[^}]*\\bbackground:/s,
-            );'''
+      /\\.jig-week-column\\s*\\{[^}]*\\bbackground:/s,
+    );'''
           if old_block not in text:
               raise SystemExit("week-column architecture assertion not found")
           text = text.replace(old_block, new_block)
           anchor = '''    for (const token of JIG_PRODUCT_TOKENS) {
-              expect(common).toContain(\`"\${token}"\`);
-            }
-          '''
+      expect(common).toContain(`"${token}"`);
+    }
+
+'''
           replacement = '''    for (const token of JIG_PRODUCT_TOKENS) {
-              expect(common).toContain(\`"\${token}"\`);
-            }
-            expect(common).not.toContain('"--jig-lane-surface"');
-            expect(common).toContain(
-              '"--jig-chrome-surface": "var(--color-background-body)"',
-            );
-          '''
+      expect(common).toContain(`"${token}"`);
+    }
+    expect(common).not.toContain('"--jig-lane-surface"');
+    expect(common).toContain(
+      '"--jig-chrome-surface": "var(--color-background-body)"',
+    );
+
+'''
           if anchor not in text:
               raise SystemExit("product-token architecture assertion anchor not found")
           tests.write_text(text.replace(anchor, replacement))
