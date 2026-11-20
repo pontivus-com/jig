@@ -208,47 +208,6 @@ async function touchDrag(
   return intent;
 }
 
-test("unfinished prior-day cards roll into today in the canonical Planner", async ({
-  page,
-}) => {
-  const today = await browserCivilDate(page);
-  const yesterday = await browserCivilDate(page, -1);
-  await createTask(page, "Rollover contract", yesterday);
-  await page.reload();
-
-  await expect(
-    page
-      .locator(".jig-task-card")
-      .filter({ hasText: "Rollover contract" })
-      .first(),
-  ).toBeVisible();
-
-  await expect
-    .poll(
-      async () => (await taskByTitle(page, "Rollover contract")).scheduled_date,
-    )
-    .toBe(today);
-
-  const todayColumn = page.locator(`[data-date="${today}"]`);
-  await expect(
-    todayColumn.getByText("Rollover contract", { exact: true }),
-  ).toBeVisible();
-
-  const state = await apiState(page);
-  expect(
-    state.tasks.some(
-      (task) =>
-        task.title === "Rollover contract" &&
-        task.scheduled_date === yesterday,
-    ),
-  ).toBe(false);
-
-  await page.reload();
-  expect(
-    (await taskByTitle(page, "Rollover contract")).scheduled_date,
-  ).toBe(today);
-});
-
 test("non-drag movement uses the same exact index semantics", async ({
   page,
 }) => {
@@ -365,6 +324,59 @@ test("date headers are signifiers rather than selectable Planner state", async (
   await expect(page.locator('[aria-current="date"]')).toHaveCount(0);
   await expect(page.locator(".jig-date-heading-button")).toHaveCount(0);
   await expect(page.locator(".jig-week-date-signifier > strong")).toHaveCount(7);
+});
+
+test("past-date drag is visibly unavailable and reports the canonical reason without mutation", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  await createTask(page, "Past-date drag guard", today);
+  await page.reload();
+
+  const pastDates = await page.locator("[data-date]").evaluateAll(
+    (elements, currentDate) =>
+      elements
+        .map((element) => element.getAttribute("data-date"))
+        .filter(
+          (date): date is string =>
+            date !== null && date < currentDate,
+        ),
+    today,
+  );
+  const destinationDate = pastDates.at(-1);
+  test.skip(
+    destinationDate === undefined,
+    "The current displayed week has no past date to target",
+  );
+  if (destinationDate === undefined) {
+    return;
+  }
+
+  const target = page.locator(
+    `[data-date="${destinationDate}"] [data-jig-drop-slot="0"]`,
+  );
+  await expect(target).toHaveAttribute("data-jig-drop-allowed", "false");
+
+  const intent = await mouseDrag(
+    page,
+    await dragHandle(page, "Past-date drag guard"),
+    target,
+  );
+  expect(intent.date).toBe(destinationDate);
+
+  await expect(
+    page.getByText(
+      "Outstanding Tasks can only be scheduled for today or a future date",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect
+    .poll(
+      async () =>
+        (await taskByTitle(page, "Past-date drag guard")).scheduled_date,
+    )
+    .toBe(today);
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
 });
 
 test("dedicated-handle desktop drag moves exactly once without runtime errors or selection", async ({
