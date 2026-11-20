@@ -25,6 +25,7 @@ export type {
   CommandResult,
 } from "../protocol";
 import {
+  assertActiveScheduleDate,
   assertTaskSet,
   completeTask,
   createTask,
@@ -639,6 +640,7 @@ function pruneOrphanRecurrences(
 function executeCoreCommand(
   state: Pick<CanonicalState, "tasks" | "recurrences">,
   command: TaskCommand,
+  currentLocalDate: string,
   now: string,
   createId: () => string,
 ):
@@ -653,6 +655,7 @@ function executeCoreCommand(
       readonly deleted_task_id: string;
     } {
   if (command.type === "create") {
+    assertActiveScheduleDate(currentLocalDate, command.scheduled_date);
     const created = createTask(
       state.tasks,
       createCanonicalTask(command, createId(), now),
@@ -679,6 +682,19 @@ function executeCoreCommand(
     | { readonly tasks: readonly Task[]; readonly deleted_task_id: string };
   switch (command.type) {
     case "edit": {
+      const current = state.tasks.find(
+        (task) => task.id === command.task_id,
+      );
+      if (
+        command.changes.scheduled_date !== undefined &&
+        current !== undefined &&
+        current.completed_at === null
+      ) {
+        assertActiveScheduleDate(
+          currentLocalDate,
+          command.changes.scheduled_date,
+        );
+      }
       const edited = editTask(
         state.tasks,
         command.task_id,
@@ -700,6 +716,10 @@ function executeCoreCommand(
       );
     }
     case "move":
+      assertActiveScheduleDate(
+        currentLocalDate,
+        command.destination_date,
+      );
       result = moveTask(
         state.tasks,
         command.task_id,
@@ -843,6 +863,7 @@ export async function applyTaskCommand(
   connection: JigSqlConnection,
   command: TaskCommand,
   expectedRevision: number,
+  currentLocalDate: string,
   now: string,
   createId: () => string = crypto.randomUUID,
 ): Promise<CommandResult> {
@@ -852,7 +873,13 @@ export async function applyTaskCommand(
       throw new StaleRevisionError(state.revision);
     }
 
-    const result = executeCoreCommand(state, command, now, createId);
+    const result = executeCoreCommand(
+      state,
+      command,
+      currentLocalDate,
+      now,
+      createId,
+    );
     await persistCanonicalSet(
       connection,
       state.tasks,
@@ -879,6 +906,7 @@ export async function applyTaskCommand(
 export interface RolloverResult {
   readonly revision: number;
   readonly moved_task_ids: readonly string[];
+  readonly superseded_task_ids: readonly string[];
 }
 
 export async function rollForwardOutstandingInDatabase(
@@ -893,8 +921,15 @@ export async function rollForwardOutstandingInDatabase(
       currentLocalDate,
       updatedAt,
     );
-    if (result.moved_task_ids.length === 0) {
-      return { revision: state.revision, moved_task_ids: [] };
+    if (
+      result.moved_task_ids.length === 0 &&
+      result.superseded_task_ids.length === 0
+    ) {
+      return {
+        revision: state.revision,
+        moved_task_ids: [],
+        superseded_task_ids: [],
+      };
     }
 
     await persistCanonicalSet(
@@ -912,7 +947,11 @@ export async function rollForwardOutstandingInDatabase(
       [revision],
     );
 
-    return { revision, moved_task_ids: result.moved_task_ids };
+    return {
+      revision,
+      moved_task_ids: result.moved_task_ids,
+      superseded_task_ids: result.superseded_task_ids,
+    };
   });
 }
 
