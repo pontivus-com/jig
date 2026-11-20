@@ -2056,12 +2056,12 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       }
       expect(snapshot.rootTheme).toBe(preset);
       expect(snapshot.explicitMode).toBe(mode);
-      expect(snapshot.chromeBackground, `${preset}/${mode} chrome vs lane`)
-        .not.toBe(snapshot.laneBackground);
-      expect(snapshot.taskBackground, `${preset}/${mode} task vs lane`)
-        .not.toBe(snapshot.laneBackground);
-      expect(snapshot.taskBackground, `${preset}/${mode} task vs chrome`)
-        .not.toBe(snapshot.chromeBackground);
+      expect(snapshot.chromeBackground, `${preset}/${mode} chrome matches body`)
+        .toBe(snapshot.bodyBackground);
+      expect(snapshot.laneBackground, `${preset}/${mode} lane remains open`)
+        .toBe("rgba(0, 0, 0, 0)");
+      expect(snapshot.taskBackground, `${preset}/${mode} task vs canvas`)
+        .not.toBe(snapshot.bodyBackground);
       expect(snapshot.taskBorder).not.toBe("rgba(0, 0, 0, 0)");
       expect(
         contrastRatio(snapshot.bodyText, snapshot.bodyBackground),
@@ -2072,10 +2072,6 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
         `${preset}/${mode} Task text contrast`,
       ).toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
-      expect(
-        contrastRatio(snapshot.bodyText, snapshot.laneBackground),
-        `${preset}/${mode} lane text contrast`,
-      ).toBeGreaterThanOrEqual(4.5);
       expect(
         contrastRatio(snapshot.logoPrimary, snapshot.chromeBackground),
         `${preset}/${mode} logo primary contrast on chrome`,
@@ -2105,9 +2101,9 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
     const systemDark = await themeSnapshot(page);
     expect(systemDark.rootTheme).toBe(preset);
     expect(systemDark.explicitMode).toBeNull();
-    expect(systemDark.chromeBackground).not.toBe(systemDark.laneBackground);
-    expect(systemDark.taskBackground).not.toBe(systemDark.laneBackground);
-    expect(systemDark.taskBackground).not.toBe(systemDark.chromeBackground);
+    expect(systemDark.chromeBackground).toBe(systemDark.bodyBackground);
+    expect(systemDark.laneBackground).toBe("rgba(0, 0, 0, 0)");
+    expect(systemDark.taskBackground).not.toBe(systemDark.bodyBackground);
   }
 
   await page.emulateMedia({ colorScheme: "no-preference" });
