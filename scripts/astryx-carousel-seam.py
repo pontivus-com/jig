@@ -245,6 +245,123 @@ def main() -> None:
         "} from './Carousel';",
     )
 
+    carousel_test = root / "packages/core/src/Carousel/Carousel.test.tsx"
+    replace_once(
+        carousel_test,
+        "    it('scrollTo scrolls the container and clamps out-of-range indices', () => {",
+        "    it('scrollTo can force an immediate contained reposition', () => {\n"
+        "      const handle = createRef<CarouselHandle>();\n"
+        "      render(\n"
+        "        <Carousel handleRef={handle} aria-label=\"Handle\">\n"
+        "          <div>Item 1</div>\n"
+        "          <div>Item 2</div>\n"
+        "        </Carousel>,\n"
+        "      );\n"
+        "      const scroller = getScroller();\n"
+        "      const scrollBy = vi.fn();\n"
+        "      scroller.scrollBy = scrollBy;\n\n"
+        "      handle.current?.scrollTo(1, {animated: false});\n"
+        "      expect(scrollBy).toHaveBeenCalledWith(\n"
+        "        expect.objectContaining({behavior: 'instant'}),\n"
+        "      );\n"
+        "    });\n\n"
+        "    it('scrollTo scrolls the container and clamps out-of-range indices', () => {",
+    )
+
+    snap_test = root / "packages/core/src/SnapPaging/SnapPaging.test.tsx"
+    replace_once(
+        snap_test,
+        "    it('moves the row through the paging for a scroll to an item', () => {",
+        "    it('forwards immediate scrollTo intent through snap paging', () => {\n"
+        "      let animated: boolean | undefined;\n"
+        "      const value = makeSnapPaging(() => ({\n"
+        "        ...attachment(),\n"
+        "        move: (_target, options) => {\n"
+        "          animated = options?.animated;\n"
+        "        },\n"
+        "      }));\n"
+        "      const handle = createRef<CarouselHandle>();\n"
+        "      render(\n"
+        "        <Carousel aria-label=\"Items\" hasSnap={value} handleRef={handle}>\n"
+        "          <div>One</div>\n"
+        "          <div>Two</div>\n"
+        "        </Carousel>,\n"
+        "      );\n"
+        "      act(() => handle.current?.scrollTo(1, {animated: false}));\n"
+        "      expect(animated).toBe(false);\n"
+        "    });\n\n"
+        "    it('reports the final rest after a programmatic paging move', () => {\n"
+        "      const settles: Array<[number, number]> = [];\n"
+        "      const handle = createRef<CarouselHandle>();\n"
+        "      function Paging() {\n"
+        "        return (\n"
+        "          <Carousel\n"
+        "            aria-label=\"Items\"\n"
+        "            hasSnap={useSnapPaging({\n"
+        "              pages: 'item',\n"
+        "              onSettle: (index, previous) => settles.push([index, previous]),\n"
+        "            })}\n"
+        "            handleRef={handle}\n"
+        "          >\n"
+        "            <div>One</div>\n"
+        "            <div>Two</div>\n"
+        "            <div>Three</div>\n"
+        "          </Carousel>\n"
+        "        );\n"
+        "      }\n"
+        "      render(<Paging />);\n"
+        "      const row = scroller();\n"
+        "      Object.defineProperty(row, 'clientWidth', {value: 100, configurable: true});\n"
+        "      Object.defineProperty(row, 'offsetWidth', {value: 100, configurable: true});\n"
+        "      Object.defineProperty(row, 'scrollWidth', {value: 300, configurable: true});\n"
+        "      Object.defineProperty(row, 'scrollLeft', {\n"
+        "        value: 0,\n"
+        "        writable: true,\n"
+        "        configurable: true,\n"
+        "      });\n"
+        "      row.getBoundingClientRect = () => new DOMRect(0, 0, 100, 100);\n"
+        "      Array.from(row.children).forEach((child, index) => {\n"
+        "        child.getBoundingClientRect = () =>\n"
+        "          new DOMRect(index * 100, 0, 100, 100);\n"
+        "      });\n"
+        "      row.scrollTo = ({left}: ScrollToOptions) => {\n"
+        "        if (typeof left === 'number') row.scrollLeft = left;\n"
+        "      };\n\n"
+        "      act(() => handle.current?.scrollTo(1, {animated: false}));\n"
+        "      expect(settles).toEqual([[1, 0]]);\n"
+        "    });\n\n"
+        "    it('moves the row through the paging for a scroll to an item', () => {",
+    )
+
+    carousel_doc = root / "packages/core/src/Carousel/Carousel.doc.mjs"
+    replace_once(
+        carousel_doc,
+        "    {name: 'handleRef', type: 'React.Ref<CarouselHandle>', description: 'Imperative handle exposing scrollNext(), scrollPrev(), scrollTo(index), canScrollNext(), and canScrollPrev() for programmatic scroll control.'},",
+        "    {name: 'handleRef', type: 'React.Ref<CarouselHandle>', description: 'Imperative handle exposing scrollNext(), scrollPrev(), scrollTo(index, {animated}), canScrollNext(), and canScrollPrev(). Pass animated: false to reposition immediately.'},",
+    )
+    replace_once(
+        carousel_doc,
+        "    handleRef: 'imperative handle: scrollNext/scrollPrev/scrollTo(index)/canScrollNext/canScrollPrev',",
+        "    handleRef: 'imperative handle: scrollNext/scrollPrev/scrollTo(index, {animated})/canScrollNext/canScrollPrev; animated:false repositions immediately',",
+    )
+
+    snap_doc = root / "packages/core/src/SnapPaging/useSnapPaging.doc.mjs"
+    replace_once(
+        snap_doc,
+        "      type: \"{pages?: 'view' | 'item'}\",",
+        "      type: \"{pages?: 'view' | 'item'; onSettle?: (index: number, previous: number) => void}\",",
+    )
+    replace_once(
+        snap_doc,
+        "        \"What one flick moves. 'view' moves one view and lands on the item start edge nearest one viewport on; 'item' moves one item. A new value applies from the next flick.\",",
+        "        \"What one flick moves, plus an optional callback after paging fully rests on a page selected by a gesture or programmatic move. Controlled internal alignment is not reported.\",",
+    )
+    replace_once(
+        snap_doc,
+        "      \"{pages: 'view' | 'item'}: what one flick moves. Default 'view'. A new value applies from the next flick.\",",
+        "      \"{pages: 'view' | 'item', onSettle}: what one flick moves and an optional final-rest callback. Default pages is 'view'.\",",
+    )
+
     changeset = root / ".changeset/carousel-settled-reposition.md"
     changeset.write_text(
         "---\n"
