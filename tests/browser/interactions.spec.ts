@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 function activeWeek(page: Page): Locator {
-  return page.locator(".jig-planner-surface");
+  return page.locator('[data-jig-week-canonical="true"]');
 }
 
 async function taskCard(page: Page, title: string) {
@@ -115,7 +115,7 @@ async function mouseDrag(
     { steps: 12 },
   );
 
-  const dragScope = page.locator(".jig-task-drag-scope");
+  const dragScope = activeWeek(page).locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
   await expect(
     page.locator(".jig-task-insertion-slot-active .jig-task-drop-indicator"),
@@ -201,7 +201,7 @@ async function touchDrag(
     });
   }
 
-  const dragScope = page.locator(".jig-task-drag-scope");
+  const dragScope = activeWeek(page).locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
   await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
 
@@ -438,6 +438,130 @@ test("dedicated-handle desktop drag moves exactly once without runtime errors or
     (await taskByTitle(page, "Pointer drag contract")).scheduled_date,
   ).toBe(destinationDate);
   expect(runtimeErrors).toEqual([]);
+});
+
+test("active Task drag locks Carousel travel and canonical week state", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Carousel drag lock", today);
+  await page.reload();
+
+  const first = activeWeek(page).locator(".jig-week-column").first();
+  const weekBefore = await first.getAttribute("data-date");
+  const slideBefore = await activeWeek(page).boundingBox();
+  const source = await dragHandle(page, "Carousel drag lock");
+  const sourceBox = await source.boundingBox();
+  if (weekBefore === null || slideBefore === null || sourceBox === null) {
+    throw new Error("Carousel drag-lock geometry is unavailable");
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 8,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 3 },
+  );
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
+  await page.mouse.wheel(1200, 0);
+  await page.waitForTimeout(120);
+  const slideDuring = await activeWeek(page).boundingBox();
+  if (slideDuring === null) {
+    throw new Error("Canonical Carousel slide disappeared during Task drag");
+  }
+  expect(Math.abs(slideDuring.x - slideBefore.x)).toBeLessThanOrEqual(1);
+  await expect.poll(() => first.getAttribute("data-date")).toBe(weekBefore);
+
+  await page.mouse.up();
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect.poll(() => first.getAttribute("data-date")).toBe(weekBefore);
+  const slideAfter = await activeWeek(page).boundingBox();
+  if (slideAfter === null) {
+    throw new Error("Canonical Carousel slide disappeared after Task drag");
+  }
+  expect(Math.abs(slideAfter.x - slideBefore.x)).toBeLessThanOrEqual(1);
+});
+
+test("active touch Task drag cannot move the Carousel sideways", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  await createTask(page, "Touch Carousel drag lock", today);
+  await page.reload();
+
+  const first = activeWeek(page).locator(".jig-week-column").first();
+  const weekBefore = await first.getAttribute("data-date");
+  const slideBefore = await activeWeek(page).boundingBox();
+  const source = await dragHandle(page, "Touch Carousel drag lock");
+  const sourceBox = await source.boundingBox();
+  if (weekBefore === null || slideBefore === null || sourceBox === null) {
+    throw new Error("Touch Carousel drag-lock geometry is unavailable");
+  }
+
+  const client = await page.context().newCDPSession(page);
+  const point = (x: number, y: number) => ({
+    x,
+    y,
+    radiusX: 1,
+    radiusY: 1,
+    force: 1,
+    id: 73,
+  });
+  const startX = sourceBox.x + sourceBox.width / 2;
+  const startY = sourceBox.y + sourceBox.height / 2;
+  const horizontalDirection = startX < 720 ? 1 : -1;
+
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [point(startX, startY)],
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [
+      point(startX + horizontalDirection * 8, startY + 8),
+    ],
+  });
+  await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
+
+  for (let step = 1; step <= 8; step += 1) {
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        point(
+          startX + horizontalDirection * (8 + step * 35),
+          startY + 8,
+        ),
+      ],
+    });
+  }
+
+  await page.waitForTimeout(120);
+  const slideDuring = await activeWeek(page).boundingBox();
+  if (slideDuring === null) {
+    throw new Error("Canonical Carousel slide disappeared during touch Task drag");
+  }
+  expect(Math.abs(slideDuring.x - slideBefore.x)).toBeLessThanOrEqual(1);
+  await expect.poll(() => first.getAttribute("data-date")).toBe(weekBefore);
+
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchCancel",
+    touchPoints: [],
+  });
+  await client.detach();
+
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect(activeWeek(page).locator(".jig-task-drag-scope")).toHaveAttribute(
+    "data-jig-drag-active",
+    "false",
+  );
+  await expect.poll(() => first.getAttribute("data-date")).toBe(weekBefore);
 });
 
 test("selection focus and drag preserve the High-priority semantic cue", async ({
@@ -799,14 +923,14 @@ test("desktop drag keeps a stable insertion intent through inter-card whitespace
   }
   const x = slotBox.x + slotBox.width / 2;
   await page.mouse.move(x, slotBox.y + slotBox.height * 0.25, { steps: 8 });
-  const firstIntent = await page.locator(".jig-task-drag-scope").evaluate(
+  const firstIntent = await activeWeek(page).locator(".jig-task-drag-scope").evaluate(
     (element) => ({
       date: element.getAttribute("data-jig-drop-date"),
       index: element.getAttribute("data-jig-drop-index"),
     }),
   );
   await page.mouse.move(x, slotBox.y + slotBox.height * 0.75, { steps: 2 });
-  const secondIntent = await page.locator(".jig-task-drag-scope").evaluate(
+  const secondIntent = await activeWeek(page).locator(".jig-task-drag-scope").evaluate(
     (element) => ({
       date: element.getAttribute("data-jig-drop-date"),
       index: element.getAttribute("data-jig-drop-index"),
@@ -865,7 +989,7 @@ test("dedicated-handle drag survives twenty sequential cycles without stranded s
 
     await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
     await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
-    await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+    await expect(activeWeek(page).locator(".jig-task-drag-scope")).toHaveAttribute(
       "data-jig-drag-active",
       "false",
     );
@@ -900,7 +1024,7 @@ test("outside drop restores exactly without mutation", async ({
   );
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
   await page.mouse.move(4, 4, { steps: 8 });
-  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+  await expect(activeWeek(page).locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drop-date",
     "",
   );
@@ -908,7 +1032,7 @@ test("outside drop restores exactly without mutation", async ({
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
   await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
-  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+  await expect(activeWeek(page).locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drag-active",
     "false",
   );
@@ -968,7 +1092,7 @@ test("pointer cancellation clears touch drag without mutation", async ({
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
   await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
-  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+  await expect(activeWeek(page).locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drag-active",
     "false",
   );
@@ -996,7 +1120,7 @@ test("default KeyboardSensor moves from the dedicated grip and commits once", as
   await page.keyboard.press("Space");
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
-  const scope = page.locator(".jig-task-drag-scope");
+  const scope = activeWeek(page).locator(".jig-task-drag-scope");
   let reachedTarget = false;
   for (let step = 0; step < 96; step += 1) {
     await page.keyboard.press("ArrowDown");
@@ -1076,7 +1200,7 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
 
   const scrollTop = await frame.evaluate((element) => element.scrollTop);
   expect(scrollTop).toBeGreaterThan(0);
-  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+  await expect(activeWeek(page).locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drop-date",
     today,
   );
@@ -1123,7 +1247,7 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
   );
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
-  const scope = page.locator(".jig-task-drag-scope");
+  const scope = activeWeek(page).locator(".jig-task-drag-scope");
   for (let slotIndex = 0; slotIndex <= 3; slotIndex += 1) {
     const slot = page.locator(
       `[data-date="${destinationDate}"] [data-jig-drop-slot="${slotIndex}"]`,
@@ -1316,7 +1440,7 @@ test("Task-body touch scroll never activates drag", async ({ page }) => {
   await client.detach();
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-  await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+  await expect(activeWeek(page).locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drag-active",
     "false",
   );
