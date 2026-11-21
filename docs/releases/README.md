@@ -152,7 +152,7 @@ The release bundles carry the pinned Bun runtime for the selected architecture p
 
 GitHub-generated source archives remain provenance artifacts; they are not the primary supported installation channel.
 
-Android is deliberately not part of the GitHub Release asset matrix. For v1.1.0 the first public Android distribution target is F-Droid. The permanent Release workflow certifies the exact Android source/build state before Linux publication, but it does not upload an APK and does not publish to F-Droid. The external F-Droid submission is derived from `distribution/fdroid/metadata/com.pontivus.jig.yml` only after the immutable `v1.1.0` source tag exists. Android availability must not be described as public until F-Droid has actually published `com.pontivus.jig`.
+Android is deliberately not part of the GitHub Release asset matrix. F-Droid remains the first intended public Android distribution target. The permanent Release workflow certifies the exact Android source/build state before Linux publication, but it does not upload an APK and does not publish to F-Droid. External F-Droid submission/publication is a separate deferred distribution activity: it may begin only after an immutable source tag exists **and** Jig is considered stable with the required marketing/store material ready. Android availability must not be described as public until F-Droid has actually published `com.pontivus.jig`.
 
 ## Bundle contents
 
