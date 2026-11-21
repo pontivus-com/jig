@@ -101,10 +101,6 @@ function dropIntent(
   ) {
     return null;
   }
-  if (!isActiveScheduleDate(currentLocalDate, date)) {
-    return null;
-  }
-
   const task = tasks.find((candidate) => candidate.id === taskId);
   if (task === undefined || task.completed_at !== null) {
     return null;

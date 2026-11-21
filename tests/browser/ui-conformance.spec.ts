@@ -273,15 +273,13 @@ test("desktop uses explicit Planner navigation with one seven-date open canvas",
   const labels = await active
     .locator(".jig-week-date-signifier > strong")
     .allTextContents();
-  expect(labels.map((label) => label.split(" ")[0])).toEqual([
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ]);
+  expect(labels.map((label) => label.split(" ")[1])).toEqual(
+    await Promise.all(
+      Array.from({ length: 7 }, async (_, index) =>
+        (await browserCivilDate(page, index)).slice(8),
+      ),
+    ),
+  );
 
   const chrome = await active.locator(".jig-week-column").first().evaluate(
     (element) => {
@@ -621,7 +619,7 @@ test("temporal group stays page-centered in one row and navigation has no select
   );
   await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Next week" }).click();
+  await page.getByRole("button", { name: "Next horizon" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
   await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(0);
   await expect(page.locator('[aria-current="date"]')).toHaveCount(0);
@@ -633,8 +631,10 @@ test("temporal group stays page-centered in one row and navigation has no select
   );
   await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Previous week" }).click();
-  await expect(range).not.toHaveText(rangeBefore ?? "");
+  await expect(
+    page.getByRole("button", { name: "Previous horizon" }),
+  ).toBeDisabled();
+  await expect(range).toHaveText(rangeBefore ?? "");
   await expect(activeWeek.locator(".jig-week-board")).not.toHaveClass(
     /jig-week-board-(previous|next)/,
   );
@@ -706,7 +706,7 @@ test("narrow Planner opens with the current day at the top", async ({
   });
 
   expectNear(initialGeometry.todayTop, initialGeometry.frameTop, 1);
-  expect(initialGeometry.scrollTop).toBeGreaterThan(0);
+  expect(initialGeometry.scrollTop).toBeGreaterThanOrEqual(0);
 
   await frame.evaluate((element) => {
     element.scrollTop = 0;
@@ -729,9 +729,7 @@ test("narrow Planner opens with the current day at the top", async ({
       todayTop: today.getBoundingClientRect().top,
     };
   });
-  expect(scrolledUpGeometry.todayTop).toBeGreaterThan(
-    scrolledUpGeometry.frameTop,
-  );
+  expectNear(scrolledUpGeometry.todayTop, scrolledUpGeometry.frameTop, 1);
 });
 
 test("global Add exposes the full form and defaults to today", async ({
@@ -752,10 +750,11 @@ test("global Add exposes the full form and defaults to today", async ({
   await expect(workspace.getByLabel("Reference")).toBeVisible();
   await expect(workspace.getByLabel("Notes")).toBeVisible();
   await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(workspace).toBeHidden();
 
   const range = page.locator(".jig-header-week-range");
   const rangeBefore = await range.textContent();
-  await page.getByRole("button", { name: "Next week" }).click();
+  await page.getByRole("button", { name: "Next horizon" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   workspace = page.getByRole("dialog", { name: "Add task" });
@@ -764,7 +763,7 @@ test("global Add exposes the full form and defaults to today", async ({
   );
 });
 
-test("per-date add controls are limited to today and future dates", async ({
+test("per-date add controls are limited to future dates", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -780,7 +779,7 @@ test("per-date add controls are limited to today and future dates", async ({
     await expect(add).toHaveCount(date > today ? 1 : 0);
   }
 
-  await page.getByRole("button", { name: "Next week", exact: true }).click();
+  await page.getByRole("button", { name: "Next horizon", exact: true }).click();
   await expect(
     active.locator(".jig-week-column").first().getByRole("button", {
       name: /^Add task to /,
@@ -790,7 +789,7 @@ test("per-date add controls are limited to today and future dates", async ({
 
 test("per-date plus opens the same full form for its explicit date", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole("button", { name: "Next week", exact: true }).click();
+  await page.getByRole("button", { name: "Next horizon", exact: true }).click();
   const active = activeWeek(page);
   const futureColumn = active.locator(".jig-week-column").first();
   const futureDate = await futureColumn.getAttribute("data-date");
@@ -840,6 +839,120 @@ test("Task click opens the editable Drawer directly and blank content dismisses 
   await expect(workspace).toBeHidden();
   expect((await apiState(page)).tasks.some((task) => task.title === "Unsaved replacement"))
     .toBe(false);
+});
+
+test("adding and editing a Task confirm success and close the workspace", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+
+  for (const width of [1440, 390]) {
+    await resetCanonicalTasks(page);
+    await page.reload();
+    await page.setViewportSize({ width, height: 900 });
+
+    const addControl =
+      width < 600
+        ? page.locator(".jig-mobile-add-fab")
+        : page.locator(".jig-header-right").getByRole("button", {
+            name: "Add task",
+            exact: true,
+          });
+    await addControl.click();
+
+    const addWorkspace = page.getByRole("dialog", { name: "Add task" });
+    await expect(addWorkspace).toBeVisible();
+    if (width < 600) {
+      await expect(addWorkspace.getByLabel("Title")).toBeFocused();
+    }
+    await addWorkspace.getByLabel("Title").fill(`Feedback ${width}`);
+    await addWorkspace.getByRole("button", {
+      name: "Add task",
+      exact: true,
+    }).click();
+    await expect(addWorkspace).toBeHidden();
+    const addedConfirmation = page
+      .getByRole("status")
+      .filter({ hasText: "Task added" });
+    await expect(addedConfirmation).toBeVisible();
+    await addedConfirmation
+      .getByRole("button", { name: "Dismiss confirmation" })
+      .click();
+    await expect(addedConfirmation).toHaveClass(
+      /jig-success-confirmation-exiting/,
+    );
+    await expect(addedConfirmation).toBeHidden();
+
+    const task = page.getByText(`Feedback ${width}`, { exact: true });
+    await expect(task).toBeVisible();
+    await task.click();
+    const editWorkspace = page.getByRole("dialog", {
+      name: `Feedback ${width}`,
+    });
+    await expect(editWorkspace).toBeVisible();
+    if (width < 600) {
+      await expect(editWorkspace.getByLabel("Title")).not.toBeFocused();
+    }
+    await editWorkspace.evaluate((dialog) => {
+      const scrollRegion = Array.from(
+        dialog.querySelectorAll<HTMLElement>("*"),
+      ).find((element) => element.scrollHeight > element.clientHeight);
+      if (scrollRegion === undefined) {
+        throw new Error("Task workspace has no scroll region");
+      }
+      scrollRegion.scrollTop = scrollRegion.scrollHeight;
+    });
+    await editWorkspace.getByLabel("Title").fill(`Edited ${width}`);
+    await editWorkspace.getByRole("button", {
+      name: "Save",
+      exact: true,
+    }).click();
+    await expect(editWorkspace).toBeHidden();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Task saved" }),
+    ).toBeVisible();
+    await expect(page.getByText(`Edited ${width}`, { exact: true })).toBeVisible();
+
+    await addControl.click();
+    const reopenedAddWorkspace = page.getByRole("dialog", {
+      name: "Add task",
+    });
+    const reopenedTitle = reopenedAddWorkspace.getByLabel("Title");
+    await expect(reopenedTitle).toBeVisible();
+    if (width < 600) {
+      await expect(reopenedTitle).toBeFocused();
+    }
+    const titleBox = await reopenedTitle.boundingBox();
+    const workspaceBox = await reopenedAddWorkspace.boundingBox();
+    expect(titleBox).not.toBeNull();
+    expect(workspaceBox).not.toBeNull();
+    if (titleBox !== null && workspaceBox !== null) {
+      expect(titleBox.y).toBeGreaterThanOrEqual(workspaceBox.y);
+      expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(
+        workspaceBox.y + workspaceBox.height,
+      );
+    }
+    await expect
+      .poll(() =>
+        reopenedAddWorkspace.evaluate((dialog) => {
+          const scrollRegion = Array.from(
+            dialog.querySelectorAll<HTMLElement>("*"),
+          ).find((element) => element.scrollHeight > element.clientHeight);
+          return scrollRegion?.scrollTop ?? null;
+        }),
+      )
+      .toBe(0);
+    await reopenedAddWorkspace.getByRole("button", {
+      name: "Cancel",
+      exact: true,
+    }).click();
+    await expect(reopenedAddWorkspace).toBeHidden();
+
+    await page.getByLabel(`Complete Edited ${width}`, { exact: true }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Task completed" }),
+    ).toBeVisible();
+  }
 });
 
 test("selecting another Task retargets the open editable workspace", async ({ page }) => {
@@ -1008,12 +1121,12 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       "Global Add task",
     );
     await expectTarget(
-      page.getByRole("button", { name: "Previous week", exact: true }),
-      "Previous week",
+      page.getByRole("button", { name: "Previous horizon", exact: true }),
+      "Previous horizon",
     );
     await expectTarget(
-      page.getByRole("button", { name: "Next week", exact: true }),
-      "Next week",
+      page.getByRole("button", { name: "Next horizon", exact: true }),
+      "Next horizon",
     );
     await expectTarget(
       page.getByRole("button", { name: "Today", exact: true }),
@@ -1480,18 +1593,18 @@ test("narrow Planner shows all seven dated sections and preserves the same works
     page.getByRole("navigation", { name: "Primary" }),
   ).toBeVisible();
 
-  const labels = await active
-    .locator(".jig-week-date-signifier > strong")
-    .allTextContents();
-  expect(labels.map((label) => label.split(" ")[0])).toEqual([
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ]);
+  const dates = await active
+    .locator(".jig-week-column")
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("data-date")),
+    );
+  expect(dates).toEqual(
+    await Promise.all(
+      Array.from({ length: 7 }, async (_, index) =>
+        browserCivilDate(page, index),
+      ),
+    ),
+  );
 
   await page.getByText("Mobile workspace task", { exact: true }).click();
   let workspace = page.getByRole("dialog", { name: "Mobile workspace task" });
@@ -1611,6 +1724,10 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
+  await expect(workspace).toBeHidden();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Task saved" }),
+  ).toBeVisible();
 
   await expect
     .poll(async () => {
@@ -1640,18 +1757,8 @@ test("Repeat uses one shared series while Task occurrences remain ordinary canon
   await expect(
     page.getByLabel("Recurring task").first(),
   ).toBeVisible();
-  await expect(
-    workspace.getByRole("combobox", { name: "Repeat" }),
-  ).toContainText("Weekly");
-  await expect(workspace.getByLabel("Ends on")).toHaveValue(
-    await displayedDateValue(page, endDate),
-  );
-
-  await workspace
-    .getByRole("button", { name: "Close", exact: true })
-    .click();
   const rangeBeforeNext = await page.locator(".jig-header-week-range").textContent();
-  await page.getByRole("button", { name: "Next week" }).click();
+  await page.getByRole("button", { name: "Next horizon" }).click();
   await expect(page.locator(".jig-header-week-range")).not.toHaveText(
     rangeBeforeNext ?? "",
   );

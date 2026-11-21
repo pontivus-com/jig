@@ -324,7 +324,10 @@ test("optional metadata edits round-trip through the canonical Task", async ({
   await workspace
     .getByRole("button", { name: "Save", exact: true })
     .click();
-  await expect(workspace).toBeVisible();
+  await expect(workspace).toBeHidden();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Task saved" }),
+  ).toBeVisible();
 
   const edited = await taskByTitle(page, "Editable metadata task");
   expect(edited.context).toBe("Client Alpha");
@@ -343,57 +346,18 @@ test("date headers are signifiers rather than selectable Planner state", async (
   ).toHaveCount(7);
 });
 
-test("past-date drag is visibly unavailable and reports the canonical reason without mutation", async ({
+test("rolling Planner never renders a past-date drag destination", async ({
   page,
 }) => {
   const today = await browserCivilDate(page);
-  await createTask(page, "Past-date drag guard", today);
-  await page.reload();
-
-  const pastDates = await page.locator("[data-date]").evaluateAll(
+  const dates = await page.locator("[data-date]").evaluateAll(
     (elements, currentDate) =>
       elements
         .map((element) => element.getAttribute("data-date"))
-        .filter(
-          (date): date is string =>
-            date !== null && date < currentDate,
-        ),
+        .filter((date): date is string => date !== null && date < currentDate),
     today,
   );
-  const destinationDate = pastDates.at(-1);
-  test.skip(
-    destinationDate === undefined,
-    "The current displayed week has no past date to target",
-  );
-  if (destinationDate === undefined) {
-    return;
-  }
-
-  const target = page.locator(
-    `[data-date="${destinationDate}"] [data-jig-drop-slot="0"]`,
-  );
-  await expect(target).toHaveAttribute("data-jig-drop-allowed", "false");
-
-  const intent = await mouseDrag(
-    page,
-    await dragHandle(page, "Past-date drag guard"),
-    target,
-  );
-  expect(intent.date).toBe(destinationDate);
-
-  await expect(
-    page.getByText(
-      "Outstanding Tasks can only be scheduled for today or a future date",
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await expect
-    .poll(
-      async () =>
-        (await taskByTitle(page, "Past-date drag guard")).scheduled_date,
-    )
-    .toBe(today);
-  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  expect(dates).toEqual([]);
 });
 
 test("dedicated-handle desktop drag moves exactly once without runtime errors or selection", async ({
@@ -1496,9 +1460,10 @@ test("long Planner lanes grow with content without an internal lane scroller", a
   expect(geometry.overflowY).not.toBe("auto");
   expect(geometry.overflowY).not.toBe("scroll");
 
+  const futureDate = await browserCivilDate(page, 1);
   await expect(
-    column.getByRole("button", {
+    page.locator(`[data-date="${futureDate}"]`).getByRole("button", {
       name: /^Add task to /,
     }),
-  ).toBeVisible();
+  ).toHaveCount(1);
 });

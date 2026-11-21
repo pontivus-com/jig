@@ -72,15 +72,15 @@ export function formatReminderTime(value: string): string {
 }
 
 
-export function formatPlannerWeekRange(displayedWeekStart: string): string {
-  assertCivilDate(displayedWeekStart);
-  const end = addCivilDays(displayedWeekStart, 6);
+export function formatPlannerHorizonRange(horizonStart: string): string {
+  assertCivilDate(horizonStart);
+  const end = addCivilDays(horizonStart, 6);
 
-  const startMonth = formatCivilDate(displayedWeekStart, { month: "short" });
+  const startMonth = formatCivilDate(horizonStart, { month: "short" });
   const endMonth = formatCivilDate(end, { month: "short" });
-  const startYear = formatCivilDate(displayedWeekStart, { year: "numeric" });
+  const startYear = formatCivilDate(horizonStart, { year: "numeric" });
   const endYear = formatCivilDate(end, { year: "numeric" });
-  const startDay = formatCivilDate(displayedWeekStart, { day: "numeric" });
+  const startDay = formatCivilDate(horizonStart, { day: "numeric" });
   const endDay = formatCivilDate(end, { day: "numeric" });
 
   if (startYear !== endYear) {

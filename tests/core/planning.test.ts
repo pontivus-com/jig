@@ -3,13 +3,17 @@ import type { Priority, Task } from "../../src/core/task";
 import {
   assertActiveScheduleDate,
   assertTaskSet,
+  clampPlannerHorizonStart,
   completeTask,
   createTask,
   defaultAddDate,
   deleteTask,
   editTask,
   isActiveScheduleDate,
+  isFutureAddDate,
   moveTask,
+  movePlannerHorizon,
+  plannerHorizonDates,
   reopenTask,
   rollForwardOutstanding,
   startOfWeekMonday,
@@ -346,6 +350,14 @@ describe("active scheduling dates", () => {
   });
 });
 
+describe("per-date add affordance dates", () => {
+  it("shows dated add only for future dates because global Add represents today", () => {
+    expect(isFutureAddDate("2026-11-20", "2026-11-20")).toBe(false);
+    expect(isFutureAddDate("2026-11-20", "2026-11-21")).toBe(true);
+    expect(isFutureAddDate("2026-11-20", "2026-11-19")).toBe(false);
+  });
+});
+
 describe("planning mutations", () => {
   it("uses priority only to place a new Task in a manually mixed list", () => {
     const existing = [
@@ -562,5 +574,34 @@ describe("civil week helpers", () => {
       "2028-03-04",
       "2028-03-05",
     ]);
+  });
+});
+
+describe("rolling Planner horizon helpers", () => {
+  it("returns exactly seven consecutive dates from the horizon start", () => {
+    expect(plannerHorizonDates("2026-12-29")).toEqual([
+      "2026-12-29",
+      "2026-12-30",
+      "2026-12-31",
+      "2027-01-01",
+      "2027-01-02",
+      "2027-01-03",
+      "2027-01-04",
+    ]);
+  });
+
+  it("clamps Previous at today and shifts by seven civil days otherwise", () => {
+    expect(clampPlannerHorizonStart("2026-11-15", "2026-11-16")).toBe(
+      "2026-11-16",
+    );
+    expect(movePlannerHorizon("2026-11-16", "2026-11-16", -7)).toBe(
+      "2026-11-16",
+    );
+    expect(movePlannerHorizon("2026-11-23", "2026-11-16", -7)).toBe(
+      "2026-11-16",
+    );
+    expect(movePlannerHorizon("2026-11-16", "2026-11-16", 7)).toBe(
+      "2026-11-23",
+    );
   });
 });

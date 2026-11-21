@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Canonical UI solution through v1.1, amended 2026-11-20 after physical-device acceptance exposed compact-header identity/height, interactive-text legibility, Task leading-control alignment and past-date movement feedback defects. For adjacent-week behavior this document owns visual/interaction presentation only; JIG-110-FR-33 is the sole functional authority and JIG-110-SD-43 is the sole paging-mechanics authority. The app-wide configured desktop/mobile hierarchy is governed by the v1.1 application reference below; the existing onboarding/Task-form references remain binding within their scopes. v1.0.x sections remain release history only.
+**Status:** Canonical UI solution through v1.1, amended 2026-11-21 after scope reduction. Adjacent-week Carousel/swipe paging is deferred beyond v1.1; the release presents explicit Previous/Next/Today controls only. The app-wide configured desktop/mobile hierarchy is governed by the v1.1 application reference below; the existing onboarding/Task-form references remain binding within their scopes. v1.0.x sections and the retained future-paging text remain release history only.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–33.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx ownership, the governed Task-movement proof gate, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop and Android, including v1.1 onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
@@ -62,7 +62,7 @@ The only secondary destinations are **History** and **Settings**.
 - Today is a temporal shortcut inside Planner, not a destination.
 - Planner-only **Add task** is a single prominent compact/mobile FAB above the bottom navigation; History/Settings do not render it.
 
-Planner owns one temporal presentation state: the displayed week. Desktop renders all seven outstanding date sequences as columns. Narrow/mobile renders the same seven sequences as vertically stacked dated sections. There is no selected-day state or selected-day subview. Completed Tasks are absent from Planner and live in History.
+Planner owns one temporal presentation state: the displayed rolling horizon start. The view always derives exactly seven consecutive dates beginning at today or a future date. Desktop renders those seven outstanding date sequences as columns; narrow/mobile renders the same sequences as vertically stacked dated sections. There is no selected-day state or selected-day subview. Completed Tasks are absent from Planner and live in History.
 
 ### Onboarding and installed lifecycle
 
@@ -217,14 +217,14 @@ The approved desktop composition is the v1.0.3 reference.
 **Header:** one compact full-width application header with three zones.
 
 - **Left:** Jig product mark/home affordance.
-- **Center (v1.0.5):** one inline temporal group: **Previous chevron · 16–22 Nov 2026 · Next chevron · Today**. The range is informational and sits between the arrows; Today remains an explicit action. This supersedes the older two-line reference geometry.
+- **Center (v1.0.5):** one inline temporal group: **Previous chevron · 16–22 Nov 2026 · Next chevron · Today**. The range is the current seven-day horizon, is informational and sits between the arrows; Today remains an explicit action. This supersedes the older two-line reference geometry.
 - **Right:** **Add task**, adjacent **Planner · History · Settings** navigation, compact synchronization state. Planner is visibly active on the Planner surface.
 
 The temporal centerpiece is centered on the page, not merely centered in the leftover space between left/right controls.
 
-The week range uses compact formatting without “Week of” or a separate month title. Previous/Next shift the displayed week by exactly seven days. Today returns to the week containing the current local date.
+The horizon range uses compact formatting without “Week of” or a separate month title. Previous/Next shift the displayed horizon by exactly seven civil days; Previous is bounded at today. Today resets the horizon start to the current local date. A future horizon may remain selected across local midnight, while the current horizon rolls forward with today.
 
-The board contains seven equal-width Monday–Sunday tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. The tracks are visually open: no lane cards, no thick outlines and no framed column containers. Use spacing and at most a subtle hairline divider between adjacent days. Date headers use full weekday names, for example `Thursday 19`; they are non-selectable date signifiers and contain a compact `+` immediately adjacent to the label for date-specific creation.
+The board contains seven equal-width horizon tracks. Each track has a 160px width minimum and expands with the available desktop canvas. Vertical height is content-driven, so lanes may end at different heights. The tracks are visually open: no lane cards, no thick outlines and no framed column containers. Use spacing and at most a subtle hairline divider between adjacent days. Date headers use full weekday names, for example `Thursday 19`; they are non-selectable date signifiers and contain a compact `+` immediately adjacent to the label for date-specific creation for every visible today/future date.
 
 The exact current local civil date alone receives the subtle teal current-day border/header treatment; the same weekday in another displayed week does not. Selected Task uses its own subtle info-blue card selection treatment. Drag-over uses transient Amber. Priority uses red/neutral/green cues. Do not conflate these states.
 
@@ -295,9 +295,9 @@ The compact configured hierarchy uses three persistent regions:
 - no Planner Add button and no hamburger primary-navigation trigger.
 
 **Temporal row — Planner only, 52px normal-content target, <=56px at normal text sizing**
-- Previous week;
-- flexible readable week range as the dominant temporal label;
-- Next week;
+- Previous horizon;
+- flexible readable seven-day horizon range as the dominant temporal label;
+- Next horizon;
 - explicit **Today** text action.
 
 **Bottom navigation — configured application only**
@@ -396,7 +396,9 @@ Jig uses the entire viewport. There is no decorative page gutter.
 - With the former 48px desktop inset removed, the desktop seven-track breakpoint becomes **73rem / 1168px**.
 - “Zero margin” refers to viewport/application-frame spacing. It does not require text, icons or card contents to touch their own component borders; those retain governed internal padding.
 
-### 4.3.4 v1.0.5 semantic icon normalization
+### 4.3.4 Rolling horizon ownership and semantic icon normalization
+
+The rolling horizon has one semantic owner. The planning core generates the seven consecutive civil dates and clamps the lower bound; ConfiguredApp stores only the displayed horizon start and translates Previous/Next/Today into core operations; the header consumes the formatted range and disabled state; Planner consumes the same derived dates. No UI component filters history, performs rollover, or maintains a second temporal window. The deferred Carousel/swipe feature is not part of v1.1.
 
 Use Astryx 0.7.13 public semantic icons as the only reusable icon language. The production UI must visibly normalize at least:
 
@@ -457,9 +459,9 @@ For an existing recurring Task, the Repeat field resolves the shared series conf
 
 #### One Save contract
 
-**Save** is the single primary mutation for the form. It commits the ordinary Task draft and any Repeat change as one user operation. Cancel closes/discards the draft as today. Validation errors remain in the form and no partial save is presented as success.
+**Save** is the single primary mutation for the form. It commits the ordinary Task draft and any Repeat change as one user operation. A successful create/edit presents the shared, short-lived `Task added` / `Task saved` in-application confirmation, then closes the active Drawer or BottomSheet. Cancel closes/discards the draft with the public Astryx reverse exit transition; the workspace remains mounted until that transition settles. Validation errors remain in the form and no partial save is presented as success. This confirmation is operation feedback, not a browser/Android notification or a parallel toast/snackbar subsystem.
 
-Completion/reopen and permanent Delete remain independent Task lifecycle commands outside the form's Save semantics. Delete confirmation remains the sole blocking Task dialog.
+Completion/reopen and permanent Delete remain independent Task lifecycle commands outside the form's Save semantics. Successful completion/reopen presents the same short-lived shared operation confirmation (`Task completed` / `Task reopened`). Delete confirmation remains the sole blocking Task dialog.
 
 On mobile, the primary action area remains visible and comfortable at the end of the BottomSheet; Save/Cancel may share one row when the available width preserves >=48px targets and adequate separation. The scrollable content receives sufficient end padding/inset so the action area never covers validation, Reference or Notes. Opening the software keyboard/IME must preserve normal scrolling and access to the active field plus Save/Cancel. Do not stack ordinary actions into separate full-width rows merely by default. Destructive/lifecycle actions are visually separated from the primary form action without creating button clutter.
 
@@ -472,11 +474,12 @@ On mobile, the primary action area remains visible and comfortable at the end of
 | Planner temporal state | Jig pure presentation state: displayed week start only |
 | Lists, labels, fields and semantic theme | Astryx published primitives; reminder delivery itself is browser Notification, not Toast |
 | Operational attention banner | one Jig-owned `JigAttentionBanner` composition from public Astryx Icon/Button leaves + semantic tokens because the pinned Banner public API cannot vertically center icon/action with multi-line description content |
+| Task mutation confirmation | one shared `JigSuccessConfirmation` operation-feedback leaf using public Astryx Icon/IconButton leaves and success semantic roles; Add/Edit/complete/reopen outcomes are transient, dismissible and shared by desktop/Android WebView |
 | Desktop Task workspace | Astryx non-modal right Drawer |
 | Narrow Task workspace | Astryx BottomSheet rising from the bottom |
 | Task movement mechanics | Jig `ui/src/drag.tsx` adapter over the physically proven current dnd-kit candidate; one owner only, no Pangea/parallel sensors |
 | Planner seven-track composition, narrow seven-section stack, Task workspace content | small Jig React composition |
-| Adjacent-week paging on desktop + narrow/mobile | One fresh Astryx Carousel-backed adjacent-week presentation conforms to JIG-110-FR-33 and JIG-110-SD-43; this UI solution adds no second paging mechanism, state owner, compatibility renderer or inherited legacy component identity |
+| Adjacent-week direct paging/swipe | Deferred beyond v1.1; explicit Previous/Next/Today controls remain the only v1.1 week-navigation interaction |
 | Scheduled date/order/rollover/complete/reopen/delete/identity | pure Jig planning core |
 | Task reads/writes and repository synchronization state | Bun service + SQLite + repository adapter |
 
@@ -506,7 +509,7 @@ Motion is a restrained feedback layer over the existing composition. The event/s
 | Open/close Task or Add workspace | Drawer enter/exit from the right | BottomSheet enter/exit from the bottom | Astryx Drawer/BottomSheet |
 | Save, complete/reopen, delete | Task-card insertion/update/completion/removal feedback | Same card feedback without avoidable layout shift | Jig Task-card/Planner composition |
 | Drag start/slot/drop | Grip/source lift, slot emphasis, invalid feedback and settling | Same through the Android touch grip | Existing drag and operation-feedback owners |
-| Week navigation/Today | Previous/Next controls and direct horizontal paging select one adjacent week; Today directly selects the current week | Same behavior with touch paging; explicit Today also performs current-day WebView positioning inside the restored week | FR-33 behavior + SD-43 paging architecture + existing canonical Planner state |
+| Week navigation/Today | Previous/Next controls select adjacent seven-day horizons and Today directly selects the current horizon | Same explicit controls; no direct horizontal paging is claimed in v1.1 | Existing canonical Planner state; future direct paging is deferred |
 | Sync/reminder/theme/focus state | Subordinate status/metadata/control transition | Same semantic transition in the WebView/native shell | Existing status, Task-row, Theme and Astryx control owners |
 
 Do not animate initial current-day anchoring, healthy-sync loops, protocol phases, reminder Toasts, large destination slides, decorative identity/header/navigation elements or repeated due pulses. Motion must not be the only error/state signal and must never block a mutation or recovery action. The detailed functional and technical contract is JIG-110-FR-32 / JIG-110-SD-42.
@@ -516,9 +519,9 @@ Do not animate initial current-day anchoring, healthy-sync loops, protocol phase
 | Case | Acceptance |
 |---|---|
 | Header composition | desktop remains <=44px; compact application row keeps Jig identity left + centered Planner/History/Settings title + restrained sync right; Planner alone adds the temporal row; each compact row targets 52px and stays <=56px at normal text sizing while preserving >=48×48px hit geometry; no overlap/overflow at 320/360/390/414px |
-| Week navigation | One shared Astryx Carousel-backed adjacent-week interaction is used at desktop and narrow widths; Previous/Next and horizontal touch/trackpad paging select exactly one adjacent week; Today directly restores the current week; breakpoint reflow preserves that week; canonical and adjacent slides use the same Week/date/Task/List/empty-state visual tree and do not change geometry at settlement; no selected-day state, inherited superseded implementation, or second adjacent-page presentation exists |
-| Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; content-driven heights; open lanes with whitespace/hairline separation rather than boxed panels; full Monday–Sunday names; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
-| Unified creation | Global Add uses the derived weekday-matching date inside the displayed week; per-date Add uses its explicit date; the full canonical Task form is visible immediately and Date is editable |
+| Week navigation | v1.1 uses explicit Previous/Next/Today controls over the one canonical rolling seven-day horizon; direct horizontal paging/swipe is deferred beyond the release |
+| Week scanning | Seven readable equal-width date tracks, >=160px each in desktop mode; content-driven heights; open lanes with whitespace/hairline separation rather than boxed panels; seven consecutive today/future dates; only exact today gets current-day treatment; selected Task, priority and drag target remain visually distinct |
+| Unified creation | Global Add defaults to today; per-date Add uses its explicit visible horizon date; the full canonical Task form is visible immediately and Date is editable |
 | Task workspace | Click/tap opens one integrated form ordered Title · Date · Repeat · Reminder · Priority · Context · Reference · Notes; Repeat uses Does not repeat/Weekly/Monthly progressive disclosure; one Save atomically commits Task + recurrence changes; no second recurrence editor/save exists |
 | Workspace geometry | Desktop Drawer overlays without narrowing board; narrow BottomSheet rises from bottom |
 | Responsive continuity | displayed week, selected Task/workspace state and unsaved draft survive Drawer↔BottomSheet change |
@@ -542,12 +545,13 @@ Do not animate initial current-day anchoring, healthy-sync loops, protocol phase
 | In-application brand | one canonical inline Jig wordmark geometry on desktop/narrow; foreground and pin resolve through active theme semantic roles with required contrast; no fixed Light/Dark application-logo switching |
 | Reminder delivery | with granted permission an eligible due reminder creates browser Notification whether visible/hidden/focused/unfocused; no reminder Toast; unsupported/default/denied states do not claim delivery and successful keys do not duplicate |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
+| Task mutation feedback | successful Add/Edit shows `Task added` / `Task saved`, successful completion/reopen shows `Task completed` / `Task reopened`, and all use the shared semantic success confirmation on desktop and Android; no OS notification or toast subsystem is introduced |
 | Operational attention banner geometry | shared desktop/Android banner uses one Jig-owned public-leaf composition; multi-line error/warning message keeps status icon vertically centered to the message block; inline recovery/navigation action is vertically centered, may wrap cleanly below on narrow widths, and no private Astryx Banner selector/anatomy is used |
 | Motion and reduced motion | eligible events use short interruptible Linux/Desktop-browser and Android-WebView-equivalent feedback; Drawer/BottomSheet/control transitions remain Astryx-owned; Task/Planner/status transitions remain Jig-owned; reduced motion removes travel/scaling/smooth scroll/loops while retaining immediate state, focus and accessible status; initial Planner load and forbidden protocol/decorative motion remain still |
 
 ### Cross-platform Astryx Carousel adjacent-week presentation
 
-JIG-110-FR-33 is the sole functional authority for adjacent-week behavior and JIG-110-SD-43 is the sole technical authority for paging mechanics. This UI solution is defined from the clean post-purge baseline. Any superseded adjacent-week implementation is historical defect evidence only and is not a design template, migration source, compatibility target or source-structure authority.
+JIG-110-FR-33 is deferred beyond v1.1. Its historical SD-43 paging design is retained below as future work only. The v1.1 temporal authority is JIG-110-FR-02A / SD-44: one rolling seven-day horizon with explicit Previous/Next/Today controls. Any superseded adjacent-week implementation is historical defect evidence only and is not a design template, migration source, compatibility target or source-structure authority.
 
 All three logical week slides use one Week visual composition. Each slide occupies exactly one Carousel scroll viewport through the public Astryx item-sizing contract; Jig content only fills that public slide and does not size a slide against the browser viewport. The same date section, today treatment, per-date Add affordance, Astryx List/Task presentation, priority/reminder/completed/recurrence/reference metadata, typography, control-slot geometry, insertion spacing and empty-week composition are present before and after settlement. Canonical-versus-adjacent is a capability distinction only: it controls whether mutation, dnd, focus and live actions are attached; it must not select a different visual component family or rebuild the incoming slide when it becomes canonical.
 

@@ -65,6 +65,18 @@ body {
   }
 }
 
+@keyframes jig-success-confirmation-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1083,6 +1095,37 @@ body {
     justify-content: flex-end;
   }
 
+  .jig-success-confirmation {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--spacing-2);
+    margin: var(--spacing-2) var(--spacing-3) 0;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: var(--border-width) solid var(--color-border-success);
+    border-radius: var(--radius-element);
+    color: var(--color-on-success-muted);
+    background: var(--color-success-muted);
+    animation: jig-attention-reveal var(--duration-fast-max)
+      var(--ease-standard) both;
+  }
+
+  .jig-success-confirmation-exiting {
+    pointer-events: none;
+    animation: jig-success-confirmation-exit var(--duration-fast)
+      var(--ease-standard) both;
+  }
+
+  .jig-success-confirmation > span {
+    min-width: 0;
+    flex: 1 1 auto;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .jig-success-confirmation button {
+    flex: 0 0 auto;
+  }
+
   .jig-task-sheet-header {
     display: flex;
     align-items: flex-start;
@@ -1828,7 +1871,8 @@ body {
 
     .jig-content-configured-transition,
     .jig-week-board-today,
-    .jig-attention-banner {
+    .jig-attention-banner,
+    .jig-success-confirmation {
       animation: none;
     }
 

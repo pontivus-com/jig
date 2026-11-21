@@ -12,6 +12,7 @@ import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Task, TaskCommand } from "../../src/core/task";
 import { formatCivilDate } from "./dates";
 import { TaskEditor, type TaskDraft } from "./task-editor";
+import { useEffect, useRef, useState } from "react";
 
 export type TaskWorkspaceState =
   | { readonly mode: "closed" }
@@ -40,6 +41,7 @@ export type TaskWorkspacePresentation =
 
 interface TaskWorkspaceContentProps {
   readonly editorFormId?: string;
+  readonly workspaceSession: number;
   readonly showEditorActions?: boolean;
   readonly workspace: TaskWorkspacePresentation;
   readonly externalError: string | null;
@@ -58,8 +60,51 @@ function workspaceTask(
   return workspace.mode === "task" ? workspace.task : null;
 }
 
+function workspaceIdentity(
+  workspace: TaskWorkspacePresentation | null,
+): string | null {
+  if (workspace === null) {
+    return null;
+  }
+  return workspace.mode === "task"
+    ? `task:${workspace.task.id}`
+    : `create:${workspace.originatingDate}`;
+}
+
+function useWorkspaceSession(
+  workspace: TaskWorkspacePresentation | null,
+): {
+  readonly contentRef: React.RefObject<HTMLDivElement | null>;
+  readonly session: number;
+} {
+  const [session, setSession] = useState(0);
+  const identity = workspaceIdentity(workspace);
+  const previousIdentity = useRef(identity);
+  const wasOpen = useRef(identity !== null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (identity !== null && identity !== previousIdentity.current) {
+      contentRef.current?.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+    }
+    previousIdentity.current = identity;
+
+    if (identity !== null && !wasOpen.current) {
+      setSession((current) => current + 1);
+    }
+    wasOpen.current = identity !== null;
+  }, [identity]);
+
+  return { contentRef, session };
+}
+
 function TaskWorkspaceContent({
   editorFormId,
+  workspaceSession,
   showEditorActions = true,
   workspace,
   externalError,
@@ -76,6 +121,7 @@ function TaskWorkspaceContent({
   return (
     <div className="jig-task-workspace-form">
       <TaskEditor
+        key={`${workspaceSession}:${workspace.mode}:${task?.id ?? "create"}`}
         {...(editorFormId === undefined ? {} : { formId: editorFormId })}
         showActions={showEditorActions}
         task={task}
@@ -135,7 +181,7 @@ function workspaceSubtitle(
 }
 
 export interface TaskWorkspaceOverlayProps
-  extends Omit<TaskWorkspaceContentProps, "workspace"> {
+  extends Omit<TaskWorkspaceContentProps, "workspace" | "workspaceSession"> {
   readonly workspace: TaskWorkspacePresentation | null;
 }
 
@@ -150,7 +196,18 @@ export function TaskWorkspaceDrawer({
   onToggleComplete,
   onClose,
 }: TaskWorkspaceOverlayProps): React.ReactElement {
-  const title = workspace === null ? "Task" : workspaceTitle(workspace);
+  const { contentRef, session: workspaceSession } =
+    useWorkspaceSession(workspace);
+  const [retainedWorkspace, setRetainedWorkspace] =
+    useState<TaskWorkspacePresentation | null>(workspace);
+  useEffect(() => {
+    if (workspace !== null) {
+      setRetainedWorkspace(workspace);
+    }
+  }, [workspace]);
+
+  const renderedWorkspace = workspace ?? retainedWorkspace;
+  const title = renderedWorkspace === null ? "Task" : workspaceTitle(renderedWorkspace);
 
   return (
     <Drawer
@@ -167,13 +224,13 @@ export function TaskWorkspaceDrawer({
       purpose="form"
       padding={4}
     >
-      {workspace === null ? null : (
+      {renderedWorkspace === null ? null : (
         <Layout
           height="fill"
           header={
             <DrawerHeader
               title={title}
-              subtitle={workspaceSubtitle(workspace)}
+              subtitle={workspaceSubtitle(renderedWorkspace)}
               onOpenChange={() => {
                 if (!isSaving) {
                   onClose();
@@ -183,9 +240,10 @@ export function TaskWorkspaceDrawer({
             />
           }
           content={
-            <LayoutContent>
+            <LayoutContent ref={contentRef}>
               <TaskWorkspaceContent
-                workspace={workspace}
+                workspace={renderedWorkspace}
+                workspaceSession={workspaceSession}
                 externalError={externalError}
                 isSaving={isSaving}
                 recurrenceSeries={recurrenceSeries}
@@ -214,7 +272,18 @@ export function TaskWorkspaceBottomSheet({
   onToggleComplete,
   onClose,
 }: TaskWorkspaceOverlayProps): React.ReactElement {
-  const title = workspace === null ? "Task" : workspaceTitle(workspace);
+  const { contentRef, session: workspaceSession } =
+    useWorkspaceSession(workspace);
+  const [retainedWorkspace, setRetainedWorkspace] =
+    useState<TaskWorkspacePresentation | null>(workspace);
+  useEffect(() => {
+    if (workspace !== null) {
+      setRetainedWorkspace(workspace);
+    }
+  }, [workspace]);
+
+  const renderedWorkspace = workspace ?? retainedWorkspace;
+  const title = renderedWorkspace === null ? "Task" : workspaceTitle(renderedWorkspace);
 
   return (
     <BottomSheet
@@ -230,7 +299,7 @@ export function TaskWorkspaceBottomSheet({
       purpose="form"
       padding={4}
     >
-      {workspace === null ? null : (
+      {renderedWorkspace === null ? null : (
         <Layout
           height="fill"
           header={
@@ -238,7 +307,7 @@ export function TaskWorkspaceBottomSheet({
               <div className="jig-task-sheet-header">
                 <div>
                   <strong>{title}</strong>
-                  <span>{workspaceSubtitle(workspace)}</span>
+                  <span>{workspaceSubtitle(renderedWorkspace)}</span>
                 </div>
                 <Button
                   label="Close"
@@ -254,11 +323,12 @@ export function TaskWorkspaceBottomSheet({
             </LayoutHeader>
           }
           content={
-            <LayoutContent>
+            <LayoutContent ref={contentRef}>
               <TaskWorkspaceContent
                 editorFormId="jig-task-bottom-sheet-form"
                 showEditorActions={false}
-                workspace={workspace}
+                workspace={renderedWorkspace}
+                workspaceSession={workspaceSession}
                 externalError={externalError}
                 isSaving={isSaving}
                 recurrenceSeries={recurrenceSeries}
@@ -284,7 +354,7 @@ export function TaskWorkspaceBottomSheet({
                   <Button
                     type="submit"
                     form="jig-task-bottom-sheet-form"
-                    label={workspace.mode === "create" ? "Add task" : "Save"}
+                    label={renderedWorkspace.mode === "create" ? "Add task" : "Save"}
                     variant="primary"
                     isLoading={isSaving}
                   />

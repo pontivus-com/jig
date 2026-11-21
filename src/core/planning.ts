@@ -61,6 +61,20 @@ export function isActiveScheduleDate(
   return candidateDate >= currentLocalDate;
 }
 
+/**
+ * Per-date creation affordances are intentionally narrower than scheduling:
+ * the global Add action represents today, so a dated plus is only shown for
+ * a future date.
+ */
+export function isFutureAddDate(
+  currentLocalDate: string,
+  candidateDate: string,
+): boolean {
+  assertCivilDate(currentLocalDate, "current_local_date");
+  assertCivilDate(candidateDate, "scheduled_date");
+  return candidateDate > currentLocalDate;
+}
+
 function activeSequence(
   tasks: readonly Task[],
   scheduledDate: string,
@@ -709,6 +723,49 @@ export function weekDates(displayedWeekStart: string): readonly string[] {
 
   return Array.from({ length: 7 }, (_, index) =>
     addCivilDays(monday, index),
+  );
+}
+
+export const PLANNER_HORIZON_DAYS = 7;
+
+/**
+ * Return the exact forward-looking Planner window from its civil-date start.
+ * The horizon is deliberately independent of Monday/Sunday calendar weeks.
+ */
+export function plannerHorizonDates(
+  horizonStart: string,
+): readonly string[] {
+  assertCivilDate(horizonStart, "planner_horizon_start");
+
+  return Array.from({ length: PLANNER_HORIZON_DAYS }, (_, index) =>
+    addCivilDays(horizonStart, index),
+  );
+}
+
+/**
+ * Keep a displayed Planner horizon at or after the current local civil date.
+ */
+export function clampPlannerHorizonStart(
+  horizonStart: string,
+  currentLocalDate: string,
+): string {
+  assertCivilDate(horizonStart, "planner_horizon_start");
+  assertCivilDate(currentLocalDate, "current_local_date");
+  return horizonStart < currentLocalDate ? currentLocalDate : horizonStart;
+}
+
+/**
+ * Shift the displayed Planner horizon by a civil-day offset while preserving
+ * the no-history lower bound. The UI uses -7 and +7 for Previous and Next.
+ */
+export function movePlannerHorizon(
+  horizonStart: string,
+  currentLocalDate: string,
+  offsetDays: number,
+): string {
+  return clampPlannerHorizonStart(
+    addCivilDays(horizonStart, offsetDays),
+    currentLocalDate,
   );
 }
 

@@ -88,7 +88,7 @@ test("already-open browser refreshes canonical state across local midnight", asy
   ).toBeVisible();
 });
 
-test("local midnight preserves an explicitly viewed non-current week", async ({
+test("local midnight preserves an explicitly viewed future horizon", async ({
   page,
 }) => {
   const start = nearMidnight();
@@ -98,7 +98,7 @@ test("local midnight preserves an explicitly viewed non-current week", async ({
   await page.reload();
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  await page.getByRole("button", { name: "Next week" }).click();
+  await page.getByRole("button", { name: "Next horizon" }).click();
   const range = page.locator(".jig-header-week-range");
   const viewedWeek = await range.textContent();
 

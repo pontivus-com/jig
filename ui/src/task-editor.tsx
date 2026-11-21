@@ -436,7 +436,7 @@ export function TaskEditor({
             value={draft.title}
             onChange={(value) => update("title", value)}
             isRequired
-            hasAutoFocus
+            hasAutoFocus={task === null}
             width="100%"
             controlClassName="jig-mobile-touch-control"
           />

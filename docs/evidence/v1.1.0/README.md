@@ -1,6 +1,8 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** CURRENT V1.1 IMPLEMENTATION NON-DEVICE CERTIFIED / CERTIFIED EXECUTABLE SOURCE HEAD `59f7d1642211739df88dc188a4fdfe17af2c26c9` / VERIFY `44690410706` #1632 PASS / J110-IMP-09 + J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22..24 IMPLEMENTED + NON-DEVICE CERTIFIED, PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — the hosted PR merge candidate `7d4225312b9e6e3983b9a5d494977dcc4ae19782` (second parent = source head `59f7d164…`) passed strict typecheck, 42/42 core/integration/architecture files with 267/267 tests, production build, browser bootstrap, 82/82 real-browser tests, shell/installer lifecycle, Android build/static/dependency-lock/FLOSS/F-Droid certification and 5/5 API-24 instrumentation tests. Browser artifact `14607679872` and Android artifact `14608147658` are retained for this hosted lineage. The generated APK is 9,787,835 bytes with SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. Physical Android WeekPager/banner/runtime confirmation and issue #31 remain open.
+**Status:** CURRENT V1.1 IMPLEMENTATION EVIDENCE / Carousel/swipe paging DEFERRED BEYOND V1.1 / J110-IMP-09 + J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22 + IMP-24 IMPLEMENTED, PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — prior hosted artifacts are retained as historical evidence only. The deferred Carousel material does not gate the v1.1 release.
+
+**Scope amendment (2026-11-21):** v1.1 does not build, expose or certify direct adjacent-week horizontal paging/swipe. Explicit Previous/Next/Today controls remain. IMP-23/FR-33/SD-43 are future work and must not be presented as v1.1 closure requirements.
 
 **WeekPager evidence boundary (2026-11-21):** only a final candidate implementing JIG-110-SD-43 with the released four-part public Astryx Carousel seam can certify JIG-110-FR-33 / IMP-23: settled-index notification, immediate/non-animated recentering, one-Carousel-view slide sizing, and public user-scroll suspension that prevents physical horizontal touch/pen/trackpad/wheel Carousel travel during Task drag while preserving imperative recentering. The complete implementation shape is now validated on temporary Jig head `23bd3537a7481a71651eb7654deecc21533ce4b1`, GitHub Actions run `44853591058`: 76/76 targeted Astryx Carousel/SnapPaging tests passed together with strict source/test/docs typecheck, build, changeset, knowledge/spec and package-boundary validation; Jig strict TypeScript, 273/273 unit/integration/architecture tests, 15/15 dedicated UI-ownership architecture tests and production build passed; and 63/63 real-browser tests passed, including desktop mouse/trackpad-equivalent and touch Task-drag no-travel assertions, repeated adjacent settlement, 73rem reflow preservation and reduced-motion paging. This temporary overlay is implementation-shape evidence only and is not a released dependency or final v1.1 executable candidate. All earlier WeekPager runs in this ledger remain historical implementation evidence only and provide no final SD-43 architectural acceptance. Upstream Astryx owner acceptance/release, the matching Jig package pin, released-dependency browser/desktop real-input and Android evidence remain pending before IMP-23 closes.
 
@@ -8,7 +10,7 @@
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
-## Current WeekPager + attention-banner non-device candidate
+## Historical WeekPager + attention-banner evidence
 
 - Source branch/head: `v1.1` / `59f7d1642211739df88dc188a4fdfe17af2c26c9`.
 - Permanent Verify: `44690410706` / #1632 — **PASS**.
@@ -179,7 +181,7 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 J110-IMP-18..20 and the repository-executable portions of IMP-22..24 are implemented and non-device certified. Remaining order:
 
 1. Run the focused **J110-IMP-21 physical Android confirmation** on the current exact APK candidate, including compact header/title/height, readable interactive labels, grip/checkbox centering, Task creation, past-date rejection feedback, recurrence non-accumulation, restart persistence and synchronization continuity.
-2. In the same exact-candidate physical wave, close IMP-23/IMP-24 real-device rows: populated/empty WeekPager both directions, repeated paging, interruption, vertical-scroll arbitration, active-week drag isolation, BottomSheet interaction, reduced motion, and multi-line attention-banner icon/action centering/wrapping.
+2. In the same exact-candidate physical wave, close IMP-24 real-device attention-banner geometry and the remaining IMP-15 interaction matrix; no Carousel/WeekPager checks are required for v1.1.
 3. Complete the remaining **J110-IMP-15** physical/native matrix. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
 4. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
 5. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
@@ -190,6 +192,6 @@ Do not create a competing branch, platform-specific recurrence/scheduling rule o
 
 Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and the earlier Samsung/Android-16 sessions as historical evidence. The **current candidate awaiting physical certification** is source `59f7d1642211739df88dc188a4fdfe17af2c26c9`, hosted APK artifact `14608147658`, extracted APK SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`.
 
-**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22..24 IMPLEMENTED + NON-DEVICE CERTIFIED / J110-IMP-23 + IMP-24 PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. Verify #1632 closes the repository-executable/non-device WeekPager and attention-banner work; physical Android confirmation and the remaining IMP-15 matrix are still open.
+**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22 + IMP-24 PHYSICAL ACCEPTANCE OPEN / J110-IMP-23 DEFERRED / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. Physical Android confirmation, IMP-24 and the remaining IMP-15 matrix are still open; historical WeekPager evidence is not part of v1.1 closure.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.

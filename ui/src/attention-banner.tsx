@@ -1,6 +1,6 @@
 import { Icon, IconButton } from "@astryxdesign/core";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type JigAttentionStatus = "error" | "warning";
 export type JigAttentionContainer = "card" | "section";
@@ -72,5 +72,60 @@ export function JigAttentionBanner({
         />
       </div>
     </section>
+  );
+}
+
+export interface JigSuccessConfirmationProps {
+  readonly message: string;
+  readonly onDismiss: () => void;
+}
+
+/**
+ * Short-lived operation confirmation. This is deliberately an inline
+ * application status, not a second toast/snackbar system or a source of
+ * domain state.
+ */
+export function JigSuccessConfirmation({
+  message,
+  onDismiss,
+}: JigSuccessConfirmationProps): React.ReactElement {
+  const [isExiting, setIsExiting] = useState(false);
+  const hasDismissed = useRef(false);
+
+  const dismiss = useCallback((): void => {
+    if (hasDismissed.current) {
+      return;
+    }
+    hasDismissed.current = true;
+    setIsExiting(true);
+    window.setTimeout(onDismiss, 175);
+  }, [onDismiss]);
+
+  useEffect(() => {
+    hasDismissed.current = false;
+    setIsExiting(false);
+    const timeout = window.setTimeout(dismiss, 3500);
+    return () => window.clearTimeout(timeout);
+  }, [dismiss, message]);
+
+  return (
+    <div
+      className={[
+        "jig-success-confirmation",
+        isExiting ? "jig-success-confirmation-exiting" : "",
+      ].join(" ")}
+      role="status"
+      aria-live="polite"
+    >
+      <Icon icon="check" size="sm" color="inherit" />
+      <span>{message}</span>
+      <IconButton
+        label="Dismiss confirmation"
+        icon={<Icon icon="close" color="inherit" />}
+        variant="ghost"
+        size="sm"
+        onClick={dismiss}
+      />
+    </div>
   );
 }

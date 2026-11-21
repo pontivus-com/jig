@@ -46,6 +46,7 @@ export interface PlannerHeaderProps {
   readonly destination: Destination;
   readonly layoutMode: LayoutMode;
   readonly weekLabel: string;
+  readonly canGoPrevious: boolean;
   readonly statusControl: ReactNode;
   readonly compactStatusControl: ReactNode;
   readonly onHome: () => void;
@@ -106,6 +107,7 @@ function BrandHome({
 
 function TemporalNavigator({
   weekLabel,
+  canGoPrevious,
   compact,
   onPreviousWeek,
   onToday,
@@ -113,22 +115,27 @@ function TemporalNavigator({
 }: Readonly<
   Pick<
     PlannerHeaderProps,
-    "weekLabel" | "onPreviousWeek" | "onToday" | "onNextWeek"
+    | "weekLabel"
+    | "canGoPrevious"
+    | "onPreviousWeek"
+    | "onToday"
+    | "onNextWeek"
   > & { readonly compact?: boolean }
 >): React.ReactElement {
   return (
     <div className="jig-header-temporal">
       <IconButton
-        label="Previous week"
+        label="Previous horizon"
         icon={<Icon icon="chevronLeft" color="inherit" />}
         variant="ghost"
         size="sm"
         className="jig-temporal-control"
+        isDisabled={!canGoPrevious}
         onClick={onPreviousWeek}
       />
       <strong className="jig-header-week-range">{weekLabel}</strong>
       <IconButton
-        label="Next week"
+        label="Next horizon"
         icon={<Icon icon="chevronRight" color="inherit" />}
         variant="ghost"
         size="sm"
@@ -210,6 +217,7 @@ function DesktopHeader(props: PlannerHeaderProps): React.ReactElement {
   const {
     destination,
     weekLabel,
+    canGoPrevious,
     statusControl,
     onHome,
     onPreviousWeek,
@@ -228,6 +236,7 @@ function DesktopHeader(props: PlannerHeaderProps): React.ReactElement {
         {destination === "planner" ? (
           <TemporalNavigator
             weekLabel={weekLabel}
+            canGoPrevious={canGoPrevious}
             onPreviousWeek={onPreviousWeek}
             onToday={onToday}
             onNextWeek={onNextWeek}
@@ -260,6 +269,7 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
   const {
     destination,
     weekLabel,
+    canGoPrevious,
     compactStatusControl,
     onHome,
     onPreviousWeek,
@@ -284,6 +294,7 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
         <div className="jig-header-mobile-temporal-row">
           <TemporalNavigator
             weekLabel={weekLabel}
+            canGoPrevious={canGoPrevious}
             compact
             onPreviousWeek={onPreviousWeek}
             onToday={onToday}

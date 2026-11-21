@@ -16,9 +16,9 @@ import {
 import type { ReactNode } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
-  addCivilDays,
-  startOfWeekMonday,
-  weekDates,
+  clampPlannerHorizonStart,
+  movePlannerHorizon,
+  plannerHorizonDates,
 } from "../../src/core/planning";
 import type {
   CanonicalState,
@@ -60,7 +60,7 @@ import {
   type ThemePreset,
 } from "./appearance";
 import {
-  formatPlannerWeekRange,
+  formatPlannerHorizonRange,
   millisecondsUntilNextLocalDay,
   todayCivilDate,
 } from "./dates";
@@ -73,7 +73,10 @@ import {
 import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
-import { JigAttentionBanner } from "./attention-banner";
+import {
+  JigAttentionBanner,
+  JigSuccessConfirmation,
+} from "./attention-banner";
 import {
   installNativeActiveListener,
   installNativeBackButtonListener,
@@ -95,13 +98,13 @@ import {
   type SetupStatus,
 } from "./setup-http";
 interface PlannerState {
-  readonly displayedWeekStart: string;
+  readonly displayedHorizonStart: string;
 }
 
 function initialPlannerState(): PlannerState {
   const today = todayCivilDate();
   return {
-    displayedWeekStart: startOfWeekMonday(today),
+    displayedHorizonStart: today,
   };
 }
 
@@ -192,6 +195,9 @@ function ConfiguredApp({
     useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
+  const [operationConfirmation, setOperationConfirmation] = useState<
+    string | null
+  >(null);
   const [initialSyncSettled, setInitialSyncSettled] = useState(false);
   const [dismissedSyncAttention, setDismissedSyncAttention] = useState<
     string | null
@@ -222,7 +228,9 @@ function ConfiguredApp({
     deleteTaskId === null
       ? null
       : tasks.find((task) => task.id === deleteTaskId) ?? null;
-  const displayedDates = weekDates(plannerState.displayedWeekStart);
+  const displayedDates = plannerHorizonDates(
+    plannerState.displayedHorizonStart,
+  );
 
   const refreshCanonical = useCallback(async (): Promise<void> => {
     const next = await readCanonicalTasks();
@@ -349,15 +357,19 @@ function ConfiguredApp({
         return false;
       }
 
-      const previousCurrentWeek = startOfWeekMonday(observedToday);
-      const nextCurrentWeek = startOfWeekMonday(nextToday);
       setWeekTransitionDirection(null);
-      setPlannerState((current) =>
-        current.displayedWeekStart === previousCurrentWeek &&
-        previousCurrentWeek !== nextCurrentWeek
-          ? { displayedWeekStart: nextCurrentWeek }
-          : current,
-      );
+      setPlannerState((current) => {
+        const nextStart =
+          current.displayedHorizonStart === observedToday
+            ? nextToday
+            : clampPlannerHorizonStart(
+                current.displayedHorizonStart,
+                nextToday,
+              );
+        return nextStart === current.displayedHorizonStart
+          ? current
+          : { displayedHorizonStart: nextStart };
+      });
       setObservedToday(nextToday);
 
       try {
@@ -412,6 +424,7 @@ function ConfiguredApp({
       }
 
       setOperationError(null);
+      setOperationConfirmation(null);
       setIsOperating(true);
       try {
         const result = await submitTaskCommand(command, canonical.revision);
@@ -448,13 +461,15 @@ function ConfiguredApp({
 
   const toggleComplete = useCallback(
     async (task: Task): Promise<boolean> => {
+      const completing = task.completed_at === null;
       const changed =
         (await runCommand(
-          task.completed_at === null
+          completing
             ? { type: "complete", task_id: task.id }
             : { type: "reopen", task_id: task.id },
         )) !== null;
       if (changed) {
+        setOperationConfirmation(completing ? "Task completed" : "Task reopened");
         setWorkspace((current) =>
           workspaceTaskId(current) === task.id
             ? { mode: "closed" }
@@ -517,25 +532,26 @@ function ConfiguredApp({
 
   const saveWorkspace = useCallback(
     async (command: TaskCommand): Promise<boolean> => {
+      const workspaceMode = workspace.mode;
       const result = await runCommand(command);
       if (result === null || !("task" in result)) {
         return false;
       }
-      setWorkspace((current) => ({
-        mode: "task",
-        taskId: result.task.id,
-        draft:
-          current.mode === "task" || current.mode === "create"
-            ? current.draft
-            : draftFor(result.task, result.task.scheduled_date),
-      }));
+      setWorkspace({ mode: "closed" });
+      setOperationConfirmation(
+        workspaceMode === "create" ? "Task added" : "Task saved",
+      );
       return true;
     },
-    [runCommand],
+    [runCommand, workspace.mode],
   );
 
   const closeWorkspace = useCallback((): void => {
     setWorkspace({ mode: "closed" });
+  }, []);
+
+  const dismissOperationConfirmation = useCallback((): void => {
+    setOperationConfirmation(null);
   }, []);
 
   const changeWorkspaceDraft = useCallback((draft: TaskDraft): void => {
@@ -674,31 +690,41 @@ function ConfiguredApp({
 
   const requestPreviousWeek = useCallback((): void => {
     setWeekTransitionDirection(null);
+    const today = todayCivilDate();
     setPlannerState((current) => ({
-      displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
+      displayedHorizonStart: movePlannerHorizon(
+        current.displayedHorizonStart,
+        today,
+        -7,
+      ),
     }));
   }, []);
 
   const requestNextWeek = useCallback((): void => {
     setWeekTransitionDirection(null);
+    const today = todayCivilDate();
     setPlannerState((current) => ({
-      displayedWeekStart: addCivilDays(current.displayedWeekStart, 7),
+      displayedHorizonStart: movePlannerHorizon(
+        current.displayedHorizonStart,
+        today,
+        7,
+      ),
     }));
   }, []);
 
   const goToToday = useCallback((): void => {
-    const todayWeekStart = startOfWeekMonday(todayCivilDate());
+    const today = todayCivilDate();
     setWeekTransitionDirection(
       layoutMode === "narrow" ||
-        plannerState.displayedWeekStart === todayWeekStart
+        plannerState.displayedHorizonStart === today
         ? null
         : "today",
     );
     setPlannerState({
-      displayedWeekStart: todayWeekStart,
+      displayedHorizonStart: today,
     });
     setTodayScrollRequest((current) => current + 1);
-  }, [layoutMode, plannerState.displayedWeekStart]);
+  }, [layoutMode, plannerState.displayedHorizonStart]);
 
   const repositoryStatus = repositoryStatusPresentation(status, {
     initialSync: !initialSyncSettled,
@@ -767,6 +793,14 @@ function ConfiguredApp({
       }
     />
   ) : null;
+
+  const operationConfirmationView =
+    operationConfirmation === null ? null : (
+      <JigSuccessConfirmation
+        message={operationConfirmation}
+        onDismiss={dismissOperationConfirmation}
+      />
+    );
 
   const workspacePresentation: TaskWorkspacePresentation | null =
     workspace.mode === "closed"
@@ -903,9 +937,12 @@ function ConfiguredApp({
             <PlannerHeader
               destination={destination}
               layoutMode={layoutMode}
-              weekLabel={formatPlannerWeekRange(
-                plannerState.displayedWeekStart,
+              weekLabel={formatPlannerHorizonRange(
+                plannerState.displayedHorizonStart,
               )}
+              canGoPrevious={
+                plannerState.displayedHorizonStart > todayCivilDate()
+              }
               statusControl={statusControl}
               compactStatusControl={compactStatusControl}
               onHome={() => navigateDestination("planner")}
@@ -918,6 +955,7 @@ function ConfiguredApp({
           }
         >
           {durableBanner}
+          {operationConfirmationView}
           <div
             className={[
               "jig-content-frame",

@@ -393,7 +393,7 @@ describe("UI ownership architecture", () => {
 
     expect(planning).toContain("export function isActiveScheduleDate(");
     expect(drag).toContain("isActiveScheduleDate");
-    expect(week).toContain("isActiveScheduleDate");
+    expect(week).toContain("isFutureAddDate");
     expect(editor).toContain("assertActiveScheduleDate");
     expect(drag).not.toMatch(/date\s*<\s*todayCivilDate\(\)/);
     expect(week).not.toMatch(/date\s*<\s*todayCivilDate\(\)/);
@@ -500,7 +500,11 @@ describe("UI ownership architecture", () => {
     const history = source("ui/src/history.tsx");
 
     expect(app).toContain("interface PlannerState");
-    expect(app).toContain("readonly displayedWeekStart: string");
+    expect(app).toContain("readonly displayedHorizonStart: string");
+    expect(app).toContain("plannerHorizonDates");
+    expect(app).toContain("movePlannerHorizon");
+    expect(app).not.toContain("startOfWeekMonday");
+    expect(app).not.toContain("weekDates");
     expect(app).not.toContain("selectedDate");
     expect(app).not.toContain("selectDate");
     expect(app).not.toContain('mode: "view"');
@@ -614,7 +618,10 @@ describe("UI ownership architecture", () => {
     expect(attention).toContain("<Icon");
     expect(attention).not.toContain("<Banner");
     expect(attention).not.toContain("stylex");
+    expect(attention).toContain("JigSuccessConfirmation");
+    expect(attention).toContain('icon="check"');
     expect(app).toContain("<JigAttentionBanner");
+    expect(app).toContain("<JigSuccessConfirmation");
     expect(settings).toContain("<JigAttentionBanner");
     expect(setup).toContain("<JigAttentionBanner");
     expect(app).not.toContain("<Banner");

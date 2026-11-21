@@ -1,8 +1,8 @@
 # Android v1.1 development and physical-device certification
 
-**Status:** v1.1 implementation support document, amended 2026-11-20 after the WeekPager/attention-banner remediation reached hosted non-device certification. J110-IMP-09 remains complete with its detailed historical record lost. J110-IMP-18..20 and repository-executable IMP-22..24 work are complete on certified executable source `59f7d1642211739df88dc188a4fdfe17af2c26c9` / Verify #1632. Android build certification and API-24 5/5 pass; current APK artifact is `14608147658` with extracted SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. J110-IMP-21, IMP-23/24 physical rows and the remaining J110-IMP-15 matrix still require exact-candidate physical Android execution.
+**Status:** v1.1 implementation support document, amended 2026-11-21 after Carousel/swipe paging was deferred beyond the release. J110-IMP-09 remains complete with its detailed historical record lost. J110-IMP-18..20 and repository-executable IMP-22/24 work are complete on their certified lineage; Android build certification and API-24 5/5 pass are retained evidence. J110-IMP-21, IMP-24 physical confirmation and the remaining J110-IMP-15 matrix still require exact-candidate physical Android execution.
 
-**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39, SD-40, SD-42 and SD-43; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..24 and J110-IMP-15.
+**Authority:** [v1.1 technical solution](../architecture/v1.1-mobile-technical-solution.md), especially JIG-110-SD-08, SD-10, SD-22, SD-24, SD-30, SD-33, SD-35, SD-37, SD-39, SD-40 and SD-42; [v1.1 implementation plan](../implementation/v1.1-complete-implementation-plan.md), especially J110-IMP-08, J110-IMP-09, J110-IMP-18..22, J110-IMP-24 and J110-IMP-15.
 
 ## 1. Governed Android baseline
 
@@ -132,9 +132,9 @@ The repository package authority expects application ID `com.pontivus.jig`; the 
 
 The checklist above is retained as the historical IMP-09 gate definition. Its detailed execution results were not retained. If new physical evidence during IMP-15 shows a repeated missed drop, floating-card residue, unstable slot or scroll conflict, reopen SD-34/35 from that new evidence. Do not add Pangea, another drag library or a platform-only sensor stack.
 
-### Cross-platform WeekPager physical boundary
+### Deferred adjacent-week paging
 
-J110-IMP-23 / JIG-110-SD-43 govern adjacent-week paging on both desktop and Android/narrow. Android physical certification must use the exact final SD-43 candidate and confirm repeated previous/next horizontal paging on populated and empty weeks, ordinary vertical Planner scrolling, interruption, BottomSheet open/close, and that dedicated-grip Task dragging never pages or exposes an adjacent passive page as a drop target. The active week must remain the only interactive/dnd domain. This development guide defines no alternate Android paging implementation; any candidate not conforming to SD-43 is ineligible for certification.
+Carousel/swipe paging is outside v1.1. Android physical certification covers the retained explicit Previous/Next/Today controls, ordinary vertical Planner scrolling and the existing Task/BottomSheet interactions; no direct horizontal paging or Carousel arbitration is claimed.
 
 ### Shared operational-attention Banner physical boundary
 
@@ -148,7 +148,7 @@ The current corrective wave is not optional visual polish. Before final physical
 - J110-IMP-19 **COMPLETE:** intentional scheduling is current/future only through one canonical core rule with concise existing-feedback projection and no mutation on rejection;
 - J110-IMP-20 **COMPLETE:** shared daily rollover is recurrence-aware so older overdue outstanding siblings do not accumulate when a later occurrence is due;
 - J110-IMP-21 **IN PROGRESS:** exact source/APK and hosted/browser evidence are established; focused physical Android confirmation remains.
-- J110-IMP-23 **IMPLEMENTED + NON-DEVICE CERTIFIED:** the cross-platform WeekPager passes Verify #1632; exact-candidate physical touch/scroll/drag arbitration remains open.
+- J110-IMP-23 **DEFERRED:** adjacent-week Carousel/swipe paging is removed from v1.1 and may be reconsidered in a future release.
 - J110-IMP-24 **IMPLEMENTED + NON-DEVICE CERTIFIED:** desktop+narrow browser geometry passes Verify #1632; exact-candidate physical WebView confirmation remains open.
 
 Do not implement any of these as Android-only behavior.
