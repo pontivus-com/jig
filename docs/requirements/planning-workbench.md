@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding functional design through v1.1, amended 2026-11-20 for physical-mobile UX remediation, governed onboarding/complete-Task-form authority and one cross-platform Planner WeekPager. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract supersedes affected onboarding hierarchy, header/touch geometry, Task movement, Task-form Repeat, Settings, synchronization, reminder and Android behavior.
+**Status:** Binding functional design through v1.1, amended 2026-11-21 for the reduced scope. Adjacent-week direct paging/swipe is deferred beyond v1.1; explicit Previous/Next/Today controls remain. v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract supersedes affected onboarding hierarchy, header/touch geometry, Task movement, Task-form Repeat, Settings, synchronization, reminder and Android behavior.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -8,9 +8,9 @@
 
 Jig has **one primary Planner surface**. There are no separate Day and Week destinations.
 
-On wide/desktop layouts, Planner presents the current planning week as seven dated columns containing the canonical ordered outstanding Tasks for those dates. The board consumes the available planning canvas rather than preserving an artificial maximum width.
+On wide/desktop layouts, Planner presents a forward-looking rolling seven-day horizon as seven dated columns containing the canonical ordered outstanding Tasks for those dates. The horizon begins no earlier than today, and the board consumes the available planning canvas rather than preserving an artificial maximum width.
 
-On narrow/mobile layouts, the same Planner reflows to seven vertically stacked dated Task sections for the displayed week. This is a responsive presentation of the same weekly Planner state, not a separate Day view, route, destination or data projection.
+On narrow/mobile layouts, the same Planner reflows to seven vertically stacked dated Task sections for the displayed horizon. This is a responsive presentation of the same rolling Planner state, not a separate Day view, route, destination or data projection.
 
 The primary planning interaction is master-detail:
 
@@ -56,7 +56,7 @@ The following requirements are binding for v1.0.3 and supersede any earlier Day/
 | ID | Requirement | Observable acceptance |
 |---|---|---|
 | JIG-103-FR-01 | One Planner destination | Jig exposes one planning destination. Desktop shows the seven-date weekly board; narrow/mobile shows the same seven dated sequences stacked vertically. There is no separately navigable Day view and no selected-day subview. |
-| JIG-103-FR-02 | Planner is the default/home surface | Jig opens on Planner with the week containing the current local date displayed. The Jig product mark/home affordance returns from secondary destinations to Planner. v1.0.4 also exposes Planner explicitly in the desktop top navigation under JIG-104-FR-16. Returning home preserves the displayed week for that session; startup initializes to the current week. |
+| JIG-103-FR-02 | Planner is the default/home surface | Jig opens on Planner with the rolling seven-day horizon beginning on the current local date displayed. The Jig product mark/home affordance returns from secondary destinations to Planner. v1.0.4 also exposes Planner explicitly in the desktop top navigation under JIG-104-FR-16. Returning home preserves the displayed horizon for that session; startup initializes to today plus six days. |
 | JIG-103-FR-03 | No persistent desktop sidebar | The former left navigation rail is removed. Desktop secondary navigation is folded into the top region and exposes only History and Settings, with appropriate semantic iconography. |
 | JIG-103-FR-04 | Proper mobile hamburger navigation | Mobile uses a top hamburger/menu-button pattern for secondary navigation. Opening it presents History and Settings as a compact menu/popover; it must not open a side-navigation drawer or recreate the former desktop sidebar. |
 | JIG-103-FR-05 | Task click/tap opens contextual Task work; it never moves | Clicking/tapping any Task row/card selects that canonical Task and opens the contextual Task workspace in place. The current Planner/History destination remains active. Card selection never changes scheduled date, order or destination. v1.0.4 makes that workspace directly editable rather than read-only. |
@@ -71,7 +71,7 @@ The following requirements are binding for v1.0.3 and supersede any earlier Day/
 | JIG-103-FR-14 | Responsive reflow preserves state | Crossing the responsive breakpoint while a Task workspace is open preserves the existing/create workspace state and unsaved draft values. Responsive composition must not create duplicate Task state or mutate canonical Task data. |
 | JIG-103-FR-15 | Completion leaves the Planner and remains inspectable | Completing a Task removes it from the outstanding Planner sequence and records its completion timestamp. Completed Tasks remain inspectable/reopenable from History; the removed standalone Day completed section is not required. |
 | JIG-103-FR-16 | Navigation is intentionally minimal | **Superseded for desktop by JIG-104-FR-16.** History and Settings remain the only non-Planner destinations. Narrow/mobile may continue to expose History and Settings through the compact menu, while Planner is the default/home surface. |
-| JIG-103-FR-17 | Centered week navigation is the Planner temporal model | The active week date range is visually centered in the Planner header. Directly beneath that range, one grouped control row contains Previous week, Today and Next week. Previous/Next move the displayed week by exactly seven days. Today displays the week containing the current local date. The range label itself is informational, not an interactive separator between the three controls. There is no selected-day state. |
+| JIG-103-FR-17 | Centered rolling-horizon navigation is the Planner temporal model | The active seven-day horizon range is visually centered in the Planner header. One grouped control row contains Previous, Today and Next. Previous/Next move the displayed horizon by exactly seven civil days, with Previous bounded so the horizon never begins before today. Today displays today plus the next six days. The range label itself is informational, not an interactive separator between the three controls. There is no selected-day state. |
 
 ### v1.0.4 interaction-correction requirements
 
@@ -219,7 +219,7 @@ Desktop Planner is one wide weekly planning surface plus one global application 
 **Global header hierarchy:** the header has three semantic zones and one centered temporal centerpiece.
 
 - **Left:** the Jig product mark/wordmark. It is the Planner/Home affordance.
-- **Center (v1.0.5 override):** the Planner temporal navigator is one inline group: **Previous week chevron · compact active week range · Next week chevron · Today**. The range is informational; Previous/Next/Today are the controls. This v1.0.5 one-row geometry supersedes the earlier v1.0.3 two-line arrangement so the complete header fits the 44px budget without offsets or clipping.
+- **Center (v1.1 rolling-horizon override):** the Planner temporal navigator is one inline group: **Previous chevron · compact active seven-day horizon range · Next chevron · Today**. The range is informational; Previous/Next/Today are the controls. Previous is bounded at today, so the Planner never navigates into a date earlier than the current local date.
 - **Right:** **Add task**, **Planner**, **History**, **Settings**, and compact synchronization status. Planner, History and Settings form one adjacent navigation group; Planner is visibly active on the Planner surface.
 - The center region remains optically/page centered even when the left and right zones have unequal widths.
 
@@ -229,9 +229,9 @@ Desktop Planner is one wide weekly planning surface plus one global application 
 - different months, same year: `30 Nov–6 Dec 2026`;
 - different years: `28 Dec 2026–3 Jan 2027`.
 
-**Temporal state:** Planner maintains exactly one temporal presentation state: the visible week start. At startup it is the Monday containing the current local date. Previous/Next shift the displayed week by exactly seven days. Today restores the week containing the current local date. Date headers are labels/actions containers, not selectors.
+**Temporal state:** Planner maintains exactly one temporal presentation state: the visible seven-day horizon start. At startup it is the current local date. Previous/Next shift the displayed horizon by exactly seven civil days, with Previous clamped at today. Today restores the horizon beginning on the current local date. Date headers are labels/actions containers, not selectors.
 
-**Planner board:** the seven Monday–Sunday date columns fill the available planning canvas equally in width. There is no artificial content max-width. Each column remains at least 160px wide in desktop composition. Column height is content-driven rather than equalized or stretched for a bottom action. Column headers are non-selectable date signifiers using full weekday names plus the day number, such as `Thursday 19`; each header also contains the compact day-specific `+` action adjacent to the date label.
+**Planner board:** the seven consecutive horizon date columns fill the available planning canvas equally in width. There is no artificial content max-width. Each column remains at least 160px wide in desktop composition. Column height is content-driven rather than equalized or stretched for a bottom action. Column headers are non-selectable date signifiers using full weekday names plus the day number, such as `Thursday 19`; each header also contains the compact day-specific `+` action adjacent to the date label.
 
 **Reduced chrome:** date lanes are not boxed panels. Do not draw thick perimeter borders or persistent card-like lane containers around each day. Use the minimum visual structure needed to scan the week: whitespace between lanes, typography, and at most subtle hairline dividers between adjacent lanes. Empty lane space remains visually open. Task cards are the primary discrete surfaces and use restrained borders/shadows; do not stack multiple outlines, heavy shadows or redundant framing around cards inside framed lanes.
 
@@ -245,7 +245,7 @@ Desktop Planner is one wide weekly planning surface plus one global application 
 
 **History:** selecting a completed Task opens the same right-side Task workspace while History remains the active destination.
 
-**Onboarding (v1.1):** first-run setup remains inside the canonical Jig application frame and follows the governed value-first hierarchy. Android uses one bounded single-column flow with **Connect GitHub repository** as its genuine setup choice. Desktop uses a stable value/context region plus a bounded setup pane, with primary **Connect GitHub repository** and secondary **Use an existing local repository**. GitHub authorization/access/progress is presented only as the minimum provider handoff needed for the current state; successful setup enters Planner directly. If the displayed week is empty, Planner uses its normal governed empty-week activation rather than a separate completion/onboarding screen.
+**Onboarding (v1.1):** first-run setup remains inside the canonical Jig application frame and follows the governed value-first hierarchy. Android uses one bounded single-column flow with **Connect GitHub repository** as its genuine setup choice. Desktop uses a stable value/context region plus a bounded setup pane, with primary **Connect GitHub repository** and secondary **Use an existing local repository**. GitHub authorization/access/progress is presented only as the minimum provider handoff needed for the current state; successful setup enters Planner directly. If the displayed seven-day horizon is empty, Planner uses its normal governed empty-horizon activation rather than a separate completion/onboarding screen.
 
 **Configured destination heading ownership (v1.1):** the application header owns the active destination title. On compact/mobile, the canonical Jig identity remains at left while **Planner**, **History** or **Settings** is centered and synchronization remains at right; the destination title never replaces Jig identity. Compact History/Settings omit the explanatory subtitle from the bar to keep chrome compact. Desktop History/Settings may retain their concise centered title+subtitle. History/Settings body content begins directly with the first meaningful group/section and does not repeat the page title.
 
@@ -261,9 +261,9 @@ Narrow/mobile is the same Planner and the same Task model, not a separate Day/We
 
 The governed v1.0.5 header is one compact row:
 
-1. **One application/temporal row:** compact complete Jig wordmark · Previous · compact active week range · Next · Today · Add · compact synchronization state · hamburger. Icon-only `sm` controls may be used where required for width, but accessible labels remain authoritative. Do not create a second temporal row.
+1. **One application/temporal row:** compact complete Jig wordmark · Previous · compact active seven-day horizon range · Next · Today · Add · compact synchronization state · hamburger. Icon-only `sm` controls may be used where required for width, but accessible labels remain authoritative. Do not create a second temporal row.
 2. **Shared navigation semantics:** the hamburger renders the same **Planner · History · Settings** destination set as desktop from the same typed destination owner. It is a compact menu/popover, never a side-navigation drawer.
-3. **Seven dated sections:** all seven dates for the displayed week appear as vertically stacked day sections. Each section header shows the date and its semantic Add icon; no date strip or selected-day control exists.
+3. **Seven dated sections:** all seven dates for the displayed horizon appear as vertically stacked day sections. Each section header shows the date and its semantic Add icon; no date strip or selected-day control exists.
 4. **Task lists:** each dated section contains that date's canonical outstanding sequence directly below its header and uses the same sortable Task row, metadata and Task action menu as desktop.
 5. **Global Add:** Add task remains available as a convenient week-context action and opens the unified form with the derived weekday-matching default date; the Date field can be changed immediately.
 6. **Direct movement:** whole-card touch/pen/mouse drag is available with the same exact-position movement semantics as desktop; genuine interactive descendants do not initiate drag.
@@ -272,7 +272,7 @@ Tapping a Task opens its directly editable full Task form in a non-blocking **Bo
 
 Touch-sized controls are required. Direct drag ordering may be unavailable on narrow/mobile. When drag is unavailable, touch-operable Move up/Move down commands provide same-day ordering and the Edit scheduled-date field provides explicit cross-date rescheduling. These commands mutate the same canonical order/date state as desktop interactions; there is no mobile-specific ordering model.
 
-Responsive reflow between desktop and narrow/mobile preserves displayed week, selected Task, workspace mode and unsaved draft state. There is no selected-day state to preserve. A Task workspace that is open as a desktop right overlay becomes the mobile BottomSheet, and vice versa, without duplicating Task/draft state.
+Responsive reflow between desktop and narrow/mobile preserves displayed horizon, selected Task, workspace mode and unsaved draft state. There is no selected-day state to preserve. A Task workspace that is open as a desktop right overlay becomes the mobile BottomSheet, and vice versa, without duplicating Task/draft state.
 
 Task creation/editing is never a centered/fullscreen modal. Permanent Delete confirmation remains blocking. No full background/scheduled mobile notification requirement is introduced.
 
@@ -301,7 +301,7 @@ The earlier Day/Week mockups remain historical design inputs only. Their separat
 8. **Responsive continuity:** narrow and wide layouts represent the same Planner state, selected Task, Task-workspace mode and values, without a Day/Week destination split, destination switching caused by selection or loss of edits.
 9. **Daily rollover:** leave a Thursday Task outstanding and advance the local day to Friday. Jig changes the Task's canonical `scheduled_date` to Friday, moves the same card into Friday's Planner bucket, and removes it from Thursday. Desktop and narrow/mobile Planner presentations show the same moved Task. If Jig is inactive across multiple days, the outstanding Task catches up directly to the current local date. Existing reminder time-of-day is preserved.
 10. **Deletion:** choose Delete on an outstanding or completed Task, cancel the confirmation once with no change, then confirm; the Task is removed from Jig and the next portable Git snapshot records its absence. No in-app trash or restore is offered.
-11. **Single Planner navigation and centered temporal controls:** launch Jig on desktop and mobile. Planner is the default. Desktop has no left navigation rail; the Jig mark is Home, the right-side navigation group explicitly contains Planner, History and Settings, and the centered week range sits above a grouped Previous/Today/Next row. Previous/Next move the displayed week by seven days; Today returns to the current week. No selected-day state exists. Mobile presents the same temporal centerpiece below its application band, and its hamburger renders the same Planner, History and Settings destination set from the shared navigation owner.
+11. **Single Planner navigation and centered temporal controls:** launch Jig on desktop and mobile. Planner is the default. Desktop has no left navigation rail; the Jig mark is Home, the right-side navigation group explicitly contains Planner, History and Settings, and the centered seven-day horizon range sits beside a grouped Previous/Today/Next control set. Previous/Next move the displayed horizon by seven days; Previous cannot move before today; Today returns to today plus six days. No selected-day state exists. Mobile presents the same temporal centerpiece below its application band, and its hamburger renders the same Planner, History and Settings destination set from the shared navigation owner.
 12. **Inspect without moving:** click/tap a Task. Its details open in the right-side desktop workspace or bottom mobile sheet while its scheduled date/order and current destination remain unchanged.
 13. **Unified Add:** invoke Add task from a date context. The workspace opens the same Title, Date, Context, Priority, Reminder, Reference and Notes fields used for an existing Task, pre-populated with the originating date and canonical defaults. Title and Date are required; optional fields may be left empty. Saving creates the Task without a later Edit step.
 14. **Movement semantics:** drag a desktop Task within/between date columns and observe exact-position movement. Click/tap alone never moves it. Change scheduled date through Edit and observe non-drag rescheduling without a separate Move-to-date surface.
@@ -354,7 +354,7 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | ID | Binding v1.1 outcome |
 |---|---|
 | JIG-110-FR-01 | Narrow/mobile header is persistent/sticky and safe-area aware. |
-| JIG-110-FR-02 | Compact configured header keeps Jig identity left + centered Planner/History/Settings title + restrained sync right; Planner alone adds the temporal row and Planner-only FAB. |
+| JIG-110-FR-02 | Compact configured header keeps Jig identity left + centered Planner/History/Settings title + restrained sync right; Planner alone adds the rolling seven-day temporal row and Planner-only FAB. |
 | JIG-110-FR-03 | Mobile interaction geometry is application-wide: ordinary touch targets are >=48×48px, standalone adjacent controls are visibly separated, compact header rows target 52px and stay <=56px at normal text sizing, interactive labels use at least normal base/body action typography, and onboarding/Task BottomSheet/directly analogous mobile forms conform to the governed v1.1 hierarchy rather than compressed desktop controls. |
 | JIG-110-FR-04 | Reminder due state is derived from incomplete/current-date/reminder-time-passed state, independent of delivery. |
 | JIG-110-FR-05 | Past-due/current reminders remain visible; session-start suppression is removed and open Jig transitions to due state as time passes. |
@@ -362,7 +362,7 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-07 | Scheduled and displayed/delivered notification outcomes are never conflated; failed/denied delivery never hides in-app attention. |
 | JIG-110-FR-08 | Android schedules/cancels/reconciles OS local notifications for future reminders without push infrastructure. |
 | JIG-110-FR-09 | Linux/browser uses the service-worker notification path while open; closed-browser scheduling remains outside the requirement. |
-| JIG-110-FR-10 | Fresh Jig starts in value-first onboarding before repository configuration, inside the canonical Jig application frame/header/body. Android uses the governed single-column flow; desktop uses the governed stable value/context region plus bounded setup pane. Successful setup enters Planner directly; an empty displayed week uses the normal governed Planner activation rather than another setup step. |
+| JIG-110-FR-10 | Fresh Jig starts in value-first onboarding before repository configuration, inside the canonical Jig application frame/header/body. Android uses the governed single-column flow; desktop uses the governed stable value/context region plus bounded setup pane. Successful setup enters Planner directly; an empty displayed seven-day horizon uses the normal governed Planner activation rather than another setup step. |
 | JIG-110-FR-11 | Existing configured upgrades bypass onboarding. |
 | JIG-110-FR-12 | Linux bootstrap offers existing local repository or Connect GitHub; normal UI does not expose installer URL/checkout flags. |
 | JIG-110-FR-13 | A valid existing Git worktree is sufficient for local setup. |
@@ -385,6 +385,6 @@ The complete normative requirement text and acceptance matrix are in [Jig v1.1 A
 | JIG-110-FR-30 | One configured destination-title owner supplies Planner/History/Settings. Compact/mobile always retains Jig identity and centers the active destination title; desktop History/Settings may also show the concise subtitle. Body surfaces do not duplicate page titles. |
 | JIG-110-FR-31 | Settings is one content-sized reading hierarchy: Data & sync combines repository home/local safety/continuity/action; Appearance contains only appearance; Notifications is separate; technical Git/service/database/path/manual-sync details are subordinate/collapsed Diagnostics. |
 | JIG-110-FR-32 | Eligible interaction/state events use restrained equivalent desktop/mobile motion; Astryx owns supported Drawer/BottomSheet/control transitions; Jig owns only product-specific card/Planner/status transitions; reduced motion removes travel/scaling/smooth scrolling/loops while retaining immediate semantic feedback; forbidden protocol/decorative/initial-load motion is absent. |
-| JIG-110-FR-33 | Release-specific authority is [JIG-110-FR-33 in the v1.1 functional design](v1.1-mobile-functional-design.md#jig-110-fr-33--cross-platform-paged-week-navigation). This workbench indexes the requirement and does not restate a second paging contract. |
+| Deferred beyond v1.1 | The former JIG-110-FR-33 direct paging/swipe contract is future work; v1.1 retains explicit Previous/Next/Today controls. |
 
 Older JIG-103/104/105/106 rows remain release-history provenance only when JIG-110 explicitly supersedes their affected behavior.
