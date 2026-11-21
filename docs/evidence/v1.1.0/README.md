@@ -1,6 +1,6 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** CURRENT V1.1 IMPLEMENTATION EVIDENCE / exact executable candidate `a9044f9906db80f8fc5e32872884bd007c47ea91` / permanent Verify #1746 PASS across Linux/browser, Android build certification and API-24 runtime / J110-IMP-09 + J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED BEYOND V1.1 / J110-IMP-15 OPTIONAL PHYSICAL/NATIVE QA / ISSUE #31 LIVE LINUX ACCEPTANCE OPEN. IMP-21 is retained as historical re-certification provenance, not a separate final gate.
+**Status:** CURRENT V1.1 IMPLEMENTATION EVIDENCE / exact executable candidate `a9044f9906db80f8fc5e32872884bd007c47ea91` / permanent Verify #1746 PASS across Linux/browser, Android build certification and API-24 runtime / J110-IMP-09 + J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED BEYOND V1.1 / J110-IMP-15 OPTIONAL PHYSICAL/NATIVE QA / ISSUE #31 LIVE LINUX ACCEPTANCE PASS. IMP-21 is retained as historical re-certification provenance, not a separate final gate.
 
 **Scope amendment (2026-11-21):** v1.1 does not build, expose or certify direct adjacent-week horizontal paging/swipe. Explicit Previous/Next/Today controls remain. IMP-23/FR-33/SD-43 are future work and must not be presented as v1.1 closure requirements.
 
@@ -175,14 +175,11 @@ The development APK retained by permanent Verify #1746 is the **current physical
 - Artifact archive digest: `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`.
 - Extracted `app-debug.apk`: **9,789,275 bytes**, SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`.
 - This remains a certification artifact only. Future public Android distribution is intended for F-Droid, but submission/publication is deferred until product stability and marketing/store-material readiness.
-## Still required before release-candidate closure
+## Release-candidate closure
 
-Repository-executable implementation is complete on the certified lineage. The remaining release gate is:
+Repository-executable implementation is complete and issue #31 live Linux/Desktop acceptance is **PASS** on hosted run `44906092976`: real Jig Linux installation, real GitHub Device Flow, real freedesktop Secret Service store/restore, authorized private-repository visibility, and live refresh without `client_secret` all passed. No production repository was cloned or mutated.
 
-1. Complete the live Linux/Desktop GitHub acceptance tracked by **issue #31** using the real installed Linux path and real GitHub Device Flow/Secret Service interaction.
-2. Once issue #31 is closed, `v1.1` may be promoted to `master` and the governed release ceremony may begin.
-
-The broader J110-IMP-15 Android physical/native/runtime/interoperability matrix remains useful QA and may continue against exact #1746 `app-debug.apk` SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`, but it is not a v1.1 release gate.
+No v1.1 acceptance gates remain before promotion to `master`. The broader J110-IMP-15 Android physical/native/runtime/interoperability matrix remains useful QA and may continue against exact #1746 `app-debug.apk` SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`, but it is not a v1.1 release gate.
 
 No Carousel/WeekPager checks are required for v1.1. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost detailed record.
 
