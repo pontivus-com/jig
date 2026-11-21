@@ -1,12 +1,12 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** CURRENT V1.1 IMPLEMENTATION EVIDENCE / exact executable candidate `a9044f9906db80f8fc5e32872884bd007c47ea91` / permanent Verify #1746 PASS across Linux/browser, Android build certification and API-24 runtime / J110-IMP-09 + J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED BEYOND V1.1 / J110-IMP-15 FINAL PHYSICAL/LIVE CERTIFICATION + ISSUE #31 OPEN. IMP-21 is retained as historical re-certification provenance, not a separate final gate.
+**Status:** CURRENT V1.1 IMPLEMENTATION EVIDENCE / exact executable candidate `a9044f9906db80f8fc5e32872884bd007c47ea91` / permanent Verify #1746 PASS across Linux/browser, Android build certification and API-24 runtime / J110-IMP-09 + J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED BEYOND V1.1 / J110-IMP-15 OPTIONAL PHYSICAL/NATIVE QA / ISSUE #31 LIVE LINUX ACCEPTANCE OPEN. IMP-21 is retained as historical re-certification provenance, not a separate final gate.
 
 **Scope amendment (2026-11-21):** v1.1 does not build, expose or certify direct adjacent-week horizontal paging/swipe. Explicit Previous/Next/Today controls remain. IMP-23/FR-33/SD-43 are future work and must not be presented as v1.1 closure requirements.
 
 **Deferred WeekPager evidence boundary (2026-11-21):** FR-33/SD-43/IMP-23 Carousel/swipe work is future work and is not part of v1.1 certification. Earlier temporary Carousel/WeekPager runs remain historical implementation-shape evidence only and must not be used as a v1.1 release prerequisite, fallback implementation, or current-candidate acceptance result.
 
-**Operational-attention Banner evidence boundary (2026-11-21):** the shared `JigAttentionBanner` implementation remains the v1.1 owner and was re-certified on exact executable candidate `a9044f9…` by permanent Verify #1746. Remaining physical WebView geometry/interaction confirmation is executed once inside the IMP-15 final physical matrix; it does not leave IMP-24 implementation open.
+**Operational-attention Banner evidence boundary (2026-11-21):** the shared `JigAttentionBanner` implementation remains the v1.1 owner and was re-certified on exact executable candidate `a9044f9…` by permanent Verify #1746. Remaining physical WebView geometry/interaction confirmation may be retained under optional IMP-15 QA; it does not leave IMP-24 implementation open or block release.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
 
@@ -177,12 +177,12 @@ The development APK retained by permanent Verify #1746 is the **current physical
 - This remains a certification artifact only. Future public Android distribution is intended for F-Droid, but submission/publication is deferred until product stability and marketing/store-material readiness.
 ## Still required before release-candidate closure
 
-Repository-executable implementation is complete on the certified `a9044f9…` lineage. The remaining order is:
+Repository-executable implementation is complete on the certified lineage. The remaining release gate is:
 
-1. Execute the remaining **J110-IMP-15** physical Android/runtime/interoperability matrix against exact #1746 `app-debug.apk` SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`. This one matrix includes still-relevant checks formerly listed under IMP-21/22/24; no separate closure waves remain.
-2. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acquisition and synchronization acceptance tracked by **issue #31**.
-3. Reconcile the final physical/live results into this ledger and `physical-android-certification.md` without copying PASS values from older candidates.
-4. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
+1. Complete the live Linux/Desktop GitHub acceptance tracked by **issue #31** using the real installed Linux path and real GitHub Device Flow/Secret Service interaction.
+2. Once issue #31 is closed, `v1.1` may be promoted to `master` and the governed release ceremony may begin.
+
+The broader J110-IMP-15 Android physical/native/runtime/interoperability matrix remains useful QA and may continue against exact #1746 `app-debug.apk` SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`, but it is not a v1.1 release gate.
 
 No Carousel/WeekPager checks are required for v1.1. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost detailed record.
 
@@ -190,8 +190,8 @@ Do not create a competing branch, platform-specific recurrence/scheduling rule o
 
 ## Physical-device evidence
 
-Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and the earlier Samsung/Android-16 sessions as historical evidence. The **current candidate awaiting final physical certification** is executable source `a9044f9906db80f8fc5e32872884bd007c47ea91`, Verify #1746, hosted Android artifact `14706565629` with archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. The extracted `app-debug.apk` is 9,789,275 bytes with SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`.
+Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and the earlier Samsung/Android-16 sessions as historical evidence. The retained exact Android QA candidate is executable source `a9044f9906db80f8fc5e32872884bd007c47ea91`, Verify #1746, hosted Android artifact `14706565629` with archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. The extracted `app-debug.apk` is 9,789,275 bytes with SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`.
 
-**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED / J110-IMP-15 FINAL CERTIFICATION OPEN.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. All still-required physical Android/runtime/interoperability observations are owned by IMP-15; historical WeekPager evidence is not part of v1.1 closure.
+**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED / J110-IMP-15 OPTIONAL QA.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. Any remaining physical Android/runtime/interoperability observations may be recorded under IMP-15 as non-blocking QA; historical WeekPager evidence is not part of v1.1 closure.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.
