@@ -15,16 +15,26 @@ The supported public installation path is the immutable GitHub Release bundle. E
 
 If `systemd --user` is unavailable, installation still verifies the foreground runtime and `jig serve` remains available.
 
-## Install Jig and choose the repository in the application
+## Two-phase installation
 
-The normal v1.1 installation path no longer asks the shell installer to choose a planning repository:
+### Phase 1 — install Jig
+
+The normal v1.1 installation path installs the application first and does not ask the shell installer to choose a planning repository:
 
 ```bash
 curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
   | bash
 ```
 
-A fresh installation starts Jig in bootstrap mode on `127.0.0.1:47831`. Open Jig (or run `jig`) and choose:
+### Phase 2 — choose the repository in Jig
+
+After Phase 1, run:
+
+```bash
+jig
+```
+
+A fresh installation runs bootstrap mode on `127.0.0.1:47831`. Jig opens the setup surface; choose:
 
 - **Use a repository already on this computer** — enter the absolute root path of an existing writable Git worktree;
 - **Connect GitHub repository** — Jig shows GitHub's required device code, opens/offers GitHub authorization, discovers authorized repository access automatically and continues without manual refresh; a repository chooser appears only when more than one genuine eligible repository requires a choice.
@@ -62,7 +72,7 @@ The checkout path must be new or empty. After `git clone` succeeds, installation
 Replace the latest URL with the immutable release tag:
 
 ```bash
-curl -fsSL https://github.com/pontivus-com/jig/releases/download/v1.0.0/jig-install.sh \
+curl -fsSL https://github.com/pontivus-com/jig/releases/download/v1.1.0/jig-install.sh \
   | bash -s -- --repo /absolute/path/to/your/planning-repo
 ```
 

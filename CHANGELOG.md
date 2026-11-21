@@ -6,6 +6,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Documentation
 
+- **Installation:** Made the public README Quick start follow the governed two-phase flow: install Jig first with the release bootstrap script, then run `jig` and choose/connect the planning repository inside the application. Kept direct `--repo` installation as an explicit automation path and corrected the pinned-version example to v1.1.0.
+
 - **Release ceremony:** Clarified that a multi-commit `release/vX.Y.Z` branch must be merged through a normal PR merge/squash so the release commit's first parent is the pre-release `master` candidate; direct fast-forward promotion is not a valid publication trigger, and the governed same-version finalization path is used for pre-tag recovery.
 
 ## [1.1.0] - 2026-11-21
