@@ -1,0 +1,68 @@
+name: Live Linux GitHub acceptance
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: live-linux-github-acceptance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  live-linux-github:
+    if: github.event.pull_request.number == 27 && github.head_ref == 'v1.1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      JIG_ACCEPTANCE_ISSUE: "31"
+      JIG_ACCEPTANCE_TARGET: "pontivus-com/legal"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install real Secret Service prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools
+
+      - name: Run real installed-Linux Device Flow acceptance
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          export LIVE_HOME="${RUNNER_TEMP}/jig-live-home"
+          export LIVE_RUNTIME="${RUNNER_TEMP}/jig-live-runtime"
+          mkdir -p "${LIVE_HOME}" "${LIVE_RUNTIME}"
+          chmod 700 "${LIVE_HOME}" "${LIVE_RUNTIME}"
+
+          dbus-run-session -- bash -euo pipefail <<'LIVE'
+          export HOME="${LIVE_HOME}"
+          export XDG_RUNTIME_DIR="${LIVE_RUNTIME}"
+
+          eval "$(printf '\n' | gnome-keyring-daemon --unlock --components=secrets)"
+          eval "$(gnome-keyring-daemon --start --components=secrets)"
+
+          printf 'jig-live-probe' | secret-tool store \
+            --label='Jig live acceptance probe' \
+            application jig-live-acceptance
+          test "$(secret-tool lookup application jig-live-acceptance)" = "jig-live-probe"
+          secret-tool clear application jig-live-acceptance
+
+          bash "${GITHUB_WORKSPACE}/scripts/install.sh"
+
+          test -x "${HOME}/.local/bin/jig"
+          test -x "${HOME}/.local/share/jig/runtime/bun"
+          test -f "${HOME}/.local/share/jig/src/github-device-flow.ts"
+
+          "${HOME}/.local/share/jig/runtime/bun" \
+            "${GITHUB_WORKSPACE}/scripts/live-linux-github-acceptance.ts"
+          LIVE
