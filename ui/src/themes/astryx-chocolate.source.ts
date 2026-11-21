@@ -7,6 +7,5 @@ export const astryxChocolateTheme = defineTheme({
   extends: chocolateTheme,
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-card)",
   },
 });

@@ -1,4 +1,11 @@
 import {
+  isWeekday,
+  validateRecurrenceSeries,
+  type RecurrencePattern,
+  type RecurrenceSeries,
+  type Weekday,
+} from "../../src/core/recurrence";
+import {
   validateTask,
   type Task,
   type TaskCommand,
@@ -7,7 +14,7 @@ import type {
   CanonicalState,
   CommandResult,
   Diagnostics,
-  RepositoryStatus,
+  RepositorySynchronizationStatus,
   ServiceStatus,
 } from "../../src/protocol";
 
@@ -57,7 +64,7 @@ async function responsePayload(response: Response): Promise<unknown> {
   }
 }
 
-async function fetchJson(
+export async function fetchJson(
   input: string,
   init?: RequestInit,
 ): Promise<unknown> {
@@ -97,7 +104,7 @@ function writeToken(): string {
   return token;
 }
 
-async function postJson(
+export async function postJson(
   path: string,
   body: unknown,
 ): Promise<unknown> {
@@ -126,39 +133,186 @@ function parseRevision(value: unknown): number {
   return value;
 }
 
+function responseString(
+  object: Record<string, unknown>,
+  key: string,
+  source: unknown,
+): string {
+  const value = object[key];
+  if (typeof value !== "string") {
+    throw new JigHttpError(
+      500,
+      source,
+      `Jig service returned invalid recurrence ${key}`,
+    );
+  }
+  return value;
+}
+
+function parseRecurrencePattern(
+  value: unknown,
+): RecurrencePattern {
+  const object = objectValue(value);
+  if (object.kind === "weekly") {
+    if (
+      typeof object.interval_weeks !== "number" ||
+      !Number.isInteger(object.interval_weeks) ||
+      !Array.isArray(object.weekdays)
+    ) {
+      throw new JigHttpError(
+        500,
+        value,
+        "Jig service returned invalid weekly recurrence",
+      );
+    }
+    const weekdays: Weekday[] = [];
+    for (const weekday of object.weekdays) {
+      if (!isWeekday(weekday)) {
+        throw new JigHttpError(
+          500,
+          value,
+          "Jig service returned invalid recurrence weekday",
+        );
+      }
+      weekdays.push(weekday);
+    }
+    return {
+      kind: "weekly",
+      interval_weeks: object.interval_weeks,
+      weekdays,
+    };
+  }
+  if (
+    object.kind === "monthly" &&
+    typeof object.day_of_month === "number" &&
+    Number.isInteger(object.day_of_month)
+  ) {
+    return {
+      kind: "monthly",
+      day_of_month: object.day_of_month,
+    };
+  }
+  throw new JigHttpError(
+    500,
+    value,
+    "Jig service returned invalid recurrence pattern",
+  );
+}
+
+function parseRecurrenceSeries(value: unknown): RecurrenceSeries {
+  const object = objectValue(value);
+  return validateRecurrenceSeries({
+    id: responseString(object, "id", value),
+    effective_from: responseString(
+      object,
+      "effective_from",
+      value,
+    ),
+    end_date: responseString(object, "end_date", value),
+    pattern: parseRecurrencePattern(object.pattern),
+    created_at: responseString(object, "created_at", value),
+    updated_at: responseString(object, "updated_at", value),
+  });
+}
+
 export async function readCanonicalTasks(): Promise<CanonicalState> {
   const payload = objectValue(await fetchJson("/api/v1/tasks"));
-  if (!Array.isArray(payload.tasks)) {
+  if (
+    !Array.isArray(payload.tasks) ||
+    !Array.isArray(payload.recurrences)
+  ) {
     throw new JigHttpError(
       500,
       payload,
-      "Jig service returned an invalid Task set",
+      "Jig service returned an invalid canonical state",
     );
   }
 
   const tasks: Task[] = payload.tasks.map((value) => validateTask(value));
+  const recurrences: RecurrenceSeries[] =
+    payload.recurrences.map((value) => parseRecurrenceSeries(value));
   return {
     revision: parseRevision(payload.revision),
     tasks,
+    recurrences,
   };
 }
 
-function isRepositoryStatus(value: unknown): value is RepositoryStatus {
-  return (
-    value === "local-only" ||
-    value === "pending" ||
-    value === "retrying" ||
-    value === "synchronized" ||
-    value === "sync-issue"
-  );
+function parseRepositorySynchronizationStatus(
+  value: unknown,
+): RepositorySynchronizationStatus {
+  const status = objectValue(value);
+  const localGit = status.local_git;
+  if (
+    localGit !== "pending" &&
+    localGit !== "committed" &&
+    localGit !== "issue"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid local Git status",
+    );
+  }
+
+  const remote = objectValue(status.remote);
+  const state = remote.state;
+  if (state === "not-configured") {
+    if (remote.remote_name !== null || remote.remote_location !== null) {
+      throw new JigHttpError(
+        500,
+        value,
+        "Jig service returned invalid unconfigured remote status",
+      );
+    }
+    return {
+      local_git: localGit,
+      remote: {
+        state,
+        remote_name: null,
+        remote_location: null,
+      },
+    };
+  }
+
+  if (
+    state !== "pending" &&
+    state !== "retrying" &&
+    state !== "synchronized" &&
+    state !== "sync-issue"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid remote synchronization status",
+    );
+  }
+  if (
+    typeof remote.remote_name !== "string" ||
+    typeof remote.remote_location !== "string"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization remote identity",
+    );
+  }
+
+  return {
+    local_git: localGit,
+    remote: {
+      state,
+      remote_name: remote.remote_name,
+      remote_location: remote.remote_location,
+    },
+  };
 }
 
 export async function readStatus(): Promise<ServiceStatus> {
   const payload = objectValue(await fetchJson("/api/v1/status"));
   if (
     payload.ready !== true ||
-    typeof payload.repository_path !== "string" ||
-    !isRepositoryStatus(payload.repository_status)
+    typeof payload.repository_path !== "string"
   ) {
     throw new JigHttpError(
       500,
@@ -170,7 +324,8 @@ export async function readStatus(): Promise<ServiceStatus> {
   return {
     ready: true,
     repository_path: payload.repository_path,
-    repository_status: payload.repository_status,
+    repository_status:
+      parseRepositorySynchronizationStatus(payload.repository_status),
   };
 }
 
@@ -250,16 +405,9 @@ export async function submitTaskCommand(
   };
 }
 
-export async function triggerSync(): Promise<RepositoryStatus> {
+export async function triggerSync(): Promise<RepositorySynchronizationStatus> {
   const payload = objectValue(await postJson("/api/v1/sync", {}));
-  if (!isRepositoryStatus(payload.repository_status)) {
-    throw new JigHttpError(
-      500,
-      payload,
-      "Jig service returned invalid synchronization status",
-    );
-  }
-  return payload.repository_status;
+  return parseRepositorySynchronizationStatus(payload.repository_status);
 }
 
 export function isStaleRevision(error: unknown): boolean {

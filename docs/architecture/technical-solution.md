@@ -1,13 +1,15 @@
 # Jig — technical solution design
 
-**Status:** Binding v1.0.6 technical solution, v0.24 (2026-11-18). The eleven JIG-105 designs remain the published v1.0.5 baseline. JIG-106-SD-01 through JIG-106-SD-07 now define the complete v1.0.6 realization for continuous secondary-screen measure, multi-theme Astryx composition, independent System/Light/Dark appearance, complete semantic re-theming, theme-aware in-application branding, browser-level reminder delivery and Settings-only appearance configuration. Canonical Task, shell, SQLite, HTTP and Git synchronization contracts are unchanged.
+**Status:** Canonical technical solution through v1.1, amended 2026-11-20 for physical-acceptance findings: recurrence-aware rollover non-accumulation, one canonical past-date scheduling guard, compact-header/Task-card presentation corrections and the cross-platform motion contract. v1.0.6 remains historical release provenance; JIG-110-SD-01..43 in the release-specific v1.1 solution govern v1.1 implementation.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16, JIG-105-FR-01 through JIG-105-FR-11, JIG-106-FR-01 through JIG-106-FR-07 and JIG-FR-01 through JIG-FR-22.
-**Scope boundary:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service.
+**Historical v1.0.6-and-earlier scope:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service. **Current v1.1 scope is defined by `## v1.1 binding architecture` and JIG-110-SD-01..43 below; those contracts add the governed Android runtime, bootstrap/onboarding, native reminder path, cross-installation continuity and restrained cross-platform motion while preserving the no-hosted-Jig-service boundary.**
 
 **Foundational authority rule:** For every external integration, identify the authoritative owner first. Jig implements only the minimum interface needed for Jig's product job and must not absorb that external system's configuration, topology, provisioning, migration, reconciliation or policy. For Git specifically, Jig owns deterministic Jig records, automatic synchronization intent and coarse sync outcome; Git owns repository acquisition, branches/refs/worktrees, signing/identity, credentials, remotes, history and reconciliation. A Git isolation technique may exist inside the adapter, but it is not Jig domain, user workflow or configuration.
 
-## 1. Decisions, baseline and user experience
+## 1. v1.0.x decisions, baseline and user experience — historical where v1.1 supersedes
+
+**Historical-baseline rule:** Sections 1–11 retain the released v1.0.x architecture as provenance. For v1.1 forward implementation, `## v1.1 binding architecture` and the linked JIG-110-SD-01..43 contracts supersede every conflicting v1.0.x statement in these sections, including repository-required startup, browser-only notification delivery, one-row/56px narrow-header assumptions, whole-card drag activation and deferred standalone phone installation.
 
 Jig is a date-based personal planner, not a project manager or an Order lifecycle client. **The user chooses an existing personal or organizational Git repository during installation. All authoritative planning data, including the live SQLite database, lives under a dedicated directory inside that selected repository.** The public pontivus-com/jig source code repository contains no personal data and is not a valid default data target.
 
@@ -134,7 +136,7 @@ A repo-wide architecture guard must scan production source for the same violatio
 
 Only one Bun process may write the configured SQLite file. Enforce a single active instance for each configured data root. The process has a serialized, bounded synchronization loop; a browser need not remain open for Git operations. UI state is limited to active destination (`planner | history | settings`), displayed Planner week start, selected Task/workspace draft, transient drag preview, one local `ThemePreset` and one local `AppearanceMode`. There is no selected-day state. Theme family and appearance mode are presentation state only and never part of canonical Task, SQLite, HTTP protocol or Git-synchronized planning data. Planner and History are queries over the same canonical Task set; desktop and narrow Planner compositions are presentations of the same Planner state, not parallel view authorities.
 
-**Local HTTP:** bind only to `127.0.0.1`. The default port is **47831**; `install.sh --port <1024..65535>` is the only supported override and persists the chosen value in local configuration. The HTTP API is `/api/v1`; reads return canonical Task values plus the current SQLite revision, and mutations return success only after the SQLite transaction commits. Repository status is exactly `local-only | pending | retrying | synchronized | sync-issue`. The user can continue editing regardless of repository synchronization status.
+**Local HTTP:** bind only to `127.0.0.1`. The default port is **47831**; `install.sh --port <1024..65535>` is the only supported override and persists the chosen value in local configuration. The HTTP API is `/api/v1`; reads return canonical Task values plus the current SQLite revision, and mutations return success only after the SQLite transaction commits. v1.1 repository status has one structured owner that distinguishes the local Git snapshot from remote synchronization; the compact `Local only | Pending | Retrying | Synced | Sync issue` header label is derived from that structure rather than stored independently. The user can continue editing regardless of either repository state.
 
 **Idle behavior:** One service, no worker farm, no browser needed for task storage/sync, no polling-heavy UI while closed. Coalesce edits into short Git bursts, use a timer/backoff instead of permanent busy loops, and never wake a job per drag animation frame. Resource limits are verified in a real idle/workload test rather than inferred from technology choice.
 
@@ -172,8 +174,39 @@ The local configuration file is **`~/.config/jig/config.json`** and contains onl
 
 The browser API serializes canonical core types directly; do not create transport DTO classes or a second Task/command schema.
 
+The v1.1 operational repository status is a shell-owned typed contract, not domain state and not a DTO hierarchy:
+
+~~~ts
+type LocalGitSnapshotState = "pending" | "committed" | "issue";
+
+type RemoteGitSynchronization =
+  | {
+      readonly state: "not-configured";
+      readonly remote_name: null;
+      readonly remote_location: null;
+    }
+  | {
+      readonly state: "pending" | "retrying" | "synchronized" | "sync-issue";
+      readonly remote_name: string;
+      readonly remote_location: string;
+    };
+
+interface RepositorySynchronizationStatus {
+  readonly local_git: LocalGitSnapshotState;
+  readonly remote: RemoteGitSynchronization;
+}
+~~~
+
+`local_git = "committed"` means the current canonical SQLite revision has a corresponding successfully committed Jig portable snapshot at the local `jig-data` ref. A successful local commit remains committed even if the later remote push is pending, retrying or failing. `local_git = "pending"` means the current revision has not yet reached that local Git commit boundary. `local_git = "issue"` is used only when the current export/commit phase itself has failed; a remote transport failure must never downgrade local Git state.
+
+Remote identity is observed from the same Git-selected synchronization remote used by the adapter. The adapter exposes only the selected remote name plus a **credential-free display location** derived from its current push target. Strip userinfo/password/token/query/fragment material and never surface askpass/environment credentials. This value is informational presentation data only: it is not persisted in `JigConfig`, SQLite planning state or portable records. When no unambiguous synchronization remote exists, the remote state is `not-configured`; Jig does not invent or persist one.
+
+Remote `synchronized` is valid only after the current locally committed Jig head has been successfully pushed to the selected remote. If another local mutation becomes current before/while that push completes, the presentation returns to pending rather than claiming the new revision is synchronized. The existing retry/backoff outcomes apply only to the remote stage once a local commit exists.
+
+The compact header repository label is a pure presentation projection of `RepositorySynchronizationStatus`: local Git issue → Sync issue; local Git pending → Pending; committed + no remote → Local only; committed + remote pending/retrying/sync-issue/synchronized → the corresponding Pending/Retrying/Sync issue/Synced label. Settings renders the two constituent facts separately.
+
 - `GET /api/v1/tasks` → `{ revision, tasks }`, where `tasks` is the complete canonical Task set.
-- `GET /api/v1/status` → service readiness, selected repository path, and one synchronization status from `local-only | pending | retrying | synchronized | sync-issue`.
+- `GET /api/v1/status` → service readiness, selected repository path, and one structured `RepositorySynchronizationStatus` containing local Git snapshot state plus read-only remote identity/synchronization state.
 - `GET /api/v1/diagnostics` → sanitized **Jig** health only: service health, SQLite availability/schema version, repository accessibility, portable-format validity and coarse adapter health. It contains no Git topology repair model, credentials, Task content or secrets.
 - `POST /api/v1/commands` accepts one canonical Task command plus `expected_revision`.
 - `POST /api/v1/sync` requests an immediate synchronization attempt through the existing serialized repository worker and returns HTTP **202** with the current synchronization status.
@@ -200,7 +233,7 @@ At service start generate a fresh **256-bit random write token**. Inject it into
 
 ## 4. Canonical Task model
 
-One Task is the sole durable representation of an intended item. Planner and History are queries/views of it; completed Tasks are excluded from Planner and queried through History. Store the fields below in SQLite and the portable JSON files.
+One Task is the sole durable representation of one intended occurrence. Planner and History are queries/views of canonical Tasks; completed Tasks are excluded from Planner and queried through History. Recurrence does not introduce virtual Task rows: a bounded recurrence series owns only the repeat rule, while every actual occurrence is an ordinary Task. Store the Task fields below in SQLite and the portable JSON files.
 
 | Field | Type / constraint | Semantic ownership |
 |---|---|---|
@@ -213,6 +246,8 @@ One Task is the sole durable representation of an intended item. Planner and His
 | reference | optional string | External URL/path/repository locator only |
 | note | optional string | Brief personal context, not authoritative requirements |
 | reminder_time | optional local HH:mm | Alert time on scheduled_date, not a time estimate |
+| recurrence_series_id | null or UUID | Optional recurrence-series membership; null for one-off Tasks |
+| recurrence_occurrence_date | null or ISO local civil date | Immutable recurrence slot; remains unchanged if the Task is later rolled or manually rescheduled |
 | completed_at | null or UTC ISO instant | Null = outstanding; otherwise completed |
 | created_at | UTC ISO instant | Historical creation time |
 | updated_at | UTC ISO instant | Last committed change time |
@@ -230,11 +265,15 @@ Task references are treated as data: safe http(s) links may open with normal bro
 3. The user-selected sequence is authoritative; priority updates never reorder it.
 4. Date moves preserve all task metadata and identity except scheduled_date and position; reminder_time stays the same and is interpreted on the new date.
 5. Completion records an instant and removes the item from its outstanding sequence; reopening appends it, rather than guessing its former position.
-6. Daily rollover is an automatic canonical mutation. Every outstanding Task with `scheduled_date < current_local_date` is moved to `current_local_date`; completed Tasks are unchanged.
+6. Daily rollover is an automatic canonical mutation. Before movement, recurring series apply one non-accumulation rule: for each series preserve the latest outstanding occurrence whose immutable recurrence slot is due on/before `current_local_date`, and supersede any other outstanding occurrence in that series that is actually overdue (`scheduled_date < current_local_date`). Then every remaining overdue outstanding Task is moved to `current_local_date`. Completed Tasks and future-scheduled Tasks are unchanged.
 7. A confirmed deletion removes the Task row entirely. If the deleted Task was outstanding, the remaining positions on its scheduled date are compacted transactionally; completed deletion requires no active-order compaction.
 8. Deletion creates no tombstone, deleted status, trash record or application-level undo history.
 9. A failed mutation leaves all affected dates unchanged; UI reports failure without implying a save.
 10. Every imported complete snapshot passes the same invariants before it can replace local state; after validation, its Task membership is authoritative for that adopted snapshot.
+11. `recurrence_series_id` and `recurrence_occurrence_date` are either both null or both non-null. A recurring occurrence's `recurrence_occurrence_date` is immutable even when `scheduled_date` changes through rollover or explicit movement.
+12. Recurrence never changes ordinary Task semantics: each materialized occurrence is an independent Task and owns its own title, priority, context, reference, note, reminder, scheduled date/position and completion state. A recurrence rule determines series calendar slots only.
+13. Recurrence has exactly two **user write scopes**. Occurrence-scope commands may mutate only the addressed Task. Series-scope recurrence commands may mutate only the shared `RecurrenceSeries` plus series membership by retaining/removing/creating occurrence rows; they must not rewrite ordinary Task fields on a retained sibling. Automatic rollover supersession is planning maintenance, not a third write scope or persisted lifecycle state. There is no bulk Task-content propagation command in v1.1.
+14. Intentional active scheduling uses one rule: create/edit/move may schedule an outstanding Task only on `current_local_date` or a future civil date. The rule is a pure core predicate reused by every scheduling path. Past-date rejection never depends on drag/UI state and never mutates canonical data.
 
 ### 4.2 Operation algorithms
 
@@ -252,11 +291,126 @@ Task references are treated as data: safe http(s) links may open with normal bro
 
 **Read:** Planner derives seven consecutive local civil dates beginning Monday from `displayedWeekStart`. Desktop renders all seven outstanding sequences as columns; narrow/mobile renders the same seven outstanding sequences as vertically stacked dated sections. There is no selected-day projection or selector. Before normal planning reads/commands, the service ensures daily rollover is current, so overdue outstanding Tasks have already been moved into the current local date and are visible in the same canonical Planner bucket on every responsive composition. History is grouped by local completion date. Date/week navigation is presentation state and never writes Task data.
 
+### 4.2.1 Bounded recurrence series
+
+Recurrence is a pure planning-core capability, not a background scheduler and not a second Task model. The recurrence configuration itself has **one canonical series owner**. Tasks carry only the series link + immutable occurrence slot; weekly/monthly pattern/end-date values are never copied into each Task row.
+
+Canonical types are intentionally small:
+
+~~~ts
+type Weekday =
+  | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
+
+type RecurrencePattern =
+  | {
+      readonly kind: "weekly";
+      readonly interval_weeks: number;
+      readonly weekdays: readonly Weekday[];
+    }
+  | {
+      readonly kind: "monthly";
+      readonly day_of_month: number;
+    };
+
+interface RecurrenceSeries {
+  readonly id: string;
+  readonly effective_from: string;
+  readonly end_date: string;
+  readonly pattern: RecurrencePattern;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+~~~
+
+Validation is exact:
+
+- `effective_from` and `end_date` are valid local civil dates and `end_date >= effective_from`;
+- weekly `interval_weeks` is a positive whole number and `weekdays` is non-empty, unique and canonical Monday→Sunday order;
+- monthly `day_of_month` is an integer `1..31`;
+- every series is finite; there is no null/unbounded end date.
+
+One pure owner enumerates recurrence dates. The seed Task itself is retained as the first occurrence. Additional dates are strictly after the seed/effective date and no later than the inclusive end date.
+
+**Weekly:** the local Monday-based week containing `effective_from` is recurrence week zero. Active weeks are every `interval_weeks`; selected weekdays inside active weeks produce occurrences. Selecting all seven weekdays is the daily pattern. A four-week interval with one selected weekday is the governed "every four weeks" case.
+
+**Monthly:** each later month contributes the configured `day_of_month` only when that civil date exists. A day-31 series therefore skips February/April/etc.; it is never silently clamped to month-end.
+
+Because every recurrence has a required finite end date, v1.1 **materializes the complete bounded occurrence set transactionally**. It does not create virtual Planner rows, a lazy recurrence daemon, a device-local recurrence cache or a second recurrence scheduler. This keeps Linux and Android on one canonical Task set and keeps portable Git snapshots deterministic.
+
+Enabling recurrence on an existing Task:
+
+1. creates one `RecurrenceSeries`;
+2. attaches the seed Task to that series with `recurrence_occurrence_date = seed.scheduled_date`;
+3. enumerates every later recurrence slot through `end_date`;
+4. creates one ordinary Task for each slot, copying the seed Task's title, priority, context, reference, note and `reminder_time` **at that moment only**, while assigning a fresh Task ID, the slot as both `scheduled_date` and `recurrence_occurrence_date`, and normal initial priority-based position for that date;
+5. persists the series + all Task changes in one transaction and increments the canonical revision once.
+
+The canonical command surface keeps occurrence and series semantics distinct while allowing the integrated Task form to save atomically:
+
+~~~text
+create { ..., recurrence? }
+edit { task_id, changes, recurrence? }
+~~~
+
+`create.recurrence` creates the seed and bounded series atomically. Existing-Task `edit.changes` remains occurrence-local. The optional top-level `edit.recurrence` is only the series mutation input: omitted means unchanged, a spec means enable/update, and `null` means stop. Persistence applies the occurrence edit and optional recurrence reconciler in one transaction/revision so the UI has one Save and cannot partially commit. The separate public `set_recurrence` command is removed after migration rather than retained as a parallel user-save path. `move`, `complete`, `reopen` and `delete` remain occurrence-scope commands. Every occurrence resolves visible Repeat configuration through the one canonical `RecurrenceSeries`; no per-Task recurrence configuration copy exists.
+
+Changing Repeat is a **series-membership reconciliation** anchored at the invoking occurrence's immutable `recurrence_occurrence_date`. It updates the one shared series configuration rather than creating a per-occurrence rule or propagating Task content:
+
+- preserve the invoking occurrence, all earlier occurrences and every completed occurrence;
+- enumerate the updated recurrence slot set from the invoking immutable slot through the inclusive end date;
+- keep an existing later outstanding occurrence when its immutable `recurrence_occurrence_date` remains in that slot set, preserving its Task ID, scheduled date/position and every occurrence-local field exactly as stored;
+- delete only later outstanding occurrences whose immutable recurrence slot is no longer in that slot set;
+- create only newly introduced later slots, copying the invoking occurrence's current title, priority, context, reference, note and reminder time once at creation and assigning the normal initial position for each date;
+- update the one shared series `effective_from`, pattern and end date in the same transaction, with `effective_from` equal to the invoking occurrence's immutable recurrence slot for the newly effective schedule;
+- never rewrite ordinary Task fields on any retained occurrence as part of a Repeat change;
+- **Stop repeating / remove recurrence** retains the invoking Task, clears its recurrence link so it becomes one-off, preserves completed History and removes **every other outstanding Task linked to that series** in the same transaction, regardless of whether its recurrence slot is earlier or later than the invoking occurrence. This includes older occurrences that rolled forward; the user never deletes those cards individually;
+- individual Task Delete remains occurrence-only and must not invoke series removal.
+
+The two write scopes are deliberately non-overlapping. Occurrence-scope Task edits never mutate `RecurrenceSeries`. Series-scope Repeat edits never propagate title/priority/context/reference/note/reminder/scheduled-date/position/completion state into retained sibling Tasks. There is intentionally no "all occurrences", "this and following Task details" or template-propagation command in v1.1; a different common Task definition is represented by creating a new recurring Task.
+
+Daily rollover never changes `recurrence_occurrence_date` or the series rule. Before ordinary rollover, the core applies recurrence non-accumulation: within each series, identify the latest outstanding occurrence whose immutable slot is due on/before today; remove older outstanding siblings that are actually overdue; preserve future-scheduled siblings (including explicit user reschedules); then roll the surviving overdue occurrence to today. Superseded siblings are removed, not marked completed, so History remains truthful and no new lifecycle status is introduced.
+
+Each generated occurrence has its own `reminder_time`. The existing reminder owner therefore needs no recurrence-specific delivery state: the same time is copied when the occurrence is created, and reminder due/delivery is evaluated against that occurrence's current `scheduled_date`. A rolled occurrence keeps the time-of-day exactly as today.
+
+Canonical state returned to presentation contains both canonical Tasks and recurrence-series records, so the Task workspace can resolve a Task's shared Repeat configuration without a second lookup model:
+
+~~~ts
+interface CanonicalState {
+  readonly revision: number;
+  readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
+}
+~~~
+
+This extends the one canonical state contract; it does not create a recurrence DTO/ViewModel. A recurrence series with no remaining linked Tasks is deleted transactionally.
+
 ### 4.3 Persistence representation
 
-SQLite schema is one Task table plus minimal app-local metadata and notification-delivery bookkeeping:
+SQLite schema is one Task table plus one bounded recurrence-rule table, minimal app-local metadata and notification-delivery bookkeeping. The recurrence table is planning data, not notification/runtime state:
 
 ~~~sql
+CREATE TABLE recurrence_series (
+  id TEXT PRIMARY KEY,
+  effective_from TEXT NOT NULL,
+  end_date TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('weekly', 'monthly')),
+  interval_weeks INTEGER,
+  weekdays_mask INTEGER,
+  day_of_month INTEGER,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  CHECK (
+    (kind = 'weekly'
+      AND interval_weeks IS NOT NULL AND interval_weeks > 0
+      AND weekdays_mask IS NOT NULL AND weekdays_mask BETWEEN 1 AND 127
+      AND day_of_month IS NULL)
+    OR
+    (kind = 'monthly'
+      AND interval_weeks IS NULL AND weekdays_mask IS NULL
+      AND day_of_month BETWEEN 1 AND 31)
+  )
+);
+
 CREATE TABLE task (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -268,12 +422,19 @@ CREATE TABLE task (
   reference TEXT,
   note TEXT,
   reminder_time TEXT,
+  recurrence_series_id TEXT REFERENCES recurrence_series(id),
+  recurrence_occurrence_date TEXT,
   completed_at TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   CHECK (
     (completed_at IS NULL AND position IS NOT NULL AND position >= 0)
     OR (completed_at IS NOT NULL AND position IS NULL)
+  ),
+  CHECK (
+    (recurrence_series_id IS NULL AND recurrence_occurrence_date IS NULL)
+    OR
+    (recurrence_series_id IS NOT NULL AND recurrence_occurrence_date IS NOT NULL)
   )
 );
 CREATE UNIQUE INDEX task_active_position
@@ -282,7 +443,7 @@ CREATE UNIQUE INDEX task_active_position
 CREATE INDEX task_completed_at ON task(completed_at);
 ~~~
 
-Technical input validation must also enforce canonical date/time formats, nonblank titles and valid IDs before SQL insertion; CHECK constraints alone do not validate those strings. SQLite schema v2 uses one app metadata table for schema version, dataset identity, monotonically increasing SQLite state revision, last exported revision, last safely adopted portable snapshot identity and durable pending-sync state. The v1 `data_ref` field is migrated away in place because Git topology is not persistence-domain state. A separate local reminder-delivery key set can suppress duplicate browser notifications; it is non-authoritative presentation bookkeeping and is **not included in Git exports**. SQLite lives under the selected personal repository's `.jig/local/` path and is excluded from version control; deterministic JSON records are the portable snapshot synchronized through the repository adapter.
+Technical input validation must also enforce canonical date/time formats, nonblank titles, valid IDs and recurrence invariants before SQL insertion; CHECK constraints alone do not validate those strings. The recurrence `weekdays_mask` is only SQLite encoding (Monday bit 0 through Sunday bit 6); the canonical core type remains the named `Weekday[]` union. The recurrence feature advances SQLite to schema v3: the v2→v3 migration adds the recurrence table and nullable Task recurrence columns, leaving every existing Task non-recurring. SQLite app metadata for schema version, dataset identity, monotonically increasing SQLite state revision, last exported revision, last safely adopted portable snapshot identity and durable pending-sync state. The v1 `data_ref` field is migrated away in place because Git topology is not persistence-domain state. A separate local reminder-delivery key set can suppress duplicate browser notifications; it is non-authoritative presentation bookkeeping and is **not included in Git exports**. SQLite lives under the selected personal repository's `.jig/local/` path and is excluded from version control; deterministic JSON records are the portable snapshot synchronized through the repository adapter.
 
 Apply reordering in one SQLite transaction. To satisfy the active-position uniqueness constraint while changing multiple indices, first move affected positions to distinct temporary nonconflicting values within that same transaction, then write final 0..N-1 positions. No intermediate ordering can be observed outside the transaction. If the transaction fails, the whole operation rolls back.
 
@@ -377,7 +538,7 @@ The range label is not an interactive element and must not sit between the chevr
 
 The Planner board uses seven equal-width tracks with a product-level 160px minimum. Track **height is content-driven**; do not stretch tracks merely to equalize bottoms or anchor a lane action. Empty tracks keep only the minimum usable drop-target area.
 
-The seven tracks are **layout tracks, not panel components**. Do not wrap each day in a persistent bordered/card surface. Jig CSS may use spacing plus a single subtle hairline inline divider between adjacent tracks, and may remove even that divider when responsive density makes whitespace sufficient. Do not combine lane borders, header borders and card borders into repeated parallel line work. Task cards remain the discrete interaction surfaces. The desktop semantic breakpoint is **73rem / 1168 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and **zero outer viewport inset**. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
+The seven tracks are **layout tracks, not panel components**. Do not wrap each day in a persistent bordered/card surface. The shared Planner canvas may use the governed `--jig-planner-surface` behind the tracks; each date lane remains transparent within it. Jig CSS may use spacing plus a single subtle hairline inline divider between adjacent tracks, and may remove even that divider when responsive density makes whitespace sufficient. Do not combine lane borders, header borders and card borders into repeated parallel line work. Task cards remain the discrete interaction surfaces. The desktop semantic breakpoint is **73rem / 1168 CSS px**: this derives from seven 160px tracks plus six 8px inter-track gaps and **zero outer viewport inset**. Below this width render the narrow Planner composition rather than horizontal-scrolling the desktop board. The right Task workspace overlays and therefore does not reduce this board-width calculation.
 
 The date column header is non-selectable and owns only date presentation plus the date-specific Add action. Render the **full weekday name** plus day number (for example `Thursday 19`) and one compact icon-only `+` control with an accessible label such as `Add task to Thursday 19 November`. Do not abbreviate weekdays.
 
@@ -789,6 +950,8 @@ Pinned Astryx evidence:
 
 **Functional owner:** JIG-106-FR-01.
 
+v1.1 adds one heading-ownership refinement without changing this width owner: History/Settings destination title and subtitle are rendered exactly once by the application header. Their bounded 50rem content surfaces begin with semantic page content and contain no duplicate page-level heading block. The versioned v1.1 solution specifies the exact header composition and accessibility semantics.
+
 The 50rem budget belongs continuously to the History/Settings screen content. It is **not** a desktop-only rule and it is unrelated to the Planner's 73rem semantic composition breakpoint.
 
 1. Keep the existing base owner:
@@ -1189,7 +1352,9 @@ Existing valid Jig portable data in the selected repository is continuity author
 
 ### 7.2 Portable snapshot format
 
-`format.json` includes a version discriminator and a UUID **dataset_id**, created once at first initialization and stable on every replica. Every task is `tasks/<uuid>.json` using exactly the canonical Task fields in §4, sorted key order, UTF-8, normalized newlines and strict date/instant formats. No SQLite binary, Git credentials, device-local reminder-delivery receipts, secrets, private system paths, temporary files or browser state enter commits. Completed and unfinished tasks are both included.
+`format.json` includes a version discriminator and a UUID **dataset_id**, created once at first initialization and stable on every replica. Recurrence is a product-driven portable-contract extension, so v1.1 recurrence advances the portable format to **version 2**. Every task remains `tasks/<uuid>.json` using exactly the canonical Task fields in §4, including nullable recurrence membership/occurrence date. Each recurrence rule is `recurrences/<uuid>.json` using the canonical `RecurrenceSeries` fields/pattern. Both trees use sorted key order, UTF-8, normalized newlines and strict date/instant formats. No SQLite binary, Git credentials, device-local reminder-delivery receipts, secrets, private system paths, temporary files or browser state enter commits. Completed and unfinished tasks are both included.
+
+Portable-format v1 remains an accepted upgrade input: it contains Tasks only and is interpreted as every Task having null recurrence fields with no recurrence-series records. After canonical adoption/migration, the next export emits format v2. A v2 snapshot is valid only when every non-null Task recurrence reference resolves to exactly one recurrence record and no duplicate `(recurrence_series_id, recurrence_occurrence_date)` pair exists.
 
 The portable tree is a **complete snapshot**; every file path ID matches its embedded ID; duplicate task IDs or missing/duplicate active positions invalidate the entire import. Once the repository integration boundary presents a complete candidate snapshot, Jig validates it before adoption. Its Task membership is then exact: a Task present in the previously adopted dataset but absent from the newly adopted snapshot is deleted locally in the same transactional import. A missing file in an arbitrary, incomplete or unvalidated worktree is **not** a deletion signal. User deletion is therefore represented naturally by absence of `tasks/<uuid>.json` in a later complete snapshot; no tombstone file or deleted-state record is introduced. Jig never interprets partial Git merge state or repository topology as planning data.
 
@@ -1204,11 +1369,15 @@ rollForwardOutstanding(
   tasks,
   currentLocalDate,
   updatedAt,
-): { tasks, moved_task_ids }
+): { tasks, moved_task_ids, superseded_task_ids }
 ```
 
+`superseded_task_ids` is an internal pure-result field used only so persistence can atomically delete stale recurring occurrences and decide whether the canonical revision changed. It is not a Task status, DTO, event stream or persisted history model.
+
 Rules:
-- select outstanding Tasks with `scheduled_date < currentLocalDate`;
+- identify each recurrence series' latest outstanding occurrence whose immutable `recurrence_occurrence_date <= currentLocalDate`;
+- from that series, supersede any **other** outstanding occurrence whose `scheduled_date < currentLocalDate`; do not touch completed Tasks or Tasks explicitly scheduled into the future;
+- after supersession, select remaining outstanding Tasks with `scheduled_date < currentLocalDate`;
 - sort selected Tasks by source `scheduled_date` ascending, then source `position`;
 - move all selected Tasks directly to `currentLocalDate`;
 - place them before Tasks already scheduled for `currentLocalDate`;
@@ -1217,6 +1386,7 @@ Rules:
 - compact each affected source date;
 - preserve Task id/title/context/priority/reference/note/reminder time;
 - update `scheduled_date` and `updated_at` for moved Tasks;
+- remove superseded recurring Tasks from the current canonical Task set without synthesizing `completed_at`;
 - do not mutate completed Tasks;
 - no intermediate per-day history is created when catching up after multiple missed days.
 
@@ -1224,7 +1394,7 @@ Shell lifecycle:
 1. run rollover once during service startup before normal planning state is served;
 2. maintain one timer for the next local civil-day boundary;
 3. at the boundary, execute one SQLite transaction applying the pure core result;
-4. increment SQLite revision once when at least one Task moved;
+4. increment SQLite revision once when at least one Task moved **or recurring occurrence was superseded**;
 5. mark portable state dirty so the existing sync worker exports/synchronizes it;
 6. reschedule the next day-boundary timer;
 7. before serving canonical planning state or accepting a Task mutation, perform an idempotent catch-up check so suspend/sleep/timer delays cannot leave stale dates visible.
@@ -1237,6 +1407,8 @@ HTTP command admission order is strict:
 5. only then execute the requested Task mutation.
 
 Do not validate `expected_revision` first and perform rollover afterward.
+
+The same existing runtime-local-date owner supplies `currentLocalDate` to Task-command execution after rollover. Add one pure planning-core guard such as `assertActiveScheduleDate(currentLocalDate, candidateDate)` and call it from create, explicit Date edit and move. Do not derive local date from the UTC mutation instant, add a clock service, or duplicate past-date checks in UI/platform adapters. Presentation may pre-mark a past drag target unavailable for immediate affordance, but the core predicate remains authoritative and its error is projected through the existing operation-feedback path.
 
 The already-open browser must also revalidate canonical state across a local-day transition. The UI keeps the last observed local civil date and:
 - schedules a recheck for the next local day boundary;
@@ -1383,7 +1555,7 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-06 priority change | Edit operation | Only priority changes; position unchanged |
 | JIG-FR-07 unrestricted edit | Astryx edit surface + core update | All optional fields and date edited without workflow gate |
 | JIG-FR-08 completion/reopen | Core transition + timestamp + DB | Date-scheduled completion, history query, reopen same ID |
-| JIG-FR-09 daily rollover | Pure core rollover + one SQLite transaction + service day-boundary/catch-up trigger | Earlier outstanding Tasks physically move to the current date; desktop and narrow Planner show the same moved Task in the current bucket; completed Tasks never move |
+| JIG-FR-09 daily rollover | Pure recurrence-aware core rollover + one SQLite transaction + service day-boundary/catch-up trigger | One-off overdue Tasks move to today; recurring series supersede older overdue outstanding siblings before moving the surviving due occurrence; completed/future Tasks remain untouched |
 | JIG-FR-10 reminder delivery | JIG-106-SD-06 + §6 one browser reminder monitor + browser Notification API | Granted permission => one browser/OS Notification regardless visibility/focus; no reminder Toast; one delivery key suppresses duplicates; no closed-app guarantee |
 | JIG-FR-11 external context | Reference open/copy UI | Link/path accessible; no source-content import |
 | JIG-FR-12 honest outcome | HTTP/SQLite/repository-boundary outcome and UI | Failed local save or repository sync never rendered as success |
@@ -1397,14 +1569,20 @@ Paths are a suggested semantic decomposition, not a mandate to manufacture separ
 | JIG-FR-20 low-friction idle | one Bun service, bounded timers/backoff | Measured low idle CPU/RSS and responsive reopen |
 | JIG-FR-21 delete | Core delete + SQLite transaction + complete-snapshot export/import | Confirmation precedes mutation; row/file disappear; outstanding positions compact; Git round trip preserves deletion |
 | JIG-FR-22 appearance | JIG-106-SD-02 through SD-05 + SD-07 | One 13-preset registry + independent System/Light/Dark mode fully re-theme all governed surfaces/states and in-app branding from Settings only, without Task/Git mutation |
+| JIG-FR-23 bounded recurrence | §4.2.1 recurrence core + recurrence-aware rollover + schema v3 + portable format v2 | One shared series owns recurrence configuration; materialized Tasks own occurrence-local content/lifecycle; rollover prevents automatic accumulation by superseding stale overdue siblings; Repeat reconciliation remains shared-series only; Stop repeating preserves completed History and removes every other outstanding series occurrence |
+| JIG-110-FR-30 destination heading ownership | v1.1 SD-40 + UI solution | Compact header preserves Jig identity and centers Planner/History/Settings title from one owner; desktop secondary titles retain their concise subtitle; body-level duplicate heading is removed |
+| JIG-110-FR-31 user-level continuity/synchronization | structured repository status above + v1.1 SD-41 | Technical local/remote truth remains structured once; primary UI derives minimal planning-data-home/local-safety/continuity language while exact Git/service/database facts remain secondary diagnostics |
+| JIG-110-FR-24 cross-installation continuity | v1.1 SD-30 + SD-41 | Four normal outcomes (Local only / Synchronized / Adopt remote / Push local) plus exactly six bounded edge cases SYNC-E1..SYNC-E6. One pure classifier owns the decision; shell/native adapters supply effects only; unsafe states preserve both boundaries and stop rather than adding reconciliation. |
 
 ### 10.1 Test boundaries
 
-**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, completed-task rescheduling, reopening, outstanding/completed deletion and edge dates including month/year boundaries.
+**Core tests:** Exhaustive representative priority mix, insertion at both ends, same-day and cross-day movement, empty destinations, cancellation/no mutation, rank compaction, priority changes, current/future scheduling acceptance, past-date create/edit/move rejection with no mutation, daily rollover ordering/date mutation, multi-day catch-up, completed-task non-rollover, reminder preservation, reopening, outstanding/completed deletion, recurrence enumeration/reconciliation and edge dates including month/year boundaries. Recurrence coverage includes multiple weekdays, all-seven daily pattern, every-four-weeks cadence, inclusive end date, monthly 28/29/30/31 behavior, no-accumulation rollover for one/multiple missed periods, latest-due-survivor selection, explicit future-reschedule preservation, occurrence-only completion/move/delete/edit, shared-series visibility from every occurrence, Repeat membership reconciliation that preserves retained sibling IDs/content, creation-time-only copying into new slots, no bulk content propagation, and Stop repeating that preserves completed History while removing every other outstanding series occurrence including rolled/overdue siblings.
 
 **SQLite integration:** One failed transaction rolls back every affected position/date; uniqueness and completeness checks; restart with WAL; task query by scheduled and completion dates; migration from a fresh empty database; corrupted input rejected before persistence.
 
 **Repository/Git integration:** Use existing-repository fixtures with unrelated dirty/staged files and normal developer Git configurations, including commit signing enabled with no Jig key. Verify automatic export/synchronization touches only Jig-owned portable data; user Git configuration is unchanged; installation/retry survives synchronization failure; existing valid Jig data is adopted; the exact v1.0.0 empty-bootstrap residue recovers safely; unknown malformed states are non-destructive; ordinary repository content remains untouched.
+
+For v1.1, exercise only the governed SD-41 matrix: ordinary Desktop → Android → Desktop and Android → Desktop → Android round trips plus SYNC-E1..SYNC-E6. Prove stale-base export is prevented, rejected/ambiguous pushes re-observe before another write, auth/transport failure preserves local work under existing bounded retry, restart/bookkeeping repair cannot overwrite a newer SQLite revision, and unsafe/incompatible remote state is non-destructive. Do not expand the suite into general Git repair or semantic planning-data merge behavior.
 
 **Browser interaction:** Real Astryx components and dnd-kit are tested together using Playwright: Planner startup on today/current week; centered one-row Previous/range/Next/Today controls; exact seven-day Previous/Next behavior; Today reset; Jig-home state preservation; no desktop sidebar; explicit desktop Planner/History/Settings navigation with correct active state; reduced-chrome open seven-track board with full weekday labels and per-date +; mobile Planner/History/Settings hamburger popover with no drawer and seven stacked dated sections; same-day whole-card drag, cross-date drag and empty-day drop; persisted daily rollover visible in both responsive Planner compositions; open-browser local-midnight revalidation; full-card drag overlay; Escape cancel; Task checkbox/link/workspace non-interference; keyboard/touch move alternatives; desktop Drawer overlays without narrowing the board; Drawer↔BottomSheet responsive switching with unsaved editor state preserved; confirmed/cancelled deletion; long-list scrolling; the JIG-106 13-theme × Light/Dark/System matrix and semantic-state/contrast assertions; theme-aware inline wordmark; continuous History/Settings width on both sides of 73rem; Settings-only Theme/Appearance controls; visible/hidden and focused/unfocused browser Notification delivery with no reminder Toast; permission default/denied/unsupported behavior; duplicate suppression/catch-up; and durable save-error visibility.
 
@@ -1420,7 +1598,7 @@ If the Astryx ListItem/dnd-kit integration fails in the browser, fix the smalles
 
 ## 11. Explicitly deferred capabilities
 
-Independent phone installation, native mobile Git/process/filesystem integration, application-level trash/soft-delete/undo/restore, background/push notifications, Order WorkItem creation, automatic project-task synchronization, metrics/dashboard, team collaboration, repeated scheduling, subtasks, duration estimation and general workflow constraints are excluded. Git history, branch, merge and conflict reconciliation are explicitly **outside Jig's domain**, not deferred Jig features. The canonical Task format and repository record identity intentionally leave room for later extension, but none of these capabilities is represented as implemented by this design.
+Independent phone installation, native mobile Git/process/filesystem integration, application-level trash/soft-delete/undo/restore, background/push notifications, Order WorkItem creation, automatic project-task synchronization, metrics/dashboard, team collaboration, subtasks, duration estimation and general workflow constraints are excluded. Git history, branch, merge and conflict reconciliation are explicitly **outside Jig's domain**, not deferred Jig features. The canonical Task format and repository record identity intentionally leave room for later extension, but none of these capabilities is represented as implemented by this design.
 
 ## 12. Decision history and minimality rationale
 
@@ -1430,7 +1608,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **Automatic bounded Git sync instead of manual export:** Local SQLite saves trigger background commit/fetch/push with safe retries even when the browser is closed; network status is separately visible.
 - **Repository boundary instead of a Jig Git state machine:** Jig exports/validates portable snapshots and receives only operational synchronization outcomes. Git acquisition, topology, policy, credentials, history and reconciliation stay with Git tooling and never become Jig domain/configuration/state.
 - **Astryx directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows.
-- **dnd-kit instead of Astryx same-list reordering plus custom cross-day dragging:** One coordinated drag system across all seven date columns with a single canonical move command.
+- **One proof-gated drag adapter instead of framework layering:** the failed Pangea implementation is removed. Current dnd-kit is the candidate sensor/drop engine behind Jig-owned explicit insertion-slot semantics; it may ship only after desktop and physical-Android proof, and canonical movement remains one move command.
 - **Browser-side reminder monitor instead of background infrastructure:** one browser Notification channel while Jig is open and permission is granted, independent of visibility/focus, with no Toast fallback and no closed-app delivery guarantee.
 - **One Task and derived views instead of multiple planning objects:** Satisfies all Task semantics without building a project manager.
 - **One Planner state instead of Day/Week destinations:** `displayedWeekStart` alone drives both the desktop seven-column board and narrow seven-section stack; responsive composition never creates another planning authority or selected-day subview.
@@ -1438,3 +1616,27 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **Drawer on desktop, BottomSheet on narrow:** one TaskWorkspaceState is rendered through the public Astryx surface appropriate to the layout; presentation changes without draft/state duplication.
 
 **Implementation planning can now be derived from this document and [the UI solution](../design/ui-solution.md).** The plan must preserve the boundaries above, prove the specified acceptance gates, and must not interpret non-goals as implied features.
+
+
+## v1.1 binding architecture
+
+The detailed normative solution contracts are [JIG-110-SD-01..43](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
+
+- runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error; both modes render inside the same canonical Jig application frame, with onboarding as a distinct body state rather than a standalone technical setup page; the governed v1.1 references own the user-visible composition: Android/narrow uses the bounded single-column flow, desktop uses the stable value/context region plus bounded setup pane, and successful setup transitions directly to Planner without persisted onboarding progress; Astryx remains reusable component authority;
+- Linux and Android share one governed **Jig Desktop & Mobile** public GitHub App registration and the same intent-level onboarding contract. One Connect GitHub repository action starts automatic authorization/access/acquisition/adoption orchestration; provider-owned consent and repository selection when genuinely required are the only normal user interruptions. Linux additionally supports the genuine choice of an existing local repository;
+- Android is a committed Capacitor 8 shell using the same React UI/core/protocol contracts, package ID `com.pontivus.jig`, private app-owned repository storage and F-Droid-compatible FLOSS dependencies;
+- root `package.json.version` is the sole release-version authority; Android `versionName` equals it and `versionCode = major*1_000_000 + minor*1_000 + patch`;
+- canonical SQLite semantics move to one asynchronous TypeScript persistence owner with a Bun driver on Linux and a narrow AndroidX bundled-SQLite native driver on Android;
+- Android Git uses the selected isomorphic-git/native-filesystem/native-HTTP adapter only after the mandatory automated/emulator feasibility gate; the same transport is physically confirmed in the final device-certification wave, and failure at either gate returns to design review rather than silently adding another transport;
+- reminders use one pure due predicate, one UI clock, browser service-worker delivery and Android local scheduling with exact typed outcomes; notification side-effect state is non-canonical;
+- narrow header is one sticky configured application region: every destination keeps Jig identity left + centered destination title + restrained sync right; Planner alone adds the temporal row. Compact rows target 52px and stay <=56px at normal text sizing, ordinary touch targets remain >=48×48px with deliberate separation, and persistent bottom navigation—not a hamburger/popover—owns Planner/History/Settings;
+- physical Android use rejected the Pangea owner under the v1.1 hard gate. The replacement uses one proof-gated current dnd-kit adapter only if it passes desktop + physical Android validation; a dedicated grip targets N+1 explicit before/between/after insertion slots per date, Task body remains normal scroll/open content, and every terminal path clears drag/overlay state;
+- bounded recurrence remains one pure series/occurrence owner, while the UI integrates Repeat into the one complete Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes form with progressive disclosure governed by the v1.1 mobile/desktop references. On mobile the same BottomSheet remains normally scrollable under expanded Repeat controls, weekday targets wrap rather than compress, persistent actions do not cover fields/validation/Notes and IME resize does not make later fields or Save/Cancel unreachable. Existing-Task edit carries an optional recurrence change so ordinary occurrence edits and series reconciliation commit atomically in one transaction/revision; the separate public set_recurrence command is removed after migration;
+- History/Settings destination title + subtitle have one application-header owner; their content surfaces contain no duplicate page-heading block;
+- repository synchronization follows v1.1 SD-41's bounded audit: one pure FC/IS classifier yields Local only / Synchronized / Adopt remote / Push local / Attention from already-observed facts; Desktop/system-Git and Android/isomorphic-git keep their imperative mechanics separate and do not duplicate policy. SYNC-E1..SYNC-E6 are the complete v1.1 exception set. Existing persistence metadata is reused for crash-safe revision/export truth; no synchronization table, DTO hierarchy, service/repository class stack, Task merge engine or Git merge/rebase/force workflow is introduced. Settings still uses one content-sized sequence: Data & sync → Appearance → Notifications → subordinate/collapsed Diagnostics;
+- motion follows v1.1 SD-42's one cross-platform event/owner map: Astryx owns supported surface/control transitions, Jig owns only product-specific card/Planner/status feedback, reduced motion removes travel/scaling/smooth scrolling/loops, and no operation depends on animation;
+- operational attention feedback uses one shared Jig-owned error/warning composition across desktop and Android because the pinned Astryx Banner public API top-aligns icon/end-action regions for multi-line descriptions and exposes no public alignment hook. The fallback is limited to the existing operational-attention shape, uses only public Astryx Icon/Button leaves plus public semantic tokens, preserves existing operation/sync/setup state ownership and does not alter browser/Android reminder notification delivery;
+- adjacent-week navigation is governed exclusively by JIG-110-SD-43 in the release-specific v1.1 technical solution. This cross-release document adds no second paging architecture; all implementation and verification must conform to that single SD-43 owner;
+- development APKs are local certification artifacts; F-Droid is the first public Android distribution target; no Google Play/iOS release work is part of v1.1.
+
+The complete FR→SD traceability remains owned by the versioned v1.1 functional/technical documents and the complete v1.1 implementation plan.

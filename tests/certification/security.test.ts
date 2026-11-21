@@ -101,6 +101,7 @@ describe("V1 security and trust boundaries", () => {
       dataset_id:
         "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001",
       tasks: [],
+      recurrences: [],
       files: new Map([
         [
           "format.json",
@@ -129,6 +130,8 @@ describe("V1 security and trust boundaries", () => {
       reference: "https://example.com/matter",
       note: "Private note",
       reminder_time: null,
+      recurrence_series_id: null,
+      recurrence_occurrence_date: null,
       completed_at: null,
       created_at: "2026-11-16T01:00:00.000Z",
       updated_at: "2026-11-16T01:00:00.000Z",
@@ -144,6 +147,30 @@ describe("V1 security and trust boundaries", () => {
       /(?:password|credential|private_key|access_token|write_token)/i,
     );
     expect(portable).not.toContain(process.cwd());
+  });
+
+  it("keeps GitHub Device Flow registration secretless and redirect-free", async () => {
+    const registration = await source("src/github-registration.ts");
+    const auth = await source("src/github-auth.ts");
+    const secretService = await source("src/shell/secret-service.ts");
+
+    expect(registration).toContain("GITHUB_APP_REGISTRATION");
+    expect(registration).not.toContain("GITHUB_DESKTOP_APP_REGISTRATION");
+    expect(registration).not.toContain("GITHUB_ANDROID_APP_REGISTRATION");
+    expect(registration).toContain("client_id:");
+    expect(registration).toContain("app_slug:");
+    expect(registration).not.toMatch(/client_secret\s*:/);
+    expect(registration).not.toMatch(/redirect_uri\s*:/);
+    expect(auth).not.toContain("readonly client_secret");
+    expect(auth).not.toContain("readonly redirect_uri");
+    expect(auth).not.toContain("code_verifier");
+    expect(auth).not.toContain("code_challenge");
+    expect(auth).toContain("https://github.com/login/device/code");
+    expect(auth).toContain("urn:ietf:params:oauth:grant-type:device_code");
+    expect(secretService).not.toContain("client_secret");
+    expect(registration).not.toContain("access_token");
+    expect(registration).not.toContain("refresh_token");
+    expect(registration).not.toContain("private_key");
   });
 
   it("does not execute Task references or import source content in the row owner", async () => {

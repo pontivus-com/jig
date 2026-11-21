@@ -1,6 +1,6 @@
 # Jig — product definition
 
-**Status:** Candidate initial product baseline, v0.2 (2026-11-16). Proposed for adoption in the Jig repository.  
+**Status:** Canonical product definition, v1.1 direction adopted and amended 2026-11-18. v1.0.6 remains the released baseline; v1.1 adds Android, in-application repository onboarding, corrected reminders/header, precise Task placement and bounded recurring Tasks without changing Jig's product job.  
 **Concern:** Product purpose, value, boundaries and MVP target.  
 **Product identity:** Jig / Pontivus Jig. Product descriptor: just-in-time daily planner. The name evokes a brief nudge that helps the user get on track.
 
@@ -14,7 +14,7 @@ The day is often planned the preceding evening or early morning. Circumstances c
 
 **Jig schedules attention, not project execution.**
 
-Jig gives one person an ordered calendar of lightweight work intentions, optional priority and reminders, immediate rearrangement, and a reliable view of what remains and what was completed. At the start of a new local day, unfinished earlier-day items automatically roll forward into the current day by changing their scheduled date. The cards therefore physically move into the next/current day bucket everywhere in Jig until the user completes, explicitly reschedules, or deletes them.
+Jig gives one person an ordered calendar of lightweight work intentions, optional priority, reminders and bounded repeat patterns, immediate rearrangement, and a reliable view of what remains and what was completed. At the start of a new local day, unfinished earlier-day items automatically roll forward into the current day by changing their scheduled date. The cards therefore physically move into the next/current day bucket everywhere in Jig until the user completes, explicitly reschedules, or deletes them.
 
 A Jig task represents *something to attend to on a date*, not a complete project requirement, issue, work package or implementation plan. It may point to the authoritative work in another project or system. The details and execution lifecycle continue to live there.
 
@@ -25,7 +25,7 @@ Illustrative item: **Thursday — Legal app: TTA workflow remediation**. Jig own
 - Initial user: one person managing granular commitments across several work contexts and personal activities.
 - Initial installation and main use: Linux desktop browser backed by a minimal local user service, launched with `jig` or kept running by the user's service manager.
 - Design from the beginning: responsive, mobile-first information hierarchy and touch-aware interaction model.
-- Independent phone installation and phone-side repository synchronization are future delivery needs. Desktop MVP includes automatic desktop repository synchronization and must not make the canonical data or interaction design incompatible with a later phone runtime.
+- v1.1 delivers an independent **Android** application that uses the same canonical planning semantics and portable Git data as Linux. iOS remains outside the release path. Android uses app-owned private repository/SQLite storage, works offline, and synchronizes the same portable Jig records when connectivity/authentication are available.
 - Local/offline work is fundamental; no third-party online service is needed for ordinary planning. The user explicitly chooses an existing personal/organization Git repository as Jig's planning-data home. Its canonical records and operational SQLite database live under a dedicated Jig directory inside that repository, never in Jig's public source repository.
 
 ## 4. MVP outcomes
@@ -36,11 +36,11 @@ An operator must be able to:
 2. review an entire week as seven dated sequences, with narrow/mobile reflowing those same seven dates vertically rather than introducing a selected-day subview; unfinished earlier-day items automatically roll into the current day's bucket by updating their scheduled date;
 3. change the order of items at any point using drag-and-drop;
 4. move work to another date without losing it;
-5. optionally mark importance and set a reminder, without estimating duration;
+5. optionally mark importance, set a reminder, and apply a finite weekly/monthly repeat pattern with an explicit end date, without estimating duration;
 6. complete, reopen or permanently delete work and review completed versus unfinished items;
 7. follow an optional reference to the actual project or work system;
 8. retain all planning state under the selected personal Git repository and synchronize portable task data automatically when a Git remote is available;
-9. install and configure Jig in a single guided script, including repository selection and a background service;
+9. install Jig first and complete repository setup inside Jig: Linux supports an existing local repository or optimized Connect GitHub acquisition; Android uses optimized GitHub acquisition into app-owned storage;
 10. launch or reopen Jig through a simple `jig` desktop command, with fast idle-to-use interaction and a low background resource footprint.
 
 ## 5. Product principles
@@ -53,7 +53,7 @@ An operator must be able to:
 - **History without ceremony:** completed work remains inspectable; unfinished work automatically rolls forward into the current day until completed, explicitly rescheduled or deleted.
 - **Simple deletion:** confirmed deletion removes the task from Jig rather than creating another lifecycle state. Recovery of previously exported states is delegated to Git history instead of an application trash, soft-delete or undo subsystem.
 - **Portable ownership:** a user-selected Git repository contains Jig's local database and Git-tracked logical task records in an isolated Jig area; the software's source repository contains no personal task data.
-- **Authority boundaries:** Jig owns planning information, local durability, deterministic portable Jig records and the intent/outcome of automatic synchronization. External systems remain authoritative for their own mechanics. In particular, Git owns repository acquisition, topology, branches/refs/worktrees, signing and identity policy, credentials, history, merge/rebase/conflict handling and reconciliation. Jig may invoke the minimum Git operations required to synchronize Jig-owned records, but must not turn those mechanics into Jig domain, configuration, migration or user workflow.
+- **Authority boundaries:** Jig owns planning information, local durability, deterministic portable Jig records and the intent/outcome of automatic synchronization. External systems remain authoritative for their own mechanics. In particular, Git owns repository acquisition, topology, branches/refs/worktrees, signing and identity policy, credentials, history, merge/rebase and repository-history reconciliation. Jig may invoke the minimum Git operations required to synchronize Jig-owned records and must automatically consume ordinary supported-client fast-forward advances, but must not turn Git reconciliation mechanics into Jig domain, configuration, migration or user workflow. If both sides have independently advanced and cannot be represented by one fast-forward, Jig preserves local planning data and remote history and reports synchronization attention rather than inventing a data merge or last-writer-wins policy.
 - **Git-native continuity:** The repository selected at installation is Jig's data home. The installer may identify it by an existing local path or by a repository URL plus checkout destination; URL mode delegates acquisition to Git and then uses the same installation path. If that repository already contains valid Jig portable data, Jig adopts it and continues. Jig does not implement an application-level repository-migration subsystem.
 - **Low-friction lifecycle:** one installer configures the repository, local executable and Linux user service; saves and normal Git synchronization are automatic rather than a repeated user chore.
 - **Non-invasive coexistence:** Jig does not stage, commit, overwrite, merge or publish unrelated content in the selected repository.

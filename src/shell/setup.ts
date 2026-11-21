@@ -18,11 +18,13 @@ import {
 } from "./git";
 import {
   adoptCanonicalSnapshot,
-  initializeDatabase,
-  openDatabase,
   readCanonicalState,
   readMetadata,
-} from "./sqlite";
+} from "../persistence/sqlite";
+import {
+  initializeDatabase,
+  openDatabase,
+} from "./sqlite-bun";
 import {
   writeConfigAtomic,
   type JigConfig,
@@ -65,7 +67,7 @@ async function git(
   return result.stdout;
 }
 
-function normalizedGitHubRepository(value: string): string | null {
+export function normalizedGitHubRepository(value: string): string | null {
   const trimmed = value.trim().replace(/\.git$/, "");
   const patterns = [
     /^https?:\/\/github\.com\/([^/]+\/[^/]+)$/i,
@@ -193,9 +195,9 @@ export async function initializeRepositoryInstallation(options: {
 
   let datasetId: string;
   if (databaseExists) {
-    const existing = openDatabase(sqlitePath);
+    const existing = await openDatabase(sqlitePath);
     try {
-      datasetId = readMetadata(existing).dataset_id;
+      datasetId = (await readMetadata(existing)).dataset_id;
       if (
         candidate !== null &&
         candidate.snapshot.dataset_id !== datasetId
@@ -206,11 +208,15 @@ export async function initializeRepositoryInstallation(options: {
       }
 
       if (candidate !== null) {
-        const state = readCanonicalState(existing);
-        const expected = serializeSnapshot(state.tasks, datasetId);
+        const state = await readCanonicalState(existing);
+        const expected = serializeSnapshot(
+          state.tasks,
+          datasetId,
+          state.recurrences,
+        );
         if (
           !snapshotsEqual(expected.files, candidate.snapshot.files) &&
-          !readMetadata(existing).pending_sync
+          !(await readMetadata(existing)).pending_sync
         ) {
           throw new InstallationError(
             "Existing local planning data differs from the repository snapshot without a pending local export; refusing implicit replacement",
@@ -218,7 +224,7 @@ export async function initializeRepositoryInstallation(options: {
         }
       }
     } finally {
-      existing.close();
+      await existing.close();
     }
   } else {
     datasetId = candidate?.snapshot.dataset_id ?? crypto.randomUUID();
@@ -233,20 +239,25 @@ export async function initializeRepositoryInstallation(options: {
     throw error;
   }
 
-  const db = initializeDatabase(sqlitePath, datasetId);
+  const db = await initializeDatabase(sqlitePath, datasetId);
   let adoptedExistingSnapshot = false;
   try {
     if (!databaseExists && candidate !== null) {
-      adoptCanonicalSnapshot(
+      await adoptCanonicalSnapshot(
         db,
         candidate.snapshot.tasks,
+        candidate.snapshot.recurrences,
         candidate.head,
       );
       adoptedExistingSnapshot = true;
     }
 
-    const state = readCanonicalState(db);
-    const snapshot = serializeSnapshot(state.tasks, datasetId);
+    const state = await readCanonicalState(db);
+    const snapshot = serializeSnapshot(
+      state.tasks,
+      datasetId,
+      state.recurrences,
+    );
     await writePortableSnapshot(
       adapter,
       snapshot,
@@ -267,7 +278,7 @@ export async function initializeRepositoryInstallation(options: {
       adopted_existing_snapshot: adoptedExistingSnapshot,
     };
   } finally {
-    db.close();
+    await db.close();
   }
   } finally {
     await writerLease.release();

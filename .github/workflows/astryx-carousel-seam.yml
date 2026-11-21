@@ -1,0 +1,220 @@
+name: Prepare Astryx Carousel public paging seam
+
+on:
+  push:
+    branches: [v1.1]
+    paths:
+      - .github/workflows/astryx-carousel-seam.yml
+      - scripts/astryx-carousel-seam.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: astryx-carousel-seam-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch-test-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      ASTRYX_BASE_SHA: 51d94100f703b70b46578b6ad6a5778831cc8f96
+    steps:
+      - name: Checkout Jig harness
+        uses: actions/checkout@v4
+        with:
+          path: jig
+          persist-credentials: false
+
+      - name: Compile Astryx patch harness
+        run: python3 -m py_compile jig/scripts/astryx-carousel-seam.py
+
+      - name: Checkout exact Astryx authority
+        uses: actions/checkout@v4
+        with:
+          repository: meta/astryx
+          ref: ${{ env.ASTRYX_BASE_SHA }}
+          path: astryx
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Prove exact Astryx base
+        working-directory: astryx
+        run: test "$(git rev-parse HEAD)" = "$ASTRYX_BASE_SHA"
+
+      - name: Apply IMP-23 public paging seam
+        run: python3 jig/scripts/astryx-carousel-seam.py astryx
+
+      - name: Reject whitespace and accidental unrelated edits
+        working-directory: astryx
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git diff --name-only)"
+          printf '%s\\n' "$changed"
+          while IFS= read -r path; do
+            case "$path" in
+              packages/core/src/Carousel/Carousel.tsx|packages/core/src/Carousel/index.ts|packages/core/src/Carousel/Carousel.doc.mjs|packages/core/src/Carousel/Carousel.test.tsx|packages/core/src/SnapPaging/SnapPaging.ts|packages/core/src/SnapPaging/snapPagingValue.ts|packages/core/src/SnapPaging/useSnapPaging.doc.mjs|packages/core/src/SnapPaging/SnapPaging.test.tsx|docs/specs/components/Carousel/Carousel.spec.md|.changeset/carousel-settled-reposition.md) ;;
+              *) echo "::error::Unexpected Astryx patch path: $path"; exit 1 ;;
+            esac
+          done <<< "$changed"
+
+      - name: Set up Astryx pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          version: 11.10.0
+
+      - name: Set up Astryx Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: astryx/.nvmrc
+          package-manager-cache: false
+
+      - name: Install exact Astryx dependency graph
+        working-directory: astryx
+        run: pnpm install --frozen-lockfile
+
+      - name: Targeted Carousel and SnapPaging unit tests
+        working-directory: astryx
+        run: pnpm vitest run packages/core/src/Carousel/Carousel.test.tsx packages/core/src/SnapPaging/SnapPaging.test.tsx --project ui
+
+      - name: Astryx core typecheck
+        working-directory: astryx
+        run: pnpm -F @astryxdesign/core typecheck
+
+      - name: Astryx core build
+        working-directory: astryx
+        run: pnpm -F @astryxdesign/core build
+
+      - name: Changeset knowledge/spec and package-boundary checks
+        working-directory: astryx
+        run: |
+          pnpm check:changesets
+          pnpm check:knowledge
+          pnpm check:package-boundaries
+
+      - name: Create tested four-part patch artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C astryx add packages/core/src/Carousel packages/core/src/SnapPaging docs/specs/components/Carousel/Carousel.spec.md .changeset/carousel-settled-reposition.md
+          git -C astryx diff --binary --cached "$ASTRYX_BASE_SHA" > astryx-carousel-lifecycle.patch
+          test -s astryx-carousel-lifecycle.patch
+          sha256sum astryx-carousel-lifecycle.patch > astryx-carousel-lifecycle.patch.sha256
+
+      - name: Retain tested Astryx patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: astryx-carousel-lifecycle-${{ env.ASTRYX_BASE_SHA }}
+          path: |
+            astryx-carousel-lifecycle.patch
+            astryx-carousel-lifecycle.patch.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Record validated Astryx patch
+        shell: bash
+        run: |
+          echo "Validated four-part Astryx patch retained for exact base $ASTRYX_BASE_SHA."
+          echo "Publication runs as a separate job and requires an upstream-capable Actions secret."
+
+  publish-upstream:
+    needs: patch-test-publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ASTRYX_BASE_SHA: 51d94100f703b70b46578b6ad6a5778831cc8f96
+    steps:
+      - name: Checkout exact Astryx authority
+        uses: actions/checkout@v4
+        with:
+          repository: meta/astryx
+          ref: ${{ env.ASTRYX_BASE_SHA }}
+          path: astryx
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Download validated Astryx patch
+        uses: actions/download-artifact@v4
+        with:
+          name: astryx-carousel-lifecycle-${{ env.ASTRYX_BASE_SHA }}
+
+      - name: Verify and apply validated patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c astryx-carousel-lifecycle.patch.sha256
+          git -C astryx apply --index ../astryx-carousel-lifecycle.patch
+          git -C astryx diff --cached --check
+
+      - name: Commit exact validated Astryx candidate
+        working-directory: astryx
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(Carousel): expose bounded paging lifecycle and suspension"
+          echo "ASTRYX_CANDIDATE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Require upstream-capable Actions credential
+        env:
+          ASTRYX_WRITE_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN || secrets.META_ASTRYX_TOKEN || secrets.GH_PAT || secrets.PAT || secrets.GITHUB_PAT || secrets.CROSS_REPO_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "$ASTRYX_WRITE_TOKEN" ]]; then
+            echo "::error::No upstream-capable Actions credential is configured. Add ASTRYX_WRITE_TOKEN (or one of the supported cross-repo aliases) with branch/PR write access to meta/astryx."
+            exit 2
+          fi
+
+      - name: Publish validated Astryx branch
+        id: publish
+        working-directory: astryx
+        env:
+          ASTRYX_WRITE_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN || secrets.META_ASTRYX_TOKEN || secrets.GH_PAT || secrets.PAT || secrets.GITHUB_PAT || secrets.CROSS_REPO_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="jig-imp-23-carousel-public-seam-${GITHUB_RUN_ID}"
+          git branch -f "$branch" HEAD
+          git remote set-url origin "https://x-access-token:${ASTRYX_WRITE_TOKEN}@github.com/meta/astryx.git"
+          git push origin "refs/heads/$branch:refs/heads/$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Open Astryx pull request
+        id: pr
+        working-directory: astryx
+        env:
+          GH_TOKEN: ${{ secrets.ASTRYX_WRITE_TOKEN || secrets.META_ASTRYX_TOKEN || secrets.GH_PAT || secrets.PAT || secrets.GITHUB_PAT || secrets.CROSS_REPO_TOKEN }}
+          UPSTREAM_BRANCH: ${{ steps.publish.outputs.branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(gh pr create \
+            --repo meta/astryx \
+            --base main \
+            --head "$UPSTREAM_BRANCH" \
+            --title "feat(Carousel): expose bounded paging lifecycle and suspension" \
+            --body "Expose the complete four-part bounded paging seam required by Jig v1.1: SnapPaging final-rest notification, CarouselHandle.scrollTo(index, {animated:false}), public one-view Carousel item sizing, and public scrollingBehavior='suspended' so external Task drag can suspend Carousel-owned horizontal touch/pen/trackpad/wheel travel without consumer scroll interception. The exact candidate was validated by Jig IMP-23 Actions with focused Carousel/SnapPaging tests, strict source/test/docs typecheck, Core build, changeset validation, knowledge/spec validation, package-boundary checks, and 63/63 real-browser consumer acceptance tests.")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Opened $url"
+
+      - name: Record publication result in Jig blocker
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLICATION_OUTCOME: ${{ steps.publish.outcome }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$PUBLICATION_OUTCOME" == "success" ]]; then
+            body="Actions published Astryx candidate `$ASTRYX_CANDIDATE_SHA`. Upstream PR: $PR_URL"
+          else
+            body="Actions validated and reconstructed Astryx candidate `$ASTRYX_CANDIDATE_SHA`, but upstream publication did not complete. Configure repository/org Actions secret `ASTRYX_WRITE_TOKEN` with branch/PR write access to `meta/astryx`, then rerun **Prepare Astryx Carousel lifecycle seam** via workflow_dispatch."
+          fi
+          gh issue comment 45 --repo pontivus-com/jig --body "$body"

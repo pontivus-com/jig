@@ -10,6 +10,5 @@ export const solarizedTheme = defineTheme({
   tokens: communityColorTokens(solarizedPalette),
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

@@ -1,0 +1,99 @@
+import groovy.json.JsonSlurper
+
+apply plugin: 'com.android.application'
+
+def jigPackageJson = new JsonSlurper().parse(rootProject.file('../package.json'))
+if (!(jigPackageJson.version instanceof String)) {
+    throw new GradleException('Root package.json must contain a string version')
+}
+def jigVersionName = jigPackageJson.version
+if (!(jigVersionName ==~ /^\d+\.\d+\.\d+$/)) {
+    throw new GradleException(
+        "Android versioning requires numeric major.minor.patch; found ${jigVersionName}"
+    )
+}
+def jigVersionParts = jigVersionName.tokenize('.').collect { it.toInteger() }
+if (jigVersionParts.any { it < 0 || it > 999 }) {
+    throw new GradleException(
+        "Android version components must be in 0..999; found ${jigVersionName}"
+    )
+}
+def jigVersionCode =
+    jigVersionParts[0] * 1_000_000 +
+    jigVersionParts[1] * 1_000 +
+    jigVersionParts[2]
+
+android {
+    namespace = "com.pontivus.jig"
+    compileSdk = rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        applicationId "com.pontivus.jig"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode jigVersionCode
+        versionName jigVersionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        aaptOptions {
+            ignoreAssetsPattern =
+                '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles(
+                getDefaultProguardFile('proguard-android.txt'),
+                'proguard-rules.pro',
+            )
+        }
+    }
+}
+
+repositories {
+    flatDir {
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.core:core:$androidxCoreVersion"
+    implementation(
+        "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    )
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "androidx.sqlite:sqlite-bundled:$androidxSqliteVersion"
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-cordova-android-plugins')
+
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation(
+        "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    )
+}
+
+apply from: 'capacitor.build.gradle'
+
+tasks.register("verifyJigVersion") {
+    doLast {
+        if (android.defaultConfig.versionName != jigVersionName) {
+            throw new GradleException(
+                "Android versionName is not root package version"
+            )
+        }
+        if (android.defaultConfig.versionCode != jigVersionCode) {
+            throw new GradleException(
+                "Android versionCode derivation is inconsistent"
+            )
+        }
+        println(
+            "JIG_ANDROID_VERSION=${jigVersionName} " +
+            "JIG_ANDROID_VERSION_CODE=${jigVersionCode}"
+        )
+    }
+}

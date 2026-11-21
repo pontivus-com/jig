@@ -129,6 +129,131 @@ jobs:
         if: steps.detect.outputs.should_release == 'true'
         run: bun scripts/verify-release.ts --mode release-commit --base "${{ steps.detect.outputs.parent_sha }}"
 
+  android-certification:
+    needs: prepare
+    if: needs.prepare.outputs.should_release == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TARGET_SHA: ${{ needs.prepare.outputs.target_sha }}
+    steps:
+      - name: Checkout exact release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --force origin "+refs/heads/master:refs/remotes/origin/master"
+          [[ "${TARGET_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          git checkout --detach "${TARGET_SHA}"
+          test "$(git rev-parse HEAD)" = "${TARGET_SHA}"
+          git merge-base --is-ancestor "${TARGET_SHA}" refs/remotes/origin/master
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.5"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install frozen dependency graph
+        run: bun install --frozen-lockfile
+
+      - name: Set up Android JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Ensure Android SDK 36
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Verify governed Android source/device contract
+        run: bash scripts/verify-android-device-prerequisites.sh --source-only
+
+      - name: Synchronize governed Android project
+        run: bun run android:sync
+
+      - name: Verify Gradle dependency locks are current
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd android
+            ./gradlew :app:dependencies --write-locks >/tmp/jig-gradle-dependencies.txt
+          )
+          if git status --porcelain -- android | grep -q 'gradle.lockfile'; then
+            echo "::error::Gradle dependency locks are missing or stale."
+            find android -name gradle.lockfile -type f -print -exec cat {} \;
+            exit 1
+          fi
+
+      - name: Android unit, static and dependency checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew :app:testDebugUnitTest :app:lintDebug
+          cd ..
+          bash scripts/verify-android-dependencies.sh
+
+      - name: Prove Android release identity and version
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          IFS=. read -r major minor patch <<<"${RELEASE_VERSION}"
+          expected_code=$((major * 1000000 + minor * 1000 + patch))
+          output="$(bun run android:version:check)"
+          printf '%s\n' "$output"
+          grep -Fq "JIG_ANDROID_VERSION=${RELEASE_VERSION} JIG_ANDROID_VERSION_CODE=${expected_code}" <<<"$output"
+          grep -Fq 'applicationId "com.pontivus.jig"' android/app/build.gradle
+          metadata="distribution/fdroid/metadata/com.pontivus.jig.yml"
+          grep -Eq '^[[:space:]]+versionName:[[:space:]]+1\.1\.0$' "$metadata"
+          grep -Eq '^[[:space:]]+versionCode:[[:space:]]+1001000$' "$metadata"
+          grep -Eq '^[[:space:]]+commit:[[:space:]]+v1\.1\.0$' "$metadata"
+          grep -Eq '^CurrentVersion:[[:space:]]+1\.1\.0$' "$metadata"
+          grep -Eq '^CurrentVersionCode:[[:space:]]+1001000$' "$metadata"
+
+      - name: Build Android release-source candidate
+        run: cd android && ./gradlew :app:assembleRelease
+
+      - name: Lint candidate F-Droid metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "${RUNNER_TEMP}/fdroid-venv"
+          "${RUNNER_TEMP}/fdroid-venv/bin/pip" install "fdroidserver==2.4.5"
+          mkdir -p "${RUNNER_TEMP}/fdroid-data/config" "${RUNNER_TEMP}/fdroid-data/metadata"
+          categories_catalog="${RUNNER_TEMP}/fdroid-data/categories-authority.yml"
+          curl -fsSLo "${categories_catalog}" "https://raw.githubusercontent.com/f-droid/fdroiddata/6e52e1ad56721f12c49f48d936e9da05ef740d91/config/categories.yml"
+          "${RUNNER_TEMP}/fdroid-venv/bin/python" - "${categories_catalog}" "${RUNNER_TEMP}/fdroid-data/config/categories.yml" <<'PY'
+          import sys
+          from pathlib import Path
+          import yaml
+
+          source = Path(sys.argv[1])
+          target = Path(sys.argv[2])
+          categories = yaml.safe_load(source.read_text())
+          if not isinstance(categories, dict) or "Task" not in categories:
+              raise SystemExit("Pinned F-Droid category authority has no Task category")
+          target.write_text(yaml.safe_dump({"Task": categories["Task"]}, sort_keys=False))
+          PY
+          grep -Fq "Task:" "${RUNNER_TEMP}/fdroid-data/config/categories.yml"
+          cp distribution/fdroid/metadata/com.pontivus.jig.yml "${RUNNER_TEMP}/fdroid-data/metadata/"
+          (
+            cd "${RUNNER_TEMP}/fdroid-data"
+            "${RUNNER_TEMP}/fdroid-venv/bin/fdroid" lint com.pontivus.jig
+          )
+
   arm64-certification:
     needs: prepare
     if: needs.prepare.outputs.should_release == 'true'
@@ -170,7 +295,7 @@ jobs:
           bun run typecheck
           bun run test
           bun run build
-          bash -n scripts/install.sh scripts/jig scripts/install-release.sh
+          bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/release-bundle-smoke.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh
           bash tests/install/installer-smoke.sh
 
       - name: Package and smoke certified arm64 bundle
@@ -184,29 +309,13 @@ jobs:
 
           smoke="${RUNNER_TEMP}/jig-arm64-release-smoke"
           rm -rf "${smoke}"
-          mkdir -p "${smoke}/home" "${smoke}/repo" "${smoke}/bin"
-
-          cat > "${smoke}/bin/systemctl" <<'EOF'
-          #!/usr/bin/env bash
-          exit 1
-          EOF
-          chmod 0755 "${smoke}/bin/systemctl"
-
-          git -C "${smoke}/repo" init -q
-          git -C "${smoke}/repo" config user.name "Jig Release"
-          git -C "${smoke}/repo" config user.email "release@example.invalid"
+          mkdir -p "${smoke}"
           tar -xzf "${output}/jig-linux-arm64.tar.gz" -C "${smoke}"
-
-          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home" \
-            "${smoke}/jig/scripts/install.sh" \
-            --repo "${smoke}/repo" --port 47931
-          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home" \
-            "${smoke}/home/.local/bin/jig" status
-          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home" \
-            "${smoke}/home/.local/bin/jig" uninstall
+          bash tests/install/release-bundle-smoke.sh \
+            "${smoke}/jig" "${smoke}/matrix" 47931
 
   release:
-    needs: [prepare, arm64-certification]
+    needs: [prepare, arm64-certification, android-certification]
     if: needs.prepare.outputs.should_release == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -265,7 +374,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n scripts/install.sh scripts/jig scripts/install-release.sh
+          bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/release-bundle-smoke.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh
           bash tests/install/installer-smoke.sh
 
       - name: Build release assets
@@ -287,26 +396,10 @@ jobs:
           set -euo pipefail
           smoke="${RUNNER_TEMP}/jig-release-smoke"
           rm -rf "${smoke}"
-          mkdir -p "${smoke}/home" "${smoke}/repo" "${smoke}/bin"
-
-          # The smoke test owns an isolated HOME. Do not allow the hosted
-          # runner's already-running user systemd manager (bound to the real
-          # runner home) to leak into that environment. Exercise Jig's
-          # documented foreground fallback exactly like installer-smoke.sh.
-          cat > "${smoke}/bin/systemctl" <<'EOF'
-          #!/usr/bin/env bash
-          exit 1
-          EOF
-          chmod 0755 "${smoke}/bin/systemctl"
-
-          git -C "${smoke}/repo" init -q
-          git -C "${smoke}/repo" config user.name "Jig Release"
-          git -C "${smoke}/repo" config user.email "release@example.invalid"
+          mkdir -p "${smoke}"
           tar -xzf release/jig-linux-x64.tar.gz -C "${smoke}"
-
-          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home"             "${smoke}/jig/scripts/install.sh"             --repo "${smoke}/repo" --port 47931
-          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home"             "${smoke}/home/.local/bin/jig" status
-          PATH="${smoke}/bin:${PATH}" HOME="${smoke}/home"             "${smoke}/home/.local/bin/jig" uninstall
+          bash tests/install/release-bundle-smoke.sh \
+            "${smoke}/jig" "${smoke}/matrix" 47931
 
       - name: Create or verify annotated tag
         shell: bash

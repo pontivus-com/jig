@@ -6,7 +6,7 @@ import {
   initializeRepositoryInstallation,
   validateSelectedRepository,
 } from "../../src/shell/setup";
-import { runGit } from "../../src/shell/git";
+import { repositorySynchronizationMode, runGit } from "../../src/shell/git";
 
 const roots: string[] = [];
 
@@ -64,6 +64,61 @@ describe("V1-21 repository installation", () => {
       repository_path: repo,
       http_port: 47831,
     });
+  });
+
+  it("accepts a repository without a remote as healthy local-only setup", async () => {
+    const repo = await repository();
+    const configPath = join(repo, "local-only-config.json");
+
+    await expect(
+      initializeRepositoryInstallation({
+        repository_path: repo,
+        http_port: 47831,
+        config_path: configPath,
+      }),
+    ).resolves.toMatchObject({
+      config: {
+        repository_path: repo,
+        http_port: 47831,
+      },
+    });
+
+    await expect(
+      repositorySynchronizationMode({ repository_path: repo }),
+    ).resolves.toBe("local-only");
+    expect(await git(repo, ["remote"])).toBe("");
+  });
+
+  it("keeps setup valid when an existing remote is unavailable", async () => {
+    const repo = await repository();
+    const configPath = join(repo, "unavailable-remote-config.json");
+    const remoteUrl = "https://127.0.0.1:1/example/planning.git";
+    await git(repo, ["remote", "add", "origin", remoteUrl]);
+
+    const installed = await initializeRepositoryInstallation({
+      repository_path: repo,
+      http_port: 47831,
+      config_path: configPath,
+    });
+
+    expect(installed.config.repository_path).toBe(repo);
+    expect(await git(repo, ["remote", "get-url", "origin"])).toBe(remoteUrl);
+    await expect(
+      repositorySynchronizationMode({ repository_path: repo }),
+    ).resolves.toBe("remote");
+  });
+
+  it("validates non-GitHub SSH remotes without rewriting provider topology", async () => {
+    const repo = await repository();
+    const remoteUrl = "git@gitlab.com:example/planning.git";
+    await git(repo, ["remote", "add", "origin", remoteUrl]);
+    await git(repo, ["config", "remote.pushDefault", "origin"]);
+
+    await expect(validateSelectedRepository(repo)).resolves.toBe(repo);
+    expect(await git(repo, ["remote", "get-url", "origin"])).toBe(remoteUrl);
+    expect(await git(repo, ["config", "--get", "remote.pushDefault"])).toBe(
+      "origin",
+    );
   });
 
   it("refuses the public Jig source checkout as a planning-data target", async () => {

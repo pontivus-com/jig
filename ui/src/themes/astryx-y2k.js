@@ -245,12 +245,14 @@ export const astryxY2kTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
+    "--jig-chrome-surface": "var(--color-background-body)",
+    "--jig-planner-surface": "color-mix(in srgb, var(--color-background-surface) 88%, var(--color-background-muted) 12%)",
+    "--jig-task-surface": "color-mix(in srgb, var(--color-background-card) 50%, var(--color-background-body) 50%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)",
-    "--jig-task-surface": "var(--color-background-surface)"
+    "--jig-brand-accent": "var(--color-icon-accent)"
   },
   __localTokenOwners: {
     "--jig-state-today-border": "astryx-y2k",
@@ -267,12 +269,14 @@ export const astryxY2kTheme = {
     "--jig-status-healthy-bg": "astryx-y2k",
     "--jig-status-healthy-border": "astryx-y2k",
     "--jig-status-healthy-text": "astryx-y2k",
+    "--jig-chrome-surface": "astryx-y2k",
+    "--jig-planner-surface": "astryx-y2k",
+    "--jig-task-surface": "astryx-y2k",
     "--jig-state-hover-bg": "astryx-y2k",
     "--jig-state-pressed-bg": "astryx-y2k",
     "--jig-task-border": "astryx-y2k",
     "--jig-brand-primary": "astryx-y2k",
-    "--jig-brand-accent": "astryx-y2k",
-    "--jig-task-surface": "astryx-y2k"
+    "--jig-brand-accent": "astryx-y2k"
   },
   __localTokenLineage: ["astryx-y2k"],
   components: {

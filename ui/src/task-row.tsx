@@ -7,20 +7,25 @@ import {
   ListItem,
 } from "@astryxdesign/core";
 import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
-import {
-  PointerActivationConstraints,
-  PointerSensor,
-} from "@dnd-kit/dom";
-import { useSortable } from "@dnd-kit/react/sortable";
-import type { Ref } from "react";
+import { useRef, type Ref } from "react";
+import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { formatReminderTime } from "./dates";
 import { JigIcon } from "./jig-icons";
+import { useReminderLifecycle } from "./reminder";
+import { recurrenceSummary } from "./task-editor";
 
-export interface TaskRowProps {
+interface TaskRowBaseProps {
   readonly task: Task;
+  readonly recurrenceSeries?: RecurrenceSeries | null;
+  readonly now: Date;
+}
+
+export interface TaskRowProps extends TaskRowBaseProps {
   readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
+  readonly isDragging?: boolean | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -39,23 +44,19 @@ function isSafeWebReference(value: string): boolean {
   }
 }
 
-const DRAG_EXCLUDED_SELECTOR = '[data-jig-drag-excluded="true"]';
-
 function stopPointer(event: React.PointerEvent): void {
   event.stopPropagation();
 }
 
-function preventTaskDragActivation(event: PointerEvent): boolean {
-  const { target } = event;
-  return (
-    target instanceof Element &&
-    target.closest(DRAG_EXCLUDED_SELECTOR) !== null
-  );
-}
-
 function TaskMetadata({
   task,
-}: Readonly<{ task: Task }>): React.ReactElement {
+  recurrenceSeries = null,
+  isInteractive = true,
+}: Readonly<{
+  task: Task;
+  recurrenceSeries?: RecurrenceSeries | null;
+  isInteractive?: boolean;
+}>): React.ReactElement {
   return (
     <div className="jig-task-meta">
       {task.context === null ? null : (
@@ -65,6 +66,20 @@ function TaskMetadata({
         <span className="jig-task-meta-item jig-reminder-time">
           <Icon icon="clock" size="xsm" color="secondary" />
           {formatReminderTime(task.reminder_time)}
+        </span>
+      )}
+      {task.recurrence_series_id === null ? null : (
+        <span
+          className="jig-task-meta-item jig-repeat-indicator"
+          aria-label={
+            recurrenceSeries === null
+              ? "Recurring task"
+              : `Recurring task: ${recurrenceSummary(recurrenceSeries)}`
+          }
+        >
+          {recurrenceSeries === null
+            ? "Repeats"
+            : recurrenceSummary(recurrenceSeries)}
         </span>
       )}
       {task.priority === "NORMAL" ? null : (
@@ -81,13 +96,17 @@ function TaskMetadata({
       {task.reference === null ? null : isSafeWebReference(task.reference) ? (
         <Link
           data-jig-drag-excluded="true"
-          className="jig-task-meta-item"
+          className="jig-task-reference-action jig-task-meta-item"
           href={task.reference}
           target="_blank"
           type="inherit"
           hasUnderline
-          onPointerDown={stopPointer}
-          onClick={(event) => event.stopPropagation()}
+          {...(isInteractive
+            ? {
+                onPointerDown: stopPointer,
+                onClick: (event: React.MouseEvent) => event.stopPropagation(),
+              }
+            : {})}
         >
           <span className="jig-reference-link-content">
             <Icon icon="externalLink" size="xsm" color="inherit" />
@@ -99,14 +118,17 @@ function TaskMetadata({
           data-jig-drag-excluded="true"
           label="Copy reference"
           variant="ghost"
-          size="sm"
           icon={<Icon icon="copy" size="xsm" color="inherit" />}
-          className="jig-copy-reference jig-task-meta-item"
-          onPointerDown={stopPointer}
-          onClick={(event) => {
-            event.stopPropagation();
-            void navigator.clipboard.writeText(task.reference ?? "");
-          }}
+          className="jig-task-reference-action jig-copy-reference jig-task-meta-item"
+          {...(isInteractive
+            ? {
+                onPointerDown: stopPointer,
+                onClick: (event: React.MouseEvent) => {
+                  event.stopPropagation();
+                  void navigator.clipboard.writeText(task.reference ?? "");
+                },
+              }
+            : {})}
         >
           Reference
         </Button>
@@ -115,9 +137,55 @@ function TaskMetadata({
   );
 }
 
+interface TaskCompletionControlProps {
+  readonly task: Task;
+  readonly completed: boolean;
+  readonly onToggleComplete: () => void;
+}
+
+function TaskCompletionControl({
+  task,
+  completed,
+  onToggleComplete,
+}: TaskCompletionControlProps): React.ReactElement {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <span
+      className="jig-task-completion-target"
+      data-jig-drag-excluded="true"
+      onClick={(event: React.MouseEvent<HTMLSpanElement>) => {
+        // Astryx CheckboxInput intentionally keeps a label-hidden checkbox as
+        // a 24px marker and exposes no public control-class hook. The Task row
+        // cannot own that checkbox's hit area because the independent drag
+        // grip shares the same leading region. This wrapper is therefore the
+        // smallest Jig-owned semantic fallback: it retains Astryx's checkbox
+        // and native input semantics while forwarding only otherwise-empty
+        // 48px target space through the component's public input ref.
+        if (event.target === event.currentTarget) {
+          inputRef.current?.click();
+        }
+        event.stopPropagation();
+      }}
+    >
+      <CheckboxInput
+        ref={inputRef}
+        label={
+          completed
+            ? `Reopen ${task.title}`
+            : `Complete ${task.title}`
+        }
+        isLabelHidden
+        value={completed}
+        onChange={onToggleComplete}
+      />
+    </span>
+  );
+}
+
 function priorityMenuItems(
   task: Task,
-  onSetPriority: (priority: Priority) => void,
+  onSetPriority?: ((priority: Priority) => void) | undefined,
 ): DropdownMenuItemData[] {
   return ([
     ["HIGH", "High"],
@@ -132,16 +200,18 @@ function priorityMenuItems(
           <Icon icon="check" size="xsm" color="inherit" />
         </span>
       ) : undefined,
-    onClick: () => onSetPriority(priority),
+    ...(onSetPriority === undefined
+      ? {}
+      : { onClick: () => onSetPriority(priority) }),
   }));
 }
 
 export interface TaskActionMenuProps {
   readonly task: Task;
-  readonly onEdit: () => void;
-  readonly onToggleComplete: () => void;
-  readonly onSetPriority: (priority: Priority) => void;
-  readonly onDelete: () => void;
+  readonly onEdit?: (() => void) | undefined;
+  readonly onToggleComplete?: (() => void) | undefined;
+  readonly onSetPriority?: ((priority: Priority) => void) | undefined;
+  readonly onDelete?: (() => void) | undefined;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
 }
@@ -160,13 +230,15 @@ function taskActionMenuItems({
       id: "edit",
       label: "Open / edit",
       icon: <JigIcon name="edit" color="inherit" />,
-      onClick: onEdit,
+      ...(onEdit === undefined ? {} : { onClick: onEdit }),
     },
     {
       id: task.completed_at === null ? "complete" : "reopen",
       label: task.completed_at === null ? "Complete" : "Reopen",
       icon: <Icon icon="check" size="sm" color="inherit" />,
-      onClick: onToggleComplete,
+      ...(onToggleComplete === undefined
+        ? {}
+        : { onClick: onToggleComplete }),
     },
     ...priorityMenuItems(task, onSetPriority),
     ...(onMoveUp === undefined
@@ -193,7 +265,7 @@ function taskActionMenuItems({
       id: "delete",
       label: "Delete…",
       icon: <JigIcon name="delete" color="inherit" />,
-      onClick: onDelete,
+      ...(onDelete === undefined ? {} : { onClick: onDelete }),
     },
   ];
 }
@@ -217,7 +289,6 @@ export function TaskActionMenu(
           icon: <Icon icon="moreHorizontal" color="inherit" />,
           isIconOnly: true,
           variant: "ghost",
-          size: "sm",
           className: "jig-task-menu-trigger",
         }}
         items={items}
@@ -228,7 +299,7 @@ export function TaskActionMenu(
   );
 }
 
-export function TaskCardPreview({
+export function TaskDragOverlayCard({
   task,
 }: Readonly<{ task: Task }>): React.ReactElement {
   return (
@@ -236,56 +307,81 @@ export function TaskCardPreview({
       className={`jig-task-card jig-task-priority-${task.priority.toLowerCase()} jig-drag-card-overlay`}
       aria-hidden="true"
     >
-      <div className="jig-task-card-preview-row">
-        <span className="jig-task-card-preview-checkbox">□</span>
+      <div className="jig-task-drag-overlay-row">
+        <span className="jig-task-drag-overlay-checkbox">□</span>
         <span className="jig-task-title">{task.title}</span>
         <Icon icon="moreHorizontal" color="secondary" />
       </div>
-      <TaskMetadata task={task} />
+      <TaskMetadata task={task} isInteractive={false} />
     </div>
   );
 }
 
-export function TaskRow({
-  task,
-  isSelected = false,
-  rowRef,
-  onSelect,
-  onToggleComplete,
-  onEdit,
-  onSetPriority,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-}: TaskRowProps): React.ReactElement {
-  const completed = task.completed_at !== null;
+interface TaskCardPresentationProps {
+  readonly task: Task;
+  readonly recurrenceSeries: RecurrenceSeries | null;
+  readonly now: Date;
+  readonly showDragHandle: boolean;
+  readonly isSelected: boolean;
+  readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
+  readonly isDragging: boolean;
+  readonly onSelect?: (() => void) | undefined;
+  readonly onToggleComplete: () => void;
+  readonly onEdit: () => void;
+  readonly onSetPriority: (priority: Priority) => void;
+  readonly onDelete: () => void;
+  readonly onMoveUp?: (() => void) | undefined;
+  readonly onMoveDown?: (() => void) | undefined;
+}
+
+function TaskCardPresentation(
+  props: TaskCardPresentationProps,
+): React.ReactElement {
+  const completed = props.task.completed_at !== null;
+  const reminderLifecycle = useReminderLifecycle(props.task, props.now);
+  const reminderDue = reminderLifecycle === "due";
 
   return (
     <ListItem
-      {...(rowRef === undefined ? {} : { ref: rowRef })}
-      itemKey={task.id}
-      {...(onSelect === undefined ? {} : { onClick: onSelect })}
+      {...(props.rowRef === undefined ? {} : { ref: props.rowRef })}
+      itemKey={props.task.id}
+      {...(props.onSelect === undefined ? {} : { onClick: props.onSelect })}
       className={[
         "jig-task-card",
-        `jig-task-priority-${task.priority.toLowerCase()}`,
-        isSelected ? "jig-task-card-selected" : "",
+        `jig-task-priority-${props.task.priority.toLowerCase()}`,
+        props.isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
+        reminderDue ? "jig-task-card-reminder-due" : "",
+        props.isDragging ? "jig-task-card-dragging" : "",
       ]
         .filter(Boolean)
         .join(" ")}
-      isSelected={isSelected}
-      align="first-line"
+      isSelected={props.isSelected}
       startContent={
         <span
           className="jig-task-card-leading"
           data-jig-drag-excluded="true"
         >
-          <CheckboxInput
-            label={completed ? `Reopen ${task.title}` : `Complete ${task.title}`}
-            isLabelHidden
-            value={completed}
-            onChange={onToggleComplete}
-            size="sm"
+          {props.showDragHandle ? (
+            <span
+              {...(props.dragHandleRef === undefined
+                ? {}
+                : { ref: props.dragHandleRef })}
+              className="jig-task-drag-handle"
+              role="button"
+              tabIndex={0}
+              aria-label={`Move ${props.task.title}`}
+              onClick={(event: React.MouseEvent<HTMLSpanElement>) =>
+                event.stopPropagation()}
+            >
+              <JigIcon name="drag" color="inherit" size="sm" />
+            </span>
+          ) : null}
+          <TaskCompletionControl
+            task={props.task}
+            completed={completed}
+            onToggleComplete={props.onToggleComplete}
           />
         </span>
       }
@@ -299,70 +395,79 @@ export function TaskRow({
                   : "jig-task-title"
               }
             >
-              {task.title}
+              {props.task.title}
             </span>
           </div>
-          <TaskMetadata task={task} />
+          <TaskMetadata
+            task={props.task}
+            recurrenceSeries={props.recurrenceSeries}
+          />
+          {reminderLifecycle === "scheduled" ? (
+            <span
+              className="jig-reminder-due-indicator jig-reminder-scheduled-indicator"
+              aria-label="Reminder scheduled"
+            >
+              <Icon icon="clock" size="xsm" color="inherit" />
+              Reminder scheduled
+            </span>
+          ) : reminderLifecycle === "due" ? (
+            <span
+              className="jig-reminder-due-indicator"
+              aria-label="Reminder due; reminder time has passed"
+            >
+              <Icon icon="clock" size="xsm" color="inherit" />
+              Reminder due · time passed
+            </span>
+          ) : reminderLifecycle === "notified" ? (
+            <span
+              className="jig-reminder-due-indicator jig-reminder-notified-indicator"
+              aria-label="Reminder due; notification displayed"
+            >
+              <Icon icon="clock" size="xsm" color="inherit" />
+              Reminder notified
+            </span>
+          ) : null}
         </div>
       }
       endContent={
         <TaskActionMenu
-          task={task}
-          onEdit={onEdit}
-          onToggleComplete={onToggleComplete}
-          onSetPriority={onSetPriority}
-          onDelete={onDelete}
-          {...(onMoveUp === undefined ? {} : { onMoveUp })}
-          {...(onMoveDown === undefined ? {} : { onMoveDown })}
+          task={props.task}
+          onEdit={props.onEdit}
+          onToggleComplete={props.onToggleComplete}
+          onSetPriority={props.onSetPriority}
+          onDelete={props.onDelete}
+          {...(props.onMoveUp === undefined ? {} : { onMoveUp: props.onMoveUp })}
+          {...(props.onMoveDown === undefined
+            ? {}
+            : { onMoveDown: props.onMoveDown })}
         />
       }
     />
   );
 }
 
-export interface SortableTaskRowProps
-  extends Omit<TaskRowProps, "rowRef"> {
-  readonly index: number;
-  readonly group: string;
-}
-
-export function SortableTaskRow({
-  task,
-  index,
-  group,
-  ...rowProps
-}: SortableTaskRowProps): React.ReactElement {
-  const sortable = useSortable({
-    id: task.id,
-    index,
-    group,
-    type: "jig-task",
-    accept: "jig-task",
-    sensors: [
-      PointerSensor.configure({
-        preventActivation: preventTaskDragActivation,
-        activationConstraints(event) {
-          return event.pointerType === "touch"
-            ? [
-                new PointerActivationConstraints.Delay({
-                  value: 250,
-                  tolerance: 5,
-                }),
-              ]
-            : [new PointerActivationConstraints.Distance({ value: 5 })];
-        },
-      }),
-    ],
-  });
-
-  // The Astryx ListItem <li> is both dnd-kit's sortable geometry element and
-  // pointer source. Both public refs therefore receive the same root element.
-  // PointerSensor excludes genuine interactive descendants, while activation
-  // constraints preserve ordinary press/release for Task selection.
-  const rowRef = (element: HTMLLIElement | null): void => {
-    sortable.ref(element);
-    sortable.sourceRef(element);
-  };
-
-  return <TaskRow {...rowProps} task={task} rowRef={rowRef} />;
+export function TaskRow(props: TaskRowProps): React.ReactElement {
+  return (
+    <TaskCardPresentation
+      task={props.task}
+      recurrenceSeries={props.recurrenceSeries ?? null}
+      now={props.now}
+      isSelected={props.isSelected ?? false}
+      {...(props.rowRef === undefined ? {} : { rowRef: props.rowRef })}
+      {...(props.dragHandleRef === undefined
+        ? {}
+        : { dragHandleRef: props.dragHandleRef })}
+      isDragging={props.isDragging ?? false}
+      showDragHandle={props.dragHandleRef !== undefined}
+      {...(props.onSelect === undefined ? {} : { onSelect: props.onSelect })}
+      onToggleComplete={props.onToggleComplete}
+      onEdit={props.onEdit}
+      onSetPriority={props.onSetPriority}
+      onDelete={props.onDelete}
+      {...(props.onMoveUp === undefined ? {} : { onMoveUp: props.onMoveUp })}
+      {...(props.onMoveDown === undefined
+        ? {}
+        : { onMoveDown: props.onMoveDown })}
+    />
+  );
 }

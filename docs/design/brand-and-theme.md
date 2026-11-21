@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical v1.0.6 brand and application-theme contract v0.19, 2026-11-18. v1.0.5 remains the default Jig palette/identity baseline; v1.0.6 adds the curated multi-theme application catalogue, independent System/Light/Dark appearance, palette-independent Jig product-state semantics and theme-aware in-application wordmark paint.
+**Status:** Canonical brand and application-theme contract v0.23, amended 2026-11-21 after physical review exposed insufficient separation between application chrome, Planner canvas and Task cards while preserving the v1.1 Android icon derivation. v1.0.6 remains the published theme baseline; v1.1 preserves the same Jig identity and requires every app/launcher icon to derive from the one canonical standalone J-mark geometry rather than carrying a platform-specific redraw.
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, default Jig brand palette, multi-theme Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -295,7 +295,7 @@ Feature CSS must consume these aliases for the product states below and must not
 | `--jig-state-nav-active-bg` | Ink 100 `#EFF2F7` | Ink 800 `#253046` | active History/Settings destination |
 | `--jig-state-nav-active-text` | Ink 900 `#162034` | Ink 50 `#F9FAFD` | active History/Settings label/icon |
 | `--jig-state-drag-border` | Amber 700 `#B86C00` | Amber 500 `#F59E0B` | transient drag source/drop target outline |
-| `--jig-state-drag-bg` | Amber 50 `#FEF3E7` | Amber 500 mixed 18% into Ink 900 | transient drag target tint only |
+| `--jig-state-drag-bg` | Amber 50 `#FEF3E7` | Amber 500 mixed 18% into Ink 900 | transient drag destination-area tint only |
 | `--jig-priority-high` | Astryx error text role | Astryx error text role | High priority leading cue |
 | `--jig-priority-normal` | Ink 500 `#788499` | Ink 400 `#9BA5B8` | Normal priority leading cue |
 | `--jig-priority-low` | Astryx success text role | Astryx success text role | Low priority leading cue |
@@ -328,19 +328,20 @@ This table is binding. “Astryx-owned” means use the stated public component 
 | Component / activity | Base | Hover / pressed | Active / selected / outcome | Focus | Disabled | Prohibited substitution |
 |---|---|---|---|---|---|---|
 | **App page/body** | Paper 100 / Ink 950 | n/a | n/a | n/a | n/a | Amber/status fills |
-| **Header / Drawer / BottomSheet / card surface** | White / Ink 900 | neutral overlay where interactive | n/a | n/a | n/a | status colors as general surface |
+| **Application chrome — desktop/narrow header + narrow/Android bottom navigation** | `--jig-chrome-surface` resolving to `--color-background-body` | neutral overlay where interactive | one shared body-surface chrome owner across top and bottom | n/a | n/a | independent chrome/lane fills; card/status surface roles |
+| **Drawer / BottomSheet** | Astryx surface semantics | Astryx neutral overlay | n/a | Astryx focus | Astryx disabled | Jig chrome/Task-card aliases |
 | **Ordinary structural border** | `--color-border` | n/a | emphasized only where contract says so | n/a | n/a | Amber |
 | **Primary button — Add task, Save** | Astryx `primary`: Amber accent + Ink 950 content | Astryx primary hover/pressed | same semantic family | Amber focus ring | Astryx disabled text/surface | success/warning/error |
 | **Secondary button — Today, Complete/Reopen, Cancel when rendered secondary** | Astryx `secondary` neutral | Astryx neutral hover/pressed | no persistent Amber state | Amber focus ring | Astryx disabled | selected-Task/today colors |
 | **Ghost/icon button — Previous, Next, Jig Home, date-header +, menus, close** | transparent + primary/secondary Ink | neutral hover/pressed | active destination handled separately below | Amber focus ring | Astryx disabled | persistent Amber fill |
 | **History/Settings active destination** | ghost control anatomy | neutral hover/pressed | `--jig-state-nav-active-bg` + `--jig-state-nav-active-text`; optional emphasized neutral border | Amber focus ring | n/a | Amber-muted active fill; Task-selection background |
-| **Week/date label — ordinary** | surface/muted header + primary/secondary Ink | no click-selection state | n/a | n/a | n/a | accent/selected state |
+| **Week/date lane — ordinary** | transparent over `--color-background-body` + primary/secondary text | no click-selection state | n/a | n/a | n/a | dedicated lane fill; card/accent-selected surface roles |
 | **Exact current local day** | ordinary date section | n/a | `--jig-state-today-border` + `--jig-state-today-text`; font weight may increase; no whole-lane colored fill | n/a | n/a | Amber; selected-Task info blue; success/warning/error fill |
 | **Non-current date in other weeks** | ordinary date section | n/a | **no day-level state** | n/a | n/a | today or selected-day styling |
 | **Task card — ordinary** | card surface + ordinary border | `--jig-state-hover-bg` | n/a | Amber focus ring on interactive body | disabled controls only | accent-muted card fill |
 | **Task card — selected/open workspace target** | ordinary card | neutral hover remains subordinate | `--jig-state-task-selected-bg` + `--jig-state-task-selected-border` using the info-blue family | Amber focus ring additionally | n/a | Amber; today teal; priority/status color as card fill |
 | **Task drag source** | selected/ordinary card semantics underneath | n/a | `--jig-state-drag-border`; drag overlay shadow; reduced-opacity source is permitted | n/a during pointer drag | n/a | selected-task neutral as sole drag indicator |
-| **Date drop target** | ordinary/today structural state underneath | n/a | dashed/solid `--jig-state-drag-border` + `--jig-state-drag-bg` | n/a | n/a | today neutral; success/warning/error |
+| **Task insertion target** | ordinary/today structural state underneath | n/a | exact 2px `--jig-state-drag-border` insertion rule; cross-date/empty destination may add `--jig-state-drag-bg` | n/a | n/a | whole-column dashed outline as the sole placement signal; success/warning/error |
 | **High priority** | no card fill change | n/a | narrow `--jig-priority-high` leading cue + restrained error-family High label if shown | n/a | n/a | Amber/warning |
 | **Normal priority** | no card fill change | n/a | narrow `--jig-priority-normal` leading cue; no badge by default | n/a | n/a | Amber |
 | **Low priority** | no card fill change | n/a | narrow `--jig-priority-low` leading cue + restrained success-family Low label if shown | n/a | n/a | info/Amber |
@@ -378,31 +379,32 @@ The following resolved values are the intended visual result **when the Jig them
 These values deliberately use the wider functional palette: temporal orientation is teal, selected Task is info blue, active destination is neutral Ink, direct manipulation/focus is Amber, High is red/error, Normal is neutral, and Low/healthy status is green/success. No persistent product state may use `--color-accent-muted` simply because it is selected.
 
 
-## 6.5 Task-surface contrast and responsive parity
+## 6.5 Open-canvas surface hierarchy and responsive parity
 
-The Planner canvas and Task card are separate semantic surfaces. v1.0.5 makes that separation explicit because the published v1.0.4 Dark/narrow presentation allowed Task cards to visually merge into their background.
+The Planner remains one open seven-track canvas containing discrete Task-card surfaces, but the canvas must not collapse into the same visual layer as application chrome. Header and persistent bottom-navigation chrome use the body surface; the Planner canvas uses a deliberately mixed elevated Planner surface; individual date lanes remain transparent within that shared canvas; and Task cards use the theme's card surface above it. This preserves open lane geometry while giving the eye three clear layers: chrome, week canvas and Task.
 
-The feature-level contract remains two Jig-local semantic aliases. The default Jig preset resolves them as follows; other theme wrappers select their governed elevated surface/border roles as specified by JIG-106-SD-04:
+The shared Jig product-token mapping therefore owns only the structural surface roles that need explicit aliases across all thirteen themes:
 
-| Alias | Light | Dark | Purpose |
-|---|---|---|---|
-| `--jig-task-surface` | White | Ink 800 | Base outstanding/completed Task-card surface across Planner and History |
-| `--jig-task-border` | Ink 200 / emphasized neutral border | Ink 700 / emphasized neutral border | Base Task-card edge separation |
+| Alias | Cross-theme derivation | Purpose |
+|---|---|---|
+| `--jig-chrome-surface` | `--color-background-body` | desktop/narrow application header and narrow/Android persistent bottom navigation; one shared owner without introducing a separate filled chrome layer |
+| `--jig-planner-surface` | 88% theme surface + 12% theme muted | shared Planner canvas behind all seven transparent date lanes |
+| `--jig-task-surface` | `--color-background-card` | ordinary outstanding/completed Task-card elevation across Planner and History |
+| `--jig-task-border` | emphasized neutral border | Task-card edge separation |
 
-The surrounding Planner canvas remains:
-
-- Light: Paper 100;
-- Dark: Ink 950.
-
-Therefore Dark Task cards sit two Ink stops above the canvas rather than using the v1.0.4 Ink 900 surface. This is deliberate legibility/elevation, not decorative chrome.
+There is intentionally **no `--jig-lane-surface`**. Ordinary Monday–Sunday lanes inherit the shared Planner canvas by remaining transparent; the canvas is not repeated as seven boxed panels. This keeps the week open rather than turning seven tracks into cards.
 
 Rules:
 
-1. Desktop and narrow/mobile consume the same Task-surface aliases. Responsive CSS must not substitute `--color-background-body`, transparent, or a mobile-only surface.
-2. Hover may add the ordinary transient overlay, but the un-hovered card must already be visibly distinct.
-3. Selected Task continues to use the governed info-blue selected surface/border; keyboard focus adds Amber; drag adds transient Amber; priority remains the narrow leading cue. These states do not redefine the base card surface contract.
-4. History Task rows use the same base Task surface family unless an Astryx component public semantic surface already provides the exact same resolved role.
-5. Do not introduce raw feature-local colors in `styles.css`.
+1. Header chrome and persistent narrow/Android bottom navigation consume exactly the same `--jig-chrome-surface`, and that alias resolves directly to the selected theme's body background.
+2. The Planner canvas consumes `--jig-planner-surface`; ordinary Planner date lanes have no individual background fill. Adjacent dates may use the governed subtle hairline separator, and the exact current day may add only its governed border/text treatment.
+3. Every ordinary Task card consumes `--jig-task-surface`; it must remain visibly distinct from the Planner canvas before hover/selection/focus.
+4. The mapping is shared in `ui/src/themes/product-tokens.ts`. Theme-specific source files must not reintroduce a lane-surface alias, override the chrome/body equivalence, or branch on theme identity.
+5. Hover may add the ordinary transient overlay, but the un-hovered card must already be visibly distinct.
+6. Selected Task continues to use the governed info-blue selected surface/border; keyboard focus adds Amber; drag adds transient Amber; priority remains the narrow leading cue. These states do not redefine the base card surface contract.
+7. History Task rows use the same base Task surface family unless an Astryx component public semantic surface already provides the exact same resolved role.
+8. Generated theme artifacts move only through the pinned Astryx theme compiler, and the exhaustive theme matrix must prove body/chrome equivalence, Planner/chrome separation, transparent Planner lanes and Task-card separation for every theme in Light, Dark and live System mode.
+9. Do not introduce raw feature-local colors in `styles.css`.
 
 ### v1.0.5 icon and header-brand normalization
 
@@ -503,8 +505,8 @@ The horizontal wordmark uses the canonical J mark as the actual first letter and
 | `jig-icon.svg` | 64×64 | transparent | canonical icon alias |
 | `jig-symbol-mono-dark.svg` | 64×64 | transparent | one-color dark mark |
 | `jig-symbol-mono-light.svg` | 64×64 | transparent | one-color light mark |
-| `jig-app-icon.svg` | 512×512, viewBox 64×64 | Ink 950 tile | app/product icon master |
-| `jig-favicon.svg` | 32×32, viewBox 64×64 | Ink 950 tile | browser favicon |
+| `jig-app-icon.svg` | 512×512, viewBox 64×64 | Ink 950 tile | app/product icon master; fixed-color derivative of canonical `jig-icon.svg` geometry |
+| `jig-favicon.svg` | 32×32, viewBox 64×64 | Ink 950 tile | browser favicon; fixed-color derivative of canonical `jig-icon.svg` geometry |
 | `jig-logo.svg` | 112×68 | transparent | horizontal lockup on light surfaces |
 | `jig-logo-on-dark.svg` | 112×68 | transparent | horizontal lockup on dark surfaces |
 | `jig-logo-mono-dark.svg` | 112×68 | transparent | one-color horizontal dark |
@@ -524,7 +526,8 @@ The README plate is 192×96, adding exactly 40 units horizontal and 14 units ver
 ### Application integration
 
 - **Application header/app shell:** render one canonical inline SVG/React wordmark geometry copied from the approved lockup. Its guide/wordmark foreground consumes `--jig-brand-primary`; its alignment pin consumes `--jig-brand-accent`. Desktop and narrow use this same semantic component. Do not switch fixed Light/Dark image files in application chrome and do not compose the standalone J icon beside live “Jig” text.
-- **Browser/app icon contexts:** use the standalone J-only `jig-app-icon.svg` / `jig-favicon.svg`; these fixed Ink-tile assets are intentionally theme-independent.
+- **Browser/app icon contexts:** use the standalone J-only `jig-app-icon.svg` / `jig-favicon.svg`; these fixed Ink-tile assets are intentionally theme-independent. Their J path, stroke width, alignment-pin center/radius and internal placement must remain identical to the canonical `jig-icon.svg` mark geometry; only context-specific foreground/background paint and canvas size may differ.
+- **Android launcher icon:** `android/app/src/main/res/drawable/ic_launcher.xml` is a platform translation of that same canonical standalone J mark. It must use the same J path/stroke and amber alignment-pin geometry, with the fixed app-icon treatment of white guide + Brand Amber `#F59E0B` on Ink 950 `#0B1426`. Android may own the outer launcher mask/silhouette; Jig must not redraw, simplify, substitute or independently tune the mark for Android.
 - **README / unknown viewer theme:** use `jig-logo-plate-dark.svg`.
 - **External/light branded surfaces:** `jig-logo.svg` or `jig-logo-light.svg` remain valid fixed Jig-palette assets.
 - **External/dark branded surfaces:** `jig-logo-on-dark.svg` or `jig-logo-dark.svg` remain valid fixed Jig-palette assets.
@@ -561,3 +564,10 @@ Any change to brand anchors, theme palette sources, semantic mapping or mark geo
 8. architecture checks proving one root Theme owner and no feature-level raw palette/theme-name branching.
 
 Layout-only UI changes do not redefine this brand contract.
+
+
+## v1.1 reminder attention and drag precision
+
+Reminder due is a user-attention state, not notification-delivery state. It consumes the existing Astryx warning semantic roles (`--color-border-warning`, `--color-warning-muted`, `--color-text-warning`) plus accessible non-color text/icon meaning; it does not introduce a second theme palette. It must remain distinguishable from High priority, save/sync error, selection, focus and drag.
+
+v1.1 direct manipulation uses `--jig-state-drag-border` for the exact insertion rule and `--jig-state-drag-bg` only as supplementary cross-date/empty-target tint. A whole date-column outline is no longer sufficient placement feedback.

@@ -40,6 +40,27 @@ function taskById(tasks: readonly Task[], taskId: string): Task {
   return task;
 }
 
+export function assertActiveScheduleDate(
+  currentLocalDate: string,
+  candidateDate: string,
+): void {
+  if (!isActiveScheduleDate(currentLocalDate, candidateDate)) {
+    throw new PlanningError(
+      "INVALID_OPERATION",
+      "Outstanding Tasks can only be scheduled for today or a future date",
+    );
+  }
+}
+
+export function isActiveScheduleDate(
+  currentLocalDate: string,
+  candidateDate: string,
+): boolean {
+  assertCivilDate(currentLocalDate, "current_local_date");
+  assertCivilDate(candidateDate, "scheduled_date");
+  return candidateDate >= currentLocalDate;
+}
+
 function activeSequence(
   tasks: readonly Task[],
   scheduledDate: string,
@@ -122,6 +143,7 @@ function insertionIndexForPriority(
 export function assertTaskSet(tasks: readonly Task[]): void {
   const ids = new Set<string>();
   const positionsByDate = new Map<string, number[]>();
+  const recurrenceSlots = new Set<string>();
 
   for (const task of tasks) {
     validateTask(task);
@@ -132,6 +154,21 @@ export function assertTaskSet(tasks: readonly Task[]): void {
       );
     }
     ids.add(task.id);
+
+    if (
+      task.recurrence_series_id !== null &&
+      task.recurrence_occurrence_date !== null
+    ) {
+      const key =
+        `${task.recurrence_series_id}:${task.recurrence_occurrence_date}`;
+      if (recurrenceSlots.has(key)) {
+        throw new PlanningError(
+          "INVALID_OPERATION",
+          `Duplicate recurrence slot ${key}`,
+        );
+      }
+      recurrenceSlots.add(key);
+    }
 
     if (task.completed_at === null) {
       if (task.position === null) {
@@ -502,12 +539,55 @@ export function rollForwardOutstanding(
 ): {
   readonly tasks: readonly Task[];
   readonly moved_task_ids: readonly string[];
+  readonly superseded_task_ids: readonly string[];
 } {
   assertTaskSet(tasks);
   assertCivilDate(currentLocalDate, "current_local_date");
   assertUtcInstant(updatedAt, "updated_at");
 
-  const overdue = tasks
+  const latestDueOutstandingBySeries = new Map<string, Task>();
+  for (const task of tasks) {
+    if (
+      task.completed_at !== null ||
+      task.recurrence_series_id === null ||
+      task.recurrence_occurrence_date === null ||
+      task.recurrence_occurrence_date > currentLocalDate
+    ) {
+      continue;
+    }
+    const current = latestDueOutstandingBySeries.get(
+      task.recurrence_series_id,
+    );
+    if (
+      current === undefined ||
+      (current.recurrence_occurrence_date ?? "") <
+        task.recurrence_occurrence_date
+    ) {
+      latestDueOutstandingBySeries.set(task.recurrence_series_id, task);
+    }
+  }
+
+  const supersededIds = new Set<string>();
+  for (const task of tasks) {
+    if (
+      task.completed_at !== null ||
+      task.recurrence_series_id === null ||
+      task.scheduled_date >= currentLocalDate
+    ) {
+      continue;
+    }
+    const survivor = latestDueOutstandingBySeries.get(
+      task.recurrence_series_id,
+    );
+    if (survivor !== undefined && survivor.id !== task.id) {
+      supersededIds.add(task.id);
+    }
+  }
+
+  const retainedTasks = tasks.filter(
+    (task) => !supersededIds.has(task.id),
+  );
+  const overdue = retainedTasks
     .filter(
       (task) =>
         task.completed_at === null &&
@@ -522,11 +602,15 @@ export function rollForwardOutstanding(
         : (left.position ?? 0) - (right.position ?? 0);
     });
 
-  if (overdue.length === 0) {
-    return { tasks, moved_task_ids: [] };
+  if (overdue.length === 0 && supersededIds.size === 0) {
+    return {
+      tasks,
+      moved_task_ids: [],
+      superseded_task_ids: [],
+    };
   }
 
-  const currentSequence = activeSequence(tasks, currentLocalDate);
+  const currentSequence = activeSequence(retainedTasks, currentLocalDate);
   const replacements = new Map<string, Task>();
 
   overdue.forEach((task, position) => {
@@ -556,12 +640,15 @@ export function rollForwardOutstanding(
     );
   });
 
-  const nextTasks = tasks.map((task) => replacements.get(task.id) ?? task);
+  const nextTasks = retainedTasks.map(
+    (task) => replacements.get(task.id) ?? task,
+  );
   assertTaskSet(nextTasks);
 
   return {
     tasks: nextTasks,
     moved_task_ids: overdue.map((task) => task.id),
+    superseded_task_ids: [...supersededIds],
   };
 }
 

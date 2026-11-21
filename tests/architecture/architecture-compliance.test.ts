@@ -58,6 +58,7 @@ describe("architecture compliance", () => {
       expect(content, path).not.toMatch(/\bas\s+unknown\s+as\b/);
       expect(content, path).not.toMatch(/\bas\s+any\b/);
       expect(content, path).not.toMatch(/:\s*any\b/);
+      expect(content, path).not.toMatch(/JSON\.parse\([^;\n]+\)\s+as\s+/);
       expect(content, path).not.toMatch(/<any>/);
       expect(content, path).not.toMatch(/\bArray<any>\b/);
       expect(content, path).not.toMatch(
@@ -76,7 +77,9 @@ describe("architecture compliance", () => {
     expect(taskOwners.map(([path]) => path)).toEqual(["src/core/task.ts"]);
 
     for (const typeName of [
-      "RepositoryStatus",
+      "LocalGitSnapshotState",
+      "RemoteGitSynchronization",
+      "RepositorySynchronizationStatus",
       "CanonicalState",
       "CommandResult",
       "ServiceStatus",
@@ -87,6 +90,71 @@ describe("architecture compliance", () => {
       );
       expect(owners.map(([path]) => path)).toEqual(["src/protocol.ts"]);
     }
+  });
+
+  it("keeps recurrence configuration single-owner and Task linkage-only", () => {
+    const recurrenceOwners = production.filter(([, content]) =>
+      /export interface RecurrenceSeries\s*\{/.test(content),
+    );
+    expect(recurrenceOwners.map(([path]) => path)).toEqual([
+      "src/core/recurrence.ts",
+    ]);
+
+    const taskSource = source("src/core/task.ts");
+    const taskStart = taskSource.indexOf("export interface Task {");
+    const taskEnd = taskSource.indexOf(
+      "\n}",
+      taskStart,
+    );
+    expect(taskStart).toBeGreaterThanOrEqual(0);
+    expect(taskEnd).toBeGreaterThan(taskStart);
+    const taskInterface = taskSource.slice(taskStart, taskEnd);
+    expect(taskInterface).toContain("recurrence_series_id");
+    expect(taskInterface).toContain("recurrence_occurrence_date");
+    expect(taskInterface).not.toContain("interval_weeks");
+    expect(taskInterface).not.toContain("weekdays");
+    expect(taskInterface).not.toContain("day_of_month");
+    expect(taskInterface).not.toContain("end_date");
+
+    const recurrence = source("src/core/recurrence.ts");
+    const planning = source("src/core/recurrence-planning.ts");
+    const editor = source("ui/src/task-editor.tsx");
+    const nativeRuntime = source("ui/src/runtime-native.ts");
+
+    expect(recurrence).toContain("export type RecurrencePattern");
+    expect(planning).toContain("setTaskRecurrence");
+    expect(editor).toContain("type RecurrenceSeries");
+    expect(editor).toContain("type RecurrenceSpec");
+    expect(editor).toContain("validateRecurrenceSpec");
+    expect(editor).toContain("recurrenceSpecMatchesSeries");
+    expect(editor).not.toContain("function recurrenceMatchesSeries");
+    const recurrenceDraftStart = editor.indexOf(
+      "function recurrenceSpecForDraft",
+    );
+    const commandStart = editor.indexOf(
+      "export function commandForDraft",
+      recurrenceDraftStart,
+    );
+    expect(recurrenceDraftStart).toBeGreaterThanOrEqual(0);
+    expect(commandStart).toBeGreaterThan(recurrenceDraftStart);
+    const recurrenceDraft = editor.slice(
+      recurrenceDraftStart,
+      commandStart,
+    );
+    expect(recurrenceDraft).toContain("validateRecurrenceSpec");
+    expect(recurrenceDraft).not.toContain("draft.repeatEndDate < anchor");
+    expect(recurrenceDraft).not.toContain("intervalWeeks <= 0");
+    expect(recurrenceDraft).not.toContain("dayOfMonth < 1");
+    expect(editor).toContain('label="Repeat"');
+    expect(editor).not.toContain("Enable repeat");
+    expect(editor).not.toContain("Save repeat");
+    expect(editor).not.toMatch(
+      /interface\s+RecurrenceSeries\s*\{|type\s+RecurrencePattern\s*=/,
+    );
+    expect(nativeRuntime).not.toContain("RecurrenceSeries");
+    expect(nativeRuntime).not.toContain("RecurrencePattern");
+    expect(nativeRuntime).not.toContain("interval_weeks");
+    expect(nativeRuntime).not.toContain("day_of_month");
   });
 
   it("keeps v1.0.4 Planner and editor semantics single-owner", () => {
@@ -108,6 +176,533 @@ describe("architecture compliance", () => {
     expect(editor).not.toContain("normalizeTitle");
     expect(editor).not.toContain("normalizeOptionalText");
     expect(editor).not.toContain("function optionalText");
+  });
+
+  it("enforces the SD-38 GitHub integration dependency direction", () => {
+    const sync = source("src/shell/sync.ts");
+    const protocol = source("src/protocol.ts");
+    const http = source("src/shell/http.ts");
+    const main = source("src/shell/main.ts");
+    const auth = source("src/github-auth.ts");
+    const onboarding = source("src/github-onboarding.ts");
+    const reconnect = source("src/github-reconnect.ts");
+    const deviceFlow = source("src/github-device-flow.ts");
+    const setup = source("ui/src/setup.tsx");
+    const app = source("ui/src/app.tsx");
+    const deviceFlowUi = source("ui/src/github-device-flow.tsx");
+    const githubHttp = source("src/shell/github-http.ts");
+    const setupHttp = source("ui/src/setup-http.ts");
+
+    for (const [path, content] of production.filter(([path]) =>
+      path.startsWith("src/core/") || path.startsWith("src/persistence/"),
+    )) {
+      expect(content, path).not.toMatch(
+        /from\s+["'][^"']*(?:\/github|github-)[^"']*["']/,
+      );
+    }
+
+    expect(sync.toLowerCase()).not.toContain("github");
+    expect(sync).not.toContain("client_id");
+    expect(sync).not.toContain("secret-tool");
+    expect(sync).not.toContain("GIT_ASKPASS");
+    expect(sync).not.toContain("JIG_GITHUB_ACCESS_TOKEN");
+    expect(sync).not.toContain("get_network_environment");
+    expect(sync).not.toContain("SyncAuthenticationError");
+
+    expect(protocol.toLowerCase()).not.toContain("github");
+    expect(http.toLowerCase()).not.toContain("github");
+    expect(http).not.toContain("/api/v1/github/");
+
+    expect(main).not.toContain("loadCurrentGitHubCredential");
+    expect(main).not.toContain("refreshGitHubCredential");
+    expect(main).not.toContain("githubGitEnvironment");
+    expect(main).not.toContain("GIT_ASKPASS");
+    expect(main).not.toContain(
+      "assertManagedGitHubSynchronizationRemote",
+    );
+
+    expect(auth).not.toMatch(/node:|bun:|Bun\.|@capacitor/);
+    expect(onboarding).toContain("GitHubDeviceFlowSession");
+    expect(onboarding).not.toContain("startGitHubDeviceAuthorization");
+    expect(onboarding).not.toContain("pollGitHubDeviceAuthorization");
+
+    expect(reconnect).toContain("GitHubDeviceFlowSession");
+    expect(reconnect).not.toContain("config_path");
+    expect(reconnect).not.toContain("http_port");
+    expect(reconnect).not.toContain("acquire");
+    expect(reconnect).not.toContain("repository");
+
+    expect(deviceFlow).toContain("startGitHubDeviceAuthorization");
+    expect(deviceFlow).toContain("pollGitHubDeviceAuthorization");
+    expect(deviceFlow).toContain("runUntilSettled");
+    expect(onboarding).toContain("runUntilSettled");
+    expect(reconnect).toContain("runUntilSettled");
+    expect(deviceFlow).not.toMatch(/node:|bun:|Bun\.|@capacitor/);
+    expect(onboarding).not.toMatch(/node:|bun:|Bun\.|@capacitor|\.\/shell\//);
+    expect(reconnect).not.toMatch(/node:|bun:|Bun\.|@capacitor/);
+    expect(deviceFlow).not.toContain("repository");
+
+    expect(setup).not.toContain("retry_after_seconds");
+    expect(app).not.toContain("retry_after_seconds");
+    expect(deviceFlowUi).not.toContain("retry_after_seconds");
+    expect(deviceFlowUi).not.toContain("onRefresh");
+    expect(setup).not.toContain("Refresh access");
+    expect(setup).not.toContain("Grant repository access");
+    expect(setup).not.toContain("Manage GitHub access");
+    expect(setupHttp).not.toContain("refreshGitHubSetup");
+    expect(setupHttp).not.toContain("acquireGitHubRepository");
+    expect(githubHttp).not.toContain("/api/v1/setup/github/refresh-access");
+    expect(githubHttp).not.toContain("/api/v1/setup/github/acquire");
+    expect(githubHttp).toContain("/api/v1/setup/github/connect");
+    expect(githubHttp).toContain("/api/v1/setup/github/state");
+    expect(githubHttp).toContain("/api/v1/setup/github/select-repository");
+
+    for (const ownerPath of [
+      "src/github-auth.ts",
+      "src/github-device-flow.ts",
+      "src/github-onboarding.ts",
+      "src/github-reconnect.ts",
+      "src/github-registration.ts",
+    ]) {
+      expect(
+        production.some(([path]) => path === ownerPath),
+        ownerPath,
+      ).toBe(true);
+    }
+    for (const obsoletePath of [
+      "src/shell/github-auth.ts",
+      "src/shell/github-device-flow.ts",
+      "src/shell/github-onboarding.ts",
+      "src/shell/github-reconnect.ts",
+      "src/shell/github-registration.ts",
+    ]) {
+      expect(
+        production.some(([path]) => path === obsoletePath),
+        obsoletePath,
+      ).toBe(false);
+    }
+
+    const githubContractOwners = production.filter(([, content]) =>
+      /export interface GitHubAuthorizationSnapshot\b/.test(content),
+    );
+    expect(githubContractOwners.map(([path]) => path)).toEqual([
+      "src/github.ts",
+    ]);
+  });
+
+  it("reuses the shared GitHub protocol and orchestration owners on Android", () => {
+    const androidSetup = source("ui/src/native/github-setup.ts");
+    const registration = source("src/github-registration.ts");
+
+    expect(androidSetup).toContain(
+      'from "../../../src/github-device-flow"',
+    );
+    expect(androidSetup).toContain(
+      'from "../../../src/github-onboarding"',
+    );
+    expect(androidSetup).toContain(
+      'from "../../../src/github-reconnect"',
+    );
+    expect(androidSetup).toContain(
+      'from "../../../src/github-registration"',
+    );
+    expect(androidSetup).toContain("new GitHubDeviceFlowSession");
+    expect(androidSetup).toContain("new GitHubOnboardingController");
+    expect(androidSetup).toContain("new GitHubReconnectController");
+    expect(androidSetup).toContain("GITHUB_APP_REGISTRATION");
+    expect(androidSetup).not.toContain(
+      "GITHUB_ANDROID_APP_REGISTRATION",
+    );
+    expect(androidSetup).not.toContain(
+      "GITHUB_DESKTOP_APP_REGISTRATION",
+    );
+    expect(androidSetup).not.toMatch(
+      /interface\s+GitHubAuthorizationSnapshot\b|interface\s+GitHubDeviceAuthorization\b/,
+    );
+    expect(androidSetup).not.toContain("refreshAndroidGitHubSetup");
+    expect(androidSetup).not.toContain("refreshAndroidGitHubReconnect");
+    expect(androidSetup).not.toContain("acquireAndroidGitHubRepository");
+    expect(androidSetup).toContain("resumeAndroidGitHubSetup");
+    expect(androidSetup).toContain("resumeAndroidGitHubReconnect");
+
+    expect(registration).toContain(
+      'app_slug: "jig-desktop-mobile"',
+    );
+    expect(registration).toContain(
+      'client_id: "Iv23liyCoLFStLGRXgUk"',
+    );
+
+    for (const [path, content] of production) {
+      expect(content, path).not.toContain(
+        "GITHUB_ANDROID_APP_REGISTRATION",
+      );
+      expect(content, path).not.toContain(
+        "GITHUB_DESKTOP_APP_REGISTRATION",
+      );
+    }
+  });
+
+  it("keeps synchronization semantics in one strict functional core and effects in platform shells", () => {
+    const policy = source("src/core/synchronization.ts");
+    const persistence = source("src/persistence/sqlite.ts");
+    const synchronizationPersistence = source(
+      "src/persistence/synchronization.ts",
+    );
+    const desktopSync = source("src/shell/sync.ts");
+    const desktopGit = source("src/shell/git.ts");
+    const androidSync = source("ui/src/native/sync.ts");
+    const androidGit = source("ui/src/native/git.ts");
+
+    expect(policy).toContain("export function decideSynchronization");
+    expect(policy).toContain("export type SynchronizationFacts");
+    expect(policy).toContain("export type SynchronizationDecision");
+    expect(policy).not.toMatch(
+      /node:|bun:|Bun\.|@capacitor|isomorphic-git|github|setTimeout|Promise\.race/i,
+    );
+    expect(policy).not.toMatch(
+      /Task|RecurrenceSeries|retry|poll|credential|repository_path/i,
+    );
+
+    expect(desktopSync).toContain(
+      'from "../core/synchronization"',
+    );
+    expect(androidSync).toContain(
+      'from "../../../src/core/synchronization"',
+    );
+    expect(desktopSync).toContain(
+      'from "../persistence/synchronization"',
+    );
+    expect(androidSync).toContain(
+      'from "../../../src/persistence/synchronization"',
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function synchronizationPending",
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function exportCanonicalPortableSnapshot",
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function reconcilePersistedPortableSnapshot",
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function finishInterruptedSynchronizationAdoption",
+    );
+    expect(synchronizationPersistence).toContain(
+      "export async function adoptObservedSynchronizationRemote",
+    );
+    expect(synchronizationPersistence).not.toMatch(
+      /from\s+["'][^"']*\/shell\/|from\s+["'][^"']*\/ui\/|@capacitor|isomorphic-git|Bun\.|setTimeout|retryDelayMs/,
+    );
+    for (const sync of [desktopSync, androidSync]) {
+      expect(sync).toContain("decideSynchronization");
+      expect(sync).toContain("synchronizationPending");
+      expect(sync).toContain("exportCanonicalPortableSnapshot");
+      expect(sync).toContain("reconcilePersistedPortableSnapshot");
+      expect(sync).toContain("finishInterruptedSynchronizationAdoption");
+      expect(sync).toContain("adoptObservedSynchronizationRemote");
+      expect(sync).not.toContain("adoptCanonicalSnapshot");
+      expect(sync).not.toContain("portableSnapshotsEqual");
+      expect(sync).not.toMatch(
+        /reconcileCanonicalPlanning|three-way|adoptEmptyDatasetIdentity|applySynchronizedCanonicalState/,
+      );
+      expect(sync).not.toMatch(/for\s*\([^)]*attempt/);
+    }
+
+    expect(desktopGit).not.toContain("decideSynchronization");
+    expect(androidGit).not.toContain("decideSynchronization");
+    expect(desktopGit).not.toContain("refs/jig/observed");
+    expect(androidGit).not.toContain("refs/jig/observed");
+    expect(desktopGit).not.toMatch(
+      /["']push["'][\s\S]{0,250}(?:--force|-f\b|\+refs\/heads\/jig-data)/,
+    );
+    expect(desktopGit).not.toMatch(/["']pull["']|["']rebase["']/);
+    expect(androidGit).not.toContain("normalizeAndroidPortableHead");
+    expect(androidGit).not.toContain("synchronizeAndroidPortableRepository");
+    expect(androidGit).not.toContain("commitAndroidCanonicalState");
+    expect(androidGit).toContain("commitAndroidPortableSnapshot");
+    expect(androidGit).toContain("fastForwardOnly: true");
+
+    expect(persistence).toContain(
+      "export async function adoptCanonicalSnapshot",
+    );
+    expect(persistence).not.toContain(
+      "export async function applySynchronizedCanonicalState",
+    );
+    expect(persistence).not.toContain(
+      "export async function adoptEmptyDatasetIdentity",
+    );
+  });
+
+  it("keeps synchronization retry and timeout ownership in the existing platform shells", () => {
+    const policy = source("src/core/synchronization.ts");
+    const desktopSync = source("src/shell/sync.ts");
+    const androidSync = source("ui/src/native/sync.ts");
+    const nativeTransport = source(
+      "android/app/src/main/java/com/pontivus/jig/JigGitHttpTransport.java",
+    );
+
+    expect(policy).not.toMatch(/retry|timeout|poll|setTimeout/i);
+    expect(desktopSync).toContain("retryDelayMs");
+    expect(desktopSync).toContain("SYNC_HEALTHY_POLL_MS");
+    expect(androidSync).not.toMatch(
+      /retryDelayMs|SYNC_RETRY|Promise\.race/,
+    );
+    expect(nativeTransport).toContain(
+      "CONNECT_TIMEOUT_MS = 15_000",
+    );
+    expect(nativeTransport).toContain(
+      "READ_TIMEOUT_MS = 30_000",
+    );
+  });
+
+  it("keeps reminder timing semantics in the functional core", () => {
+    const reminder = source("src/core/reminder.ts");
+    const uiReminder = source("ui/src/reminder.tsx");
+    const nativeNotifications = source("ui/src/native/notifications.ts");
+    const nativeReconciliation = source(
+      "ui/src/native/reminder-reconciliation.ts",
+    );
+
+    expect(reminder).toContain("export function isReminderDue");
+    expect(reminder).toContain(
+      "export function isReminderScheduledInFuture",
+    );
+    expect(reminder).toContain("export function reminderFingerprint");
+    expect(reminder).toContain("export function reminderScheduledAt");
+    expect(uiReminder).toContain("isReminderDue");
+    expect(uiReminder).toContain("isReminderScheduledInFuture");
+    expect(uiReminder).not.toContain("function isFutureOrCurrentDate");
+    expect(nativeNotifications).toContain(
+      'from "../../../src/core/reminder"',
+    );
+    expect(nativeNotifications).not.toContain(
+      "isFutureAndroidReminder",
+    );
+    expect(nativeNotifications).not.toContain(
+      "androidReminderFingerprint",
+    );
+    expect(nativeNotifications).not.toContain(
+      "function androidReminderDate",
+    );
+    expect(nativeReconciliation).toContain(
+      "isReminderScheduledInFuture",
+    );
+    expect(nativeReconciliation).toContain("reminderFingerprint");
+    expect(nativeReconciliation).not.toContain(
+      "isFutureAndroidReminder",
+    );
+  });
+
+  it("keeps portable records platform-neutral and Android Git provider-neutral", () => {
+    const portable = source("src/portable.ts");
+    const desktopGit = source("src/shell/git.ts");
+    const nativeGit = source("ui/src/native/git.ts");
+    const nativeHttp = source("ui/src/native/git-http.ts");
+    const nativeFilesystem = source(
+      "ui/src/native/git-filesystem.ts",
+    );
+
+    expect(portable).not.toMatch(
+      /node:|bun:sqlite|Bun\.|@capacitor|isomorphic-git|github/i,
+    );
+    expect(portable).toContain(
+      "export const PORTABLE_FORMAT_VERSION = 2",
+    );
+    expect(desktopGit).toContain('from "../portable"');
+    expect(desktopGit).not.toContain(
+      "export const PORTABLE_FORMAT_VERSION",
+    );
+
+    expect(nativeGit.toLowerCase()).not.toContain("github");
+    expect(nativeGit).not.toContain("client_id");
+    expect(nativeGit).not.toContain("device flow");
+    expect(nativeGit).toContain("...authenticationCallbacks(credential)");
+    expect(nativeGit).toContain("onAuthFailure");
+    expect(nativeGit).toContain("onAuthSuccess");
+    expect(nativeGit).toContain(
+      "createDatasetId: () => string = () => crypto.randomUUID()",
+    );
+    expect(nativeGit).not.toMatch(
+      /https?:\/\/[^"']*(?:token|password|secret)@/i,
+    );
+    expect(nativeGit).toContain(
+      'export const ANDROID_DATA_BRANCH = "jig-data"',
+    );
+
+    expect(nativeHttp).toContain(
+      'registerPlugin<NativeHttpPort>("JigGitHttp")',
+    );
+    expect(nativeHttp).not.toContain("CapacitorHttp");
+    expect(nativeHttp).not.toContain("responseType");
+    expect(nativeHttp).not.toContain("fetch(");
+    expect(nativeHttp).not.toContain("corsProxy");
+
+    expect(nativeFilesystem).toContain("Directory.Data");
+    expect(nativeFilesystem).toContain("readlink");
+    expect(nativeFilesystem).toContain("symlink");
+    expect(nativeFilesystem).not.toContain("Task");
+    expect(nativeFilesystem.toLowerCase()).not.toContain("github");
+  });
+
+  it("keeps Android GitHub onboarding out of browser module evaluation", () => {
+    const setupHttp = source("ui/src/setup-http.ts");
+
+    expect(setupHttp).toContain("Capacitor.isNativePlatform()");
+    expect(setupHttp).toContain('import("./native/github-setup")');
+    expect(setupHttp).not.toMatch(
+      /from\s+["']\.\/native\/github-setup["']/,
+    );
+  });
+
+  it("keeps the configured UI runtime boundary provider-neutral and singular", () => {
+    const runtime = source("ui/src/runtime.ts");
+    const app = source("ui/src/app.tsx");
+
+    for (const operation of [
+      "readCanonicalTasks",
+      "readStatus",
+      "readDiagnostics",
+      "submitTaskCommand",
+      "triggerSync",
+    ]) {
+      expect(runtime, operation).toContain(operation);
+      expect(app, operation).toMatch(
+        new RegExp(`\\b${operation}\\b`),
+      );
+    }
+
+    expect(runtime).toContain("Capacitor.isNativePlatform()");
+    expect(runtime).toContain('import("./runtime-native")');
+    expect(runtime).not.toMatch(
+      /from\s+["']\.\/runtime-native["']/,
+    );
+    expect(runtime).not.toMatch(/github|client_id|device[_ -]?flow/i);
+    expect(runtime).not.toContain("../src/shell/");
+    expect(app).toContain('from "./runtime"');
+    expect(app).not.toMatch(
+      /import\s*\{[^}]*readCanonicalTasks[^}]*\}\s*from\s*["']\.\/http["']/s,
+    );
+  });
+
+  it("keeps Android SQLite native code as a low-level driver only", () => {
+    const nativeAdapter = source("ui/src/native/jig-sqlite.ts");
+    const nativeRuntime = source("ui/src/runtime-native.ts");
+    const java = source(
+      "android/app/src/main/java/com/pontivus/jig/JigSqlitePlugin.java",
+    );
+    const gradle = source("android/app/build.gradle");
+
+    expect(nativeAdapter).toContain(
+      'from "../../../src/persistence/sqlite"',
+    );
+    expect(nativeRuntime).toContain("applyTaskCommand");
+    expect(nativeRuntime).toContain("rollForwardOutstandingInDatabase");
+    expect(nativeRuntime).toContain("readCanonicalState");
+
+    expect(java).toContain('@CapacitorPlugin(name = "JigSqlite")');
+    expect(java).toContain("BundledSQLiteDriver");
+    expect(java).toContain("SQLiteConnection");
+    expect(java).toContain("SQLiteStatement");
+    expect(java).not.toMatch(
+      /\bTask\b|RecurrenceSeries|CREATE TABLE|schema_version|dataset_id/,
+    );
+    expect(java).not.toMatch(/RoomDatabase|androidx\.room/);
+    const gitHttpJava = source(
+      "android/app/src/main/java/com/pontivus/jig/JigGitHttpPlugin.java",
+    );
+    const gitTransportJava = source(
+      "android/app/src/main/java/com/pontivus/jig/JigGitHttpTransport.java",
+    );
+    expect(gitHttpJava).toContain(
+      '@CapacitorPlugin(name = "JigGitHttp")',
+    );
+    expect(gitHttpJava).toContain("HttpsURLConnection");
+    expect(gitHttpJava).not.toMatch(
+      /\bTask\b|RecurrenceSeries|github|client_id/i,
+    );
+    expect(gitTransportJava).toContain("HttpURLConnection");
+    expect(gitTransportJava).not.toMatch(
+      /\bTask\b|RecurrenceSeries|github|client_id/i,
+    );
+    expect(gradle).toContain(
+      'implementation "androidx.sqlite:sqlite-bundled:$androidxSqliteVersion"',
+    );
+    expect(gradle).not.toContain("androidx.room");
+  });
+
+  it("keeps Android GitHub credentials inside the governed Keystore boundary", () => {
+    const activity = source(
+      "android/app/src/main/java/com/pontivus/jig/MainActivity.java",
+    );
+    const plugin = source(
+      "android/app/src/main/java/com/pontivus/jig/JigSecureCredentialsPlugin.java",
+    );
+    const manifest = source("android/app/src/main/AndroidManifest.xml");
+    const adapter = source("ui/src/native/secure-credentials.ts");
+
+    expect(activity).toContain(
+      "registerPlugin(JigSecureCredentialsPlugin.class)",
+    );
+    expect(manifest).toContain('android:allowBackup="false"');
+    expect(manifest).toContain('android:dataExtractionRules="@xml/data_extraction_rules"');
+    expect(manifest).toContain('android:fullBackupContent="@xml/backup_rules"');
+    const dataExtractionRules = source(
+      "android/app/src/main/res/xml/data_extraction_rules.xml",
+    );
+    const backupRules = source(
+      "android/app/src/main/res/xml/backup_rules.xml",
+    );
+    for (const rules of [dataExtractionRules, backupRules]) {
+      expect(rules).toContain("jig_secure_credentials_v1.xml");
+      expect(rules).toContain("jig_notification_registry_v1.xml");
+    }
+    expect(plugin).toContain(
+      '"com.pontivus.jig.github.credentials.v1"',
+    );
+    expect(plugin).toContain('"AndroidKeyStore"');
+    expect(plugin).toContain('"AES/GCM/NoPadding"');
+    expect(plugin).toContain(".setKeySize(256)");
+    expect(plugin).toContain(
+      "KeyProperties.ENCRYPTION_PADDING_NONE",
+    );
+    expect(plugin).toContain("Context.MODE_PRIVATE");
+    expect(plugin).toContain('putString(\n                    CIPHERTEXT');
+    expect(plugin).toContain('putString(\n                    IV');
+    expect(plugin).not.toContain("client_secret");
+    expect(plugin).not.toContain("redirect_uri");
+    expect(adapter).toMatch(
+      /import type \{ GitHubCredential \} from/,
+    );
+    expect(adapter).not.toContain("JigConfig");
+    expect(adapter).not.toContain("Task");
+  });
+
+  it("keeps Android configured runtime provider-neutral", () => {
+    const runtime = source("ui/src/runtime.ts");
+    const native = source("ui/src/runtime-native.ts");
+
+    expect(runtime).toContain("Capacitor.isNativePlatform()");
+    expect(runtime).toContain('import("./runtime-native")');
+    expect(runtime).not.toMatch(
+      /from\s+["']\.\/runtime-native["']/,
+    );
+    expect(native.toLowerCase()).not.toContain("github");
+    expect(native).not.toContain("client_id");
+    expect(native).not.toContain("TaskDTO");
+    expect(native).not.toContain("ViewModel");
+
+    for (const operation of [
+      "readCanonicalTasks",
+      "readStatus",
+      "readDiagnostics",
+      "submitTaskCommand",
+      "triggerSync",
+    ]) {
+      expect(native, operation).toContain(operation);
+    }
+
+    expect(native).toContain("() => crypto.randomUUID()");
+    expect(native).not.toContain("crypto.randomUUID,\n  );");
   });
 
   it("isolates justified third-party assertions to boundary adapters", () => {
@@ -134,10 +729,6 @@ describe("architecture compliance", () => {
           text: "return value as ISOTimeString;",
         }),
         expect.objectContaining({
-          path: "ui/src/drag.tsx",
-          text: "ref={ref as Ref<HTMLDivElement>}",
-        }),
-        expect.objectContaining({
           path: "ui/src/http.ts",
           text: "return value as Record<string, unknown>;",
         }),
@@ -147,6 +738,60 @@ describe("architecture compliance", () => {
         }),
       ]),
     );
-    expect(assertions).toHaveLength(5);
+    expect(assertions).toHaveLength(4);
+  });
+});
+
+
+describe("brand asset ownership", () => {
+  it("derives fixed app and Android launcher icons from the canonical Jig mark", () => {
+    const canonical = source("assets/jig-icon.svg");
+    const appIcon = source("assets/jig-app-icon.svg");
+    const favicon = source("assets/jig-favicon.svg");
+    const launcher = source("android/app/src/main/res/drawable/ic_launcher.xml");
+    const manifest = source("android/app/src/main/AndroidManifest.xml");
+
+    const canonicalPath =
+      'M48 10v25c0 11-7 18-18 18h-4c-9 0-15-5-16-14';
+    expect(canonical).toContain(`d="${canonicalPath}"`);
+    expect(canonical).toContain('stroke-width="11"');
+    expect(canonical).toContain('<circle cx="28" cy="34" r="5.5"');
+
+    for (const asset of [appIcon, favicon]) {
+      expect(asset).toContain(`d="${canonicalPath}"`);
+      expect(asset).toContain('stroke-width="11"');
+      expect(asset).toContain('<circle cx="28" cy="34" r="5.5"');
+      expect(asset).toContain('#0B1426');
+      expect(asset).toContain('#F59E0B');
+    }
+
+    expect(launcher).toContain(
+      'android:pathData="M48,10v25c0,11 -7,18 -18,18h-4c-9,0 -15,-5 -16,-14"',
+    );
+    expect(launcher).toContain('android:strokeWidth="11"');
+    expect(launcher).toContain(
+      'android:pathData="M33.5,34A5.5,5.5 0,1 1,22.5,34A5.5,5.5 0,1 1,33.5,34Z"',
+    );
+    expect(launcher).toContain('#0B1426');
+    expect(launcher).toContain('#F59E0B');
+    expect(launcher).not.toContain('#111827');
+    expect(manifest).toContain('android:icon="@drawable/ic_launcher"');
+    expect(manifest).toContain('android:roundIcon="@drawable/ic_launcher"');
+  });
+});
+
+describe("v1.1 Android managed GitHub transport ownership", () => {
+  it("keeps credential lookup behind the managed remote-validation shell", () => {
+    const configured = source("ui/src/native/configured-sync.ts");
+    const managed = source("ui/src/native/github-managed-transport.ts");
+    expect(configured).toContain(
+      "createAndroidManagedGitHubCredentialProvider",
+    );
+    expect(configured).not.toContain("currentAndroidGitHubToken");
+    expect(managed).toContain("androidSynchronizationRemote");
+    expect(managed).toContain("currentAndroidGitHubToken");
+    expect(managed.indexOf("androidSynchronizationRemote")).toBeLessThan(
+      managed.lastIndexOf("currentAndroidGitHubToken"),
+    );
   });
 });

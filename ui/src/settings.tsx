@@ -1,5 +1,4 @@
 import {
-  Banner,
   Button,
   Section,
   Selector,
@@ -7,17 +6,27 @@ import {
   SegmentedControlItem,
   VStack,
 } from "@astryxdesign/core";
+
+import { JigAttentionBanner } from "./attention-banner";
 import { useEffect, useState } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
 } from "../../src/protocol";
-import { repositoryStatusPresentation } from "./repository-status";
 import {
-  browserNotificationState,
-  requestBrowserNotificationPermission,
-  type BrowserNotificationState,
-} from "./browser-notifications";
+  localGitStatusPresentation,
+  planningDataHomePresentation,
+  remoteGitStatusPresentation,
+  repositoryStatusPresentation,
+} from "./repository-status";
+import type { GitHubReconnectSnapshot } from "./setup-http";
+import { GitHubDeviceFlowPanel } from "./github-device-flow";
+import {
+  openExactReminderSettings,
+  readNotificationSettings,
+  requestNotificationPermission,
+  type NotificationSettingsState,
+} from "./notification-settings";
 import {
   THEME_DEFINITIONS,
   THEME_GROUPS,
@@ -45,15 +54,34 @@ export interface SettingsViewProps {
   readonly diagnostics: Diagnostics | null;
   readonly operationError: string | null;
   readonly isOperating: boolean;
+  readonly githubReconnectAvailable: boolean;
+  readonly githubReconnect: GitHubReconnectSnapshot | null;
   readonly onThemePresetChange: (value: ThemePreset) => void;
   readonly onAppearanceModeChange: (value: AppearanceMode) => void;
   readonly onSync: () => Promise<void>;
+  readonly onReconnectGitHub: () => Promise<void>;
 }
 
 function notificationStatusMessage(
-  state: BrowserNotificationState,
+  state: NotificationSettingsState | null,
 ): string {
-  switch (state) {
+  if (state === null) {
+    return "Checking notification settings";
+  }
+  if (state.platform === "android") {
+    switch (state.permission) {
+      case "granted":
+        return state.exact_alarm === "granted"
+          ? "Enabled · exact timing available"
+          : "Enabled · exact timing unavailable";
+      case "permission-required":
+        return "Notification permission required";
+      case "denied":
+        return "Blocked in Android settings";
+    }
+  }
+
+  switch (state.permission) {
     case "unsupported":
       return "Not supported by this browser";
     case "default":
@@ -72,210 +100,327 @@ export function SettingsView({
   diagnostics,
   operationError,
   isOperating,
+  githubReconnectAvailable,
+  githubReconnect,
   onThemePresetChange,
   onAppearanceModeChange,
   onSync,
+  onReconnectGitHub,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
-    useState<BrowserNotificationState>(browserNotificationState);
+    useState<NotificationSettingsState | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const repositoryStatus = repositoryStatusPresentation(status);
+  const planningDataHome = planningDataHomePresentation(status);
+  const localGitStatus = localGitStatusPresentation(status);
+  const remoteGitStatus = remoteGitStatusPresentation(status);
+  const synchronizationNeedsAttention =
+    repositoryStatus.key === "sync-issue";
 
   useEffect(() => {
+    let disposed = false;
     const refresh = (): void => {
-      setNotificationState(browserNotificationState());
+      void readNotificationSettings()
+        .then((next) => {
+          if (!disposed) {
+            setNotificationState(next);
+          }
+        })
+        .catch(() => {
+          if (!disposed) {
+            setNotificationState(null);
+          }
+        });
     };
+    refresh();
     window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
+    return () => {
+      disposed = true;
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   return (
     <div className="jig-settings-view">
-      <div className="jig-reference-heading">
-        <div>
-          <h1>Settings</h1>
-          <p>Repository, synchronization, appearance and diagnostics</p>
-        </div>
-      </div>
-
       {operationError === null ? null : (
-        <Banner
+        <JigAttentionBanner
           status="error"
           title="Operation failed"
           description={operationError}
-          collapsible={false}
         />
       )}
 
-      <div className="jig-settings-grid">
+      <div className="jig-settings-sections">
         <section
-          className="jig-settings-panel jig-settings-planning"
-          aria-labelledby="planning-data-heading"
+          className="jig-settings-section"
+          aria-labelledby="data-sync-heading"
         >
-          <h2 id="planning-data-heading">Planning data</h2>
-          <Section
-            className="jig-settings-card"
-            minHeight={200}
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={3}>
-              <strong>Repository</strong>
-              <p>{status?.repository_path ?? "Unavailable"}</p>
-              <small>Selected planning-data home · informational only</small>
-            </VStack>
-          </Section>
-        </section>
+          <h2 id="data-sync-heading">Data &amp; sync</h2>
+          <div className="jig-settings-group">
+            <div className="jig-settings-row">
+              <div>
+                <strong>Planning data</strong>
+                <p>{planningDataHome.label}</p>
+                <small>{planningDataHome.detail}</small>
+              </div>
+            </div>
 
-        <section
-          className="jig-settings-panel jig-settings-sync"
-          aria-labelledby="sync-heading"
-        >
-          <h2 id="sync-heading">Synchronization</h2>
-          <Section
-            className="jig-settings-card jig-settings-sync-card"
-            minHeight={200}
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={3} height="100%">
-              <strong>
-                {status?.repository_status === "synchronized"
-                  ? "Synced"
-                  : "Synchronization"}
-              </strong>
-              <p>{repositoryStatus.message}</p>
-              <dl className="jig-diagnostics">
-                <div>
-                  <dt>Service</dt>
-                  <dd>{status?.ready ? "Running" : "Unavailable"}</dd>
-                </div>
-                <div>
-                  <dt>Local save</dt>
-                  <dd>{diagnostics?.sqlite_available ? "Safe" : "Unavailable"}</dd>
-                </div>
-              </dl>
-              <div className="jig-settings-sync-action">
+            <div className="jig-settings-row">
+              <div>
+                <strong>Saved on this device</strong>
+                <p>{status === null ? "Status unavailable" : "Yes"}</p>
+                <small>
+                  Your current planning data remains available locally.
+                </small>
+              </div>
+            </div>
+
+            <div className="jig-settings-row">
+              <div>
+                <strong>Synchronization</strong>
+                <p>{repositoryStatus.label}</p>
+                <small>{repositoryStatus.message}</small>
+              </div>
+              {synchronizationNeedsAttention &&
+              githubReconnectAvailable &&
+              githubReconnect === null ? (
                 <Button
-                  label="Sync now"
+                  label="Reconnect GitHub"
                   variant="secondary"
-                  width={190}
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onReconnectGitHub();
+                  }}
+                />
+              ) : synchronizationNeedsAttention &&
+                !githubReconnectAvailable ? (
+                <Button
+                  label="Try again"
+                  variant="secondary"
                   isLoading={isOperating}
                   onClick={() => {
                     void onSync();
                   }}
                 />
+              ) : null}
+            </div>
+
+            <GitHubDeviceFlowPanel
+              authorization={githubReconnect?.authorization ?? null}
+              purpose="reconnect"
+            />
+
+            {githubReconnect?.state === "attention" ? (
+              <div className="jig-settings-row-actions">
+                <Button
+                  label="Try reconnecting GitHub"
+                  variant="secondary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onReconnectGitHub();
+                  }}
+                />
               </div>
-            </VStack>
-          </Section>
+            ) : null}
+          </div>
         </section>
 
         <section
-          className="jig-settings-panel jig-settings-appearance"
+          className="jig-settings-section"
           aria-labelledby="appearance-heading"
         >
           <h2 id="appearance-heading">Appearance</h2>
-          <Section
-            className="jig-settings-card"
-            minHeight={130}
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <VStack gap={3}>
-              <Selector
-                label="Theme"
-                value={themePreset}
-                options={THEME_OPTIONS}
-                onChange={(value) => {
-                  if (isThemePreset(value)) {
-                    onThemePresetChange(value);
-                  }
-                }}
+          <div className="jig-settings-group jig-settings-control-stack">
+            <Selector
+              label="Theme"
+              value={themePreset}
+              options={THEME_OPTIONS}
+              presentation="adaptive"
+              controlClassName="jig-mobile-touch-control"
+              renderOption={(option) => (
+                <span className="jig-mobile-selector-option">
+                  {option.label}
+                </span>
+              )}
+              onChange={(value) => {
+                if (isThemePreset(value)) {
+                  onThemePresetChange(value);
+                }
+              }}
+            />
+            <SegmentedControl
+              label="Appearance"
+              value={appearanceMode}
+              onChange={(value) => {
+                if (isAppearanceMode(value)) {
+                  onAppearanceModeChange(value);
+                }
+              }}
+              layout="fill"
+            >
+              <SegmentedControlItem
+                value="system"
+                label="System"
+                style={{ minHeight: "48px" }}
               />
-              <SegmentedControl
-                label="Appearance"
-                value={appearanceMode}
-                onChange={(value) => {
-                  if (isAppearanceMode(value)) {
-                    onAppearanceModeChange(value);
-                  }
-                }}
-                layout="fill"
-              >
-                <SegmentedControlItem value="system" label="System" />
-                <SegmentedControlItem value="light" label="Light" />
-                <SegmentedControlItem value="dark" label="Dark" />
-              </SegmentedControl>
+              <SegmentedControlItem
+                value="light"
+                label="Light"
+                style={{ minHeight: "48px" }}
+              />
+              <SegmentedControlItem
+                value="dark"
+                label="Dark"
+                style={{ minHeight: "48px" }}
+              />
+            </SegmentedControl>
+          </div>
+        </section>
 
-              <div className="jig-settings-notifications">
-                <div>
-                  <strong>Browser notifications</strong>
-                  <p>{notificationStatusMessage(notificationState)}</p>
-                </div>
-                {notificationState === "default" ? (
+        <section
+          className="jig-settings-section"
+          aria-labelledby="notifications-heading"
+        >
+          <h2 id="notifications-heading">Notifications</h2>
+          <div className="jig-settings-group">
+            <div className="jig-settings-notifications">
+              <div>
+                <strong>
+                  {notificationState?.platform === "android"
+                    ? "Android notifications"
+                    : "Browser notifications"}
+                </strong>
+                <p>{notificationStatusMessage(notificationState)}</p>
+                {notificationState?.platform === "android" &&
+                notificationState.permission === "granted" &&
+                notificationState.exact_alarm === "unavailable" ? (
+                  <small>
+                    Future reminders are scheduled inexactly until exact
+                    alarms are enabled in Android settings.
+                  </small>
+                ) : null}
+              </div>
+
+              <div className="jig-settings-row-actions">
+                {notificationState?.permission === "default" ||
+                (notificationState?.platform === "android" &&
+                  notificationState.permission ===
+                    "permission-required") ? (
                   <Button
                     label="Enable"
                     variant="secondary"
-                    size="sm"
                     onClick={() => {
-                      void requestBrowserNotificationPermission().then(
+                      void requestNotificationPermission().then(
+                        setNotificationState,
+                      );
+                    }}
+                  />
+                ) : null}
+                {notificationState?.platform === "android" &&
+                notificationState.permission === "granted" &&
+                notificationState.exact_alarm === "unavailable" ? (
+                  <Button
+                    label="Exact timing settings"
+                    variant="secondary"
+                    onClick={() => {
+                      void openExactReminderSettings().then(
                         setNotificationState,
                       );
                     }}
                   />
                 ) : null}
               </div>
-            </VStack>
-          </Section>
+            </div>
+          </div>
         </section>
 
         <section
-          className="jig-settings-panel jig-settings-diagnostics"
+          className="jig-settings-section jig-settings-diagnostics"
           aria-labelledby="diagnostics-heading"
         >
-          <h2 id="diagnostics-heading">Diagnostics</h2>
-          <Section
-            className="jig-settings-card"
-            minHeight={185}
-            padding={5}
-            dividers={["top", "bottom", "start", "end"]}
-          >
-            <dl className="jig-diagnostics">
-              <div>
-                <dt>Jig service</dt>
-                <dd>{status?.ready ? "Healthy" : "Unavailable"}</dd>
-              </div>
-              <div>
-                <dt>Local database</dt>
-                <dd>{diagnostics?.sqlite_available ? "Available" : "Unavailable"}</dd>
-              </div>
-              <div>
-                <dt>Portable data</dt>
-                <dd>
-                  {diagnostics?.repository_adapter_healthy
-                    ? "Healthy"
-                    : "Needs attention"}
-                </dd>
-              </div>
-            </dl>
-          </Section>
+          <div className="jig-settings-section-heading">
+            <div>
+              <h2 id="diagnostics-heading">Diagnostics</h2>
+              <p>Technical repository and runtime details.</p>
+            </div>
+            <Button
+              label={showDiagnostics ? "Hide diagnostics" : "Show diagnostics"}
+              variant="ghost"
+              onClick={() => setShowDiagnostics((current) => !current)}
+            />
+          </div>
+
+          {showDiagnostics ? (
+            <Section
+              className="jig-settings-card"
+              padding={5}
+              dividers={["top", "bottom", "start", "end"]}
+            >
+              <VStack gap={3}>
+                <dl className="jig-diagnostics">
+                  <div>
+                    <dt>Repository path</dt>
+                    <dd>{status?.repository_path ?? "Unavailable"}</dd>
+                  </div>
+                  <div>
+                    <dt>Jig service</dt>
+                    <dd>{status?.ready ? "Healthy" : "Unavailable"}</dd>
+                  </div>
+                  <div>
+                    <dt>Local database</dt>
+                    <dd>
+                      {diagnostics?.sqlite_available
+                        ? "Available"
+                        : "Unavailable"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Portable data</dt>
+                    <dd>
+                      {diagnostics?.repository_adapter_healthy
+                        ? "Healthy"
+                        : "Needs attention"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Local Git</dt>
+                    <dd title={localGitStatus.message}>
+                      {localGitStatus.label}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Remote Git</dt>
+                    <dd title={remoteGitStatus.message}>
+                      {remoteGitStatus.label}
+                    </dd>
+                  </div>
+                  {remoteGitStatus.remoteLocation === null ? null : (
+                    <div>
+                      <dt>Remote repository</dt>
+                      <dd>
+                        <span>{remoteGitStatus.remoteLocation}</span>
+                        <small className="jig-settings-remote-name">
+                          Git remote: {remoteGitStatus.remoteName}
+                        </small>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                <div className="jig-settings-diagnostics-actions">
+                  <Button
+                    label="Sync now"
+                    variant="secondary"
+                    isLoading={isOperating}
+                    onClick={() => {
+                      void onSync();
+                    }}
+                  />
+                </div>
+              </VStack>
+            </Section>
+          ) : null}
         </section>
       </div>
-
-      <Section
-        className="jig-local-first-note"
-        variant="muted"
-        padding={5}
-        dividers={["top", "bottom", "start", "end"]}
-      >
-        <VStack gap={1.5}>
-          <strong>Local-first behavior</strong>
-          <p>Local planning remains usable when synchronization is unavailable.</p>
-          <p>
-            Browser notifications require explicit permission; unrelated repository
-            content is never touched.
-          </p>
-        </VStack>
-      </Section>
     </div>
   );
 }

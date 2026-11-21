@@ -8,6 +8,48 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+declare -a TEST_PORTS=()
+allocate_test_port() {
+  local variable_name="$1"
+  local candidate=""
+  local used=""
+  while true; do
+    candidate="$(
+      bun -e '
+        const server = Bun.serve({
+          hostname: "127.0.0.1",
+          port: 0,
+          fetch() {
+            return new Response("ok");
+          },
+        });
+        process.stdout.write(String(server.port));
+        server.stop(true);
+      '
+    )"
+    [[ "$candidate" =~ ^[0-9]+$ ]] || continue
+    used="false"
+    for existing in "${TEST_PORTS[@]}"; do
+      if [[ "$existing" == "$candidate" ]]; then
+        used="true"
+        break
+      fi
+    done
+    if [[ "$used" == "false" ]]; then
+      TEST_PORTS+=("$candidate")
+      printf -v "$variable_name" '%s' "$candidate"
+      return
+    fi
+  done
+}
+
+allocate_test_port DATA_PORT
+allocate_test_port CLONE_PORT
+allocate_test_port NONEMPTY_PORT
+allocate_test_port OFFLINE_PORT
+allocate_test_port LEGACY_PORT
+allocate_test_port MALFORMED_PORT
+
 TEST_HOME="$TMP_ROOT/home"
 DATA_REPO="$TMP_ROOT/data"
 FAKE_BIN="$TMP_ROOT/bin"
@@ -36,7 +78,7 @@ git -C "$DATA_REPO" config commit.gpgSign true
 git -C "$DATA_REPO" config gpg.format ssh
 git -C "$DATA_REPO" config user.signingkey missing-jig-installer-key
 
-bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port "$DATA_PORT" >/dev/null
 
 [[ -x "$HOME/.local/bin/jig" ]]
 [[ -x "$HOME/.local/share/jig/runtime/bun" ]]
@@ -54,7 +96,7 @@ bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/nu
 
 # Reinstallation is idempotent and must preserve the same dataset.
 FIRST_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e   "const c=JSON.parse(await Bun.file('$HOME/.config/jig/config.json').text()); const db=new (await import('bun:sqlite')).Database(c.repository_path+'/.jig/local/jig.sqlite'); console.log(db.query('select dataset_id from app_metadata where singleton=1').get().dataset_id); db.close();")"
-bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port 47931 >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port "$DATA_PORT" >/dev/null
 SECOND_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e   "const c=JSON.parse(await Bun.file('$HOME/.config/jig/config.json').text()); const db=new (await import('bun:sqlite')).Database(c.repository_path+'/.jig/local/jig.sqlite'); console.log(db.query('select dataset_id from app_metadata where singleton=1').get().dataset_id); db.close();")"
 [[ "$FIRST_DATASET" == "$SECOND_DATASET" ]]
 
@@ -69,7 +111,7 @@ git -C "$OFFLINE_REPO" add offline.txt
 git -C "$OFFLINE_REPO" commit -m "Offline baseline" >/dev/null
 git -C "$OFFLINE_REPO" remote add origin "$TMP_ROOT/does-not-exist.git"
 
-bash "$SOURCE_ROOT/scripts/install.sh" --repo "$OFFLINE_REPO" --port 47934 >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$OFFLINE_REPO" --port "$OFFLINE_PORT" >/dev/null
 [[ -f "$OFFLINE_REPO/.jig/local/jig.sqlite" ]]
 [[ "$(cat "$OFFLINE_REPO/offline.txt")" == "offline" ]]
 
@@ -92,8 +134,8 @@ LEGACY_HEAD="$(
 )"
 git -C "$LEGACY_REPO" update-ref refs/heads/jig-data "$LEGACY_HEAD"
 
-bash "$SOURCE_ROOT/scripts/install.sh" --repo "$LEGACY_REPO" --port 47935 >/dev/null
-bash "$SOURCE_ROOT/scripts/install.sh" --repo "$LEGACY_REPO" --port 47935 >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$LEGACY_REPO" --port "$LEGACY_PORT" >/dev/null
+bash "$SOURCE_ROOT/scripts/install.sh" --repo "$LEGACY_REPO" --port "$LEGACY_PORT" >/dev/null
 [[ -f "$LEGACY_REPO/.jig/local/jig.sqlite" ]]
 [[ "$(cat "$LEGACY_REPO/legacy.txt")" == "legacy" ]]
 
@@ -109,7 +151,7 @@ git --git-dir="$REMOTE" symbolic-ref HEAD refs/heads/master
 bash "$SOURCE_ROOT/scripts/install.sh" \
   --repo-url "$REMOTE" \
   --checkout "$CLONE" \
-  --port 47932 \
+  --port "$CLONE_PORT" \
   >/dev/null
 
 [[ -f "$CLONE/user.txt" ]]
@@ -118,7 +160,7 @@ CLONE_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e "const db=new (await im
 [[ "$CLONE_DATASET" == "$FIRST_DATASET" ]]
 
 printf 'do not overwrite\n' > "$TMP_ROOT/nonempty"
-if bash "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$TMP_ROOT"   --port 47933   >/dev/null 2>&1; then
+if bash "$SOURCE_ROOT/scripts/install.sh"   --repo-url "$REMOTE"   --checkout "$TMP_ROOT"   --port "$NONEMPTY_PORT"   >/dev/null 2>&1; then
   printf 'installer unexpectedly accepted a non-empty checkout destination\n' >&2
   exit 1
 fi
@@ -142,14 +184,105 @@ BAD_HEAD="$(
 )"
 git -C "$MALFORMED_REPO" update-ref refs/heads/jig-data "$BAD_HEAD"
 
-if bash "$SOURCE_ROOT/scripts/install.sh" --repo "$MALFORMED_REPO" --port 47936 >/dev/null 2>&1; then
+if bash "$SOURCE_ROOT/scripts/install.sh" --repo "$MALFORMED_REPO" --port "$MALFORMED_PORT" >/dev/null 2>&1; then
   printf 'installer unexpectedly accepted malformed Jig portable data\n' >&2
   exit 1
 fi
 [[ "$(git -C "$MALFORMED_REPO" rev-parse refs/heads/jig-data)" == "$BAD_HEAD" ]]
 [[ "$(cat "$MALFORMED_REPO/user.txt")" == "malformed baseline" ]]
 
+# Fresh no-repository installation enters setup mode and can transition
+# through the canonical local-repository setup API.
+BOOTSTRAP_HOME="$TMP_ROOT/bootstrap-home"
+BOOTSTRAP_REPO="$TMP_ROOT/bootstrap-repo"
+mkdir -p "$BOOTSTRAP_HOME" "$BOOTSTRAP_REPO"
+git -C "$BOOTSTRAP_REPO" init >/dev/null
+git -C "$BOOTSTRAP_REPO" config user.name "Jig Bootstrap Test"
+git -C "$BOOTSTRAP_REPO" config user.email "jig-bootstrap@local.invalid"
+printf 'bootstrap\n' > "$BOOTSTRAP_REPO/user.txt"
+git -C "$BOOTSTRAP_REPO" add user.txt
+git -C "$BOOTSTRAP_REPO" commit -m "Bootstrap baseline" >/dev/null
+
+(
+  export HOME="$BOOTSTRAP_HOME"
+  export PATH="$FAKE_BIN:$PATH"
+
+  bash "$SOURCE_ROOT/scripts/install.sh" >/dev/null
+
+  [[ -x "$HOME/.local/bin/jig" ]]
+  [[ ! -e "$HOME/.config/jig/config.json" ]]
+
+  "$HOME/.local/bin/jig" status | grep -q '^setup: repository required$'
+
+  "$HOME/.local/bin/jig" serve >"$TMP_ROOT/bootstrap-service.log" 2>&1 &
+  BOOTSTRAP_PID=$!
+  cleanup_bootstrap_service() {
+    kill -TERM "$BOOTSTRAP_PID" >/dev/null 2>&1 || true
+    wait "$BOOTSTRAP_PID" >/dev/null 2>&1 || true
+  }
+  trap cleanup_bootstrap_service EXIT INT TERM
+
+  for _ in $(seq 1 40); do
+    if "$HOME/.local/share/jig/runtime/bun" -e       "const r=await fetch('http://127.0.0.1:47831/api/v1/setup/status'); const j=await r.json(); if(!r.ok||j.mode!=='bootstrap') process.exit(1);"       >/dev/null 2>&1; then
+      break
+    fi
+    sleep 0.05
+  done
+
+  TOKEN="$(
+    "$HOME/.local/share/jig/runtime/bun" -e       "const h=await (await fetch('http://127.0.0.1:47831/')).text(); const m=/window\\.__JIG_WRITE_TOKEN__=(\"[0-9a-f]{64}\");/.exec(h); if(!m) process.exit(1); process.stdout.write(JSON.parse(m[1]));"
+  )"
+
+  JIG_TOKEN="$TOKEN" JIG_REPO="$BOOTSTRAP_REPO"     "$HOME/.local/share/jig/runtime/bun" -e '
+      const response = await fetch(
+        "http://127.0.0.1:47831/api/v1/setup/local-repository",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-jig-write-token": process.env.JIG_TOKEN,
+          },
+          body: JSON.stringify({
+            repository_path: process.env.JIG_REPO,
+          }),
+        },
+      );
+      if (!response.ok) {
+        console.error(await response.text());
+        process.exit(1);
+      }
+    '
+
+  CONFIGURED="false"
+  for _ in $(seq 1 80); do
+    if "$HOME/.local/share/jig/runtime/bun" -e       "const r=await fetch('http://127.0.0.1:47831/api/v1/setup/status'); const j=await r.json(); if(!r.ok||j.mode!=='configured') process.exit(1);"       >/dev/null 2>&1; then
+      CONFIGURED="true"
+      break
+    fi
+    sleep 0.05
+  done
+  [[ "$CONFIGURED" == "true" ]]
+
+  [[ -f "$HOME/.config/jig/config.json" ]]
+  [[ -f "$BOOTSTRAP_REPO/.jig/local/jig.sqlite" ]]
+  "$HOME/.local/bin/jig" status | grep -q "^repository: $BOOTSTRAP_REPO$"
+
+  cleanup_bootstrap_service
+  trap - EXIT INT TERM
+  "$HOME/.local/bin/jig" uninstall >/dev/null
+  [[ ! -e "$HOME/.local/share/jig" ]]
+  [[ ! -e "$HOME/.config/jig" ]]
+)
+
+# Existing configured installation remains idempotent and preserves config
+# when the installer is rerun without repository arguments.
+CONFIG_BEFORE="$(cat "$HOME/.config/jig/config.json")"
+bash "$SOURCE_ROOT/scripts/install.sh" >/dev/null
+[[ "$(cat "$HOME/.config/jig/config.json")" == "$CONFIG_BEFORE" ]]
+
 "$HOME/.local/bin/jig" uninstall >/dev/null
 [[ ! -e "$HOME/.local/share/jig" ]]
 [[ ! -e "$HOME/.config/jig" ]]
 [[ -d "$CLONE/.jig" ]]
+
+

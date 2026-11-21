@@ -244,12 +244,14 @@ export const gruvboxTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
+    "--jig-chrome-surface": "var(--color-background-body)",
+    "--jig-planner-surface": "color-mix(in srgb, var(--color-background-surface) 88%, var(--color-background-muted) 12%)",
+    "--jig-task-surface": "color-mix(in srgb, var(--color-background-card) 50%, var(--color-background-body) 50%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)",
-    "--jig-task-surface": "var(--color-background-surface)"
+    "--jig-brand-accent": "var(--color-icon-accent)"
   },
   __localTokenOwners: {
     "--astryx-theme-neutral-color-status-fill-accent": "neutral",
@@ -267,12 +269,14 @@ export const gruvboxTheme = {
     "--jig-status-healthy-bg": "gruvbox",
     "--jig-status-healthy-border": "gruvbox",
     "--jig-status-healthy-text": "gruvbox",
+    "--jig-chrome-surface": "gruvbox",
+    "--jig-planner-surface": "gruvbox",
+    "--jig-task-surface": "gruvbox",
     "--jig-state-hover-bg": "gruvbox",
     "--jig-state-pressed-bg": "gruvbox",
     "--jig-task-border": "gruvbox",
     "--jig-brand-primary": "gruvbox",
-    "--jig-brand-accent": "gruvbox",
-    "--jig-task-surface": "gruvbox"
+    "--jig-brand-accent": "gruvbox"
   },
   __localTokenLineage: ["neutral","gruvbox"],
   components: {

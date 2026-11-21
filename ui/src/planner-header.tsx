@@ -1,10 +1,8 @@
 import {
   Button,
-  DropdownMenu,
   Icon,
   IconButton,
 } from "@astryxdesign/core";
-import type { DropdownMenuItemData } from "@astryxdesign/core/DropdownMenu";
 import type {
   IconName,
   NamespacedIconName,
@@ -12,19 +10,35 @@ import type {
 import type { ReactNode } from "react";
 import { JIG_ICON_KEYS, JigIcon } from "./jig-icons";
 import { JigLogo } from "./jig-logo";
+import type { Destination } from "./navigation";
 import type { LayoutMode } from "./use-layout-mode";
 
 const DESTINATIONS = [
-  { id: "planner", label: "Planner", icon: "viewColumns" },
-  { id: "history", label: "History", icon: JIG_ICON_KEYS.history },
-  { id: "settings", label: "Settings", icon: "wrench" },
+  {
+    id: "planner",
+    label: "Planner",
+    subtitle: null,
+    icon: "viewColumns",
+  },
+  {
+    id: "history",
+    label: "History",
+    subtitle: "Completed work grouped by actual completion date",
+    icon: JIG_ICON_KEYS.history,
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    subtitle: "Repository, synchronization, appearance and diagnostics",
+    icon: "wrench",
+  },
 ] as const satisfies readonly {
-  readonly id: string;
+  readonly id: Destination;
   readonly label: string;
+  readonly subtitle: string | null;
   readonly icon: IconName | NamespacedIconName;
 }[];
 
-export type Destination = (typeof DESTINATIONS)[number]["id"];
 type DestinationDefinition = (typeof DESTINATIONS)[number];
 type DestinationIconName = DestinationDefinition["icon"];
 
@@ -109,6 +123,7 @@ function TemporalNavigator({
         icon={<Icon icon="chevronLeft" color="inherit" />}
         variant="ghost"
         size="sm"
+        className="jig-temporal-control"
         onClick={onPreviousWeek}
       />
       <strong className="jig-header-week-range">{weekLabel}</strong>
@@ -117,22 +132,24 @@ function TemporalNavigator({
         icon={<Icon icon="chevronRight" color="inherit" />}
         variant="ghost"
         size="sm"
+        className="jig-temporal-control"
         onClick={onNextWeek}
       />
       {compact === true ? (
-        <IconButton
+        <Button
           label="Today"
-          icon={<Icon icon="calendar" color="inherit" />}
           variant="ghost"
           size="sm"
+          className="jig-mobile-today jig-temporal-control"
           onClick={onToday}
         />
       ) : (
         <Button
           label="Today"
           icon={<Icon icon="calendar" size="sm" color="inherit" />}
-          variant="secondary"
+          variant="ghost"
           size="sm"
+          className="jig-temporal-control"
           onClick={onToday}
         />
       )}
@@ -140,15 +157,23 @@ function TemporalNavigator({
   );
 }
 
-function DestinationTitle({
+function DestinationHeading({
   destination,
+  compact = false,
 }: Readonly<{
-  destination: Exclude<Destination, "planner">;
+  destination: Destination;
+  compact?: boolean;
 }>): React.ReactElement {
+  const definition = destinationDefinition(destination);
   return (
-    <strong className="jig-header-destination-title">
-      {destinationDefinition(destination).label}
-    </strong>
+    <div className="jig-header-destination-heading">
+      <h1 className="jig-header-destination-title">{definition.label}</h1>
+      {compact ? null : (
+        <span className="jig-header-destination-subtitle">
+          {definition.subtitle}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -168,30 +193,17 @@ function DestinationNav({
           variant="ghost"
           size="sm"
           aria-current={destination === item.id ? "page" : undefined}
-          className={destination === item.id ? "jig-header-nav-active" : ""}
+          className={[
+            "jig-header-nav-item",
+            destination === item.id ? "jig-header-nav-active" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
           onClick={() => onNavigate(item.id)}
         />
       ))}
     </nav>
   );
-}
-
-function destinationMenuItems(
-  destination: Destination,
-  onNavigate: PlannerHeaderProps["onNavigate"],
-): DropdownMenuItemData[] {
-  return DESTINATIONS.map((item) => ({
-    id: item.id,
-    label: item.label,
-    icon: <DestinationIcon icon={item.icon} />,
-    endContent:
-      destination === item.id ? (
-        <span aria-label="Current page">
-          <Icon icon="check" size="xsm" color="inherit" />
-        </span>
-      ) : undefined,
-    onClick: () => onNavigate(item.id),
-  }));
 }
 
 function DesktopHeader(props: PlannerHeaderProps): React.ReactElement {
@@ -221,7 +233,7 @@ function DesktopHeader(props: PlannerHeaderProps): React.ReactElement {
             onNextWeek={onNextWeek}
           />
         ) : (
-          <DestinationTitle destination={destination} />
+          <DestinationHeading destination={destination} />
         )}
       </div>
       <div className="jig-header-right">
@@ -253,17 +265,23 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
     onPreviousWeek,
     onToday,
     onNextWeek,
-    onAdd,
-    onNavigate,
   } = props;
 
   return (
     <header className="jig-app-header jig-app-header-narrow">
-      <div className="jig-header-left">
-        <BrandHome onHome={onHome} />
+      <div className="jig-header-mobile-application-row">
+        <div className="jig-header-mobile-identity">
+          <BrandHome onHome={onHome} />
+        </div>
+        <div className="jig-header-mobile-title">
+          <DestinationHeading destination={destination} compact />
+        </div>
+        <div className="jig-header-mobile-actions">
+          {compactStatusControl}
+        </div>
       </div>
-      <div className="jig-header-center">
-        {destination === "planner" ? (
+      {destination === "planner" ? (
+        <div className="jig-header-mobile-temporal-row">
           <TemporalNavigator
             weekLabel={weekLabel}
             compact
@@ -271,36 +289,63 @@ function NarrowHeader(props: PlannerHeaderProps): React.ReactElement {
             onToday={onToday}
             onNextWeek={onNextWeek}
           />
-        ) : (
-          <DestinationTitle destination={destination} />
-        )}
-      </div>
-      <div className="jig-header-mobile-actions">
-        {destination === "planner" ? (
-          <IconButton
-            label="Add task"
-            icon={<JigIcon name="add" color="inherit" />}
-            variant="primary"
-            size="sm"
-            onClick={onAdd}
-          />
-        ) : null}
-        {compactStatusControl}
-        <DropdownMenu
-          presentation="popover"
-          button={{
-            label: "Open navigation menu",
-            icon: <Icon icon="menu" color="inherit" />,
-            isIconOnly: true,
-            variant: "ghost",
-            size: "sm",
-          }}
-          items={destinationMenuItems(destination, onNavigate)}
-          placement="below"
-          alignment="end"
-        />
-      </div>
+        </div>
+      ) : null}
     </header>
+  );
+}
+
+export interface CompactApplicationNavigationProps
+  extends Pick<PlannerHeaderProps, "destination" | "onAdd" | "onNavigate"> {
+  readonly showAdd: boolean;
+}
+
+export function CompactApplicationNavigation({
+  destination,
+  onAdd,
+  onNavigate,
+  showAdd,
+}: CompactApplicationNavigationProps): React.ReactElement {
+  return (
+    <>
+      {destination === "planner" && showAdd ? (
+        <IconButton
+          label="Add task"
+          icon={<JigIcon name="add" color="inherit" />}
+          variant="primary"
+          className="jig-mobile-add-fab"
+          onClick={onAdd}
+        />
+      ) : null}
+      <nav className="jig-mobile-bottom-navigation" aria-label="Primary">
+        {DESTINATIONS.map((item) => {
+          const isCurrent = destination === item.id;
+          return (
+            <Button
+              key={item.id}
+              label={item.label}
+              variant="ghost"
+              width="100%"
+              aria-current={isCurrent ? "page" : undefined}
+              className={[
+                "jig-mobile-nav-item",
+                isCurrent ? "jig-mobile-nav-item-active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => onNavigate(item.id)}
+            >
+              <span className="jig-mobile-nav-content">
+                <span className="jig-mobile-nav-icon" aria-hidden="true">
+                  <DestinationIcon icon={item.icon} />
+                </span>
+                <span className="jig-mobile-nav-label">{item.label}</span>
+              </span>
+            </Button>
+          );
+        })}
+      </nav>
+    </>
   );
 }
 

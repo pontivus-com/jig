@@ -1,8 +1,16 @@
+import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { WeekView } from "./week";
 
+export type WeekTransitionDirection = "today";
+
 export interface PlannerProps {
+  readonly focusCurrentDayOnMount: boolean;
+  readonly todayScrollRequest: number;
+  readonly weekTransitionDirection: WeekTransitionDirection | null;
   readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
+  readonly now: Date;
   readonly displayedDates: readonly string[];
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
@@ -20,17 +28,24 @@ export interface PlannerProps {
 
 export function Planner(props: PlannerProps): React.ReactElement {
   return (
-    <WeekView
-      tasks={props.tasks}
-      displayedDates={props.displayedDates}
-      selectedTask={props.selectedTask}
-      onSelectTask={props.onSelectTask}
-      onAdd={props.onAdd}
-      onEdit={props.onEdit}
-      onToggleComplete={props.onToggleComplete}
-      onSetPriority={props.onSetPriority}
-      onDelete={props.onDelete}
-      onMove={props.onMove}
-    />
+    <div className="jig-planner-surface">
+      <WeekView
+        focusCurrentDayOnMount={props.focusCurrentDayOnMount}
+        todayScrollRequest={props.todayScrollRequest}
+        weekTransitionDirection={props.weekTransitionDirection}
+        tasks={props.tasks}
+        recurrences={props.recurrences}
+        now={props.now}
+        displayedDates={props.displayedDates}
+        selectedTask={props.selectedTask}
+        onSelectTask={props.onSelectTask}
+        onAdd={props.onAdd}
+        onEdit={props.onEdit}
+        onToggleComplete={props.onToggleComplete}
+        onSetPriority={props.onSetPriority}
+        onDelete={props.onDelete}
+        onMove={props.onMove}
+      />
+    </div>
   );
 }

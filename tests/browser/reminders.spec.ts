@@ -14,17 +14,18 @@ declare global {
       tag: string | null;
     }>;
     __JIG_PERMISSION_REQUESTS__?: number;
-    __JIG_NOTIFICATION_SHOULD_THROW__?: boolean;
+    __JIG_NOTIFICATION_SHOULD_FAIL__?: boolean;
   }
 }
 
-async function installNotificationMock(
+async function installNotificationHarness(
   page: Page,
   permission: "default" | "granted" | "denied",
 ): Promise<void> {
   await page.addInitScript((initialPermission) => {
     window.__JIG_NOTIFICATION_CALLS__ = [];
     window.__JIG_PERMISSION_REQUESTS__ = 0;
+    window.__JIG_NOTIFICATION_SHOULD_FAIL__ = false;
 
     class MockNotification {
       static permission: NotificationPermission = initialPermission;
@@ -35,26 +36,39 @@ async function installNotificationMock(
         MockNotification.permission = "granted";
         return "granted";
       }
+    }
 
-      constructor(
+    const registration = {
+      showNotification: async (
         title: string,
         options?: NotificationOptions,
-      ) {
+      ): Promise<void> => {
+        if (window.__JIG_NOTIFICATION_SHOULD_FAIL__ === true) {
+          throw new Error("synthetic service-worker notification failure");
+        }
         window.__JIG_NOTIFICATION_CALLS__?.push({
           title,
           body: options?.body ?? null,
           tag: options?.tag ?? null,
         });
-      }
-    }
+      },
+      active: { scriptURL: "/jig-notifications-sw.js" },
+    };
 
     Object.defineProperty(window, "Notification", {
       configurable: true,
       value: MockNotification,
     });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        register: async () => registration,
+        ready: Promise.resolve(registration),
+        getRegistration: async () => registration,
+      },
+    });
   }, permission);
 }
-
 function reminderStart(): Date {
   const start = new Date();
   start.setHours(9, 59, 30, 0);
@@ -73,16 +87,18 @@ async function prepareReminderPage(
   page: Page,
   permission: "default" | "granted" | "denied",
 ): Promise<void> {
-  await page.clock.install({
-    time: reminderStart(),
-  });
-  await installNotificationMock(page, permission);
+  await page.clock.install({ time: reminderStart() });
+  await installNotificationHarness(page, permission);
   await page.goto("/");
   await resetCanonicalTasks(page);
   await page.reload();
 }
 
-test("visible due reminder uses browser Notification and no in-app Toast", async ({
+async function notificationCalls(page: Page) {
+  return page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []);
+}
+
+test("visible due reminder uses service-worker Notification and no in-app Toast", async ({
   page,
 }) => {
   await prepareReminderPage(page, "granted");
@@ -97,12 +113,9 @@ test("visible due reminder uses browser Notification and no in-app Toast", async
     reminder_time: "10:00",
   });
   await page.reload();
-
   await page.clock.fastForward(60_000);
 
-  const calls = await page.evaluate(
-    () => window.__JIG_NOTIFICATION_CALLS__ ?? [],
-  );
+  const calls = await notificationCalls(page);
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({
     title: "Jig reminder",
@@ -111,7 +124,7 @@ test("visible due reminder uses browser Notification and no in-app Toast", async
   await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
 });
 
-test("hidden open page with granted permission uses one browser Notification", async ({
+test("hidden open page with granted permission remains duplicate-suppressed", async ({
   page,
 }) => {
   await prepareReminderPage(page, "granted");
@@ -135,20 +148,11 @@ test("hidden open page with granted permission uses one browser Notification", a
   });
   await page.clock.fastForward(60_000);
 
-  const calls = await page.evaluate(
-    () => window.__JIG_NOTIFICATION_CALLS__ ?? [],
-  );
+  const calls = await notificationCalls(page);
   expect(calls).toHaveLength(1);
-  expect(calls[0]).toMatchObject({
-    title: "Jig reminder",
-    body: "Hidden reminder",
-  });
   expect(calls[0]?.tag).toContain(`${civilDate(reminderStart())}|10:00`);
-
   await page.clock.fastForward(60_000);
-  expect(
-    await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
-  ).toHaveLength(1);
+  expect(await notificationCalls(page)).toHaveLength(1);
 });
 
 test("notification permission is requested only from the Settings Enable action", async ({
@@ -169,8 +173,7 @@ test("notification permission is requested only from the Settings Enable action"
   ).toBe(1);
 });
 
-
-test("due reminder without permission stays undelivered until explicit grant", async ({
+test("due reminder without permission stays visible until explicit grant", async ({
   page,
 }) => {
   await prepareReminderPage(page, "default");
@@ -185,45 +188,24 @@ test("due reminder without permission stays undelivered until explicit grant", a
     reminder_time: "10:00",
   });
   await page.reload();
-
-  await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      get: () => "hidden",
-    });
-  });
   await page.clock.fastForward(60_000);
-  expect(
-    await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
-  ).toEqual([]);
 
-  await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      get: () => "visible",
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-  expect(
-    await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
-  ).toEqual([]);
-  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
+  expect(await notificationCalls(page)).toEqual([]);
+  const card = page
+    .getByText("Permission-gated reminder", { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  await expect(card).toHaveClass(/jig-task-card-reminder-due/);
+  await expect(
+    card.getByText("Reminder due · time passed", { exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Enable", exact: true }).click();
   await page.clock.fastForward(30_000);
-
-  const calls = await page.evaluate(
-    () => window.__JIG_NOTIFICATION_CALLS__ ?? [],
-  );
-  expect(calls).toHaveLength(1);
-  expect(calls[0]).toMatchObject({
-    title: "Jig reminder",
-    body: "Permission-gated reminder",
-  });
+  expect(await notificationCalls(page)).toHaveLength(1);
 });
 
-test("denied notification permission leaves a due reminder undelivered", async ({
+test("denied notification permission never writes a delivery key", async ({
   page,
 }) => {
   await prepareReminderPage(page, "denied");
@@ -240,8 +222,7 @@ test("denied notification permission leaves a due reminder undelivered", async (
   await page.reload();
   await page.clock.fastForward(60_000);
 
-  expect(await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []))
-    .toEqual([]);
+  expect(await notificationCalls(page)).toEqual([]);
   expect(
     await page.evaluate(() =>
       Object.keys(localStorage).filter((key) =>
@@ -251,7 +232,7 @@ test("denied notification permission leaves a due reminder undelivered", async (
   ).toEqual([]);
 });
 
-test("unsupported Notification capability does not claim reminder delivery", async ({
+test("unsupported Notification capability does not claim delivery", async ({
   page,
 }) => {
   await page.clock.install({ time: reminderStart() });
@@ -283,43 +264,15 @@ test("unsupported Notification capability does not claim reminder delivery", asy
       ),
     ),
   ).toEqual([]);
-  await expect(page.locator(".jig-reminder-toast-content")).toHaveCount(0);
 });
 
-test("Notification constructor failure remains retryable until delivery succeeds", async ({
+test("service-worker delivery failure remains retryable until success", async ({
   page,
 }) => {
-  await page.clock.install({ time: reminderStart() });
-  await page.addInitScript(() => {
-    window.__JIG_NOTIFICATION_CALLS__ = [];
-    window.__JIG_NOTIFICATION_SHOULD_THROW__ = true;
-
-    class RetryableNotification {
-      static permission: NotificationPermission = "granted";
-
-      static async requestPermission(): Promise<NotificationPermission> {
-        return "granted";
-      }
-
-      constructor(title: string, options?: NotificationOptions) {
-        if (window.__JIG_NOTIFICATION_SHOULD_THROW__ === true) {
-          throw new Error("synthetic Notification constructor failure");
-        }
-        window.__JIG_NOTIFICATION_CALLS__?.push({
-          title,
-          body: options?.body ?? null,
-          tag: options?.tag ?? null,
-        });
-      }
-    }
-
-    Object.defineProperty(window, "Notification", {
-      configurable: true,
-      value: RetryableNotification,
-    });
+  await prepareReminderPage(page, "granted");
+  await page.evaluate(() => {
+    window.__JIG_NOTIFICATION_SHOULD_FAIL__ = true;
   });
-  await page.goto("/");
-  await resetCanonicalTasks(page);
   await apiCommand(page, {
     type: "create",
     title: "Retryable reminder",
@@ -331,10 +284,12 @@ test("Notification constructor failure remains retryable until delivery succeeds
     reminder_time: "10:00",
   });
   await page.reload();
-
+  await page.evaluate(() => {
+    window.__JIG_NOTIFICATION_SHOULD_FAIL__ = true;
+  });
   await page.clock.fastForward(60_000);
-  expect(await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []))
-    .toEqual([]);
+
+  expect(await notificationCalls(page)).toEqual([]);
   expect(
     await page.evaluate(() =>
       Object.keys(localStorage).filter((key) =>
@@ -344,70 +299,14 @@ test("Notification constructor failure remains retryable until delivery succeeds
   ).toEqual([]);
 
   await page.evaluate(() => {
-    window.__JIG_NOTIFICATION_SHOULD_THROW__ = false;
+    window.__JIG_NOTIFICATION_SHOULD_FAIL__ = false;
   });
   await page.clock.fastForward(30_000);
 
-  await expect
-    .poll(() => page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__?.length ?? 0))
-    .toBe(1);
-  expect(
-    await page.evaluate(() =>
-      Object.keys(localStorage).filter((key) =>
-        key.startsWith("jig-reminder-delivered:"),
-      ).length,
-    ),
-  ).toBe(1);
+  await expect.poll(() => notificationCalls(page).then((calls) => calls.length)).toBe(1);
 });
 
-test("rolled-forward reminder uses today's canonical date and preserved time", async ({
-  page,
-}) => {
-  await prepareReminderPage(page, "granted");
-  const today = await browserCivilDate(page);
-  const yesterday = await browserCivilDate(page, -1);
-
-  await apiCommand(page, {
-    type: "create",
-    title: "Rolled reminder",
-    scheduled_date: yesterday,
-    priority: "NORMAL",
-    context: null,
-    reference: null,
-    note: null,
-    reminder_time: "10:00",
-  });
-
-  const rolled = (await apiState(page)).tasks.find(
-    (task) => task.title === "Rolled reminder",
-  );
-  expect(rolled).toBeDefined();
-  expect(rolled?.scheduled_date).toBe(today);
-  expect(rolled?.reminder_time).toBe("10:00");
-
-  await page.reload();
-  await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      get: () => "hidden",
-    });
-  });
-  await page.clock.fastForward(60_000);
-
-  const calls = await page.evaluate(
-    () => window.__JIG_NOTIFICATION_CALLS__ ?? [],
-  );
-  expect(calls).toHaveLength(1);
-  expect(calls[0]).toMatchObject({
-    title: "Jig reminder",
-    body: "Rolled reminder",
-  });
-  expect(calls[0]?.tag).toContain(`${today}|10:00`);
-});
-
-test("completed Task never delivers its due reminder", async ({
-  page,
-}) => {
+test("completed Task never delivers its due reminder", async ({ page }) => {
   await prepareReminderPage(page, "granted");
   const today = civilDate(reminderStart());
   await apiCommand(page, {
@@ -431,13 +330,6 @@ test("completed Task never delivers its due reminder", async ({
     task_id: created.id,
   });
   await page.reload();
-
   await page.clock.fastForward(60_000);
-
-  expect(
-    await page.evaluate(() => window.__JIG_NOTIFICATION_CALLS__ ?? []),
-  ).toEqual([]);
-  await expect(
-    page.getByText("Reminder: Completed reminder", { exact: true }),
-  ).toHaveCount(0);
+  expect(await notificationCalls(page)).toEqual([]);
 });

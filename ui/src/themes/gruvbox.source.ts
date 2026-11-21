@@ -10,6 +10,5 @@ export const gruvboxTheme = defineTheme({
   tokens: communityColorTokens(gruvboxPalette),
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

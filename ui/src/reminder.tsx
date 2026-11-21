@@ -1,38 +1,41 @@
-import { useEffect, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { Task } from "../../src/core/task";
-import { browserNotificationState } from "./browser-notifications";
+import {
+  isReminderDue,
+  isReminderScheduledInFuture,
+  reminderFingerprint,
+} from "../../src/core/reminder";
+import {
+  deliverAndroidTaskReminder,
+  listenForAndroidReminderDisplay,
+} from "./native/notifications";
+import { allocateAndroidReminderId } from "./native/reminder-registry";
+import {
+  browserNotificationState,
+  displayBrowserNotification,
+  prepareBrowserNotificationServiceWorker,
+} from "./browser-notifications";
 import { todayCivilDate } from "./dates";
 
 const REMINDER_INTERVAL_MS = 30_000;
 const REMINDER_KEY_PREFIX = "jig-reminder-delivered:";
 
-function reminderKey(task: Task): string | null {
-  if (task.reminder_time === null) {
-    return null;
-  }
-  return [
-    REMINDER_KEY_PREFIX,
-    task.id,
-    task.scheduled_date,
-    task.reminder_time,
-  ].join("|");
-}
+export type ReminderLifecycle =
+  | "none"
+  | "scheduled"
+  | "due"
+  | "notified";
 
-function reminderDueAt(task: Task): Date | null {
-  if (task.reminder_time === null) {
-    return null;
-  }
-  const [year, month, day] = task.scheduled_date.split("-").map(Number);
-  const [hour, minute] = task.reminder_time.split(":").map(Number);
-  return new Date(
-    year ?? 0,
-    (month ?? 1) - 1,
-    day ?? 1,
-    hour ?? 0,
-    minute ?? 0,
-    0,
-    0,
-  );
+export function reminderDeliveryKey(task: Task): string | null {
+  const fingerprint = reminderFingerprint(task);
+  return fingerprint === null
+    ? null
+    : [REMINDER_KEY_PREFIX, task.id, fingerprint].join("|");
 }
 
 function pruneOldReminderKeys(today: string): void {
@@ -61,76 +64,216 @@ function wasDelivered(key: string): boolean {
   }
 }
 
-function markDelivered(key: string): void {
+export function markReminderNotified(key: string): void {
   try {
     localStorage.setItem(key, "1");
   } catch {
-    // Suppression persistence is best effort and never affects Task state.
+    // Presentation bookkeeping is best effort and never affects Task state.
   }
 }
 
-export function ReminderMonitor({
-  tasks,
-}: Readonly<{ tasks: readonly Task[] }>): null {
-  const sessionStartedAt = useRef(new Date());
+export function isReminderNotified(task: Task): boolean {
+  const key = reminderDeliveryKey(task);
+  return key !== null && wasDelivered(key);
+}
+
+export function useReminderLifecycle(
+  task: Task,
+  now: Date,
+): ReminderLifecycle {
+  const notified = isReminderNotified(task);
+
+  if (
+    task.completed_at !== null ||
+    task.reminder_time === null
+  ) {
+    return "none";
+  }
+  if (isReminderDue(task, now)) {
+    return notified ? "notified" : "due";
+  }
+  return isReminderScheduledInFuture(task, now)
+    ? "scheduled"
+    : "none";
+}
+
+export function useReminderClock(): Date {
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
-    pruneOldReminderKeys(todayCivilDate());
-
-    const check = (): void => {
-      const now = new Date();
-      const today = todayCivilDate(now);
-      for (const task of tasks) {
-        if (
-          task.completed_at !== null ||
-          task.scheduled_date !== today ||
-          task.reminder_time === null
-        ) {
-          continue;
-        }
-
-        const dueAt = reminderDueAt(task);
-        const key = reminderKey(task);
-        if (
-          dueAt === null ||
-          key === null ||
-          dueAt < sessionStartedAt.current ||
-          dueAt > now ||
-          wasDelivered(key)
-        ) {
-          continue;
-        }
-
-        if (browserNotificationState() !== "granted") {
-          continue;
-        }
-
-        try {
-          new Notification("Jig reminder", {
-            body: task.title,
-            tag: key,
-          });
-          markDelivered(key);
-        } catch {
-          // Leave the key undelivered so a later bounded check can retry it.
-        }
+    const tick = (): void => {
+      setNow(new Date());
+    };
+    const interval = window.setInterval(tick, REMINDER_INTERVAL_MS);
+    const onVisibility = (): void => {
+      if (document.visibilityState === "visible") {
+        tick();
       }
     };
 
-    check();
-    const interval = window.setInterval(check, REMINDER_INTERVAL_MS);
-    const onVisibility = (): void => {
-      check();
-    };
-    window.addEventListener("focus", check);
+    window.addEventListener("focus", tick);
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       window.clearInterval(interval);
-      window.removeEventListener("focus", check);
+      window.removeEventListener("focus", tick);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [tasks]);
+  }, []);
+
+  return now;
+}
+
+export function ReminderMonitor({
+  tasks,
+  now,
+  onReminderNotified,
+}: Readonly<{
+  tasks: readonly Task[];
+  now: Date;
+  onReminderNotified: () => void;
+}>): null {
+  const attemptingKeys = useRef(new Set<string>());
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
+  const nativeListenerReady = useRef<Promise<boolean> | null>(null);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
+    let active = true;
+    let listener: { remove: () => Promise<void> } | null = null;
+    const ready = listenForAndroidReminderDisplay((notification) => {
+      const extra =
+        notification.extra !== null &&
+        typeof notification.extra === "object" &&
+        !Array.isArray(notification.extra)
+          ? Object.fromEntries(Object.entries(notification.extra))
+          : null;
+      const taskId =
+        extra !== null && typeof extra.jig_task_id === "string"
+          ? extra.jig_task_id
+          : null;
+      const fingerprint =
+        extra !== null &&
+        typeof extra.jig_reminder_fingerprint === "string"
+          ? extra.jig_reminder_fingerprint
+          : null;
+      const task = tasksRef.current.find(
+        (candidate) =>
+          candidate.id === taskId &&
+          reminderDeliveryKey(candidate) !== null &&
+          reminderFingerprint(candidate) === fingerprint,
+      );
+      const key = task === undefined ? null : reminderDeliveryKey(task);
+      if (key !== null) {
+        markReminderNotified(key);
+        onReminderNotified();
+        attemptingKeys.current.delete(key);
+      }
+    }).then((handle) => {
+      if (!active) {
+        void handle.remove();
+        return false;
+      }
+      listener = handle;
+      return true;
+    }).catch(() => false);
+    nativeListenerReady.current = ready;
+
+    return () => {
+      active = false;
+      if (listener !== null) {
+        void listener.remove();
+      }
+    };
+  }, [onReminderNotified]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    const ready = nativeListenerReady.current;
+    if (ready === null) {
+      return;
+    }
+    void ready.then((listening) => {
+      if (!listening) {
+        return;
+      }
+      for (const task of tasks) {
+        if (!isReminderDue(task, now)) {
+          continue;
+        }
+        const key = reminderDeliveryKey(task);
+        if (
+          key === null ||
+          wasDelivered(key) ||
+          attemptingKeys.current.has(key)
+        ) {
+          continue;
+        }
+        attemptingKeys.current.add(key);
+        void allocateAndroidReminderId()
+          .then((notificationId) =>
+            deliverAndroidTaskReminder(task, notificationId),
+          )
+          .then((outcome) => {
+            if (outcome !== "display-requested") {
+              attemptingKeys.current.delete(key);
+            }
+          })
+          .catch(() => {
+            attemptingKeys.current.delete(key);
+          });
+      }
+    });
+  }, [now, tasks]);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      return;
+    }
+    void prepareBrowserNotificationServiceWorker();
+  }, []);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      return;
+    }
+    pruneOldReminderKeys(todayCivilDate(now));
+
+    for (const task of tasks) {
+      if (!isReminderDue(task, now)) {
+        continue;
+      }
+
+      const key = reminderDeliveryKey(task);
+      if (
+        key === null ||
+        wasDelivered(key) ||
+        attemptingKeys.current.has(key) ||
+        browserNotificationState() !== "granted"
+      ) {
+        continue;
+      }
+
+      attemptingKeys.current.add(key);
+      void displayBrowserNotification("Jig reminder", {
+        body: task.title,
+        tag: key,
+      }).then((outcome) => {
+        if (outcome === "displayed") {
+          markReminderNotified(key);
+          onReminderNotified();
+        }
+      }).finally(() => {
+        attemptingKeys.current.delete(key);
+      });
+    }
+  }, [now, tasks]);
 
   return null;
 }

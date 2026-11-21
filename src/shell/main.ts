@@ -1,19 +1,31 @@
 import { resolve } from "node:path";
 import {
-  openDatabase,
-  PORTABLE_FORMAT_VERSION,
   rollForwardOutstandingInDatabase,
   SQLITE_SCHEMA_VERSION,
-  type RepositoryStatus,
-} from "./sqlite";
+} from "../persistence/sqlite";
+import { PORTABLE_FORMAT_VERSION } from "../portable";
+import type { RepositorySynchronizationStatus } from "../protocol";
+import { openDatabase } from "./sqlite-bun";
 import {
   createHttpHandler,
   type Diagnostics,
   type ServiceStatus,
 } from "./http";
+import { createBootstrapHttpHandler } from "./bootstrap-http";
+import { GitHubOnboardingController } from "../github-onboarding";
+import { GitHubReconnectController } from "../github-reconnect";
+import { GITHUB_APP_REGISTRATION } from "../github-registration";
+import { createGitHubHttpHandler } from "./github-http";
+import { acquireManagedGitHubRepository } from "./github-managed-checkout";
+import {
+  createManagedGitHubTransport,
+  createShellGitHubDeviceFlow,
+} from "./github-transport";
+import { initializeRepositoryInstallation } from "./setup";
 import { createSyncController } from "./sync";
 import {
-  loadConfig,
+  defaultConfigPath,
+  loadConfigIfPresent,
   type JigConfig,
 } from "./config";
 import { acquireWriterLease } from "./writer";
@@ -21,6 +33,8 @@ import {
   localCivilDate,
   millisecondsUntilNextLocalDay,
 } from "./local-date";
+
+const DEFAULT_HTTP_PORT = 47831;
 
 function writeToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -31,7 +45,7 @@ function writeToken(): string {
 
 function createStatus(
   config: JigConfig,
-  repositoryStatus: RepositoryStatus,
+  repositoryStatus: RepositorySynchronizationStatus,
 ): ServiceStatus {
   return {
     ready: true,
@@ -42,7 +56,7 @@ function createStatus(
 
 function createDiagnostics(
   config: JigConfig,
-  repositoryStatus: RepositoryStatus,
+  repositoryStatus: RepositorySynchronizationStatus,
 ): Diagnostics {
   return {
     service_healthy: true,
@@ -50,20 +64,46 @@ function createDiagnostics(
     sqlite_schema_version: SQLITE_SCHEMA_VERSION,
     repository_path: config.repository_path,
     portable_format_version: PORTABLE_FORMAT_VERSION,
-    repository_adapter_healthy: repositoryStatus !== "sync-issue",
+    repository_adapter_healthy:
+      repositoryStatus.local_git !== "issue" &&
+      repositoryStatus.remote.state !== "sync-issue",
   };
 }
 
-export async function main(): Promise<void> {
-  const config = await loadConfig();
+async function runConfigured(config: JigConfig): Promise<void> {
   const lease = await acquireWriterLease(config.repository_path);
-  const db = openDatabase(
+  const db = await openDatabase(
     resolve(config.repository_path, ".jig", "local", "jig.sqlite"),
   );
-  const sync = createSyncController(db, config);
+
+  const managedGitHub = await createManagedGitHubTransport(
+    config.repository_path,
+    { registration: GITHUB_APP_REGISTRATION },
+  );
+  const sync = createSyncController(
+    db,
+    { repository_path: config.repository_path },
+    managedGitHub === null
+      ? {}
+      : {
+          networkEnvironment:
+            managedGitHub.network_environment,
+        },
+  );
+  const githubReconnect =
+    managedGitHub === null
+      ? undefined
+      : new GitHubReconnectController(
+          createShellGitHubDeviceFlow(),
+          {
+            on_connected: async () => {
+              await sync.trigger();
+            },
+          },
+        );
 
   const startupNow = new Date();
-  rollForwardOutstandingInDatabase(
+  await rollForwardOutstandingInDatabase(
     db,
     localCivilDate(startupNow),
     startupNow.toISOString(),
@@ -71,14 +111,17 @@ export async function main(): Promise<void> {
 
   let rolloverTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const ensureCurrentDayRollover = (): void => {
+  const ensureCurrentDayRollover = async (): Promise<void> => {
     const now = new Date();
-    const result = rollForwardOutstandingInDatabase(
+    const result = await rollForwardOutstandingInDatabase(
       db,
       localCivilDate(now),
       now.toISOString(),
     );
-    if (result.moved_task_ids.length > 0) {
+    if (
+      result.moved_task_ids.length > 0 ||
+      result.superseded_task_ids.length > 0
+    ) {
       sync.notifyMutation();
     }
   };
@@ -88,11 +131,9 @@ export async function main(): Promise<void> {
       clearTimeout(rolloverTimer);
     }
     rolloverTimer = setTimeout(() => {
-      try {
-        ensureCurrentDayRollover();
-      } finally {
+      void ensureCurrentDayRollover().finally(() => {
         scheduleNextDayBoundary();
-      }
+      });
     }, millisecondsUntilNextLocalDay());
   };
 
@@ -102,7 +143,10 @@ export async function main(): Promise<void> {
       rolloverTimer = null;
     }
     sync.stop();
-    db.close();
+    if (managedGitHub !== null) {
+      await managedGitHub.dispose();
+    }
+    await db.close();
     await lease.release();
   };
 
@@ -116,12 +160,14 @@ export async function main(): Promise<void> {
   await sync.start();
   scheduleNextDayBoundary();
 
-  const handler = createHttpHandler({
+  const token = writeToken();
+  const genericHandler = createHttpHandler({
     db,
-    write_token: writeToken(),
+    write_token: token,
     repository_path: config.repository_path,
     ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
     now: () => new Date().toISOString(),
+    current_local_date: () => localCivilDate(new Date()),
     create_id: () => crypto.randomUUID(),
     get_status: () => createStatus(config, sync.status()),
     get_diagnostics: () => createDiagnostics(config, sync.status()),
@@ -129,12 +175,97 @@ export async function main(): Promise<void> {
     ensure_current_day_rollover: ensureCurrentDayRollover,
     on_task_mutation: sync.notifyMutation,
   });
+  const githubHandler = createGitHubHttpHandler({
+    write_token: token,
+    is_configured: () => true,
+    ...(githubReconnect === undefined || managedGitHub === null
+      ? {}
+      : {
+          reconnect: githubReconnect,
+          reconnect_required: managedGitHub.reconnect_required,
+        }),
+  });
 
   Bun.serve({
     hostname: "127.0.0.1",
     port: config.http_port,
-    fetch: handler,
+    fetch: async (request) =>
+      (await githubHandler(request)) ?? genericHandler(request),
   });
+}
+
+async function runBootstrap(): Promise<void> {
+  let resolveConfigured: ((config: JigConfig) => void) | null = null;
+  const configured = new Promise<JigConfig>((resolvePromise) => {
+    resolveConfigured = resolvePromise;
+  });
+  let isConfigured = false;
+  const token = writeToken();
+
+  const onConfigured = (config: JigConfig): void => {
+    isConfigured = true;
+    resolveConfigured?.(config);
+    resolveConfigured = null;
+  };
+
+  const deviceFlow = createShellGitHubDeviceFlow();
+  const githubOnboarding = new GitHubOnboardingController<JigConfig>({
+    registration: GITHUB_APP_REGISTRATION,
+    device_flow: deviceFlow,
+    acquire_repository: async (repository, credential) => {
+      const checkout = await acquireManagedGitHubRepository(
+        {
+          id: repository.id,
+          owner: repository.owner,
+          name: repository.name,
+        },
+        { access_token: credential.access_token },
+      );
+      return (
+        await initializeRepositoryInstallation({
+          repository_path: checkout,
+          http_port: DEFAULT_HTTP_PORT,
+          config_path: defaultConfigPath(),
+        })
+      ).config;
+    },
+    on_acquired: onConfigured,
+  });
+
+  const bootstrapHandler = createBootstrapHttpHandler({
+    write_token: token,
+    ui_directory: resolve(import.meta.dir, "..", "..", "dist"),
+    config_path: defaultConfigPath(),
+    http_port: DEFAULT_HTTP_PORT,
+    is_configured: () => isConfigured,
+    on_configured: onConfigured,
+  });
+  const githubHandler = createGitHubHttpHandler({
+    write_token: token,
+    onboarding: githubOnboarding,
+    is_configured: () => isConfigured,
+  });
+
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: DEFAULT_HTTP_PORT,
+    fetch: async (request) =>
+      (await githubHandler(request)) ?? bootstrapHandler(request),
+  });
+
+  const nextConfig = await configured;
+  await Bun.sleep(100);
+  await server.stop(true);
+  await runConfigured(nextConfig);
+}
+
+export async function main(): Promise<void> {
+  const config = await loadConfigIfPresent();
+  if (config === null) {
+    await runBootstrap();
+    return;
+  }
+  await runConfigured(config);
 }
 
 if (import.meta.main) {

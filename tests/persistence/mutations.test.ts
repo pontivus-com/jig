@@ -1,17 +1,21 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  applyTaskCommand,
-  initializeDatabase,
-  openDatabase,
+  adoptCanonicalSnapshot,
+  applyTaskCommand as applyTaskCommandAtLocalDate,
+  markExported,
   readCanonicalState,
   readMetadata,
   rollForwardOutstandingInDatabase,
   StaleRevisionError,
-} from "../../src/shell/sqlite";
+  type JigSqlConnection,
+} from "../../src/persistence/sqlite";
+import {
+  initializeDatabase,
+  openDatabase,
+} from "../../src/shell/sqlite-bun";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 const IDS = [
@@ -27,21 +31,42 @@ const TIMES = [
 ] as const;
 
 let root = "";
-let db: Database;
+let db: JigSqlConnection;
+
+function applyTaskCommand(
+  connection: JigSqlConnection,
+  command: Parameters<typeof applyTaskCommandAtLocalDate>[1],
+  expectedRevision: number,
+  now: string,
+  createId: () => string = crypto.randomUUID,
+): ReturnType<typeof applyTaskCommandAtLocalDate> {
+  const currentLocalDate =
+    command.type === "create"
+      ? command.scheduled_date
+      : now.slice(0, 10);
+  return applyTaskCommandAtLocalDate(
+    connection,
+    command,
+    expectedRevision,
+    currentLocalDate,
+    now,
+    createId,
+  );
+}
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "jig-mutations-"));
-  db = initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
+  db = await initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
 });
 
 afterEach(async () => {
-  db.close();
+  await db.close();
   await rm(root, { recursive: true, force: true });
 });
 
 describe("daily rollover persistence", () => {
-  it("persists all rolled-forward dates in one revision and marks sync pending", () => {
-    applyTaskCommand(
+  it("persists all rolled-forward dates in one revision and marks sync pending", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -53,7 +78,7 @@ describe("daily rollover persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -64,7 +89,7 @@ describe("daily rollover persistence", () => {
       TIMES[1],
       () => IDS[1],
     );
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -76,7 +101,7 @@ describe("daily rollover persistence", () => {
       () => IDS[2],
     );
 
-    const result = rollForwardOutstandingInDatabase(
+    const result = await rollForwardOutstandingInDatabase(
       db,
       "2026-11-16",
       TIMES[3],
@@ -84,7 +109,7 @@ describe("daily rollover persistence", () => {
 
     expect(result.revision).toBe(4);
     expect(result.moved_task_ids).toEqual([IDS[0], IDS[1]]);
-    const state = readCanonicalState(db);
+    const state = await readCanonicalState(db);
     expect(state.revision).toBe(4);
     expect(
       state.tasks
@@ -103,11 +128,11 @@ describe("daily rollover persistence", () => {
       ["Yesterday two", null],
       ["Today existing", null],
     ]);
-    expect(readMetadata(db).pending_sync).toBe(true);
+    expect((await readMetadata(db)).pending_sync).toBe(true);
   });
 
-  it("does not increment revision when no rollover is required", () => {
-    applyTaskCommand(
+  it("does not increment revision when no rollover is required", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -119,7 +144,7 @@ describe("daily rollover persistence", () => {
       () => IDS[0],
     );
 
-    const result = rollForwardOutstandingInDatabase(
+    const result = await rollForwardOutstandingInDatabase(
       db,
       "2026-11-16",
       TIMES[1],
@@ -128,12 +153,170 @@ describe("daily rollover persistence", () => {
     expect(result).toStrictEqual({
       revision: 1,
       moved_task_ids: [],
+      superseded_task_ids: [],
     });
-    expect(readCanonicalState(db).revision).toBe(1);
+    expect((await readCanonicalState(db)).revision).toBe(1);
   });
 
-  it("rolls back the entire rollover transaction on SQL failure", () => {
-    applyTaskCommand(
+  it("catches up a single-weekday recurring series without accumulation and survives restart", async () => {
+    const recurrenceIds = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2101",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2102",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2103",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2104",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2105",
+    ];
+    let index = 0;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Weekly catch-up",
+        scheduled_date: "2026-11-16",
+        reminder_time: "09:00",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON"],
+          },
+          end_date: "2026-12-07",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = recurrenceIds[index];
+        if (id === undefined) {
+          throw new Error("weekly rollover fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+
+    const before = await readCanonicalState(db);
+    const occurrence = (date: string) =>
+      before.tasks.find(
+        (task) => task.recurrence_occurrence_date === date,
+      );
+    const first = occurrence("2026-11-16");
+    const second = occurrence("2026-11-23");
+    const latestDue = occurrence("2026-11-30");
+    const future = occurrence("2026-12-07");
+    if (
+      first === undefined ||
+      second === undefined ||
+      latestDue === undefined ||
+      future === undefined
+    ) {
+      throw new Error("weekly rollover occurrences missing");
+    }
+
+    const result = await rollForwardOutstandingInDatabase(
+      db,
+      "2026-12-01",
+      "2026-12-01T01:00:00.000Z",
+    );
+
+    expect(result.revision).toBe(2);
+    expect(result.superseded_task_ids).toEqual([first.id, second.id]);
+    expect(result.moved_task_ids).toEqual([latestDue.id]);
+
+    const after = await readCanonicalState(db);
+    expect(after.tasks).toHaveLength(2);
+    expect(
+      after.tasks.find((task) => task.id === latestDue.id),
+    ).toMatchObject({
+      scheduled_date: "2026-12-01",
+      recurrence_occurrence_date: "2026-11-30",
+      reminder_time: "09:00",
+      completed_at: null,
+      position: 0,
+    });
+    expect(
+      after.tasks.find((task) => task.id === future.id),
+    ).toMatchObject({
+      scheduled_date: "2026-12-07",
+      recurrence_occurrence_date: "2026-12-07",
+      reminder_time: "09:00",
+      completed_at: null,
+      position: 0,
+    });
+    expect((await readMetadata(db)).pending_sync).toBe(true);
+
+    await db.close();
+    db = await openDatabase(join(root, "jig.sqlite"));
+    expect(await readCanonicalState(db)).toStrictEqual(after);
+  });
+
+  it("supersedes an older overdue recurring occurrence even when the latest due occurrence is already today", async () => {
+    const recurrenceIds = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2001",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2002",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2003",
+    ];
+    let index = 0;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Daily-ish recurring",
+        scheduled_date: "2026-11-16",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON", "TUE"],
+          },
+          end_date: "2026-11-17",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = recurrenceIds[index];
+        if (id === undefined) {
+          throw new Error("recurrence rollover fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+    const before = await readCanonicalState(db);
+    const older = before.tasks.find(
+      (task) => task.recurrence_occurrence_date === "2026-11-16",
+    );
+    const latest = before.tasks.find(
+      (task) => task.recurrence_occurrence_date === "2026-11-17",
+    );
+    if (older === undefined || latest === undefined) {
+      throw new Error("recurrence rollover fixture missing");
+    }
+
+    const result = await rollForwardOutstandingInDatabase(
+      db,
+      "2026-11-17",
+      "2026-11-17T01:00:00.000Z",
+    );
+
+    expect(result.revision).toBe(2);
+    expect(result.moved_task_ids).toEqual([]);
+    expect(result.superseded_task_ids).toEqual([older.id]);
+    const after = await readCanonicalState(db);
+    expect(after.tasks).toHaveLength(1);
+    expect(after.tasks[0]).toMatchObject({
+      id: latest.id,
+      scheduled_date: "2026-11-17",
+      recurrence_occurrence_date: "2026-11-17",
+      completed_at: null,
+      position: 0,
+    });
+    expect((await readMetadata(db)).pending_sync).toBe(true);
+  });
+
+  it("rolls back the entire rollover transaction on SQL failure", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -144,8 +327,8 @@ describe("daily rollover persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    const before = readCanonicalState(db);
-    db.exec(`
+    const before = await readCanonicalState(db);
+    await db.execute(`
       CREATE TRIGGER inject_rollover_failure
       BEFORE UPDATE OF scheduled_date ON task
       WHEN NEW.scheduled_date = '2026-11-16'
@@ -154,21 +337,21 @@ describe("daily rollover persistence", () => {
       END;
     `);
 
-    expect(() =>
+    await expect(
       rollForwardOutstandingInDatabase(
         db,
         "2026-11-16",
         TIMES[1],
       ),
-    ).toThrow(/injected rollover failure/);
+    ).rejects.toThrow(/injected rollover failure/);
 
-    expect(readCanonicalState(db)).toStrictEqual(before);
+    expect(await readCanonicalState(db)).toStrictEqual(before);
   });
 });
 
 describe("transactional canonical persistence", () => {
-  it("increments the revision exactly once per successful mutation", () => {
-    const created = applyTaskCommand(
+  it("increments the revision exactly once per successful mutation", async () => {
+    const created = await applyTaskCommand(
       db,
       {
         type: "create",
@@ -181,20 +364,20 @@ describe("transactional canonical persistence", () => {
     );
 
     expect(created.revision).toBe(1);
-    expect(readCanonicalState(db).revision).toBe(1);
+    expect((await readCanonicalState(db)).revision).toBe(1);
 
-    const completed = applyTaskCommand(
+    const completed = await applyTaskCommand(
       db,
       { type: "complete", task_id: IDS[0] },
       1,
       TIMES[1],
     );
     expect(completed.revision).toBe(2);
-    expect(readCanonicalState(db).revision).toBe(2);
+    expect((await readCanonicalState(db)).revision).toBe(2);
   });
 
-  it("rejects a stale revision without mutation", () => {
-    applyTaskCommand(
+  it("rejects a stale revision without mutation", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -205,9 +388,9 @@ describe("transactional canonical persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    const before = readCanonicalState(db);
+    const before = await readCanonicalState(db);
 
-    expect(() =>
+    await expect(
       applyTaskCommand(
         db,
         {
@@ -219,13 +402,13 @@ describe("transactional canonical persistence", () => {
         TIMES[1],
         () => IDS[1],
       ),
-    ).toThrow(StaleRevisionError);
+    ).rejects.toThrow(StaleRevisionError);
 
-    expect(readCanonicalState(db)).toStrictEqual(before);
+    expect(await readCanonicalState(db)).toStrictEqual(before);
   });
 
-  it("rolls back cross-date writes and revision on injected SQL failure", () => {
-    applyTaskCommand(
+  it("rolls back cross-date writes and revision on injected SQL failure", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -236,7 +419,7 @@ describe("transactional canonical persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -248,8 +431,8 @@ describe("transactional canonical persistence", () => {
       () => IDS[1],
     );
 
-    const before = readCanonicalState(db);
-    db.exec(`
+    const before = await readCanonicalState(db);
+    await db.execute(`
       CREATE TRIGGER inject_move_failure
       BEFORE UPDATE OF scheduled_date ON task
       WHEN NEW.scheduled_date = '2026-11-17'
@@ -258,7 +441,7 @@ describe("transactional canonical persistence", () => {
       END;
     `);
 
-    expect(() =>
+    await expect(
       applyTaskCommand(
         db,
         {
@@ -270,13 +453,13 @@ describe("transactional canonical persistence", () => {
         2,
         TIMES[2],
       ),
-    ).toThrow(/injected move failure/);
+    ).rejects.toThrow(/injected move failure/);
 
-    expect(readCanonicalState(db)).toStrictEqual(before);
+    expect(await readCanonicalState(db)).toStrictEqual(before);
   });
 
-  it("restarts from the exact committed canonical state", () => {
-    applyTaskCommand(
+  it("restarts from the exact committed canonical state", async () => {
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -289,11 +472,334 @@ describe("transactional canonical persistence", () => {
       TIMES[0],
       () => IDS[0],
     );
-    const before = readCanonicalState(db);
-    db.close();
+    const before = await readCanonicalState(db);
+    await db.close();
 
-    db = openDatabase(join(root, "jig.sqlite"));
+    db = await openDatabase(join(root, "jig.sqlite"));
 
-    expect(readCanonicalState(db)).toStrictEqual(before);
+    expect(await readCanonicalState(db)).toStrictEqual(before);
+  });
+
+
+describe("transactional recurrence persistence", () => {
+  it("materializes a recurrence in one revision and survives restart", async () => {
+    const ids = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1001",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1002",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1003",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1004",
+    ];
+    let index = 0;
+    const result = await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Recurring persistence",
+        scheduled_date: "2026-11-16",
+        reminder_time: "09:00",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON"],
+          },
+          end_date: "2026-11-30",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = ids[index];
+        if (id === undefined) {
+          throw new Error("recurrence id fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+
+    expect(result.revision).toBe(1);
+    const before = await readCanonicalState(db);
+    expect(before.revision).toBe(1);
+    expect(before.recurrences).toHaveLength(1);
+    expect(before.tasks).toHaveLength(3);
+    expect(
+      before.tasks.map((task) => task.recurrence_occurrence_date),
+    ).toEqual(["2026-11-16", "2026-11-23", "2026-11-30"]);
+    expect((await readMetadata(db)).pending_sync).toBe(true);
+
+    await db.close();
+    db = await openDatabase(join(root, "jig.sqlite"));
+    expect(await readCanonicalState(db)).toStrictEqual(before);
+  });
+
+  it("edits one occurrence without changing sibling content or series config", async () => {
+    const ids = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1101",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1102",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1103",
+    ];
+    let index = 0;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Independent occurrence",
+        scheduled_date: "2026-11-16",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON"],
+          },
+          end_date: "2026-11-23",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = ids[index];
+        if (id === undefined) {
+          throw new Error("recurrence id fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+    const before = await readCanonicalState(db);
+    const later = before.tasks.find(
+      (task) =>
+        task.recurrence_occurrence_date === "2026-11-23",
+    );
+    if (later === undefined) {
+      throw new Error("later recurrence fixture missing");
+    }
+
+    await applyTaskCommand(
+      db,
+      {
+        type: "edit",
+        task_id: later.id,
+        changes: {
+          title: "Only this occurrence",
+          note: "independent",
+        },
+      },
+      1,
+      "2026-11-16T02:00:00.000Z",
+    );
+
+    const after = await readCanonicalState(db);
+    expect(after.revision).toBe(2);
+    expect(after.recurrences).toStrictEqual(before.recurrences);
+    expect(
+      after.tasks.find(
+        (task) =>
+          task.recurrence_occurrence_date === "2026-11-16",
+      )?.title,
+    ).toBe("Independent occurrence");
+    expect(
+      after.tasks.find((task) => task.id === later.id),
+    ).toMatchObject({
+      title: "Only this occurrence",
+      note: "independent",
+    });
+  });
+
+  it("stops recurrence in one revision while preserving completed History", async () => {
+    const ids = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1201",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1202",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1203",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f1204",
+    ];
+    let index = 0;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Stop series",
+        scheduled_date: "2026-11-16",
+        recurrence: {
+          pattern: {
+            kind: "weekly",
+            interval_weeks: 1,
+            weekdays: ["MON"],
+          },
+          end_date: "2026-11-30",
+        },
+      },
+      0,
+      "2026-11-16T01:00:00.000Z",
+      () => {
+        const id = ids[index];
+        if (id === undefined) {
+          throw new Error("recurrence id fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+    );
+    let state = await readCanonicalState(db);
+    const completed = state.tasks.find(
+      (task) =>
+        task.recurrence_occurrence_date === "2026-11-16",
+    );
+    const invoking = state.tasks.find(
+      (task) =>
+        task.recurrence_occurrence_date === "2026-11-23",
+    );
+    if (completed === undefined || invoking === undefined) {
+      throw new Error("stop recurrence fixtures missing");
+    }
+
+    await applyTaskCommand(
+      db,
+      { type: "complete", task_id: completed.id },
+      1,
+      "2026-11-16T18:00:00.000Z",
+    );
+    const stopped = await applyTaskCommand(
+      db,
+      {
+        type: "edit",
+        task_id: invoking.id,
+        changes: {},
+        recurrence: null,
+      },
+      2,
+      "2026-11-17T01:00:00.000Z",
+    );
+    expect(stopped.revision).toBe(3);
+
+    state = await readCanonicalState(db);
+    expect(state.revision).toBe(3);
+    expect(
+      state.tasks.find((task) => task.id === invoking.id),
+    ).toMatchObject({
+      recurrence_series_id: null,
+      recurrence_occurrence_date: null,
+      completed_at: null,
+    });
+    expect(
+      state.tasks.find((task) => task.id === completed.id),
+    ).toMatchObject({
+      completed_at: "2026-11-16T18:00:00.000Z",
+    });
+    expect(
+      state.tasks.filter(
+        (task) =>
+          task.id !== invoking.id &&
+          task.completed_at === null,
+      ),
+    ).toEqual([]);
+    expect(state.recurrences).toHaveLength(1);
+  });
+});
+});
+
+
+describe("synchronized canonical application", () => {
+  it("requires the exact observed revision and leaves the applied state pending until Git export", async () => {
+    const before = await readCanonicalState(db);
+    const synchronizedTask = {
+      id: IDS[0],
+      title: "Remote adopted",
+      scheduled_date: "2026-11-16",
+      position: 0,
+      priority: "NORMAL" as const,
+      context: null,
+      reference: null,
+      note: null,
+      reminder_time: null,
+      recurrence_series_id: null,
+      recurrence_occurrence_date: null,
+      completed_at: null,
+      created_at: TIMES[0],
+      updated_at: TIMES[0],
+    };
+
+    const applied = await adoptCanonicalSnapshot(
+      db,
+      [synchronizedTask],
+      [],
+      "a".repeat(40),
+      before.revision,
+    );
+
+    expect(applied.revision).toBe(before.revision + 1);
+    expect(applied.tasks).toStrictEqual([synchronizedTask]);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: before.revision + 1,
+      last_adopted_head: "a".repeat(40),
+      last_exported_revision: 0,
+      last_exported_head: null,
+      pending_sync: true,
+    });
+  });
+
+  it("cannot overwrite a Task mutation that lands after remote observation", async () => {
+    const observedRevision = (await readCanonicalState(db)).revision;
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Newer local mutation",
+        scheduled_date: "2026-11-16",
+      },
+      observedRevision,
+      TIMES[0],
+      () => IDS[0],
+    );
+    const before = await readCanonicalState(db);
+
+    await expect(
+      adoptCanonicalSnapshot(
+        db,
+        [],
+        [],
+        "b".repeat(40),
+        observedRevision,
+      ),
+    ).rejects.toThrow(StaleRevisionError);
+
+    expect(await readCanonicalState(db)).toStrictEqual(before);
+  });
+});
+
+
+describe("export metadata truthfulness", () => {
+  it("keeps a newer SQLite mutation pending when Git represents only an older revision", async () => {
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Revision one",
+        scheduled_date: "2026-11-16",
+      },
+      0,
+      TIMES[0],
+      () => IDS[0],
+    );
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Revision two",
+        scheduled_date: "2026-11-16",
+      },
+      1,
+      TIMES[1],
+      () => IDS[1],
+    );
+
+    await markExported(db, 1, "c".repeat(40));
+
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 2,
+      last_exported_revision: 1,
+      last_exported_head: "c".repeat(40),
+      pending_sync: true,
+    });
   });
 });

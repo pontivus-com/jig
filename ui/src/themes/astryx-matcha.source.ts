@@ -7,6 +7,5 @@ export const astryxMatchaTheme = defineTheme({
   extends: matchaTheme,
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

@@ -116,7 +116,7 @@ export const jigTheme = {
     "--color-syntax-removed-marker": "var(--color-syntax-punctuation)",
     "--color-background-surface": "light-dark(var(--jig-white), var(--jig-ink-900))",
     "--color-background-body": "light-dark(var(--jig-paper-100), var(--jig-ink-950))",
-    "--color-background-card": "light-dark(var(--jig-white), var(--jig-ink-900))",
+    "--color-background-card": "light-dark(var(--jig-paper-50), var(--jig-ink-800))",
     "--color-background-popover": "light-dark(var(--jig-white), var(--jig-ink-800))",
     "--color-background-muted": "light-dark(var(--jig-paper-200), var(--jig-ink-900))",
     "--color-accent": "light-dark(var(--jig-amber-700), var(--jig-amber-500))",
@@ -233,12 +233,14 @@ export const jigTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
+    "--jig-chrome-surface": "var(--color-background-body)",
+    "--jig-planner-surface": "color-mix(in srgb, var(--color-background-surface) 88%, var(--color-background-muted) 12%)",
+    "--jig-task-surface": "color-mix(in srgb, var(--color-background-card) 50%, var(--color-background-body) 50%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)",
-    "--jig-task-surface": "light-dark(var(--jig-white), var(--jig-ink-800))"
+    "--jig-brand-accent": "var(--color-icon-accent)"
   },
   __localTokenOwners: {
     "--astryx-theme-neutral-color-status-fill-accent": "neutral",
@@ -256,12 +258,14 @@ export const jigTheme = {
     "--jig-status-healthy-bg": "jig",
     "--jig-status-healthy-border": "jig",
     "--jig-status-healthy-text": "jig",
+    "--jig-chrome-surface": "jig",
+    "--jig-planner-surface": "jig",
+    "--jig-task-surface": "jig",
     "--jig-state-hover-bg": "jig",
     "--jig-state-pressed-bg": "jig",
     "--jig-task-border": "jig",
     "--jig-brand-primary": "jig",
-    "--jig-brand-accent": "jig",
-    "--jig-task-surface": "jig"
+    "--jig-brand-accent": "jig"
   },
   __localTokenLineage: ["neutral","jig"],
   components: {

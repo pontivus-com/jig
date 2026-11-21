@@ -1,15 +1,21 @@
 import { readFile } from "node:fs/promises";
 import { extname, isAbsolute, relative, resolve } from "node:path";
-import type { Database } from "bun:sqlite";
 import {
+  assertCivilDate,
   isPriority,
   TaskValidationError,
   type TaskCommand,
 } from "../core/task";
 import { PlanningError } from "../core/planning";
+import {
+  isWeekday,
+  validateRecurrencePattern,
+  type RecurrenceSpec,
+  type Weekday,
+} from "../core/recurrence";
 import type {
   Diagnostics,
-  RepositoryStatus,
+  RepositorySynchronizationStatus,
   ServiceStatus,
 } from "../protocol";
 export type { Diagnostics, ServiceStatus } from "../protocol";
@@ -17,37 +23,29 @@ import {
   applyTaskCommand,
   readCanonicalState,
   StaleRevisionError,
-} from "./sqlite";
+  type JigSqlConnection,
+} from "../persistence/sqlite";
+import {
+  authorizeMutation,
+  jsonResponse,
+} from "./http-admission";
 
 export interface HttpDependencies {
-  readonly db: Database;
+  readonly db: JigSqlConnection;
   readonly write_token: string;
   readonly repository_path: string;
   readonly ui_directory: string;
   readonly now: () => string;
+  readonly current_local_date: () => string;
   readonly create_id: () => string;
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
-  readonly trigger_sync: () => Promise<RepositoryStatus>;
-  readonly ensure_current_day_rollover: () => void;
+  readonly trigger_sync: () => Promise<RepositorySynchronizationStatus>;
+  readonly ensure_current_day_rollover: () => Promise<void>;
   readonly on_task_mutation: () => void;
 }
 
 type JsonObject = Record<string, unknown>;
-
-function json(
-  body: unknown,
-  status = 200,
-  headers: HeadersInit = {},
-): Response {
-  return Response.json(body, {
-    status,
-    headers: {
-      "cache-control": "no-store",
-      ...headers,
-    },
-  });
-}
 
 function asObject(value: unknown, message: string): JsonObject {
   if (
@@ -100,6 +98,96 @@ function requiredString(object: JsonObject, key: string): string {
   return value;
 }
 
+function parseRecurrenceSpec(value: unknown): RecurrenceSpec {
+  const object = asObject(
+    value,
+    "recurrence must be an object",
+  );
+  exactKeys(
+    object,
+    ["pattern", "end_date"],
+    ["pattern", "end_date"],
+    "recurrence",
+  );
+  const endDate = requiredString(object, "end_date");
+  assertCivilDate(endDate, "end_date");
+
+  const patternObject = asObject(
+    object.pattern,
+    "recurrence.pattern must be an object",
+  );
+  const kind = patternObject.kind;
+  if (kind === "weekly") {
+    exactKeys(
+      patternObject,
+      ["kind", "interval_weeks", "weekdays"],
+      ["kind", "interval_weeks", "weekdays"],
+      "weekly recurrence pattern",
+    );
+    const intervalWeeks = patternObject.interval_weeks;
+    if (
+      typeof intervalWeeks !== "number" ||
+      !Number.isInteger(intervalWeeks)
+    ) {
+      throw new TaskValidationError(
+        "interval_weeks must be an integer",
+      );
+    }
+    const rawWeekdays = patternObject.weekdays;
+    if (!Array.isArray(rawWeekdays)) {
+      throw new TaskValidationError(
+        "weekdays must be an array",
+      );
+    }
+    const weekdays: Weekday[] = [];
+    for (const weekday of rawWeekdays) {
+      if (!isWeekday(weekday)) {
+        throw new TaskValidationError(
+          "weekly recurrence weekday is invalid",
+        );
+      }
+      weekdays.push(weekday);
+    }
+    return {
+      pattern: validateRecurrencePattern({
+        kind: "weekly",
+        interval_weeks: intervalWeeks,
+        weekdays,
+      }),
+      end_date: endDate,
+    };
+  }
+
+  if (kind === "monthly") {
+    exactKeys(
+      patternObject,
+      ["kind", "day_of_month"],
+      ["kind", "day_of_month"],
+      "monthly recurrence pattern",
+    );
+    const dayOfMonth = patternObject.day_of_month;
+    if (
+      typeof dayOfMonth !== "number" ||
+      !Number.isInteger(dayOfMonth)
+    ) {
+      throw new TaskValidationError(
+        "day_of_month must be an integer",
+      );
+    }
+    return {
+      pattern: validateRecurrencePattern({
+        kind: "monthly",
+        day_of_month: dayOfMonth,
+      }),
+      end_date: endDate,
+    };
+  }
+
+  throw new TaskValidationError(
+    "recurrence.pattern.kind is invalid",
+  );
+}
+
 function parseCommand(value: unknown): TaskCommand {
   const object = asObject(value, "command must be an object");
   const type = object.type;
@@ -120,6 +208,7 @@ function parseCommand(value: unknown): TaskCommand {
           "reference",
           "note",
           "reminder_time",
+          "recurrence",
         ],
         ["type", "title", "scheduled_date"],
         "create command",
@@ -148,13 +237,16 @@ function parseCommand(value: unknown): TaskCommand {
               reminder_time:
                 optionalNullableString(object, "reminder_time") ?? null,
             }),
+        ...(object.recurrence === undefined
+          ? {}
+          : { recurrence: parseRecurrenceSpec(object.recurrence) }),
       };
     }
 
     case "edit": {
       exactKeys(
         object,
-        ["type", "task_id", "changes"],
+        ["type", "task_id", "changes", "recurrence"],
         ["type", "task_id", "changes"],
         "edit command",
       );
@@ -220,6 +312,14 @@ function parseCommand(value: unknown): TaskCommand {
                   optionalNullableString(changes, "reminder_time") ?? null,
               }),
         },
+        ...(object.recurrence === undefined
+          ? {}
+          : {
+              recurrence:
+                object.recurrence === null
+                  ? null
+                  : parseRecurrenceSpec(object.recurrence),
+            }),
       };
     }
 
@@ -280,21 +380,6 @@ async function parseJsonRequest(request: Request): Promise<unknown> {
   }
 }
 
-function authorizeMutation(
-  request: Request,
-  writeToken: string,
-): Response | null {
-  const requestUrl = new URL(request.url);
-  const origin = request.headers.get("origin");
-  if (origin !== null && origin !== requestUrl.origin) {
-    return json({ error: "cross-origin mutation rejected" }, 403);
-  }
-  if (request.headers.get("x-jig-write-token") !== writeToken) {
-    return json({ error: "invalid write token" }, 403);
-  }
-  return null;
-}
-
 function contentTypeFor(path: string): string {
   switch (extname(path)) {
     case ".html":
@@ -312,15 +397,16 @@ function contentTypeFor(path: string): string {
   }
 }
 
-async function serveUi(
+export async function serveUi(
   pathname: string,
-  dependencies: HttpDependencies,
+  uiDirectory: string,
+  writeToken: string,
 ): Promise<Response> {
   const requested = pathname === "/" ? "index.html" : pathname.slice(1);
-  const absolute = resolve(dependencies.ui_directory, requested);
-  const relation = relative(dependencies.ui_directory, absolute);
+  const absolute = resolve(uiDirectory, requested);
+  const relation = relative(uiDirectory, absolute);
   if (
-    !isAbsolute(dependencies.ui_directory) ||
+    !isAbsolute(uiDirectory) ||
     relation.startsWith("..") ||
     isAbsolute(relation)
   ) {
@@ -331,7 +417,7 @@ async function serveUi(
     let content = await readFile(absolute, "utf8");
     if (requested === "index.html") {
       const bootstrap = `<script>window.__JIG_WRITE_TOKEN__=${JSON.stringify(
-        dependencies.write_token,
+        writeToken,
       )};</script>`;
       content = content.replace("</head>", `${bootstrap}</head>`);
     }
@@ -348,7 +434,7 @@ async function serveUi(
 
 function errorResponse(error: unknown): Response {
   if (error instanceof StaleRevisionError) {
-    return json(
+    return jsonResponse(
       {
         error: "stale_revision",
         current_revision: error.current_revision,
@@ -357,15 +443,15 @@ function errorResponse(error: unknown): Response {
     );
   }
   if (error instanceof PlanningError) {
-    return json(
+    return jsonResponse(
       { error: error.message },
       error.code === "NOT_FOUND" ? 404 : 400,
     );
   }
   if (error instanceof TaskValidationError) {
-    return json({ error: error.message }, 400);
+    return jsonResponse({ error: error.message }, 400);
   }
-  return json({ error: "internal persistence failure" }, 500);
+  return jsonResponse({ error: "internal persistence failure" }, 500);
 }
 
 export function createHttpHandler(
@@ -375,22 +461,29 @@ export function createHttpHandler(
     const url = new URL(request.url);
     const { pathname } = url;
 
+    if (
+      request.method === "GET" &&
+      pathname === "/api/v1/setup/status"
+    ) {
+      return jsonResponse({ mode: "configured" });
+    }
+
     if (request.method === "GET" && pathname === "/api/v1/tasks") {
       try {
-        dependencies.ensure_current_day_rollover();
-        return json(readCanonicalState(dependencies.db));
+        await dependencies.ensure_current_day_rollover();
+        return jsonResponse(await readCanonicalState(dependencies.db));
       } catch (error) {
         return errorResponse(error);
       }
     }
     if (request.method === "GET" && pathname === "/api/v1/status") {
-      return json(dependencies.get_status());
+      return jsonResponse(dependencies.get_status());
     }
     if (
       request.method === "GET" &&
       pathname === "/api/v1/diagnostics"
     ) {
-      return json(dependencies.get_diagnostics());
+      return jsonResponse(dependencies.get_diagnostics());
     }
 
     if (
@@ -429,22 +522,23 @@ export function createHttpHandler(
             );
           }
 
-          dependencies.ensure_current_day_rollover();
-          const result = applyTaskCommand(
+          await dependencies.ensure_current_day_rollover();
+          const result = await applyTaskCommand(
             dependencies.db,
             parseCommand(body.command),
             body.expected_revision,
+            dependencies.current_local_date(),
             dependencies.now(),
             dependencies.create_id,
           );
           dependencies.on_task_mutation();
-          return json(result);
+          return jsonResponse(result);
         }
 
         if (pathname === "/api/v1/sync") {
           await parseJsonRequest(request);
           const repositoryStatus = await dependencies.trigger_sync();
-          return json(
+          return jsonResponse(
             { repository_status: repositoryStatus },
             202,
           );
@@ -457,7 +551,11 @@ export function createHttpHandler(
     }
 
     if (request.method === "GET") {
-      return serveUi(pathname, dependencies);
+      return serveUi(
+        pathname,
+        dependencies.ui_directory,
+        dependencies.write_token,
+      );
     }
 
     return new Response("Not found", { status: 404 });

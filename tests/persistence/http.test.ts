@@ -1,28 +1,52 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { Database } from "bun:sqlite";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createHttpHandler } from "../../src/shell/http";
 import {
   applyTaskCommand,
-  initializeDatabase,
   readCanonicalState,
   rollForwardOutstandingInDatabase,
-} from "../../src/shell/sqlite";
+  type JigSqlConnection,
+} from "../../src/persistence/sqlite";
+import { initializeDatabase } from "../../src/shell/sqlite-bun";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 const TOKEN = "a".repeat(64);
+const LOCAL_ONLY_STATUS = {
+  local_git: "committed",
+  remote: {
+    state: "not-configured",
+    remote_name: null,
+    remote_location: null,
+  },
+} as const;
+const PENDING_STATUS = {
+  local_git: "pending",
+  remote: {
+    state: "pending",
+    remote_name: "origin",
+    remote_location: "https://example.invalid/personal/jig-data.git",
+  },
+} as const;
+const SYNCHRONIZED_STATUS = {
+  local_git: "committed",
+  remote: {
+    state: "synchronized",
+    remote_name: "origin",
+    remote_location: "https://example.invalid/personal/jig-data.git",
+  },
+} as const;
 let root = "";
-let db: Database;
+let db: JigSqlConnection;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "jig-http-"));
-  db = initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
+  db = await initializeDatabase(join(root, "jig.sqlite"), DATASET_ID);
 });
 
 afterEach(async () => {
-  db.close();
+  await db.close();
   await rm(root, { recursive: true, force: true });
 });
 
@@ -33,12 +57,13 @@ function handler() {
     repository_path: root,
     ui_directory: root,
     now: () => "2026-11-16T01:00:00.000Z",
+    current_local_date: () => "2026-11-16",
     create_id: () =>
       "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
     get_status: () => ({
       ready: true,
       repository_path: root,
-      repository_status: "local-only",
+      repository_status: LOCAL_ONLY_STATUS,
     }),
     get_diagnostics: () => ({
       service_healthy: true,
@@ -48,8 +73,8 @@ function handler() {
       portable_format_version: 1,
       repository_adapter_healthy: true,
     }),
-    trigger_sync: async () => "local-only",
-    ensure_current_day_rollover: () => undefined,
+    trigger_sync: async () => LOCAL_ONLY_STATUS,
+    ensure_current_day_rollover: async () => undefined,
     on_task_mutation: () => undefined,
   });
 }
@@ -83,6 +108,7 @@ describe("loopback HTTP admission", () => {
     expect(await response.json()).toStrictEqual({
       revision: 0,
       tasks: [],
+      recurrences: [],
     });
   });
 
@@ -103,9 +129,10 @@ describe("loopback HTTP admission", () => {
     );
 
     expect(response.status).toBe(403);
-    expect(readCanonicalState(db)).toStrictEqual({
+    expect(await readCanonicalState(db)).toStrictEqual({
       revision: 0,
       tasks: [],
+      recurrences: [],
     });
   });
 
@@ -152,11 +179,80 @@ describe("loopback HTTP admission", () => {
       error: "stale_revision",
       current_revision: 1,
     });
-    expect(readCanonicalState(db).revision).toBe(1);
+    expect((await readCanonicalState(db)).revision).toBe(1);
+  });
+
+  it("rejects intentional past scheduling without mutating canonical state", async () => {
+    const handle = handler();
+    const created = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 0,
+        command: {
+          type: "create",
+          title: "Date guard",
+          scheduled_date: "2026-11-16",
+        },
+      }),
+    );
+    expect(created.status).toBe(200);
+
+    const createPast = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "create",
+          title: "Past create",
+          scheduled_date: "2026-11-15",
+        },
+      }),
+    );
+    expect(createPast.status).toBe(400);
+    expect(await createPast.json()).toStrictEqual({
+      error: "Outstanding Tasks can only be scheduled for today or a future date",
+    });
+
+    const movePast = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "move",
+          task_id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
+          destination_date: "2026-11-15",
+          destination_index: 0,
+        },
+      }),
+    );
+    expect(movePast.status).toBe(400);
+
+    const editPast = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "edit",
+          task_id: "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
+          changes: {
+            scheduled_date: "2026-11-15",
+          },
+        },
+      }),
+    );
+    expect(editPast.status).toBe(400);
+
+    expect(await readCanonicalState(db)).toMatchObject({
+      revision: 1,
+      tasks: [
+        {
+          title: "Date guard",
+          scheduled_date: "2026-11-16",
+          position: 0,
+          completed_at: null,
+        },
+      ],
+    });
   });
 
   it("runs rollover before revision admission and rejects a pre-rollover command", async () => {
-    applyTaskCommand(
+    await applyTaskCommand(
       db,
       {
         type: "create",
@@ -164,6 +260,7 @@ describe("loopback HTTP admission", () => {
         scheduled_date: "2026-11-15",
       },
       0,
+      "2026-11-15",
       "2026-11-15T18:00:00.000Z",
       () => "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0101",
     );
@@ -175,12 +272,13 @@ describe("loopback HTTP admission", () => {
       repository_path: root,
       ui_directory: root,
       now: () => "2026-11-16T01:00:00.000Z",
+      current_local_date: () => "2026-11-16",
       create_id: () =>
         "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0102",
       get_status: () => ({
         ready: true,
         repository_path: root,
-        repository_status: "pending",
+        repository_status: PENDING_STATUS,
       }),
       get_diagnostics: () => ({
         service_healthy: true,
@@ -190,10 +288,10 @@ describe("loopback HTTP admission", () => {
         portable_format_version: 1,
         repository_adapter_healthy: true,
       }),
-      trigger_sync: async () => "pending",
-      ensure_current_day_rollover: () => {
+      trigger_sync: async () => PENDING_STATUS,
+      ensure_current_day_rollover: async () => {
         rolloverCalls += 1;
-        rollForwardOutstandingInDatabase(
+        await rollForwardOutstandingInDatabase(
           db,
           "2026-11-16",
           "2026-11-16T00:00:00.000Z",
@@ -218,12 +316,117 @@ describe("loopback HTTP admission", () => {
       error: "stale_revision",
       current_revision: 2,
     });
-    const state = readCanonicalState(db);
+    const state = await readCanonicalState(db);
     expect(state.revision).toBe(2);
     expect(state.tasks[0]).toMatchObject({
       scheduled_date: "2026-11-16",
       completed_at: null,
     });
+  });
+
+  it("admits recurrence on the canonical edit command and rejects widened recurrence shapes", async () => {
+    const ids = [
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2001",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2002",
+      "018f47f0-7b5c-7d4d-8e2b-9c3aa11f2003",
+    ];
+    let index = 0;
+    const handle = createHttpHandler({
+      db,
+      write_token: TOKEN,
+      repository_path: root,
+      ui_directory: root,
+      now: () => "2026-11-16T01:00:00.000Z",
+      current_local_date: () => "2026-11-16",
+      create_id: () => {
+        const id = ids[index];
+        if (id === undefined) {
+          throw new Error("HTTP recurrence id fixture exhausted");
+        }
+        index += 1;
+        return id;
+      },
+      get_status: () => ({
+        ready: true,
+        repository_path: root,
+        repository_status: LOCAL_ONLY_STATUS,
+      }),
+      get_diagnostics: () => ({
+        service_healthy: true,
+        sqlite_available: true,
+        sqlite_schema_version: 3,
+        repository_path: root,
+        portable_format_version: 2,
+        repository_adapter_healthy: true,
+      }),
+      trigger_sync: async () => LOCAL_ONLY_STATUS,
+      ensure_current_day_rollover: async () => undefined,
+      on_task_mutation: () => undefined,
+    });
+
+    const created = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 0,
+        command: {
+          type: "create",
+          title: "HTTP recurrence",
+          scheduled_date: "2026-11-16",
+        },
+      }),
+    );
+    expect(created.status).toBe(200);
+
+    const repeated = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 1,
+        command: {
+          type: "edit",
+          task_id: ids[0],
+          changes: {},
+          recurrence: {
+            pattern: {
+              kind: "weekly",
+              interval_weeks: 1,
+              weekdays: ["MON"],
+            },
+            end_date: "2026-11-23",
+          },
+        },
+      }),
+    );
+    expect(repeated.status).toBe(200);
+    expect(await readCanonicalState(db)).toMatchObject({
+      revision: 2,
+      recurrences: [
+        {
+          id: ids[1],
+          effective_from: "2026-11-16",
+          end_date: "2026-11-23",
+        },
+      ],
+    });
+
+    const widened = await handle(
+      postRequest("/api/v1/commands", {
+        expected_revision: 2,
+        command: {
+          type: "edit",
+          task_id: ids[0],
+          changes: {},
+          recurrence: {
+            pattern: {
+              kind: "weekly",
+              interval_weeks: 1,
+              weekdays: ["MON"],
+              propagate_title: true,
+            },
+            end_date: "2026-11-30",
+          },
+        },
+      }),
+    );
+    expect(widened.status).toBe(400);
+    expect((await readCanonicalState(db)).revision).toBe(2);
   });
 
   it("rejects unknown command fields instead of widening the boundary", async () => {
@@ -249,11 +452,12 @@ describe("loopback HTTP admission", () => {
       repository_path: root,
       ui_directory: root,
       now: () => "2026-11-16T01:00:00.000Z",
+      current_local_date: () => "2026-11-16",
       create_id: crypto.randomUUID,
       get_status: () => ({
         ready: true,
         repository_path: root,
-          repository_status: "pending",
+          repository_status: PENDING_STATUS,
       }),
       get_diagnostics: () => ({
         service_healthy: true,
@@ -265,9 +469,9 @@ describe("loopback HTTP admission", () => {
       }),
       trigger_sync: async () => {
         syncCalls += 1;
-        return "synchronized";
+        return SYNCHRONIZED_STATUS;
       },
-      ensure_current_day_rollover: () => undefined,
+      ensure_current_day_rollover: async () => undefined,
       on_task_mutation: () => undefined,
     });
 
@@ -276,5 +480,8 @@ describe("loopback HTTP admission", () => {
     );
     expect(response.status).toBe(202);
     expect(syncCalls).toBe(1);
+    expect(await response.json()).toStrictEqual({
+      repository_status: SYNCHRONIZED_STATUS,
+    });
   });
 });

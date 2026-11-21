@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -35,9 +39,159 @@ jobs:
         run: bun run build
       - name: Install Chromium for real-browser acceptance
         run: bunx playwright install --with-deps chromium
+      - name: Browser bootstrap smoke
+        run: bunx playwright test tests/browser/bootstrap-smoke.spec.ts
+
       - name: Real-browser acceptance
         run: bun run test:browser
+      - name: Retain governed v1.1 browser evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: jig-v1.1-browser-evidence-${{ github.sha }}
+          path: test-results/**/v1.1-*.png
+          if-no-files-found: error
+          retention-days: 7
       - name: Shell syntax
-        run: bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/installer-smoke.sh tests/certification/resource-gate.sh tests/certification/installed-readiness-gate.sh
+        run: bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/installer-smoke.sh tests/install/release-bundle-smoke.sh tests/certification/resource-gate.sh tests/certification/installed-readiness-gate.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh
       - name: Installer and lifecycle smoke
         run: bash tests/install/installer-smoke.sh
+
+  android-build-certification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.5"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Verify pinned JavaScript toolchain
+        run: |
+          test "$(node --version)" = "v22.23.5"
+          test "$(bun --version)" = "1.4.4"
+      - name: Install exact frozen dependency graph
+        run: bun install --frozen-lockfile
+      - name: Set up Android JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Ensure Android SDK 36
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Verify governed Android source/device contract
+        run: bash scripts/verify-android-device-prerequisites.sh --source-only
+      - name: Synchronize governed Android project
+        run: bun run android:sync
+      - name: Verify Gradle dependency locks are current
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd android
+            ./gradlew :app:dependencies --write-locks >/tmp/jig-gradle-dependencies.txt
+          )
+          if git status --porcelain -- android | grep -q 'gradle.lockfile'; then
+            echo "::error::Gradle dependency locks are missing or stale."
+            find android -name gradle.lockfile -type f -print -exec cat {} \;
+            exit 1
+          fi
+      - name: Android unit and static checks
+        run: cd android && ./gradlew :app:testDebugUnitTest :app:lintDebug
+      - name: Verify FLOSS Android runtime dependency boundary
+        run: bash scripts/verify-android-dependencies.sh
+      - name: Verify Android version derivation
+        run: bun run android:version:check
+      - name: Compile Android development APK and native bridge
+        run: cd android && ./gradlew :app:assembleDebug
+      - name: Verify v1.1.0 release metadata transition
+        if: github.event_name == 'pull_request' && github.head_ref == 'release/v1.1.0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(bun run android:version:check)"
+          printf '%s\n' "$output"
+          grep -Fq "JIG_ANDROID_VERSION=1.1.0 JIG_ANDROID_VERSION_CODE=1001000" <<<"$output"
+          metadata="distribution/fdroid/metadata/com.pontivus.jig.yml"
+          grep -Eq '^[[:space:]]+versionName:[[:space:]]+1\.1\.0$' "$metadata"
+          grep -Eq '^[[:space:]]+versionCode:[[:space:]]+1001000$' "$metadata"
+          grep -Eq '^[[:space:]]+commit:[[:space:]]+v1\.1\.0$' "$metadata"
+          grep -Eq '^CurrentVersion:[[:space:]]+1\.1\.0$' "$metadata"
+          grep -Eq '^CurrentVersionCode:[[:space:]]+1001000$' "$metadata"
+      - name: Lint candidate F-Droid metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "${RUNNER_TEMP}/fdroid-venv"
+          "${RUNNER_TEMP}/fdroid-venv/bin/pip" install "fdroidserver==2.4.5"
+          mkdir -p "${RUNNER_TEMP}/fdroid-data/config" "${RUNNER_TEMP}/fdroid-data/metadata"
+          categories_catalog="${RUNNER_TEMP}/fdroid-data/categories-authority.yml"
+          curl -fsSLo "${categories_catalog}" "https://raw.githubusercontent.com/f-droid/fdroiddata/6e52e1ad56721f12c49f48d936e9da05ef740d91/config/categories.yml"
+          "${RUNNER_TEMP}/fdroid-venv/bin/python" - "${categories_catalog}" "${RUNNER_TEMP}/fdroid-data/config/categories.yml" <<'PY'
+          import sys
+          from pathlib import Path
+          import yaml
+
+          source = Path(sys.argv[1])
+          target = Path(sys.argv[2])
+          categories = yaml.safe_load(source.read_text())
+          if not isinstance(categories, dict) or "Task" not in categories:
+              raise SystemExit("Pinned F-Droid category authority has no Task category")
+          target.write_text(yaml.safe_dump({"Task": categories["Task"]}, sort_keys=False))
+          PY
+          grep -Fq "Task:" "${RUNNER_TEMP}/fdroid-data/config/categories.yml"
+          cp distribution/fdroid/metadata/com.pontivus.jig.yml "${RUNNER_TEMP}/fdroid-data/metadata/"
+          (
+            cd "${RUNNER_TEMP}/fdroid-data"
+            "${RUNNER_TEMP}/fdroid-venv/bin/fdroid" lint com.pontivus.jig
+          )
+      - name: Retain development APK for certification inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: jig-android-debug-${{ github.sha }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  android-api-24:
+    name: Android API 24 runtime
+    needs: android-build-certification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.5"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Install exact frozen dependency graph
+        run: bun install --frozen-lockfile
+      - name: Set up Android JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Prepare Android web/native project
+        run: bun run android:sync
+      - name: Run Android instrumentation on minSdk runtime
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          # Emulator 37.3+ rejects the action's software -accel off fallback
+          # unless TCG is explicitly allowed on runners without KVM access.
+          ANDROID_I_WANT_MY_TCG: "yes"
+        with:
+          api-level: 24
+          arch: x86_64
+          target: default
+          disable-animations: true
+          script: cd android && ./gradlew :app:connectedDebugAndroidTest

@@ -1,3 +1,5 @@
+import type { RecurrenceSpec } from "./recurrence";
+
 export const PRIORITIES = ["HIGH", "NORMAL", "LOW"] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
@@ -21,11 +23,13 @@ export type TaskCommand =
       readonly reference?: string | null;
       readonly note?: string | null;
       readonly reminder_time?: string | null;
+      readonly recurrence?: RecurrenceSpec;
     }
   | {
       readonly type: "edit";
       readonly task_id: string;
       readonly changes: TaskEditChanges;
+      readonly recurrence?: RecurrenceSpec | null;
     }
   | {
       readonly type: "move";
@@ -47,6 +51,8 @@ export interface Task {
   readonly reference: string | null;
   readonly note: string | null;
   readonly reminder_time: string | null;
+  readonly recurrence_series_id: string | null;
+  readonly recurrence_occurrence_date: string | null;
   readonly completed_at: string | null;
   readonly created_at: string;
   readonly updated_at: string;
@@ -144,6 +150,8 @@ export function validateTask(value: unknown): Task {
     "reference",
     "note",
     "reminder_time",
+    "recurrence_series_id",
+    "recurrence_occurrence_date",
     "completed_at",
     "created_at",
     "updated_at",
@@ -169,6 +177,8 @@ export function validateTask(value: unknown): Task {
   const reference = task.reference;
   const note = task.note;
   const reminderTime = task.reminder_time;
+  const recurrenceSeriesId = task.recurrence_series_id;
+  const recurrenceOccurrenceDate = task.recurrence_occurrence_date;
   const completedAt = task.completed_at;
   const createdAt = task.created_at;
   const updatedAt = task.updated_at;
@@ -211,6 +221,34 @@ export function validateTask(value: unknown): Task {
   }
   if (reminderTime !== null) {
     assertLocalTime(reminderTime);
+  }
+
+  if (
+    (recurrenceSeriesId === null) !==
+    (recurrenceOccurrenceDate === null)
+  ) {
+    throw new TaskValidationError(
+      "recurrence_series_id and recurrence_occurrence_date must be null together",
+    );
+  }
+  if (recurrenceSeriesId !== null) {
+    if (typeof recurrenceSeriesId !== "string") {
+      throw new TaskValidationError(
+        "recurrence_series_id must be null or a string",
+      );
+    }
+    assertUuid(recurrenceSeriesId, "recurrence_series_id");
+  }
+  if (recurrenceOccurrenceDate !== null) {
+    if (typeof recurrenceOccurrenceDate !== "string") {
+      throw new TaskValidationError(
+        "recurrence_occurrence_date must be null or a string",
+      );
+    }
+    assertCivilDate(
+      recurrenceOccurrenceDate,
+      "recurrence_occurrence_date",
+    );
   }
 
   if (
@@ -275,6 +313,8 @@ export function validateTask(value: unknown): Task {
     reference,
     note,
     reminder_time: reminderTime,
+    recurrence_series_id: recurrenceSeriesId,
+    recurrence_occurrence_date: recurrenceOccurrenceDate,
     completed_at: completedAt,
     created_at: createdAt,
     updated_at: updatedAt,
@@ -317,6 +357,8 @@ export function createCanonicalTask(
     reference: normalizeOptionalText(command.reference),
     note: normalizeOptionalText(command.note),
     reminder_time: command.reminder_time ?? null,
+    recurrence_series_id: null,
+    recurrence_occurrence_date: null,
     completed_at: null,
     created_at: now,
     updated_at: now,

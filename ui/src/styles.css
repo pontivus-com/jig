@@ -35,6 +35,36 @@ body {
   font-family: var(--font-family-body);
 }
 
+@keyframes jig-destination-content-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jig-week-content-enter-today {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jig-attention-reveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -46,12 +76,22 @@ body {
   background: var(--color-background-body);
 }
 
+.jig-app-shell-motion-ready {
+  transition:
+    background-color var(--duration-fast-max) var(--ease-standard),
+    color var(--duration-fast-max) var(--ease-standard);
+}
+
 .jig-content-frame {
   width: 100%;
   min-width: 0;
   height: 100%;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior-y: contain;
+  transition:
+    background-color var(--duration-fast-max) var(--ease-standard),
+    color var(--duration-fast-max) var(--ease-standard);
 }
 
 .jig-content {
@@ -61,11 +101,20 @@ body {
   padding: 0;
 }
 
+.jig-content-configured-transition {
+  animation: jig-destination-content-enter var(--duration-fast-max)
+    var(--ease-standard) both;
+}
+
   .jig-app-header {
     width: 100%;
     margin: 0;
     border-block-end: var(--border-width) solid var(--color-border);
-    background: var(--color-background-body);
+    background: var(--jig-chrome-surface);
+    transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      border-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
   }
 
   .jig-app-header-desktop {
@@ -123,12 +172,79 @@ body {
     gap: var(--spacing-0-5);
   }
 
-  .jig-header-week-range,
-  .jig-header-destination-title {
+  .jig-temporal-control {
+    border: var(--border-width) solid transparent;
+    border-radius: var(--radius-element);
+    background: transparent;
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-temporal-control:hover {
+    background: var(--color-background-muted);
+    border-color: transparent;
+  }
+
+  .jig-temporal-control:focus-visible {
+    border-color: var(--color-border-info);
+  }
+
+  .jig-navigation-menu {
+    display: grid;
+    min-width: 13rem;
+    gap: var(--spacing-1);
+  }
+
+  .jig-navigation-menu-item {
+    height: 52px;
+    min-height: 52px;
+  }
+
+  .jig-header-week-range {
     min-width: 0;
     white-space: nowrap;
     font-size: var(--font-size-sm);
     font-weight: var(--font-weight-semibold);
+  }
+
+  .jig-header-destination-heading {
+    display: grid;
+    min-width: 0;
+    max-width: min(42vw, 34rem);
+    justify-items: center;
+    gap: 0;
+    text-align: center;
+  }
+
+  .jig-header-destination-title {
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-sm);
+    line-height: 1.1;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .jig-header-destination-subtitle {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .jig-header-nav-item {
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-header-nav-active {
@@ -137,13 +253,59 @@ body {
   }
 
   .jig-app-header-narrow {
+    position: sticky;
+    z-index: 1;
+    inset-block-start: 0;
     display: grid;
-    height: 3.5rem;
+    height: auto;
     min-height: 0;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+  }
+
+  .jig-header-mobile-application-row {
+    display: grid;
+    min-height: 52px;
+    grid-template-columns: minmax(48px, 1fr) minmax(0, auto) minmax(48px, 1fr);
     align-items: center;
-    gap: var(--spacing-0-5);
-    padding: 0 var(--spacing-0-5);
+    gap: var(--spacing-1);
+    padding: 0 var(--spacing-1);
+  }
+
+  .jig-header-mobile-identity {
+    min-width: 0;
+    justify-self: start;
+    overflow: hidden;
+  }
+
+  .jig-header-mobile-title {
+    min-width: 0;
+    max-width: 100%;
+    justify-self: center;
+    overflow: hidden;
+  }
+
+  .jig-header-mobile-title .jig-header-destination-heading {
+    max-width: 100%;
+  }
+
+  .jig-header-mobile-title .jig-header-destination-title {
+    font-size: var(--font-size-base);
+    line-height: 1.15;
+    font-weight: var(--font-weight-bold);
+  }
+
+  .jig-header-mobile-actions {
+    justify-self: end;
+  }
+
+  .jig-header-mobile-temporal-row {
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--spacing-1);
+    border-block-start: var(--border-width) solid var(--color-border);
   }
 
   .jig-brand-logo-wrap {
@@ -198,6 +360,10 @@ body {
     border-radius: var(--radius-full);
     background: var(--color-background-muted);
     font-weight: var(--font-weight-bold);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-status-synchronized,
@@ -225,36 +391,111 @@ body {
     background: var(--color-background-muted);
   }
 
-  .jig-reference-heading {
-    display: flex;
-    min-height: 58px;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: var(--spacing-6);
+  .jig-status-indicator {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    font-weight: var(--font-weight-semibold);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
   }
 
-  .jig-reference-heading h1,
-  .jig-reference-heading p {
-    margin: 0;
+  .jig-status-indicator.jig-status-synchronized,
+  .jig-status-indicator.jig-status-local-only,
+  .jig-status-indicator.jig-status-pending,
+  .jig-status-indicator.jig-status-retrying,
+  .jig-status-indicator.jig-status-sync-issue,
+  .jig-status-indicator.jig-status-unknown {
+    background: transparent;
+    border-color: transparent;
   }
 
-  .jig-reference-heading h1 {
-    font-size: var(--font-size-2xl);
-    line-height: var(--text-heading-1-leading);
-    font-weight: var(--font-weight-bold);
+  .jig-mobile-bottom-navigation {
+    position: fixed;
+    z-index: 3;
+    inset-inline: 0;
+    inset-block-end: 0;
+    display: grid;
+    min-height: calc(64px + env(safe-area-inset-bottom, 0px));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    padding: var(--spacing-1) var(--spacing-1)
+      env(safe-area-inset-bottom, 0px);
+    border-block-start: var(--border-width) solid var(--color-border);
+    background: var(--jig-chrome-surface);
   }
 
-  .jig-reference-heading p {
-    margin-block-start: var(--spacing-1);
+  .jig-mobile-nav-item {
+    min-width: 0;
+    min-height: 56px;
+    padding: 0;
+    border-radius: var(--radius-element);
     color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    line-height: var(--text-body-leading);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
   }
 
-  .jig-reference-heading .jig-status-control {
-    min-width: 180px;
-    min-height: calc(var(--size-element-lg) + var(--spacing-1));
+  .jig-mobile-nav-content {
+    display: grid;
+    min-width: 0;
+    justify-items: center;
+    gap: var(--spacing-0-5);
+  }
+
+  .jig-mobile-nav-icon {
+    display: grid;
+    min-width: 44px;
+    min-height: 28px;
+    place-items: center;
     border-radius: var(--radius-full);
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-mobile-nav-label {
+    overflow: hidden;
+    max-width: 100%;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .jig-mobile-nav-item-active {
+    color: var(--jig-state-nav-active-text);
+  }
+
+  .jig-mobile-nav-item-active .jig-mobile-nav-icon {
+    background: var(--jig-state-nav-active-bg);
+  }
+
+  .jig-mobile-add-fab {
+    position: fixed;
+    z-index: 4;
+    inset-inline-end: max(
+      var(--spacing-3),
+      env(safe-area-inset-right, 0px)
+    );
+    inset-block-end: calc(
+      64px + env(safe-area-inset-bottom, 0px) + var(--spacing-3)
+    );
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+    min-height: 56px;
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-med);
+  }
+
+  .jig-mobile-today {
+    min-width: 64px;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
   }
 
   .jig-view-heading {
@@ -292,7 +533,12 @@ body {
     align-items: start;
     width: 100%;
     min-width: 0;
-    padding-block-end: var(--spacing-3);
+    padding-block-end: 0;
+  }
+
+  .jig-week-board-today {
+    animation: jig-week-content-enter-today var(--duration-fast-max)
+      var(--ease-standard) both;
   }
 
   .jig-week-column {
@@ -300,7 +546,6 @@ body {
     min-width: 0;
     min-height: 18rem;
     padding-inline: var(--spacing-1);
-    background: transparent;
   }
 
   .jig-week-column + .jig-week-column {
@@ -321,6 +566,7 @@ body {
     gap: var(--spacing-2);
     padding: var(--spacing-2);
     border-block-end: var(--border-width) solid transparent;
+    transition: border-color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-week-column-today .jig-week-column-header {
@@ -342,6 +588,7 @@ body {
   .jig-week-date-signifier strong {
     min-width: 0;
     white-space: nowrap;
+    transition: color var(--duration-fast) var(--ease-standard);
   }
 
   .jig-date-add {
@@ -364,16 +611,38 @@ body {
     font-variant-numeric: tabular-nums;
   }
 
-  .jig-date-drop-zone {
-    transition:
-      outline-color var(--duration-fast-min) var(--ease-standard),
-      background-color var(--duration-fast-min) var(--ease-standard);
+  .jig-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
-  .jig-date-drop-zone-active {
-    outline: calc(2 * var(--border-width)) dashed var(--jig-state-drag-border);
-    outline-offset: calc(-1 * var(--focus-outline-offset));
+  .jig-task-drag-scope {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .jig-date-drop-zone {
+    position: relative;
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-date-drop-zone-active,
+  .jig-date-drop-zone-empty-target {
     background: var(--jig-state-drag-bg);
+  }
+
+  .jig-date-drop-zone-unavailable {
+    background: color-mix(
+      in srgb,
+      var(--color-background-body) 88%,
+      var(--color-warning-muted) 12%
+    );
   }
 
   .jig-task-card-list {
@@ -386,9 +655,15 @@ body {
     position: relative;
     min-width: 0;
     min-height: 72px;
+    align-items: center;
     border: var(--border-width) solid var(--jig-task-border, var(--color-border));
     border-radius: var(--radius-element);
     background: var(--jig-task-surface, var(--color-background-surface));
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-standard);
   }
 
   .jig-task-card:hover {
@@ -420,18 +695,78 @@ body {
     gap: var(--spacing-1);
   }
 
-  .jig-task-card:not(.jig-task-card-completed) {
-    cursor: grab;
+  .jig-task-card-dragging {
+    opacity: 0.4;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-low);
   }
 
-  .jig-task-card:not(.jig-task-card-completed):active {
+  .jig-task-drag-handle {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-element);
+    color: var(--color-text-secondary);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-task-drag-handle:hover {
+    color: var(--color-text-primary);
+    background: var(--jig-state-hover-bg);
+  }
+
+  .jig-task-drag-handle:active {
     cursor: grabbing;
+    background: var(--jig-state-pressed-bg);
+    transform: scale(0.96);
+  }
+
+  .jig-task-drop-indicator {
+    position: absolute;
+    z-index: 2;
+    inset-inline: var(--spacing-1-5);
+    height: 2px;
+    background: var(--jig-state-drag-border);
+    pointer-events: none;
+  }
+
+  .jig-task-drop-indicator::before {
+    position: absolute;
+    inset-block-start: -3px;
+    inset-inline-start: -4px;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: var(--jig-state-drag-border);
+    content: "";
+  }
+
+  .jig-task-drop-indicator-before {
+    inset-block-start: -1px;
+  }
+
+  .jig-task-drop-indicator-after {
+    inset-block-end: -1px;
+  }
+
+  .jig-task-drop-indicator-empty {
+    inset-block-start: var(--spacing-2);
   }
 
   .jig-task-card-selected {
     border-block-color: var(--jig-state-task-selected-border);
     border-inline-end-color: var(--jig-state-task-selected-border);
     background: var(--jig-state-task-selected-bg);
+    box-shadow: var(--shadow-low);
   }
 
   .jig-task-card-completed {
@@ -439,14 +774,53 @@ body {
     cursor: default;
   }
 
+  .jig-task-card-reminder-due {
+    border-block-color: var(--color-border-warning);
+    border-inline-end-color: var(--color-border-warning);
+    background: color-mix(
+      in srgb,
+      var(--jig-task-surface, var(--color-background-surface)) 88%,
+      var(--color-warning-muted) 12%
+    );
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-reminder-due-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-0-5);
+    color: var(--color-text-warning);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-reminder-scheduled-indicator,
+  .jig-reminder-notified-indicator {
+    color: var(--color-text-secondary);
+    font-weight: var(--font-weight-normal);
+  }
+
   .jig-task-card-leading {
     display: flex;
+    align-self: center;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: var(--spacing-0-5);
   }
 
-  .jig-task-card-preview-row {
+  .jig-task-completion-target {
+    display: grid;
+    place-items: center;
+  }
+
+  .jig-task-drag-overlay-row {
     display: flex;
     align-items: center;
     gap: var(--spacing-1);
@@ -503,6 +877,23 @@ body {
     min-width: 0;
   }
 
+  .jig-task-reference-action {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .jig-repeat-indicator {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--spacing-4);
+    padding-inline: var(--spacing-2);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: var(--color-background-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+  }
+
   .jig-priority-label {
     display: inline-flex;
     align-items: center;
@@ -537,19 +928,82 @@ body {
     white-space: nowrap;
   }
 
+  .jig-drag-clone-shell {
+    width: min(17.5rem, 80vw);
+    pointer-events: none;
+  }
+
   .jig-drag-card-overlay {
-    width: min(20rem, 100%);
+    width: 100%;
     padding: var(--spacing-2);
     box-shadow: var(--shadow-med);
     cursor: grabbing;
   }
 
-  .jig-task-card-preview-row {
+  .jig-task-drag-overlay-row {
     min-width: 0;
   }
 
-  .jig-task-card-preview-checkbox {
+  .jig-task-drag-overlay-checkbox {
     color: var(--color-text-secondary);
+  }
+
+  .jig-planner-surface {
+    position: relative;
+    min-height: 100%;
+    background: var(--jig-planner-surface);
+    transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
+  }
+
+  .jig-planner-empty-state {
+    display: grid;
+    width: min(100% - 2 * var(--spacing-4), 28rem);
+    justify-items: center;
+    gap: var(--spacing-2);
+    margin: var(--spacing-6) auto var(--spacing-2);
+    padding: var(--spacing-5);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-element);
+    background: var(--color-background-surface);
+    text-align: center;
+  }
+
+  .jig-planner-empty-state p {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+
+  .jig-task-insertion-slot {
+    position: relative;
+    min-height: 8px;
+    list-style: none;
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-task-drag-scope[data-jig-drag-active="true"] .jig-task-insertion-slot {
+    min-height: 20px;
+    opacity: 1;
+  }
+
+  .jig-task-insertion-slot .jig-task-drop-indicator {
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .jig-task-insertion-slot-active .jig-task-drop-indicator {
+    opacity: 1;
+  }
+
+  .jig-task-insertion-slot-unavailable-active .jig-task-drop-indicator,
+  .jig-task-insertion-slot-unavailable-active .jig-task-drop-indicator::before {
+    background: var(--color-border-warning);
   }
 
   .jig-history-view,
@@ -558,6 +1012,75 @@ body {
     max-width: 50rem;
     margin-block: 0;
     margin-inline: auto;
+    transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
+  }
+
+  .jig-attention-banner {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--spacing-2);
+    row-gap: var(--spacing-2);
+    padding: var(--spacing-3) var(--spacing-4);
+    animation: jig-attention-reveal var(--duration-fast-max)
+      var(--ease-standard) both;
+  }
+
+  .jig-attention-banner-card {
+    border-radius: var(--radius-element);
+  }
+
+  .jig-attention-banner-error {
+    color: var(--color-on-error-muted);
+    background: var(--color-error-muted);
+  }
+
+  .jig-attention-banner-warning {
+    color: var(--color-on-warning-muted);
+    background: var(--color-warning-muted);
+  }
+
+  .jig-attention-banner-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .jig-attention-banner-message {
+    display: grid;
+    min-width: 12rem;
+    flex: 1 1 12rem;
+    gap: var(--spacing-0-5);
+  }
+
+  .jig-attention-banner-title,
+  .jig-attention-banner-description {
+    margin: 0;
+  }
+
+  .jig-attention-banner-description {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-normal);
+  }
+
+  .jig-attention-banner-action {
+    display: flex;
+    max-width: 100%;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    margin-inline-start: auto;
+  }
+
+  .jig-attention-banner-dismiss {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
   }
 
   .jig-task-sheet-header {
@@ -565,8 +1088,6 @@ body {
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--spacing-3);
-    padding-block-end: var(--spacing-3);
-    border-block-end: var(--border-width) solid var(--color-border);
   }
 
   .jig-task-sheet-header > div {
@@ -597,14 +1118,16 @@ body {
 
   .jig-history-groups {
     display: grid;
-    gap: calc(var(--spacing-6) + var(--spacing-0-5));
-    margin-block-start: calc(var(--spacing-9) + var(--spacing-0-5));
+    gap: var(--spacing-6);
+    margin-block-start: var(--spacing-5);
   }
 
   .jig-history-group-heading {
-    display: grid;
-    gap: var(--spacing-1);
-    margin-block-end: var(--spacing-4);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin-block-end: var(--spacing-2);
   }
 
   .jig-history-group-heading h2 {
@@ -620,22 +1143,47 @@ body {
     border-block-end: 0;
   }
 
-  .jig-settings-grid {
+  .jig-settings-sections {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--spacing-7) 30px;
-    margin-block-start: var(--spacing-10);
+    gap: var(--spacing-6);
+    margin-block-start: var(--spacing-5);
   }
 
-  .jig-settings-panel {
+  .jig-settings-section {
     display: grid;
-    align-content: start;
-    gap: calc(var(--spacing-2) + var(--spacing-0-5));
+    gap: var(--spacing-2);
   }
 
-  .jig-settings-panel h2 {
+  .jig-settings-section h2,
+  .jig-settings-section-heading h2 {
     margin: 0;
     font-size: var(--font-size-lg);
+  }
+
+  .jig-settings-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+  }
+
+  .jig-settings-section-heading p,
+  .jig-settings-card p,
+  .jig-settings-card small,
+  .jig-settings-safety-copy {
+    margin: 0;
+  }
+
+  .jig-settings-section-heading p,
+  .jig-settings-card small,
+  .jig-settings-safety-copy {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .jig-settings-group {
+    min-width: 0;
+    border-block-start: var(--border-width) solid var(--color-border);
   }
 
   .jig-settings-card {
@@ -643,31 +1191,44 @@ body {
     border-radius: calc(var(--radius-element) + var(--border-width));
   }
 
-  .jig-settings-card p,
-  .jig-settings-card small {
-    margin: 0;
-  }
-
-  .jig-settings-card small {
-    color: var(--color-text-secondary);
-  }
-
-  .jig-settings-sync-action {
+  .jig-settings-row {
     display: flex;
-    justify-content: flex-end;
-    margin-block-start: auto;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-4);
+    padding-block: var(--spacing-3);
+    border-block-end: var(--border-width) solid var(--color-border);
   }
 
-  .jig-local-first-note {
-    overflow: hidden;
-    margin-block-start: calc(var(--spacing-7) + var(--spacing-0-5));
-    border-radius: calc(var(--radius-element) + var(--border-width));
+  .jig-settings-row > div:first-child {
+    min-width: 0;
   }
 
-  .jig-local-first-note p {
-    margin: 0;
+  .jig-settings-row p {
+    margin-block: var(--spacing-0-5) 0;
+  }
+
+  .jig-settings-row small {
+    display: block;
+    margin-block-start: var(--spacing-0-5);
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
+  }
+
+  .jig-settings-control-stack {
+    display: grid;
+    gap: var(--spacing-4);
+    padding-block: var(--spacing-3);
+    border-block-end: var(--border-width) solid var(--color-border);
+  }
+
+  .jig-settings-row-actions,
+  .jig-settings-diagnostics-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--spacing-2);
   }
 
   .jig-settings-notifications {
@@ -675,6 +1236,8 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-3);
+    padding-block: var(--spacing-3);
+    border-block-end: var(--border-width) solid var(--color-border);
   }
 
   .jig-settings-notifications p {
@@ -683,10 +1246,12 @@ body {
   }
 
   .jig-history-task-row {
-    min-height: 70px;
-    margin-block-start: var(--spacing-3);
-    border: var(--border-width) solid var(--jig-task-border, var(--color-border));
-    border-radius: var(--radius-element);
+    min-height: 64px;
+    margin-block-start: 0;
+    border: 0;
+    border-block-start: var(--border-width) solid
+      var(--jig-task-border, var(--color-border));
+    border-radius: 0;
     background: var(--jig-task-surface, var(--color-background-surface));
   }
 
@@ -748,13 +1313,36 @@ body {
     overflow-wrap: anywhere;
   }
 
-  .jig-editor-form {
-    display: grid;
-    gap: var(--spacing-3);
+  .jig-settings-remote-name {
+    display: block;
+    margin-block-start: var(--spacing-0-5);
+    color: var(--color-text-secondary);
   }
 
   .jig-editor-form {
+    display: grid;
+    gap: var(--spacing-5);
     padding-block-end: var(--spacing-1);
+  }
+
+  .jig-editor-section {
+    display: grid;
+    min-width: 0;
+    gap: var(--spacing-3);
+  }
+
+  .jig-editor-section + .jig-editor-section {
+    padding-block-start: var(--spacing-1);
+    border-block-start: var(--border-width) solid var(--color-border);
+  }
+
+  .jig-editor-section-heading h3 {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .jig-editor-group-field {
@@ -767,7 +1355,47 @@ body {
     align-items: center;
     justify-content: flex-end;
     gap: var(--spacing-3);
-    padding-block-start: var(--spacing-2);
+    padding-block: var(--spacing-2);
+  }
+
+  .jig-task-workspace-footer-actions {
+    padding-block: 0;
+  }
+
+  .jig-repeat-field,
+  .jig-repeat-disclosure {
+    display: grid;
+    gap: var(--spacing-3);
+  }
+
+  .jig-repeat-disclosure {
+    padding-block-start: var(--spacing-1);
+  }
+
+  .jig-repeat-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: var(--spacing-2);
+  }
+
+  .jig-repeat-weekday {
+    min-width: 0;
+  }
+
+  .jig-repeat-summary {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .jig-repeat-scope-copy {
+    margin: 0;
+    padding: var(--spacing-2) var(--spacing-3);
+    border-inline-start: calc(3 * var(--border-width)) solid var(--color-border-warning);
+    border-radius: var(--radius-element);
+    background: var(--color-background-muted);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
   }
 
   .jig-form-error {
@@ -777,14 +1405,206 @@ body {
     font-weight: var(--font-weight-semibold);
   }
 
+  .jig-app-header-onboarding {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    padding: 0 var(--spacing-1);
+  }
+
+  .jig-setup {
+    min-height: 100%;
+    padding: var(--spacing-7) var(--spacing-6);
+    background: var(--color-background-body);
+    color: var(--color-text-primary);
+  }
+
+  .jig-setup-layout {
+    display: grid;
+    width: min(100%, 72rem);
+    min-height: calc(100dvh - 2.75rem - 2 * var(--spacing-7));
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 30rem);
+    align-items: center;
+    gap: var(--spacing-8);
+    margin-inline: auto;
+  }
+
+  .jig-content-frame-onboarding {
+    height: calc(100dvh - 2.75rem);
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .jig-setup-value,
+  .jig-setup-pane,
+  .jig-setup-heading,
+  .jig-setup-state-heading,
+  .jig-setup-local-repository,
+  .jig-setup-github-state,
+  .jig-setup-github-repositories {
+    display: grid;
+    gap: var(--spacing-2);
+  }
+
+  .jig-setup-value {
+    gap: var(--spacing-5);
+  }
+
+  .jig-setup-heading {
+    gap: var(--spacing-1);
+  }
+
+  .jig-setup-heading h1 {
+    max-width: 18ch;
+    font-size: calc(var(--font-size-2xl) * 1.35);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+  }
+
+  .jig-setup-eyebrow {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .jig-setup-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-4);
+  }
+
+  .jig-setup-benefit {
+    display: grid;
+    align-content: start;
+    gap: var(--spacing-2);
+  }
+
+  .jig-setup-benefit-icon {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-element);
+    background: var(--color-background-muted);
+    color: var(--color-text-primary);
+  }
+
+  .jig-setup-benefit-copy {
+    display: grid;
+    gap: var(--spacing-0-5);
+  }
+
+  .jig-setup-benefit-copy > span {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .jig-setup-choice {
+    min-width: 0;
+  }
+
+  .jig-setup-choice-desktop {
+    padding: var(--spacing-5);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: calc(var(--radius-element) + var(--border-width));
+    background: var(--color-background-surface);
+    box-shadow: var(--shadow-med);
+  }
+
+  .jig-setup-choice-narrow {
+    padding-block-start: var(--spacing-1);
+  }
+
+  .jig-setup-card {
+    border-radius: calc(var(--radius-element) + var(--border-width));
+    background: var(--color-background-surface);
+    box-shadow: var(--shadow-med);
+  }
+
+  .jig-setup-github-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+  }
+
+  .jig-github-device-code {
+    font-size: var(--font-size-xl);
+    letter-spacing: 0.08em;
+  }
+
+  .jig-setup-heading h1,
+  .jig-setup-card h2,
+  .jig-setup-state-heading h2 {
+    margin: 0;
+  }
+
+  .jig-setup-heading p,
+  .jig-setup-card p,
+  .jig-setup-state-heading p,
+  .jig-setup-github-state small {
+    margin: 0;
+    color: var(--color-text-secondary);
+  }
+
   .jig-loading {
     display: grid;
-    max-width: 42rem;
+    width: min(100% - 2 * var(--spacing-4), 42rem);
     gap: var(--spacing-3);
-    margin: 10vh auto 0;
+    margin: var(--spacing-6) auto 0;
   }
 
   @media (max-width: 72.999rem) {
+    .jig-planner-empty-primary {
+      display: none;
+    }
+
+    .jig-app-header-onboarding {
+      min-height: 56px;
+      padding: 0 var(--spacing-2);
+    }
+
+    .jig-setup {
+      padding: var(--spacing-4) var(--spacing-3);
+    }
+
+    .jig-setup-layout {
+      min-height: auto;
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+      gap: var(--spacing-5);
+    }
+
+    .jig-setup-benefits {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--spacing-3);
+    }
+
+    .jig-setup-benefit {
+      grid-template-columns: 40px minmax(0, 1fr);
+      align-items: start;
+      gap: var(--spacing-3);
+    }
+
+    .jig-setup-heading h1 {
+      font-size: var(--font-size-2xl);
+      line-height: 1.12;
+    }
+
+    .jig-setup-choice-narrow {
+      padding-block-start: 0;
+    }
+
+    .jig-setup-pane {
+      width: 100%;
+    }
+
+    .jig-setup-card {
+      box-shadow: none;
+    }
+
     .jig-app-shell {
       margin: 0;
       padding: 0;
@@ -793,6 +1613,7 @@ body {
     .jig-content-frame {
       height: 100%;
       margin: 0;
+      padding: 0;
       overflow: auto;
       border: 0;
       border-radius: 0;
@@ -800,10 +1621,30 @@ body {
       box-shadow: none;
     }
 
+    .jig-content-frame-today-smooth {
+      scroll-behavior: smooth;
+    }
+
     .jig-content {
       min-height: 0;
       margin: 0;
       padding: 0;
+    }
+
+    .jig-content-configured {
+      padding-block-end: calc(
+        64px + env(safe-area-inset-bottom, 0px)
+      );
+    }
+
+    .jig-content-configured-planner {
+      padding-block-end: 0;
+    }
+
+    .jig-content-configured-planner .jig-planner-surface {
+      padding-block-end: calc(
+        64px + env(safe-area-inset-bottom, 0px)
+      );
     }
 
     .jig-header-center {
@@ -819,19 +1660,33 @@ body {
       text-overflow: ellipsis;
     }
 
-    .jig-header-mobile-actions .jig-status-control {
-      min-width: 0;
+    .jig-header-mobile-actions .jig-status-indicator {
+      min-width: 48px;
+      min-height: 48px;
+    }
+
+    .jig-app-header-narrow .jig-header-temporal {
+      width: 100%;
+      justify-content: space-between;
+      gap: var(--spacing-1);
+    }
+
+    .jig-app-header-narrow .jig-header-week-range {
+      flex: 1 1 auto;
+      text-align: center;
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-bold);
     }
 
     .jig-week-board {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
-      gap: var(--spacing-4);
+      gap: 0;
     }
 
     .jig-week-board .jig-week-column {
       min-height: 0;
-      padding-block: var(--spacing-1) var(--spacing-3);
+      padding-block: 0;
       border-inline-start: 0;
     }
 
@@ -843,30 +1698,71 @@ body {
       min-height: 0;
     }
 
+    .jig-week-board .jig-week-column-header {
+      min-height: 52px;
+      padding: var(--spacing-1) var(--spacing-2);
+    }
+
     .jig-week-board .jig-week-task-area {
-      min-height: var(--spacing-8);
+      min-height: 0;
     }
 
     .jig-task-card-list {
-      padding: var(--spacing-2) 0;
+      gap: var(--spacing-1);
+      padding: 0 0 var(--spacing-2);
     }
 
     .jig-task-card {
-      min-height: 88px;
+      min-height: 72px;
+    }
+
+    .jig-task-card-leading {
+      flex-direction: row;
+      gap: 0;
+    }
+
+    .jig-task-drag-handle,
+    .jig-task-completion-target {
+      width: 48px;
+      height: 48px;
     }
 
     .jig-history-groups,
-    .jig-settings-grid {
+    .jig-settings-sections {
       margin-block-start: var(--spacing-5);
     }
 
-    .jig-settings-grid {
-      grid-template-columns: 1fr;
-      gap: var(--spacing-5);
+    .jig-history-view,
+    .jig-settings-view {
+      padding-inline: var(--spacing-1);
     }
 
-    .jig-local-first-note {
-      margin-block-start: var(--spacing-5);
+    .jig-settings-row,
+    .jig-settings-section-heading,
+    .jig-settings-notifications {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .jig-settings-row-actions,
+    .jig-settings-diagnostics-actions {
+      justify-content: stretch;
+    }
+
+    .jig-settings-row-actions > *,
+    .jig-settings-diagnostics-actions > * {
+      min-width: 100%;
+    }
+
+    .jig-repeat-weekdays {
+      grid-template-columns: repeat(4, minmax(48px, 1fr));
+    }
+
+    .jig-repeat-weekday {
+      width: 48px;
+      min-width: 48px;
+      height: 48px;
+      min-height: 48px;
     }
 
     .jig-editor-actions {
@@ -882,6 +1778,42 @@ body {
       gap: var(--spacing-3);
     }
 
+    .jig-mobile-touch-control {
+      min-width: 48px;
+      min-height: 48px;
+    }
+
+    .jig-mobile-selector-option {
+      display: flex;
+      min-height: 40px;
+      align-items: center;
+    }
+
+    .jig-app-header-narrow button,
+    .jig-app-header-narrow [role="button"],
+    .jig-mobile-bottom-navigation button,
+    .jig-mobile-add-fab,
+    .jig-date-add,
+    .jig-task-menu-trigger,
+    .jig-task-reference-action,
+    .jig-task-card-leading [role="checkbox"],
+    .jig-editor-primary-actions button,
+    .jig-task-sheet-header button,
+    .jig-settings-view button,
+    .jig-setup button {
+      min-width: 48px;
+      min-height: 48px;
+    }
+
+    .jig-header-mobile-actions,
+    .jig-header-temporal {
+      gap: var(--spacing-2);
+    }
+
+    .jig-editor-form {
+      padding-block-end: 0;
+    }
+
     .jig-diagnostics > div {
       grid-template-columns: 1fr;
       gap: var(--spacing-0-5);
@@ -890,7 +1822,42 @@ body {
 
 
   @media (prefers-reduced-motion: reduce) {
-    .jig-date-drop-zone {
+    .jig-content-frame {
+      scroll-behavior: auto;
+    }
+
+    .jig-content-configured-transition,
+    .jig-week-board-today,
+    .jig-attention-banner {
+      animation: none;
+    }
+
+    .jig-app-shell,
+    .jig-content-frame,
+    .jig-planner-surface,
+    .jig-history-view,
+    .jig-settings-view {
       transition: none;
+    }
+
+    .jig-header-nav-item,
+    .jig-status-control,
+    .jig-status-indicator,
+    .jig-mobile-nav-item,
+    .jig-mobile-nav-icon,
+    .jig-week-column-header,
+    .jig-week-date-signifier strong,
+    .jig-date-drop-zone,
+    .jig-task-card,
+    .jig-task-drag-handle,
+    .jig-reminder-due-indicator,
+    .jig-task-insertion-slot,
+    .jig-task-insertion-slot .jig-task-drop-indicator {
+      transition: none;
+    }
+
+    .jig-task-card-dragging,
+    .jig-task-drag-handle:active {
+      transform: none;
     }
   }

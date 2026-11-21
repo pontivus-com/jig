@@ -7,6 +7,5 @@ export const astryxNeutralTheme = defineTheme({
   extends: neutralTheme,
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

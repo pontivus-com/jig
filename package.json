@@ -11,14 +11,22 @@
     "@astryxdesign/theme-neutral": "0.7.13",
     "@astryxdesign/theme-stone": "0.7.13",
     "@astryxdesign/theme-y2k": "0.7.13",
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/local-notifications": "8.3.1",
     "@dnd-kit/dom": "0.5.3",
     "@dnd-kit/react": "0.5.3",
     "@stylexjs/stylex": "0.19.1",
+    "buffer": "6.0.3",
+    "isomorphic-git": "1.44.16",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@astryxdesign/cli": "0.7.13",
+    "@capacitor/cli": "8.6.2",
     "@playwright/test": "1.64.1",
     "@types/bun": "1.4.4",
     "@types/react": "19.3.0",
@@ -34,6 +42,10 @@
     "test:browser": "playwright test",
     "verify": "bun run typecheck && bun run test && bun run build && bun run test:browser",
     "theme:check": "bun scripts/build-themes.ts --check",
-    "theme:build": "bun scripts/build-themes.ts"
+    "theme:build": "bun scripts/build-themes.ts",
+    "android:sync": "bun run build && node node_modules/@capacitor/cli/bin/capacitor sync android",
+    "android:version:check": "bun run android:sync && cd android && ./gradlew :app:verifyJigVersion",
+    "android:build:debug": "bun run android:sync && cd android && ./gradlew :app:assembleDebug",
+    "android:device:preflight": "bash scripts/verify-android-device-prerequisites.sh"
   }
 }

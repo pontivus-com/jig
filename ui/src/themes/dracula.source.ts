@@ -10,6 +10,5 @@ export const draculaTheme = defineTheme({
   tokens: communityColorTokens(draculaPalette),
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

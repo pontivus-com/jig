@@ -7,6 +7,5 @@ export const astryxButterTheme = defineTheme({
   extends: butterTheme,
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

@@ -1,0 +1,56 @@
+Categories:
+  - Task
+License: Apache-2.0
+SourceCode: https://github.com/pontivus-com/jig
+IssueTracker: https://github.com/pontivus-com/jig/issues
+Changelog: https://github.com/pontivus-com/jig/blob/HEAD/CHANGELOG.md
+
+AutoName: Jig
+Summary: Local-first just-in-time daily planner
+MaintainerNotes: |-
+  This in-repository file is pre-release candidate metadata. The external
+  fdroiddata submission must resolve the immutable v1.1.0 tag to its exact
+  40-character release commit and use that SHA in Builds.commit.
+
+Description: |-
+  Jig is a local-first just-in-time daily planner.
+  Planning state is durable on-device and portable Jig records synchronize
+  through the user's Git repository. The Android application uses the same
+  canonical Task, planning, recurrence and portable-data contracts as the
+  Linux application.
+
+RepoType: git
+Repo: https://github.com/pontivus-com/jig.git
+
+Builds:
+  - versionName: 1.1.0
+    versionCode: 1001000
+    commit: v1.1.0
+    subdir: android/app
+    sudo:
+      - apt-get update
+      - apt-get install -y curl unzip xz-utils
+      - curl -fL -o /tmp/node.tar.xz https://nodejs.org/dist/v22.23.5/node-v22.23.5-linux-x64.tar.xz
+      - echo "cdeb8670a0c81f51b4dc4ac61919f9b1ad917b304bf8221eb939570663d240f8  /tmp/node.tar.xz" | sha256sum -c -
+      - tar -xJf /tmp/node.tar.xz --strip-components=1 -C /usr/local
+      - curl -fL -o /tmp/bun.zip https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-linux-x64.zip
+      - echo "bf8ccbfb2b0b80159e0f9a6d15c55317add8077534dbc6130a3edb52fccb395c  /tmp/bun.zip" | sha256sum -c -
+      - unzip -q /tmp/bun.zip -d /tmp/bun
+      - install -m 0755 /tmp/bun/bun-linux-x64/bun /usr/local/bin/bun
+    gradle:
+      - yes
+    init:
+      - pushd ../..
+      - test "$(node --version)" = "v22.23.5"
+      - test "$(bun --version)" = "1.4.4"
+      - bun install --frozen-lockfile --ignore-scripts
+      - bun run build
+      - node node_modules/@capacitor/cli/bin/capacitor sync android
+      - popd
+    scandelete:
+      - node_modules/
+
+AutoUpdateMode: None
+UpdateCheckMode: Tags
+CurrentVersion: 1.1.0
+CurrentVersionCode: 1001000

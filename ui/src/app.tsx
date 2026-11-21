@@ -1,7 +1,6 @@
 import {
   AlertDialog,
   AppShell,
-  Banner,
   Button,
   Icon,
   IconButton,
@@ -11,12 +10,13 @@ import { Theme } from "@astryxdesign/core/theme";
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from "react";
+import type { ReactNode } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
   addCivilDays,
-  defaultAddDate,
   startOfWeekMonday,
   weekDates,
 } from "../../src/core/planning";
@@ -31,20 +31,23 @@ import {
   type TaskDraft,
 } from "./task-editor";
 import { HistoryView } from "./history";
+import { isStaleRevision } from "./http";
 import {
-  isStaleRevision,
   readCanonicalTasks,
   readDiagnostics,
   readStatus,
   submitTaskCommand,
   triggerSync,
-} from "./http";
-import { Planner } from "./planner";
+} from "./runtime";
+import { Planner, type WeekTransitionDirection } from "./planner";
 import {
+  CompactApplicationNavigation,
   PlannerHeader,
-  type Destination,
 } from "./planner-header";
-import { ReminderMonitor } from "./reminder";
+import {
+  ReminderMonitor,
+  useReminderClock,
+} from "./reminder";
 import { repositoryStatusPresentation } from "./repository-status";
 import { SettingsView } from "./settings";
 import {
@@ -67,7 +70,30 @@ import {
   type TaskWorkspacePresentation,
   type TaskWorkspaceState,
 } from "./task-workspace";
-import { useLayoutMode } from "./use-layout-mode";
+import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
+import { SetupView } from "./setup";
+import { JigLogo } from "./jig-logo";
+import { JigAttentionBanner } from "./attention-banner";
+import {
+  installNativeActiveListener,
+  installNativeBackButtonListener,
+} from "./native/app-lifecycle";
+import { NativeSystemBars } from "./native/system-bars";
+import {
+  initialDestinationNavigation,
+  navigateDestination as navigateDestinationState,
+  previousDestination,
+  type Destination,
+} from "./navigation";
+import {
+  readGitHubCapabilityStatus,
+  readGitHubReconnectState,
+  readSetupStatus,
+  reconnectGitHub as reconnectGitHubIntent,
+  resumeGitHubReconnect,
+  type GitHubReconnectSnapshot,
+  type SetupStatus,
+} from "./setup-http";
 interface PlannerState {
   readonly displayedWeekStart: string;
 }
@@ -83,26 +109,96 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+interface ApplicationShellProps {
+  readonly topNav: ReactNode;
+  readonly children: ReactNode;
+}
+
+function ApplicationShell({
+  topNav,
+  children,
+}: ApplicationShellProps): React.ReactElement {
+  const [motionReady, setMotionReady] = useState(false);
+
+  useEffect(() => {
+    setMotionReady(true);
+  }, []);
+
+  return (
+    <AppShell
+      className={motionReady ? "jig-app-shell jig-app-shell-motion-ready" : "jig-app-shell"}
+      topNav={topNav}
+      mobileNav={false}
+      contentPadding={0}
+      height="fill"
+      variant="section"
+    >
+      {children}
+    </AppShell>
+  );
+}
+
+function OnboardingHeader(): React.ReactElement {
+  return (
+    <header className="jig-app-header jig-app-header-onboarding">
+      <span className="jig-header-brand">
+        <span className="jig-brand-logo-wrap" aria-hidden="true">
+          <JigLogo />
+        </span>
+      </span>
+    </header>
+  );
+}
+
 function workspaceTaskId(state: TaskWorkspaceState): string | null {
   return state.mode === "task" ? state.taskId : null;
 }
 
-export function App(): React.ReactElement {
-  const layoutMode = useLayoutMode();
-  const [destination, setDestination] = useState<Destination>("planner");
+interface ConfiguredAppProps {
+  readonly layoutMode: LayoutMode;
+  readonly themePreset: ThemePreset;
+  readonly appearanceMode: AppearanceMode;
+  readonly onThemePresetChange: (value: ThemePreset) => void;
+  readonly onAppearanceModeChange: (value: AppearanceMode) => void;
+}
+
+function ConfiguredApp({
+  layoutMode,
+  themePreset,
+  appearanceMode,
+  onThemePresetChange,
+  onAppearanceModeChange,
+}: ConfiguredAppProps): React.ReactElement {
+  const [, setReminderDeliveryRevision] = useState(0);
+  const onReminderNotified = useCallback(() => {
+    setReminderDeliveryRevision((revision) => revision + 1);
+  }, []);
+  const reminderNow = useReminderClock();
+  const [destinationNavigation, setDestinationNavigation] = useState(
+    initialDestinationNavigation,
+  );
+  const [destinationTransition, setDestinationTransition] =
+    useState<Destination | null>(null);
   const [plannerState, setPlannerState] =
     useState<PlannerState>(initialPlannerState);
+  const [todayScrollRequest, setTodayScrollRequest] = useState(0);
+  const [weekTransitionDirection, setWeekTransitionDirection] =
+    useState<WeekTransitionDirection | null>(null);
   const [observedToday, setObservedToday] = useState(todayCivilDate);
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
+  const [githubReconnectAvailable, setGitHubReconnectAvailable] =
+    useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
+  const [initialSyncSettled, setInitialSyncSettled] = useState(false);
+  const [dismissedSyncAttention, setDismissedSyncAttention] = useState<
+    string | null
+  >(null);
   const [isOperating, setIsOperating] = useState(false);
-  const [themePreset, setThemePreset] =
-    useState<ThemePreset>(readThemePreset);
-  const [appearanceMode, setAppearanceMode] =
-    useState<AppearanceMode>(readAppearanceMode);
+  const [githubReconnect, setGitHubReconnect] =
+    useState<GitHubReconnectSnapshot | null>(null);
   const [workspace, setWorkspace] = useState<TaskWorkspaceState>({
     mode: "closed",
   });
@@ -114,6 +210,14 @@ export function App(): React.ReactElement {
     selectedTaskId === null
       ? null
       : tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const selectedRecurrenceSeries =
+    selectedTask?.recurrence_series_id === null ||
+    selectedTask?.recurrence_series_id === undefined
+      ? null
+      : canonical?.recurrences.find(
+          (series) =>
+            series.id === selectedTask.recurrence_series_id,
+        ) ?? null;
   const deleteTask =
     deleteTaskId === null
       ? null
@@ -127,18 +231,41 @@ export function App(): React.ReactElement {
 
   const refreshOperationalState = useCallback(
     async (): Promise<void> => {
-      const [nextStatus, nextDiagnostics] = await Promise.all([
+      const [
+        nextStatus,
+        nextDiagnostics,
+        githubCapabilities,
+      ] = await Promise.all([
         readStatus(),
         readDiagnostics(),
+        readGitHubCapabilityStatus(),
       ]);
       setStatus(nextStatus);
       setDiagnostics(nextDiagnostics);
+      setGitHubReconnectAvailable(
+        githubCapabilities.reconnect_available,
+      );
+    },
+    [],
+  );
+
+  const updateRepositoryStatus = useCallback(
+    (repositoryStatus: ServiceStatus["repository_status"]): void => {
+      setStatus((current) =>
+        current === null
+          ? current
+          : {
+              ...current,
+              repository_status: repositoryStatus,
+            },
+      );
     },
     [],
   );
 
   const load = useCallback(async (): Promise<void> => {
     setLoadError(null);
+    setInitialSyncSettled(false);
     try {
       await Promise.all([
         refreshCanonical(),
@@ -146,6 +273,8 @@ export function App(): React.ReactElement {
       ]);
     } catch (error) {
       setLoadError(errorMessage(error));
+    } finally {
+      setInitialSyncSettled(true);
     }
   }, [refreshCanonical, refreshOperationalState]);
 
@@ -161,6 +290,54 @@ export function App(): React.ReactElement {
     }, 15_000);
     return () => window.clearInterval(interval);
   }, []);
+  useEffect(() => {
+    const onOnline = (): void => {
+      void triggerSync()
+        .then(updateRepositoryStatus)
+        .catch(() => undefined);
+    };
+    window.addEventListener("online", onOnline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+    };
+  }, []);
+
+
+  useEffect(() => {
+    let disposed = false;
+    let cleanup: (() => Promise<void>) | null = null;
+
+    void installNativeActiveListener(() => {
+      void Promise.all([
+        resumeGitHubReconnect(),
+        refreshCanonical(),
+        triggerSync().then((next) => {
+          if (!disposed) {
+            updateRepositoryStatus(next);
+          }
+        }),
+      ]).catch((error: unknown) => {
+        if (!disposed) {
+          setOperationError(
+            `Jig could not refresh after Android resumed: ${errorMessage(error)}. Reload the application.`,
+          );
+        }
+      });
+    }).then((remove) => {
+      if (disposed) {
+        void remove();
+        return;
+      }
+      cleanup = remove;
+    });
+
+    return () => {
+      disposed = true;
+      if (cleanup !== null) {
+        void cleanup();
+      }
+    };
+  }, [refreshCanonical, updateRepositoryStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,6 +351,7 @@ export function App(): React.ReactElement {
 
       const previousCurrentWeek = startOfWeekMonday(observedToday);
       const nextCurrentWeek = startOfWeekMonday(nextToday);
+      setWeekTransitionDirection(null);
       setPlannerState((current) =>
         current.displayedWeekStart === previousCurrentWeek &&
         previousCurrentWeek !== nextCurrentWeek
@@ -315,12 +493,18 @@ export function App(): React.ReactElement {
 
   const selectTask = useCallback((task: Task): void => {
     setOperationError(null);
+    const recurrenceSeries =
+      task.recurrence_series_id === null
+        ? null
+        : canonical?.recurrences.find(
+            (series) => series.id === task.recurrence_series_id,
+          ) ?? null;
     setWorkspace({
       mode: "task",
       taskId: task.id,
-      draft: draftFor(task, task.scheduled_date),
+      draft: draftFor(task, task.scheduled_date, recurrenceSeries),
     });
-  }, []);
+  }, [canonical?.recurrences]);
 
   const openCreate = useCallback((date: string): void => {
     setOperationError(null);
@@ -337,11 +521,14 @@ export function App(): React.ReactElement {
       if (result === null || !("task" in result)) {
         return false;
       }
-      setWorkspace({
+      setWorkspace((current) => ({
         mode: "task",
         taskId: result.task.id,
-        draft: draftFor(result.task, result.task.scheduled_date),
-      });
+        draft:
+          current.mode === "task" || current.mode === "create"
+            ? current.draft
+            : draftFor(result.task, result.task.scheduled_date),
+      }));
       return true;
     },
     [runCommand],
@@ -360,19 +547,57 @@ export function App(): React.ReactElement {
   }, []);
 
   const navigateDestination = useCallback((next: Destination): void => {
-    setDestination(next);
+    if (destinationNavigation.current !== next) {
+      setDestinationTransition(next);
+    }
+    setDestinationNavigation((current) =>
+      navigateDestinationState(current, next),
+    );
     setWorkspace({ mode: "closed" });
+  }, [destinationNavigation]);
+
+  const handleBack = useCallback((): boolean => {
+    if (workspace.mode !== "closed") {
+      closeWorkspace();
+      return true;
+    }
+
+    const previous = previousDestination(destinationNavigation);
+    if (previous === null) {
+      return false;
+    }
+
+    setDestinationTransition(previous.current);
+    setDestinationNavigation(previous);
+    return true;
+  }, [closeWorkspace, destinationNavigation, workspace.mode]);
+
+  const backHandlerRef = useRef<() => boolean>(() => false);
+  backHandlerRef.current = handleBack;
+
+  useEffect(() => {
+    let disposed = false;
+    let cleanup: (() => Promise<void>) | null = null;
+
+    void installNativeBackButtonListener(() => backHandlerRef.current()).then(
+      (remove) => {
+        if (disposed) {
+          void remove();
+          return;
+        }
+        cleanup = remove;
+      },
+    );
+
+    return () => {
+      disposed = true;
+      if (cleanup !== null) {
+        void cleanup();
+      }
+    };
   }, []);
 
-  const changeThemePreset = useCallback((value: ThemePreset): void => {
-    setThemePreset(value);
-    writeThemePreset(value);
-  }, []);
-
-  const changeAppearanceMode = useCallback((value: AppearanceMode): void => {
-    setAppearanceMode(value);
-    writeAppearanceMode(value);
-  }, []);
+  const destination = destinationNavigation.current;
 
   const syncNow = useCallback(async (): Promise<void> => {
     if (isOperating) {
@@ -390,25 +615,101 @@ export function App(): React.ReactElement {
     }
   }, [isOperating, refreshOperationalState]);
 
-  const previousWeek = useCallback((): void => {
+  const reconnectGitHub = useCallback(async (): Promise<void> => {
+    if (isOperating) {
+      return;
+    }
+    setIsOperating(true);
+    setOperationError(null);
+    try {
+      const snapshot = await reconnectGitHubIntent();
+      setGitHubReconnect(snapshot);
+      if (snapshot.error !== null) {
+        setOperationError(snapshot.error);
+      }
+    } catch (error) {
+      setGitHubReconnect(null);
+      setOperationError(errorMessage(error));
+    } finally {
+      setIsOperating(false);
+    }
+  }, [isOperating]);
+
+  useEffect(() => {
+    if (githubReconnect === null) {
+      return;
+    }
+
+    let disposed = false;
+    const observe = async (): Promise<void> => {
+      try {
+        const snapshot = await readGitHubReconnectState();
+        if (disposed) {
+          return;
+        }
+        if (snapshot.state === "initial") {
+          setGitHubReconnect(null);
+          await refreshOperationalState();
+          return;
+        }
+        setGitHubReconnect(snapshot);
+        if (snapshot.state === "attention" && snapshot.error !== null) {
+          setOperationError(snapshot.error);
+        }
+      } catch {
+        // The next observation or ordinary status refresh will retry.
+      }
+    };
+
+    void observe();
+    const interval = window.setInterval(() => {
+      void observe();
+    }, 1_000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, [githubReconnect !== null, refreshOperationalState]);
+
+  const requestPreviousWeek = useCallback((): void => {
+    setWeekTransitionDirection(null);
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
     }));
   }, []);
 
-  const nextWeek = useCallback((): void => {
+  const requestNextWeek = useCallback((): void => {
+    setWeekTransitionDirection(null);
     setPlannerState((current) => ({
       displayedWeekStart: addCivilDays(current.displayedWeekStart, 7),
     }));
   }, []);
 
   const goToToday = useCallback((): void => {
+    const todayWeekStart = startOfWeekMonday(todayCivilDate());
+    setWeekTransitionDirection(
+      layoutMode === "narrow" ||
+        plannerState.displayedWeekStart === todayWeekStart
+        ? null
+        : "today",
+    );
     setPlannerState({
-      displayedWeekStart: startOfWeekMonday(todayCivilDate()),
+      displayedWeekStart: todayWeekStart,
     });
-  }, []);
+    setTodayScrollRequest((current) => current + 1);
+  }, [layoutMode, plannerState.displayedWeekStart]);
 
-  const repositoryStatus = repositoryStatusPresentation(status);
+  const repositoryStatus = repositoryStatusPresentation(status, {
+    initialSync: !initialSyncSettled,
+  });
+
+  useEffect(() => {
+    if (repositoryStatus.key !== "sync-issue") {
+      setDismissedSyncAttention(null);
+    }
+  }, [repositoryStatus.key]);
+
   const statusClassName =
     `jig-status-control jig-status-${repositoryStatus.key}`;
   const statusIcon = (
@@ -434,34 +735,34 @@ export function App(): React.ReactElement {
       size="sm"
       icon={statusIcon}
       onClick={() => navigateDestination("settings")}
-      className={statusClassName}
+      className={`jig-status-indicator jig-status-${repositoryStatus.key}`}
     />
   );
 
   const durableBanner =
     operationError !== null && workspace.mode === "closed" ? (
-    <Banner
+    <JigAttentionBanner
       status="error"
       title="Jig could not complete the operation"
       description={operationError}
       container="section"
-      collapsible={false}
+      onDismiss={() => setOperationError(null)}
     />
-  ) : status?.repository_status === "sync-issue" ? (
-    <Banner
+  ) : repositoryStatus.key === "sync-issue" &&
+    destination !== "settings" &&
+    dismissedSyncAttention !== repositoryStatus.message ? (
+    <JigAttentionBanner
       status="warning"
-      title="Repository synchronization issue"
-      description="Local planning data remains safe. Repository synchronization currently has an operational issue."
+      title="Sync needs attention"
+      description={repositoryStatus.message}
       container="section"
-      collapsible={false}
+      onDismiss={() => setDismissedSyncAttention(repositoryStatus.message)}
       endContent={
         <Button
-          label="Retry"
+          label="Open Settings"
           variant="secondary"
           size="sm"
-          onClick={() => {
-            void syncNow();
-          }}
+          onClick={() => navigateDestination("settings")}
         />
       }
     />
@@ -509,12 +810,11 @@ export function App(): React.ReactElement {
           <p>Loading local planning data…</p>
         ) : (
           <>
-            <Banner
+            <JigAttentionBanner
               status="error"
               title="Jig could not load local planning data"
               description={loadError}
-              collapsible={false}
-            />
+                            />
             <Button
               label="Retry"
               variant="primary"
@@ -527,7 +827,12 @@ export function App(): React.ReactElement {
       </div>
     ) : destination === "planner" ? (
       <Planner
+        focusCurrentDayOnMount={layoutMode === "narrow"}
+        todayScrollRequest={todayScrollRequest}
+        weekTransitionDirection={weekTransitionDirection}
         tasks={tasks}
+        recurrences={canonical.recurrences}
+        now={reminderNow}
         displayedDates={displayedDates}
         selectedTask={selectedTask}
         onSelectTask={selectTask}
@@ -555,9 +860,12 @@ export function App(): React.ReactElement {
         diagnostics={diagnostics}
         operationError={operationError}
         isOperating={isOperating}
-        onThemePresetChange={changeThemePreset}
-        onAppearanceModeChange={changeAppearanceMode}
+        githubReconnectAvailable={githubReconnectAvailable}
+        githubReconnect={githubReconnect}
+        onThemePresetChange={onThemePresetChange}
+        onAppearanceModeChange={onAppearanceModeChange}
         onSync={syncNow}
+        onReconnectGitHub={reconnectGitHub}
       />
     );
 
@@ -567,6 +875,7 @@ export function App(): React.ReactElement {
         workspace={workspacePresentation}
         externalError={operationError}
         isSaving={isOperating}
+        recurrenceSeries={selectedRecurrenceSeries}
         onDraftChange={changeWorkspaceDraft}
         onSave={saveWorkspace}
         onDelete={(task) => setDeleteTaskId(task.id)}
@@ -578,6 +887,7 @@ export function App(): React.ReactElement {
         workspace={workspacePresentation}
         externalError={operationError}
         isSaving={isOperating}
+        recurrenceSeries={selectedRecurrenceSeries}
         onDraftChange={changeWorkspaceDraft}
         onSave={saveWorkspace}
         onDelete={(task) => setDeleteTaskId(task.id)}
@@ -587,10 +897,8 @@ export function App(): React.ReactElement {
     );
 
   return (
-    <Theme theme={themeFor(themePreset)} mode={appearanceMode}>
-      <LayerProvider>
-        <AppShell
-          className="jig-app-shell"
+    <>
+        <ApplicationShell
           topNav={
             <PlannerHeader
               destination={destination}
@@ -601,36 +909,54 @@ export function App(): React.ReactElement {
               statusControl={statusControl}
               compactStatusControl={compactStatusControl}
               onHome={() => navigateDestination("planner")}
-              onPreviousWeek={previousWeek}
+              onPreviousWeek={requestPreviousWeek}
               onToday={goToToday}
-              onNextWeek={nextWeek}
-              onAdd={() =>
-                openCreate(
-                  defaultAddDate(
-                    plannerState.displayedWeekStart,
-                    todayCivilDate(),
-                  ),
-                )
-              }
+              onNextWeek={requestNextWeek}
+              onAdd={() => openCreate(todayCivilDate())}
               onNavigate={navigateDestination}
             />
           }
-          mobileNav={false}
-          banner={durableBanner ?? undefined}
-          contentPadding={0}
-          height="fill"
-          variant="section"
         >
-          <div className="jig-content-frame">
+          {durableBanner}
+          <div
+            className={[
+              "jig-content-frame",
+              layoutMode === "narrow" && todayScrollRequest > 0
+                ? "jig-content-frame-today-smooth"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <div
-              className="jig-content"
+              key={destination}
+              className={[
+                "jig-content",
+                "jig-content-configured",
+                destination === "planner"
+                  ? "jig-content-configured-planner"
+                  : "",
+                destinationTransition === destination
+                  ? "jig-content-configured-transition"
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               onPointerDown={dismissWorkspaceFromContent}
             >
               {content}
             </div>
           </div>
           {workspaceSurface}
-        </AppShell>
+          {layoutMode === "narrow" && workspacePresentation === null ? (
+            <CompactApplicationNavigation
+              destination={destination}
+              showAdd
+              onAdd={() => openCreate(todayCivilDate())}
+              onNavigate={navigateDestination}
+            />
+          ) : null}
+        </ApplicationShell>
 
         <AlertDialog
           isOpen={deleteTask !== null}
@@ -669,7 +995,92 @@ export function App(): React.ReactElement {
           }}
         />
 
-        <ReminderMonitor tasks={tasks} />
+        <ReminderMonitor
+          tasks={tasks}
+          now={reminderNow}
+          onReminderNotified={onReminderNotified}
+        />
+    </>
+  );
+}
+
+
+export function App(): React.ReactElement {
+  const layoutMode = useLayoutMode();
+  const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [themePreset, setThemePreset] =
+    useState<ThemePreset>(readThemePreset);
+  const [appearanceMode, setAppearanceMode] =
+    useState<AppearanceMode>(readAppearanceMode);
+
+  const refreshSetup = useCallback(async (): Promise<void> => {
+    setSetupError(null);
+    try {
+      setSetupStatus(await readSetupStatus());
+    } catch (error) {
+      setSetupError(errorMessage(error));
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshSetup();
+  }, [refreshSetup]);
+
+  const changeThemePreset = (value: ThemePreset): void => {
+    setThemePreset(value);
+    writeThemePreset(value);
+  };
+  const changeAppearanceMode = (value: AppearanceMode): void => {
+    setAppearanceMode(value);
+    writeAppearanceMode(value);
+  };
+
+  const bootstrapBody =
+    setupStatus?.mode === "bootstrap" ? (
+      <SetupView status={setupStatus} layoutMode={layoutMode} />
+    ) : (
+      <div className="jig-loading">
+        {setupError === null ? (
+          <p>Opening Jig…</p>
+        ) : (
+          <>
+            <JigAttentionBanner
+              status="error"
+              title="Jig could not open"
+              description={setupError}
+                    />
+            <Button
+              label="Retry"
+              variant="primary"
+              onClick={() => {
+                void refreshSetup();
+              }}
+            />
+          </>
+        )}
+      </div>
+    );
+
+  return (
+    <Theme theme={themeFor(themePreset)} mode={appearanceMode}>
+      <NativeSystemBars />
+      <LayerProvider>
+        {setupStatus?.mode === "configured" ? (
+          <ConfiguredApp
+            layoutMode={layoutMode}
+            themePreset={themePreset}
+            appearanceMode={appearanceMode}
+            onThemePresetChange={changeThemePreset}
+            onAppearanceModeChange={changeAppearanceMode}
+          />
+        ) : (
+          <ApplicationShell topNav={<OnboardingHeader />}>
+            <div className="jig-content-frame jig-content-frame-onboarding">
+              <div className="jig-content">{bootstrapBody}</div>
+            </div>
+          </ApplicationShell>
+        )}
       </LayerProvider>
     </Theme>
   );

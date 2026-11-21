@@ -20,9 +20,9 @@ async function navigateTo(
     return;
   }
 
-  await page.getByRole("button", { name: "Open navigation menu" }).click();
   await page
-    .getByRole("menuitem", { name: destination, exact: true })
+    .getByRole("navigation", { name: "Primary" })
+    .getByRole("button", { name: destination, exact: true })
     .click();
 }
 

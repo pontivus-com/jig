@@ -12,11 +12,15 @@ fail() {
 usage() {
   cat <<'EOF'
 Usage:
+  scripts/install.sh
   scripts/install.sh --repo /absolute/existing/repo [--port PORT]
   scripts/install.sh --repo-url URL --checkout /absolute/new/path [--port PORT]
 
-If no repository mode is supplied, the installer prompts for an existing Git
-repository path. --repo and --repo-url/--checkout are mutually exclusive.
+With no repository arguments, Jig installs/updates the application and starts
+the in-application setup flow. Existing configured installations keep their
+current repository configuration. --repo and --repo-url/--checkout remain
+noninteractive automation modes. --port is valid only with an immediate
+repository mode.
 EOF
 }
 
@@ -31,6 +35,7 @@ REPO_PATH=""
 REPO_URL=""
 CHECKOUT_PATH=""
 PORT="$DEFAULT_PORT"
+PORT_SPECIFIED="false"
 
 while (($# > 0)); do
   case "$1" in
@@ -52,6 +57,7 @@ while (($# > 0)); do
     --port)
       (($# >= 2)) || fail "--port requires a value."
       PORT="$2"
+      PORT_SPECIFIED="true"
       shift 2
       ;;
     -h|--help)
@@ -74,20 +80,24 @@ if [[ -n "$CHECKOUT_PATH" && -z "$REPO_URL" ]]; then
   fail "--checkout requires --repo-url."
 fi
 
-if [[ -z "$REPO_PATH" && -z "$REPO_URL" ]]; then
-  if [[ ! -t 0 ]]; then
-    fail "Repository configuration is required in noninteractive mode."
-  fi
-  read -r -p "Absolute path to an existing writable Git repository: " REPO_PATH
+INSTALL_MODE="bootstrap"
+if [[ -n "$REPO_PATH" || -n "$REPO_URL" ]]; then
+  INSTALL_MODE="immediate"
+fi
+if [[ "$INSTALL_MODE" == "bootstrap" && "$PORT_SPECIFIED" == "true" ]]; then
+  fail "--port requires --repo or --repo-url/--checkout; bootstrap mode uses port ${DEFAULT_PORT}."
 fi
 
-[[ "$PORT" =~ ^[0-9]+$ ]] || fail "--port must be an integer."
-((PORT >= 1024 && PORT <= 65535)) || fail "--port must be between 1024 and 65535."
+if [[ "$INSTALL_MODE" == "immediate" ]]; then
+  [[ "$PORT" =~ ^[0-9]+$ ]] || fail "--port must be an integer."
+  ((PORT >= 1024 && PORT <= 65535)) || fail "--port must be between 1024 and 65535."
+fi
 
+TARGET_REPO=""
 if [[ -n "$REPO_PATH" ]]; then
   [[ "$REPO_PATH" = /* ]] || fail "--repo must be an absolute path."
   TARGET_REPO="$REPO_PATH"
-else
+elif [[ -n "$REPO_URL" ]]; then
   [[ "$CHECKOUT_PATH" = /* ]] || fail "--checkout must be an absolute path."
   TARGET_REPO="$CHECKOUT_PATH"
 
@@ -167,6 +177,9 @@ else
   cp -R "$SOURCE_ROOT/src" "$BUILD_APP/"
   cp -R "$SOURCE_ROOT/ui" "$BUILD_APP/"
   cp -R "$SOURCE_ROOT/assets" "$BUILD_APP/"
+  if [[ -d "$SOURCE_ROOT/public" ]]; then
+    cp -R "$SOURCE_ROOT/public" "$BUILD_APP/"
+  fi
 
   printf 'Installing frozen dependencies and building Jig assets\n'
   (
@@ -182,13 +195,31 @@ if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/d
 fi
 
 STAGED_CONFIG="$BUILD_ROOT/config.json"
-SETUP_ARGS=(--repo "$TARGET_REPO" --port "$PORT" --config "$STAGED_CONFIG")
+RUNTIME_PORT="$DEFAULT_PORT"
 
-printf 'Preparing Jig planning data in %s\n' "$TARGET_REPO"
-(
-  cd "$BUILD_APP"
-  "$BUN_BIN" src/shell/setup.ts "${SETUP_ARGS[@]}"
-)
+if [[ "$INSTALL_MODE" == "immediate" ]]; then
+  SETUP_ARGS=(--repo "$TARGET_REPO" --port "$PORT" --config "$STAGED_CONFIG")
+  printf 'Preparing Jig planning data in %s\n' "$TARGET_REPO"
+  (
+    cd "$BUILD_APP"
+    "$BUN_BIN" src/shell/setup.ts "${SETUP_ARGS[@]}"
+  )
+  RUNTIME_PORT="$PORT"
+elif [[ -f "$CONFIG_PATH" ]]; then
+  EXISTING_PORT="$(
+    cd "$BUILD_APP"
+    JIG_CONFIG_PATH="$CONFIG_PATH" "$BUN_BIN" -e '
+      const { loadConfig } = await import("./src/shell/config.ts");
+      const config = await loadConfig(process.env.JIG_CONFIG_PATH);
+      process.stdout.write(String(config.http_port));
+    '
+  )"
+  [[ "$EXISTING_PORT" =~ ^[0-9]+$ ]] || fail "Existing Jig configuration has an invalid HTTP port."
+  RUNTIME_PORT="$EXISTING_PORT"
+  INSTALL_MODE="preserve"
+else
+  printf 'Installing Jig in first-run bootstrap mode on port %s\n' "$DEFAULT_PORT"
+fi
 
 STAGED_APP="${APP_DIR}.next.$$"
 BACKUP_APP="${APP_DIR}.previous.$$"
@@ -223,11 +254,13 @@ cp "$SOURCE_ROOT/scripts/jig" "$LAUNCHER_TMP"
 chmod 0755 "$LAUNCHER_TMP"
 mv "$LAUNCHER_TMP" "$BIN_DIR/jig"
 
-mkdir -p "$CONFIG_DIR"
-CONFIG_TMP="$CONFIG_PATH.tmp.$$"
-cp "$STAGED_CONFIG" "$CONFIG_TMP"
-chmod 0600 "$CONFIG_TMP"
-mv "$CONFIG_TMP" "$CONFIG_PATH"
+if [[ "$INSTALL_MODE" == "immediate" ]]; then
+  mkdir -p "$CONFIG_DIR"
+  CONFIG_TMP="$CONFIG_PATH.tmp.$"
+  cp "$STAGED_CONFIG" "$CONFIG_TMP"
+  chmod 0600 "$CONFIG_TMP"
+  mv "$CONFIG_TMP" "$CONFIG_PATH"
+fi
 
 SERVICE_AVAILABLE="false"
 if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
@@ -256,7 +289,7 @@ fi
 READY="false"
 if [[ "$SERVICE_AVAILABLE" == "true" ]]; then
   for _ in $(seq 1 40); do
-    if "$APP_DIR/runtime/bun" -e       "try { const r = await fetch('http://127.0.0.1:${PORT}/api/v1/status'); if (!r.ok) process.exit(1); } catch { process.exit(1); }"       >/dev/null 2>&1; then
+    if "$APP_DIR/runtime/bun" -e       "try { const r = await fetch('http://127.0.0.1:${RUNTIME_PORT}/api/v1/setup/status'); if (!r.ok) process.exit(1); } catch { process.exit(1); }"       >/dev/null 2>&1; then
       READY="true"
       break
     fi
@@ -268,7 +301,7 @@ else
   "$APP_DIR/runtime/bun" "$APP_DIR/src/shell/main.ts" >"$BUILD_ROOT/foreground.log" 2>&1 &
   FALLBACK_PID=$!
   for _ in $(seq 1 40); do
-    if "$APP_DIR/runtime/bun" -e       "try { const r = await fetch('http://127.0.0.1:${PORT}/api/v1/status'); if (!r.ok) process.exit(1); } catch { process.exit(1); }"       >/dev/null 2>&1; then
+    if "$APP_DIR/runtime/bun" -e       "try { const r = await fetch('http://127.0.0.1:${RUNTIME_PORT}/api/v1/setup/status'); if (!r.ok) process.exit(1); } catch { process.exit(1); }"       >/dev/null 2>&1; then
       READY="true"
       break
     fi
@@ -282,18 +315,27 @@ else
   }
 fi
 
-[[ -f "$TARGET_REPO/.jig/local/jig.sqlite" ]] || fail "SQLite initialization verification failed."
+if [[ "$INSTALL_MODE" == "immediate" ]]; then
+  [[ -f "$TARGET_REPO/.jig/local/jig.sqlite" ]] || fail "SQLite initialization verification failed."
+fi
 
 printf '\nJig installed successfully.\n'
 printf 'Application: %s\n' "$APP_DIR"
 printf 'Launcher: %s\n' "$BIN_DIR/jig"
-printf 'Configuration: %s\n' "$CONFIG_PATH"
-printf 'SQLite: %s/.jig/local/jig.sqlite\n' "$TARGET_REPO"
-printf 'Planning repository: %s\n' "$TARGET_REPO"
+if [[ "$INSTALL_MODE" == "immediate" ]]; then
+  printf 'Configuration: %s\n' "$CONFIG_PATH"
+  printf 'SQLite: %s/.jig/local/jig.sqlite\n' "$TARGET_REPO"
+  printf 'Planning repository: %s\n' "$TARGET_REPO"
+  printf 'Repository synchronization: managed automatically from the selected repository Git configuration\n'
+elif [[ "$INSTALL_MODE" == "preserve" ]]; then
+  printf 'Configuration: %s (preserved)\n' "$CONFIG_PATH"
+  printf 'Repository setup: existing configuration preserved\n'
+else
+  printf 'Repository setup: open http://127.0.0.1:%s/ or run "jig"\n' "$RUNTIME_PORT"
+fi
 if [[ "$SERVICE_AVAILABLE" == "true" ]]; then
   printf 'Service: %s (systemd --user, enabled and started)\n' "$UNIT_PATH"
 else
   printf 'Service: background user service unavailable; run "jig serve" as the foreground fallback.\n'
 fi
-printf 'Repository synchronization: managed automatically from the selected repository Git configuration\n'
 printf 'No systemd linger policy was changed.\n'

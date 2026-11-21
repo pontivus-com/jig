@@ -10,14 +10,30 @@ import {
 const REMOTE = "/tmp/jig-playwright-remote.git";
 const OFFLINE_REMOTE = "/tmp/jig-playwright-remote.offline.git";
 
-async function repositoryStatus(page: Page): Promise<string> {
+async function repositoryStatus(
+  page: Page,
+): Promise<{
+  readonly local_git: string;
+  readonly remote: {
+    readonly state: string;
+    readonly remote_name: string | null;
+    readonly remote_location: string | null;
+  };
+}> {
   return page.evaluate(async () => {
     const response = await fetch("/api/v1/status");
     if (!response.ok) {
       throw new Error(`GET /status failed: ${response.status}`);
     }
     const status = (await response.json()) as {
-      repository_status: string;
+      repository_status: {
+        local_git: string;
+        remote: {
+          state: string;
+          remote_name: string | null;
+          remote_location: string | null;
+        };
+      };
     };
     return status.repository_status;
   });
@@ -54,8 +70,11 @@ test.beforeEach(async ({ page }) => {
   await resetCanonicalTasks(page);
   await syncNow(page);
   await expect
-    .poll(() => repositoryStatus(page), { timeout: 10_000 })
-    .toBe("synchronized");
+    .poll(async () => {
+      const status = await repositoryStatus(page);
+      return `${status.local_git}:${status.remote.state}`;
+    }, { timeout: 10_000 })
+    .toBe("committed:synchronized");
   await page.reload();
 });
 
@@ -83,16 +102,22 @@ test("local save survives repository transport failure and later synchronization
     ).toBe(true);
 
     await expect
-      .poll(() => repositoryStatus(page), { timeout: 10_000 })
-      .toMatch(/^(retrying|sync-issue)$/);
+      .poll(async () => {
+        const status = await repositoryStatus(page);
+        return `${status.local_git}:${status.remote.state}`;
+      }, { timeout: 10_000 })
+      .toMatch(/^committed:(retrying|sync-issue)$/);
   } finally {
     await rename(OFFLINE_REMOTE, REMOTE);
   }
 
   await syncNow(page);
   await expect
-    .poll(() => repositoryStatus(page), { timeout: 10_000 })
-    .toBe("synchronized");
+    .poll(async () => {
+      const status = await repositoryStatus(page);
+      return `${status.local_git}:${status.remote.state}`;
+    }, { timeout: 10_000 })
+    .toBe("committed:synchronized");
   expect(
     (await apiState(page)).tasks.some(
       (task) => task.title === "Locally safe during sync outage",

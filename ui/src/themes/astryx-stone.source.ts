@@ -7,6 +7,5 @@ export const astryxStoneTheme = defineTheme({
   extends: stoneTheme,
   localTokens: {
     ...jigProductLocalTokens,
-    "--jig-task-surface": "var(--color-background-surface)",
   },
 });

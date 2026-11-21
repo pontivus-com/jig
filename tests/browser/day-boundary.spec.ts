@@ -73,7 +73,9 @@ test("already-open browser refreshes canonical state across local midnight", asy
   await expect
     .poll(() =>
       page
-        .locator(".jig-week-column-today")
+        .locator(
+          ".jig-planner-surface .jig-week-column-today",
+        )
         .getAttribute("data-date"),
     )
     .toBe(nextDay);

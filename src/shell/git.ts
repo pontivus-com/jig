@@ -7,15 +7,20 @@ import {
 } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 import {
-  assertUuid,
-  type Task,
-  validateTask,
-} from "../core/task";
-import { assertTaskSet } from "../core/planning";
-import type { RepositoryStatus } from "../protocol";
-import { PORTABLE_FORMAT_VERSION } from "./sqlite";
+  serializeSnapshot,
+  validateSnapshot,
+  type PortableSnapshot,
+} from "../portable";
+import type { SynchronizationLineage } from "../core/synchronization";
+export {
+  SnapshotValidationError,
+  serializeSnapshot,
+  validateSnapshot,
+  type PortableSnapshot,
+} from "../portable";
 
 const DATA_REF = "refs/heads/jig-data";
+const REMOTE_GIT_TIMEOUT_MS = 60_000;
 
 export const SYNC_HEALTHY_POLL_MS = 60_000;
 export const EXPORT_DEBOUNCE_MS = 3_000;
@@ -30,11 +35,6 @@ export const SYNC_RETRY_SECONDS = [
   300,
 ] as const;
 
-export interface PortableSnapshot {
-  readonly dataset_id: string;
-  readonly files: ReadonlyMap<string, string>;
-  readonly tasks: readonly Task[];
-}
 
 export interface GitAdapterConfig {
   readonly repository_path: string;
@@ -51,189 +51,59 @@ export interface GitCommandResult {
   readonly stderr: string;
 }
 
-export class SnapshotValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "SnapshotValidationError";
-  }
+export interface RepositorySynchronizationResult {
+  readonly status: "synchronized" | "sync-issue";
+  readonly retryable: boolean;
 }
+
+export interface SynchronizationRemote {
+  readonly name: string;
+  readonly location: string;
+}
+
+export type SynchronizationAuthority =
+  | { readonly state: "none" }
+  | { readonly state: "ambiguous" }
+  | {
+      readonly state: "selected";
+      readonly remote: SynchronizationRemote;
+    };
+
+export type PortableRemoteObservation =
+  | {
+      readonly state: "none";
+      readonly local_head: string | null;
+    }
+  | {
+      readonly state: "ambiguous";
+      readonly local_head: string | null;
+    }
+  | {
+      readonly state: "absent";
+      readonly remote: SynchronizationRemote;
+      readonly local_head: string | null;
+      readonly previously_synchronized: boolean;
+    }
+  | {
+      readonly state: "unsafe";
+      readonly remote: SynchronizationRemote;
+      readonly local_head: string | null;
+    }
+  | {
+      readonly state: "present";
+      readonly remote: SynchronizationRemote;
+      readonly local_head: string | null;
+      readonly remote_head: string;
+      readonly remote_rewritten: boolean;
+      readonly lineage: SynchronizationLineage;
+      readonly remote_snapshot: PortableSnapshot;
+    };
 
 export class GitAdapterError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "GitAdapterError";
   }
-}
-
-function canonicalTaskRecord(task: Task): Record<string, unknown> {
-  return {
-    completed_at: task.completed_at,
-    context: task.context,
-    created_at: task.created_at,
-    id: task.id,
-    note: task.note,
-    position: task.position,
-    priority: task.priority,
-    reference: task.reference,
-    reminder_time: task.reminder_time,
-    scheduled_date: task.scheduled_date,
-    title: task.title,
-    updated_at: task.updated_at,
-  };
-}
-
-function stableJson(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
-
-export function serializeSnapshot(
-  tasks: readonly Task[],
-  datasetId: string,
-): PortableSnapshot {
-  assertUuid(datasetId, "dataset_id");
-  assertTaskSet(tasks);
-
-  const files = new Map<string, string>();
-  files.set(
-    "format.json",
-    stableJson({
-      dataset_id: datasetId,
-      version: PORTABLE_FORMAT_VERSION,
-    }),
-  );
-
-  for (const task of [...tasks].sort((left, right) =>
-    left.id.localeCompare(right.id),
-  )) {
-    files.set(
-      `tasks/${task.id}.json`,
-      stableJson(canonicalTaskRecord(task)),
-    );
-  }
-
-  return {
-    dataset_id: datasetId,
-    files,
-    tasks: [...tasks],
-  };
-}
-
-function parseJsonObject(content: string, path: string): Record<string, unknown> {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    throw new SnapshotValidationError(`${path} is not valid JSON`);
-  }
-
-  if (
-    parsed === null ||
-    typeof parsed !== "object" ||
-    Array.isArray(parsed)
-  ) {
-    throw new SnapshotValidationError(`${path} must contain a JSON object`);
-  }
-  return parsed as Record<string, unknown>;
-}
-
-function parseTaskRecord(
-  content: string,
-  path: string,
-  expectedId: string,
-): Task {
-  const object = parseJsonObject(content, path);
-  const keys = [
-    "completed_at",
-    "context",
-    "created_at",
-    "id",
-    "note",
-    "position",
-    "priority",
-    "reference",
-    "reminder_time",
-    "scheduled_date",
-    "title",
-    "updated_at",
-  ];
-  const actualKeys = Object.keys(object).sort();
-  if (
-    actualKeys.length !== keys.length ||
-    actualKeys.some((key, index) => key !== keys[index])
-  ) {
-    throw new SnapshotValidationError(
-      `${path} does not contain exactly the canonical Task fields`,
-    );
-  }
-
-  const task = validateTask(object);
-  if (task.id !== expectedId) {
-    throw new SnapshotValidationError(
-      `${path} id does not match its filename`,
-    );
-  }
-  return task;
-}
-
-export function validateSnapshot(
-  files: ReadonlyMap<string, string>,
-  expectedDatasetId?: string,
-): PortableSnapshot {
-  const formatContent = files.get("format.json");
-  if (formatContent === undefined) {
-    throw new SnapshotValidationError("format.json is missing");
-  }
-
-  const format = parseJsonObject(formatContent, "format.json");
-  if (
-    format.version !== PORTABLE_FORMAT_VERSION ||
-    typeof format.dataset_id !== "string"
-  ) {
-    throw new SnapshotValidationError(
-      "format.json has an unsupported format version or dataset identity",
-    );
-  }
-  assertUuid(format.dataset_id, "dataset_id");
-
-  if (
-    expectedDatasetId !== undefined &&
-    format.dataset_id !== expectedDatasetId
-  ) {
-    throw new SnapshotValidationError(
-      "Snapshot dataset identity does not match the configured dataset",
-    );
-  }
-
-  const tasks: Task[] = [];
-  const ids = new Set<string>();
-  for (const [path, content] of files) {
-    if (path === "format.json") {
-      continue;
-    }
-
-    const match = /^tasks\/([0-9a-f-]+)\.json$/i.exec(path);
-    if (match === null || match[1] === undefined) {
-      throw new SnapshotValidationError(
-        `Unexpected portable snapshot path ${path}`,
-      );
-    }
-
-    const task = parseTaskRecord(content, path, match[1]);
-    if (ids.has(task.id)) {
-      throw new SnapshotValidationError(
-        `Duplicate Task id ${task.id} in snapshot`,
-      );
-    }
-    ids.add(task.id);
-    tasks.push(task);
-  }
-
-  assertTaskSet(tasks);
-  return {
-    dataset_id: format.dataset_id,
-    files: new Map(files),
-    tasks,
-  };
 }
 
 function assertAdapterPaths(config: GitAdapterConfig): void {
@@ -252,6 +122,7 @@ export async function runGit(
   args: readonly string[],
   input?: string,
   extraEnv: Readonly<Record<string, string>> = {},
+  timeoutMs?: number,
 ): Promise<GitCommandResult> {
   const processHandle = Bun.spawn({
     cmd: ["git", ...args],
@@ -260,19 +131,38 @@ export async function runGit(
     stdout: "pipe",
     stderr: "pipe",
     env: { ...process.env, ...extraEnv },
+    detached: timeoutMs !== undefined,
   });
 
-  const [exitCode, stdout, stderr] = await Promise.all([
-    processHandle.exited,
-    new Response(processHandle.stdout).text(),
-    new Response(processHandle.stderr).text(),
-  ]);
+  let timedOut = false;
+  const timeout =
+    timeoutMs === undefined
+      ? null
+      : setTimeout(() => {
+          timedOut = true;
+          try {
+            process.kill(-processHandle.pid, "SIGKILL");
+          } catch {
+            processHandle.kill("SIGKILL");
+          }
+        }, timeoutMs);
 
-  return {
-    exit_code: exitCode,
-    stdout: stdout.trim(),
-    stderr: stderr.trim(),
-  };
+  try {
+    const [exitCode, stdout, stderr] = await Promise.all([
+      processHandle.exited,
+      new Response(processHandle.stdout).text(),
+      new Response(processHandle.stderr).text(),
+    ]);
+    return {
+      exit_code: exitCode,
+      stdout: stdout.trim(),
+      stderr: timedOut ? "Git operation timed out" : stderr.trim(),
+    };
+  } finally {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+  }
 }
 
 async function requireGit(
@@ -290,9 +180,9 @@ async function requireGit(
   return result.stdout;
 }
 
-async function discoverSynchronizationRemote(
+async function selectedRemoteName(
   repositoryPath: string,
-): Promise<string | null> {
+): Promise<string | null | "ambiguous"> {
   const result = await runGit(repositoryPath, ["remote"]);
   if (result.exit_code !== 0) {
     throw new GitAdapterError(
@@ -316,17 +206,17 @@ async function discoverSynchronizationRemote(
     return pushDefault.stdout;
   }
 
-  const branch = await runGit(repositoryPath, [
+  const branchName = await runGit(repositoryPath, [
     "symbolic-ref",
     "--quiet",
     "--short",
     "HEAD",
   ]);
-  if (branch.exit_code === 0 && branch.stdout.length > 0) {
+  if (branchName.exit_code === 0 && branchName.stdout.length > 0) {
     const branchRemote = await runGit(repositoryPath, [
       "config",
       "--get",
-      `branch.${branch.stdout}.remote`,
+      `branch.${branchName.stdout}.remote`,
     ]);
     if (
       branchRemote.exit_code === 0 &&
@@ -336,9 +226,17 @@ async function discoverSynchronizationRemote(
     }
   }
 
-  return remotes.length === 1 ? remotes[0] ?? null : null;
+  return remotes.length === 1
+    ? remotes[0] ?? null
+    : "ambiguous";
 }
 
+export async function discoverSynchronizationRemote(
+  repositoryPath: string,
+): Promise<string | null> {
+  const selected = await selectedRemoteName(repositoryPath);
+  return selected === "ambiguous" ? null : selected;
+}
 
 export async function readCurrentPortableSnapshot(
   config: GitAdapterConfig,
@@ -454,12 +352,87 @@ export async function inspectPortableCandidate(
   return remote;
 }
 
+export function sanitizeSynchronizationRemoteLocation(
+  value: string,
+): string {
+  const trimmed = value.trim();
+  try {
+    const parsed = new URL(trimmed);
+    parsed.username = "";
+    parsed.password = "";
+    parsed.search = "";
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    const scpLike = /^(?:[^@\s]+@)?([^:\s]+):(.+)$/.exec(trimmed);
+    const host = scpLike?.[1];
+    const path = scpLike?.[2];
+    if (host !== undefined && path !== undefined) {
+      const cleanPath = path.split(/[?#]/, 1)[0] ?? "";
+      return `${host}:${cleanPath}`;
+    }
+    return trimmed.split(/[?#]/, 1)[0] ?? trimmed;
+  }
+}
+
+export async function inspectSynchronizationAuthority(
+  config: GitAdapterConfig,
+): Promise<SynchronizationAuthority> {
+  assertAdapterPaths(config);
+  const name = await selectedRemoteName(config.repository_path);
+  if (name === null) {
+    return { state: "none" };
+  }
+  if (name === "ambiguous") {
+    return { state: "ambiguous" };
+  }
+
+  const urls = await runGit(config.repository_path, [
+    "remote",
+    "get-url",
+    "--push",
+    "--all",
+    name,
+  ]);
+  const pushUrls = urls.stdout.split("\n").filter(Boolean);
+  if (
+    urls.exit_code !== 0 ||
+    pushUrls.length !== 1 ||
+    pushUrls[0] === undefined
+  ) {
+    return { state: "ambiguous" };
+  }
+
+  return {
+    state: "selected",
+    remote: {
+      name,
+      location: sanitizeSynchronizationRemoteLocation(
+        pushUrls[0],
+      ),
+    },
+  };
+}
+
+export async function inspectSynchronizationRemote(
+  config: GitAdapterConfig,
+): Promise<SynchronizationRemote | null> {
+  const authority = await inspectSynchronizationAuthority(config);
+  return authority.state === "selected"
+    ? authority.remote
+    : null;
+}
+
 export async function repositorySynchronizationMode(
   config: GitAdapterConfig,
-): Promise<"local-only" | "remote"> {
-  return (await discoverSynchronizationRemote(config.repository_path)) === null
-    ? "local-only"
-    : "remote";
+): Promise<"local-only" | "remote" | "ambiguous"> {
+  const authority = await inspectSynchronizationAuthority(config);
+  if (authority.state === "none") {
+    return "local-only";
+  }
+  return authority.state === "selected"
+    ? "remote"
+    : "ambiguous";
 }
 
 export async function repositoryCommonDir(
@@ -673,25 +646,39 @@ async function ensureJigDataWorktree(
   ]);
 }
 
+async function removeStaleSnapshotFiles(
+  worktreePath: string,
+  directory: "tasks" | "recurrences",
+  snapshot: PortableSnapshot,
+): Promise<void> {
+  const directoryPath = resolve(worktreePath, directory);
+  await mkdir(directoryPath, { recursive: true });
+  const expectedFiles = new Set(
+    [...snapshot.files.keys()].filter((path) =>
+      path.startsWith(`${directory}/`),
+    ),
+  );
+  for (const entry of await readdir(directoryPath, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) {
+      continue;
+    }
+    const relativePath = `${directory}/${entry.name}`;
+    if (!expectedFiles.has(relativePath)) {
+      await rm(resolve(directoryPath, entry.name));
+    }
+  }
+}
+
 export async function writeSnapshotToWorktree(
   worktreePath: string,
   snapshot: PortableSnapshot,
 ): Promise<void> {
-  const tasksPath = resolve(worktreePath, "tasks");
-  await mkdir(tasksPath, { recursive: true });
-
-  const expectedFiles = new Set(
-    [...snapshot.files.keys()].filter((path) => path.startsWith("tasks/")),
+  await removeStaleSnapshotFiles(worktreePath, "tasks", snapshot);
+  await removeStaleSnapshotFiles(
+    worktreePath,
+    "recurrences",
+    snapshot,
   );
-  for (const entry of await readdir(tasksPath, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) {
-      continue;
-    }
-    const relativePath = `tasks/${entry.name}`;
-    if (!expectedFiles.has(relativePath)) {
-      await rm(resolve(tasksPath, entry.name));
-    }
-  }
 
   for (const [path, content] of snapshot.files) {
     const absolute = resolve(worktreePath, path);
@@ -717,6 +704,7 @@ async function commitSnapshot(
     "--",
     "format.json",
     "tasks",
+    "recurrences",
   ]);
 
   const staged = await requireGit(jigWorktreePath(config), [
@@ -730,7 +718,8 @@ async function commitSnapshot(
   for (const path of stagedPaths) {
     if (
       path !== "format.json" &&
-      !/^tasks\/[0-9a-f-]+\.json$/i.test(path)
+      !/^tasks\/[0-9a-f-]+\.json$/i.test(path) &&
+      !/^recurrences\/[0-9a-f-]+\.json$/i.test(path)
     ) {
       throw new GitAdapterError(
         `Refusing to commit non-Jig staged path ${path}`,
@@ -766,24 +755,40 @@ export async function readSnapshotAtRef(
   ref: string,
   expectedDatasetId?: string,
 ): Promise<PortableSnapshot> {
-  const namesResult = await runGit(repositoryPath, [
+  const tree = await runGit(repositoryPath, [
     "ls-tree",
     "-r",
-    "--name-only",
     ref,
   ]);
-  if (namesResult.exit_code !== 0) {
+  if (tree.exit_code !== 0) {
     throw new GitAdapterError(
-      `Unable to enumerate candidate snapshot: ${namesResult.stderr}`,
+      `Unable to enumerate candidate snapshot: ${tree.stderr}`,
     );
   }
 
   const files = new Map<string, string>();
-  const names = namesResult.stdout
-    .split("\n")
-    .filter((name) => name === "format.json" || /^tasks\/.+\.json$/.test(name));
-
-  for (const path of names) {
+  for (const line of tree.stdout.split("\n").filter(Boolean)) {
+    const tab = line.indexOf("\t");
+    if (tab < 0) {
+      throw new GitAdapterError(
+        "Refusing malformed jig-data tree entry",
+      );
+    }
+    const metadata = line.slice(0, tab).split(" ");
+    const path = line.slice(tab + 1);
+    if (
+      metadata[0] !== "100644" ||
+      metadata[1] !== "blob" ||
+      !(
+        path === "format.json" ||
+        /^tasks\/[0-9a-f-]+\.json$/i.test(path) ||
+        /^recurrences\/[0-9a-f-]+\.json$/i.test(path)
+      )
+    ) {
+      throw new GitAdapterError(
+        `Refusing non-canonical jig-data tree entry ${path}`,
+      );
+    }
     const content = await requireGit(repositoryPath, [
       "show",
       `${ref}:${path}`,
@@ -794,24 +799,275 @@ export async function readSnapshotAtRef(
   return validateSnapshot(files, expectedDatasetId);
 }
 
-async function pushJigDataRef(
+async function refHead(
+  repositoryPath: string,
+  ref: string,
+): Promise<string | null> {
+  const result = await runGit(repositoryPath, [
+    "show-ref",
+    "--verify",
+    "--hash",
+    ref,
+  ]);
+  return result.exit_code === 0 && result.stdout.length > 0
+    ? result.stdout
+    : null;
+}
+
+async function ancestor(
+  repositoryPath: string,
+  older: string,
+  newer: string,
+): Promise<boolean | null> {
+  const result = await runGit(repositoryPath, [
+    "merge-base",
+    "--is-ancestor",
+    older,
+    newer,
+  ]);
+  return result.exit_code === 0
+    ? true
+    : result.exit_code === 1
+      ? false
+      : null;
+}
+
+export async function observePortableRemote(
   config: GitAdapterConfig,
-): Promise<RepositoryStatus> {
-  assertAdapterPaths(config);
-  const remoteName = await discoverSynchronizationRemote(
-    config.repository_path,
-  );
-  if (remoteName === null) {
-    return "local-only";
+  expectedDatasetId: string,
+  lastAdoptedHead: string | null,
+  environment: Readonly<Record<string, string>> = {},
+): Promise<PortableRemoteObservation> {
+  const authority = await inspectSynchronizationAuthority(config);
+  const localHead = await refHead(config.repository_path, DATA_REF);
+  if (authority.state === "none") {
+    return { state: "none", local_head: localHead };
+  }
+  if (authority.state === "ambiguous") {
+    return { state: "ambiguous", local_head: localHead };
   }
 
-  const result = await runGit(config.repository_path, [
-    "push",
-    remoteName,
-    `${DATA_REF}:refs/heads/jig-data`,
-  ]);
+  const trackingRef =
+    `refs/remotes/${authority.remote.name}/jig-data`;
+  const previousRemoteHead = await refHead(
+    config.repository_path,
+    trackingRef,
+  );
 
-  return result.exit_code === 0 ? "synchronized" : "sync-issue";
+  const advertised = await runGit(
+    config.repository_path,
+    [
+      "ls-remote",
+      "--heads",
+      authority.remote.name,
+      "refs/heads/jig-data",
+    ],
+    undefined,
+    environment,
+    REMOTE_GIT_TIMEOUT_MS,
+  );
+  if (advertised.exit_code !== 0) {
+    throw new GitAdapterError(
+      advertised.stderr || "Unable to observe remote jig-data",
+    );
+  }
+  if (advertised.stdout.length === 0) {
+    return {
+      state: "absent",
+      remote: authority.remote,
+      local_head: localHead,
+      previously_synchronized:
+        previousRemoteHead !== null ||
+        lastAdoptedHead !== null,
+    };
+  }
+
+  const remoteHead = advertised.stdout.split(/\s+/, 1)[0];
+  if (remoteHead === undefined || remoteHead.length === 0) {
+    throw new GitAdapterError(
+      "Malformed remote jig-data advertisement",
+    );
+  }
+
+  const fetched = await runGit(
+    config.repository_path,
+    [
+      "fetch",
+      "--no-tags",
+      "--refmap=",
+      authority.remote.name,
+      "refs/heads/jig-data",
+    ],
+    undefined,
+    environment,
+    REMOTE_GIT_TIMEOUT_MS,
+  );
+  if (fetched.exit_code !== 0) {
+    throw new GitAdapterError(
+      fetched.stderr || "Unable to fetch remote jig-data",
+    );
+  }
+
+  const fetchedHead = await runGit(
+    config.repository_path,
+    ["rev-parse", "FETCH_HEAD"],
+  );
+  if (
+    fetchedHead.exit_code !== 0 ||
+    fetchedHead.stdout !== remoteHead
+  ) {
+    throw new GitAdapterError(
+      "Remote jig-data changed during observation",
+    );
+  }
+
+  let remoteSnapshot: PortableSnapshot;
+  try {
+    remoteSnapshot = await readSnapshotAtRef(
+      config.repository_path,
+      remoteHead,
+      expectedDatasetId,
+    );
+  } catch {
+    return {
+      state: "unsafe",
+      remote: authority.remote,
+      local_head: localHead,
+    };
+  }
+
+  const priorRemoteHead =
+    previousRemoteHead ?? lastAdoptedHead;
+  const remoteRewritten =
+    priorRemoteHead !== null &&
+    priorRemoteHead !== remoteHead &&
+    (await ancestor(
+      config.repository_path,
+      priorRemoteHead,
+      remoteHead,
+    )) !== true;
+
+  let lineage: SynchronizationLineage = "unknown";
+  if (localHead !== null) {
+    if (localHead === remoteHead) {
+      lineage = "equal";
+    } else {
+      const remoteAhead = await ancestor(
+        config.repository_path,
+        localHead,
+        remoteHead,
+      );
+      const localAhead = await ancestor(
+        config.repository_path,
+        remoteHead,
+        localHead,
+      );
+      if (remoteAhead === true) {
+        lineage = "remote-ahead";
+      } else if (localAhead === true) {
+        lineage = "local-ahead";
+      } else if (
+        remoteAhead === false &&
+        localAhead === false
+      ) {
+        lineage = "diverged";
+      }
+    }
+  }
+
+  if (!remoteRewritten) {
+    const updated = await runGit(config.repository_path, [
+      "update-ref",
+      trackingRef,
+      remoteHead,
+      previousRemoteHead ?? "0".repeat(40),
+    ]);
+    if (updated.exit_code !== 0) {
+      throw new GitAdapterError(
+        "Remote-tracking evidence changed concurrently",
+      );
+    }
+  }
+
+  return {
+    state: "present",
+    remote: authority.remote,
+    local_head: localHead,
+    remote_head: remoteHead,
+    remote_rewritten: remoteRewritten,
+    lineage,
+    remote_snapshot: remoteSnapshot,
+  };
+}
+
+export async function alignPortableDataRef(
+  config: GitAdapterConfig,
+  expectedHead: string,
+  targetHead: string,
+): Promise<void> {
+  if (
+    expectedHead !== targetHead &&
+    await ancestor(
+      config.repository_path,
+      expectedHead,
+      targetHead,
+    ) !== true
+  ) {
+    throw new GitAdapterError(
+      "Local jig-data alignment must be a fast-forward",
+    );
+  }
+
+  const moved = await runGit(config.repository_path, [
+    "update-ref",
+    DATA_REF,
+    targetHead,
+    expectedHead,
+  ]);
+  if (moved.exit_code !== 0) {
+    throw new GitAdapterError(
+      "Local jig-data ref changed concurrently",
+    );
+  }
+  await requireGit(jigWorktreePath(config), [
+    "reset",
+    "--hard",
+    "HEAD",
+  ]);
+}
+
+export async function pushPortableDataRef(
+  config: GitAdapterConfig,
+  expectedRemote: SynchronizationRemote,
+  environment: Readonly<Record<string, string>> = {},
+): Promise<RepositorySynchronizationResult> {
+  const authority = await inspectSynchronizationAuthority(config);
+  if (
+    authority.state !== "selected" ||
+    authority.remote.name !== expectedRemote.name ||
+    authority.remote.location !== expectedRemote.location
+  ) {
+    return { status: "sync-issue", retryable: false };
+  }
+
+  const result = await runGit(
+    config.repository_path,
+    [
+      "push",
+      authority.remote.name,
+      `${DATA_REF}:refs/heads/jig-data`,
+    ],
+    undefined,
+    environment,
+    REMOTE_GIT_TIMEOUT_MS,
+  );
+  return {
+    status:
+      result.exit_code === 0
+        ? "synchronized"
+        : "sync-issue",
+    retryable: result.exit_code !== 0,
+  };
 }
 
 export async function ensurePortableData(
@@ -828,12 +1084,6 @@ export async function writePortableSnapshot(
 ): Promise<string> {
   await ensureJigDataWorktree(config, snapshot.dataset_id);
   return commitSnapshot(config, snapshot, revision);
-}
-
-export async function synchronizePortableData(
-  config: GitAdapterConfig,
-): Promise<RepositoryStatus> {
-  return pushJigDataRef(config);
 }
 
 export function retryDelayMs(failureCount: number): number {

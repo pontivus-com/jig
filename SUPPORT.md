@@ -21,10 +21,11 @@ Use the latest stable release before reporting a correctness problem unless the 
 Include:
 
 - Jig version;
-- Linux distribution and CPU architecture;
-- installation mode (existing repository or cloned repository);
-- whether a remote is configured;
-- output of `jig status` and relevant sanitized `jig doctor` fields;
+- platform and runtime details: Linux distribution/CPU architecture, or Android device/model, Android version/API level and WebView version for Android/prerelease reports;
+- installation/onboarding mode: existing local repository, managed GitHub acquisition, or Android GitHub acquisition where applicable;
+- whether a synchronization remote is configured and whether the failure is local persistence, Local Git or Remote Git;
+- output of `jig status` and relevant sanitized `jig doctor` fields on Linux, or the corresponding sanitized Settings/diagnostic state on Android;
+- notification permission/exact-alarm state when reporting reminder behavior;
 - a minimal reproduction.
 
 Do not paste credentials, private repository material or personal Task content.

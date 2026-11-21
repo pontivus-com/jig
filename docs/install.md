@@ -10,12 +10,32 @@ The supported public installation path is the immutable GitHub Release bundle. E
 - Git;
 - `curl`;
 - `tar`;
-- a writable existing Git repository, or a Git repository URL plus a new/empty checkout destination;
+- Git for repository continuity; a repository is selected/acquired inside Jig after a fresh install, while existing `--repo` / `--repo-url` automation remains available;
 - `systemd --user` for the normal background-service path.
 
 If `systemd --user` is unavailable, installation still verifies the foreground runtime and `jig serve` remains available.
 
-## Install into an existing repository
+## Install Jig and choose the repository in the application
+
+The normal v1.1 installation path no longer asks the shell installer to choose a planning repository:
+
+```bash
+curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
+  | bash
+```
+
+A fresh installation starts Jig in bootstrap mode on `127.0.0.1:47831`. Open Jig (or run `jig`) and choose:
+
+- **Use a repository already on this computer** — enter the absolute root path of an existing writable Git worktree;
+- **Connect GitHub repository** — Jig shows GitHub's required device code, opens/offers GitHub authorization, discovers authorized repository access automatically and continues without manual refresh; a repository chooser appears only when more than one genuine eligible repository requires a choice.
+
+Planner, History, Settings, Task commands and repository synchronization are not mounted until repository setup succeeds. A valid local repository does not need a remote; it becomes a healthy **Local only** Jig installation.
+
+If a complete existing `~/.config/jig/config.json` is already present, rerunning the installer without repository arguments preserves that configuration and the upgraded runtime starts directly in configured mode. A malformed existing config is an error and is never silently treated as first-run state.
+
+`--port` is valid only with the immediate automation modes below. Bootstrap mode always uses port `47831`.
+
+## Automation: install into an existing repository
 
 ```bash
 curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
@@ -24,7 +44,7 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
 
 Jig uses the selected repository's Git configuration for automatic synchronization. Git remains responsible for credentials, signing policy, topology and transport semantics.
 
-## Install from a repository URL
+## Automation: install from a repository URL
 
 The installer can also identify the target repository by URL and delegate acquisition to Git:
 
@@ -53,9 +73,10 @@ Application/runtime:
 ```text
 ~/.local/share/jig/
 ~/.local/bin/jig
-~/.config/jig/config.json
 ~/.config/systemd/user/jig.service   # when systemd --user is available
 ```
+
+`~/.config/jig/config.json` is created only when repository setup succeeds (or preserved during an upgrade of an already configured installation).
 
 Planning data remains inside the repository you selected. SQLite lives under `<repo>/.jig/local/`; deterministic portable Jig records are synchronized through the repository adapter. Any branch/ref/worktree isolation mechanics are internal Git-adapter details and are not part of the user configuration.
 
@@ -70,7 +91,7 @@ jig sync
 jig doctor   # optional Jig-health diagnostics when present
 ```
 
-`jig` starts the user service when necessary and opens the loopback UI. If no desktop URL opener is available it prints the local URL.
+`jig` starts the user service when necessary and opens the loopback UI. Before repository setup, it opens the bootstrap surface on port 47831. `jig status` and `jig doctor` remain usable in that state; `jig sync` requires a configured repository. If no desktop URL opener is available Jig prints the local URL.
 
 ## Use Jig with another repository checkout
 
@@ -78,7 +99,7 @@ Repository movement/cloning is performed with ordinary Git/filesystem tooling. O
 
 ## Upgrade
 
-Run the installer for the desired release again with the same repository configuration. Installation is idempotent and replaces the application/runtime atomically while preserving the repository's planning data.
+Run the installer for the desired release again. A configured installation preserves its existing complete repository configuration when no repository flags are supplied. Installation is idempotent and replaces the application/runtime atomically while preserving repository planning data. Automation may still supply `--repo` explicitly when desired.
 
 For a pinned upgrade, use the desired immutable release tag rather than `latest`.
 
@@ -97,7 +118,22 @@ This path is for contributors/development. It builds from the exact frozen depen
 ```bash
 git clone https://github.com/pontivus-com/jig.git
 cd jig
-scripts/install.sh --repo /absolute/path/to/your/planning-repo
+scripts/install.sh
 ```
 
 The public release channel is preferred for normal use.
+
+
+## Android distribution
+
+Jig v1.1 adds the independently installable Android application `com.pontivus.jig`. The first public Android distribution target is **F-Droid**.
+
+Development/debug APKs produced by `bun run android:build:debug` are certification artifacts only. They are not supported GitHub Release assets and are not the public Android installation channel.
+
+The in-repository F-Droid candidate recipe is maintained at:
+
+```text
+distribution/fdroid/metadata/com.pontivus.jig.yml
+```
+
+The external F-Droid submission must be derived from the immutable public `v1.1.0` source tag and use that tag's exact 40-character release commit SHA in `Builds.commit`. Until F-Droid actually publishes `com.pontivus.jig`, the project must describe Android as implementation/certification complete or submission pending as appropriate, not publicly available.
