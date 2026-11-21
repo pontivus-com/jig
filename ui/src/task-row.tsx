@@ -21,11 +21,11 @@ interface TaskRowBaseProps {
   readonly now: Date;
 }
 
-export interface TaskRowCanonicalInteraction {
-  readonly kind: "canonical";
+export interface TaskRowProps extends TaskRowBaseProps {
+  readonly isSelected?: boolean | undefined;
   readonly rowRef?: Ref<HTMLLIElement> | undefined;
   readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
-  readonly isDragging: boolean;
+  readonly isDragging?: boolean | undefined;
   readonly onSelect?: (() => void) | undefined;
   readonly onToggleComplete: () => void;
   readonly onEdit: () => void;
@@ -33,19 +33,6 @@ export interface TaskRowCanonicalInteraction {
   readonly onDelete: () => void;
   readonly onMoveUp?: (() => void) | undefined;
   readonly onMoveDown?: (() => void) | undefined;
-}
-
-export interface TaskRowAdjacentInteraction {
-  readonly kind: "adjacent";
-}
-
-export type TaskRowInteraction =
-  | TaskRowCanonicalInteraction
-  | TaskRowAdjacentInteraction;
-
-export interface TaskRowProps extends TaskRowBaseProps {
-  readonly isSelected: boolean;
-  readonly interaction: TaskRowInteraction;
 }
 
 function isSafeWebReference(value: string): boolean {
@@ -153,14 +140,12 @@ function TaskMetadata({
 interface TaskCompletionControlProps {
   readonly task: Task;
   readonly completed: boolean;
-  readonly isInteractive: boolean;
-  readonly onToggleComplete?: (() => void) | undefined;
+  readonly onToggleComplete: () => void;
 }
 
 function TaskCompletionControl({
   task,
   completed,
-  isInteractive,
   onToggleComplete,
 }: TaskCompletionControlProps): React.ReactElement {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -169,16 +154,19 @@ function TaskCompletionControl({
     <span
       className="jig-task-completion-target"
       data-jig-drag-excluded="true"
-      {...(isInteractive
-        ? {
-            onClick: (event: React.MouseEvent<HTMLSpanElement>) => {
-              if (event.target === event.currentTarget) {
-                inputRef.current?.click();
-              }
-              event.stopPropagation();
-            },
-          }
-        : {})}
+      onClick={(event: React.MouseEvent<HTMLSpanElement>) => {
+        // Astryx CheckboxInput intentionally keeps a label-hidden checkbox as
+        // a 24px marker and exposes no public control-class hook. The Task row
+        // cannot own that checkbox's hit area because the independent drag
+        // grip shares the same leading region. This wrapper is therefore the
+        // smallest Jig-owned semantic fallback: it retains Astryx's checkbox
+        // and native input semantics while forwarding only otherwise-empty
+        // 48px target space through the component's public input ref.
+        if (event.target === event.currentTarget) {
+          inputRef.current?.click();
+        }
+        event.stopPropagation();
+      }}
     >
       <CheckboxInput
         ref={inputRef}
@@ -189,10 +177,7 @@ function TaskCompletionControl({
         }
         isLabelHidden
         value={completed}
-        isReadOnly={!isInteractive}
-        {...(onToggleComplete === undefined
-          ? {}
-          : { onChange: onToggleComplete })}
+        onChange={onToggleComplete}
       />
     </span>
   );
@@ -332,30 +317,43 @@ export function TaskDragOverlayCard({
   );
 }
 
+interface TaskCardPresentationProps {
+  readonly task: Task;
+  readonly recurrenceSeries: RecurrenceSeries | null;
+  readonly now: Date;
+  readonly showDragHandle: boolean;
+  readonly isSelected: boolean;
+  readonly rowRef?: Ref<HTMLLIElement> | undefined;
+  readonly dragHandleRef?: Ref<HTMLSpanElement> | undefined;
+  readonly isDragging: boolean;
+  readonly onSelect?: (() => void) | undefined;
+  readonly onToggleComplete: () => void;
+  readonly onEdit: () => void;
+  readonly onSetPriority: (priority: Priority) => void;
+  readonly onDelete: () => void;
+  readonly onMoveUp?: (() => void) | undefined;
+  readonly onMoveDown?: (() => void) | undefined;
+}
+
 function TaskCardPresentation(
-  props: TaskRowProps,
+  props: TaskCardPresentationProps,
 ): React.ReactElement {
-  const canonical =
-    props.interaction.kind === "canonical" ? props.interaction : null;
   const completed = props.task.completed_at !== null;
   const reminderLifecycle = useReminderLifecycle(props.task, props.now);
   const reminderDue = reminderLifecycle === "due";
-  const isDragging = canonical?.isDragging ?? false;
 
   return (
     <ListItem
-      {...(canonical?.rowRef === undefined ? {} : { ref: canonical.rowRef })}
+      {...(props.rowRef === undefined ? {} : { ref: props.rowRef })}
       itemKey={props.task.id}
-      {...(canonical?.onSelect === undefined
-        ? {}
-        : { onClick: canonical.onSelect })}
+      {...(props.onSelect === undefined ? {} : { onClick: props.onSelect })}
       className={[
         "jig-task-card",
         `jig-task-priority-${props.task.priority.toLowerCase()}`,
         props.isSelected ? "jig-task-card-selected" : "",
         completed ? "jig-task-card-completed" : "",
         reminderDue ? "jig-task-card-reminder-due" : "",
-        isDragging ? "jig-task-card-dragging" : "",
+        props.isDragging ? "jig-task-card-dragging" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -365,30 +363,25 @@ function TaskCardPresentation(
           className="jig-task-card-leading"
           data-jig-drag-excluded="true"
         >
-          <span
-            {...(canonical?.dragHandleRef === undefined
-              ? {}
-              : { ref: canonical.dragHandleRef })}
-            className="jig-task-drag-handle"
-            {...(canonical === null
-              ? { "aria-hidden": true }
-              : {
-                  role: "button",
-                  tabIndex: 0,
-                  "aria-label": `Move ${props.task.title}`,
-                  onClick: (event: React.MouseEvent<HTMLSpanElement>) =>
-                    event.stopPropagation(),
-                })}
-          >
-            <JigIcon name="drag" color="inherit" size="sm" />
-          </span>
+          {props.showDragHandle ? (
+            <span
+              {...(props.dragHandleRef === undefined
+                ? {}
+                : { ref: props.dragHandleRef })}
+              className="jig-task-drag-handle"
+              role="button"
+              tabIndex={0}
+              aria-label={`Move ${props.task.title}`}
+              onClick={(event: React.MouseEvent<HTMLSpanElement>) =>
+                event.stopPropagation()}
+            >
+              <JigIcon name="drag" color="inherit" size="sm" />
+            </span>
+          ) : null}
           <TaskCompletionControl
             task={props.task}
             completed={completed}
-            isInteractive={canonical !== null}
-            {...(canonical === null
-              ? {}
-              : { onToggleComplete: canonical.onToggleComplete })}
+            onToggleComplete={props.onToggleComplete}
           />
         </span>
       }
@@ -407,8 +400,7 @@ function TaskCardPresentation(
           </div>
           <TaskMetadata
             task={props.task}
-            recurrenceSeries={props.recurrenceSeries ?? null}
-            isInteractive={canonical !== null}
+            recurrenceSeries={props.recurrenceSeries}
           />
           {reminderLifecycle === "scheduled" ? (
             <span
@@ -440,20 +432,14 @@ function TaskCardPresentation(
       endContent={
         <TaskActionMenu
           task={props.task}
-          {...(canonical === null
+          onEdit={props.onEdit}
+          onToggleComplete={props.onToggleComplete}
+          onSetPriority={props.onSetPriority}
+          onDelete={props.onDelete}
+          {...(props.onMoveUp === undefined ? {} : { onMoveUp: props.onMoveUp })}
+          {...(props.onMoveDown === undefined
             ? {}
-            : {
-                onEdit: canonical.onEdit,
-                onToggleComplete: canonical.onToggleComplete,
-                onSetPriority: canonical.onSetPriority,
-                onDelete: canonical.onDelete,
-                ...(canonical.onMoveUp === undefined
-                  ? {}
-                  : { onMoveUp: canonical.onMoveUp }),
-                ...(canonical.onMoveDown === undefined
-                  ? {}
-                  : { onMoveDown: canonical.onMoveDown }),
-              })}
+            : { onMoveDown: props.onMoveDown })}
         />
       }
     />
@@ -461,5 +447,27 @@ function TaskCardPresentation(
 }
 
 export function TaskRow(props: TaskRowProps): React.ReactElement {
-  return <TaskCardPresentation {...props} />;
+  return (
+    <TaskCardPresentation
+      task={props.task}
+      recurrenceSeries={props.recurrenceSeries ?? null}
+      now={props.now}
+      isSelected={props.isSelected ?? false}
+      {...(props.rowRef === undefined ? {} : { rowRef: props.rowRef })}
+      {...(props.dragHandleRef === undefined
+        ? {}
+        : { dragHandleRef: props.dragHandleRef })}
+      isDragging={props.isDragging ?? false}
+      showDragHandle={props.dragHandleRef !== undefined}
+      {...(props.onSelect === undefined ? {} : { onSelect: props.onSelect })}
+      onToggleComplete={props.onToggleComplete}
+      onEdit={props.onEdit}
+      onSetPriority={props.onSetPriority}
+      onDelete={props.onDelete}
+      {...(props.onMoveUp === undefined ? {} : { onMoveUp: props.onMoveUp })}
+      {...(props.onMoveDown === undefined
+        ? {}
+        : { onMoveDown: props.onMoveDown })}
+    />
+  );
 }

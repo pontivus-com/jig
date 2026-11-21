@@ -1,6 +1,6 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22 + IMP-24 IMPLEMENTED + NON-DEVICE CERTIFIED / J110-IMP-23 OPEN — the latest `week-carousel` implementation is now ported into the `v1.1` working tree, but the tree is not yet buildable against released Astryx `0.7.13`; the exact rebuilt baseline APK reproduced the missing horizontal swipe / J110-IMP-15 PARTIAL. Historical hosted certification remains separate; the baseline local APK is `6aef5bab67fc5a11b368554e490f161a38f6e6343f5ac8a2819ebc60bc93ee3d`.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22..24 IMPLEMENTED + NON-DEVICE CERTIFIED ON CERTIFIED EXECUTABLE SOURCE `59f7d1642211739df88dc188a4fdfe17af2c26c9` / VERIFY #1632 / J110-IMP-23 + IMP-24 PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL — hosted certification is green across Linux/browser, Android build certification and API-24 runtime. The current physical target is APK artifact `14608147658`, extracted SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. No physical result for this candidate is recorded yet; earlier device sessions remain historical evidence only.
 
 **Partial-session executable source:** `222f2fe0e672b122424042b3fa39747efb991610`  
 **GitHub Actions APK artifact:** not retained in the session record  
@@ -364,7 +364,7 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 | Gate | Result |
 |---|---|
 | J110-IMP-09 physical Task movement | **PASS — completed; detailed execution record lost** |
-| J110-IMP-23 FR-33/SD-43 cross-platform Carousel | **OPEN — latest `week-carousel` port is present in `v1.1`; released Astryx seam/pin and exact-candidate physical certification remain pending** |
+| J110-IMP-23 FR-33/SD-43 cross-platform WeekPager | **IMPLEMENTED + NON-DEVICE CERTIFIED — Verify #1632/browser 82/82/API-24 5/5 pass; exact-candidate physical touch/scroll/drag arbitration remains OPEN** |
 | J110-IMP-24 shared operational-attention Banner geometry | **IMPLEMENTED + NON-DEVICE CERTIFIED — desktop/narrow browser geometry passes; exact-candidate physical WebView confirmation remains OPEN** |
 | J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS — exact hosted re-certification is now green on Verify #1632; remaining physical matrix is pending** |
 | Issue #31 live Linux/Desktop GitHub acceptance | NOT RUN |
@@ -400,30 +400,4 @@ Physical checks on the installed APK:
 
 Screenshots retained locally: `/tmp/jig-physical-before.png`, `/tmp/jig-physical-scrolled.png`, `/tmp/jig-physical-workspace.png`, `/tmp/jig-physical-after-close.png`.
 
-The required IMP-23 physical checks were **not run against this baseline**, because it predates the final WeekCarousel port. IMP-23 remains open pending upstream publication of the four-part Astryx public seam, a released dependency pin, permanent Verify for the integrated `v1.1` head, and repeat physical horizontal paging/vertical-scroll/drag-arbitration checks.
-
-## 7. 2026-11-21 rebuilt-theme APK and adjacent-week real-input check
-
-This entry records the rebuilt current `v1.1` executable after the semantic surface correction. It is not IMP-23 closure evidence; it demonstrates the remaining user-visible blocker on the exact installed artifact.
-
-| Fact | Observed value |
-|---|---|
-| Source SHA checked | `8babbab` (`v1.1`) |
-| APK | `android/app/build/outputs/apk/debug/app-debug.apk` |
-| APK SHA-256 | `6aef5bab67fc5a11b368554e490f161a38f6e6343f5ac8a2819ebc60bc93ee3d` |
-| APK identity | `com.pontivus.jig`, versionName `1.0.6`, versionCode `1000006` |
-| Physical device | Samsung SM-S901E, Android 16 / API 36 |
-| adb serial | `R5CT62VA0MX` |
-| WebView | `com.google.android.webview` 158.0.8127.46 |
-| Browser certification | 80/81 full-suite pass; timed-out retarget case passed on immediate exact-test retry |
-| Theme matrix | 13 presets × Light/Dark/System semantic-surface check passed after fresh build |
-
-Physical checks on this exact APK:
-
-- **PASS — install and launch:** `adb install -r` succeeded; package/version identity matched the governed Android contract.
-- **PASS — runtime stability:** no `FATAL EXCEPTION` or `AndroidRuntime` crash was observed in the inspected post-launch logcat window.
-- **PASS — horizontal swipe reproduced the blocker:** a real horizontal swipe across the Planner left the accessible week range unchanged at `16–22 Nov 2026`. The current `v1.1` line exposes only the direct Previous/Next/Today controls; it has no active Carousel-backed adjacent-week gesture path.
-
-Screenshot retained locally: `/tmp/jig-physical-horizontal-swipe.png`.
-
-IMP-23 therefore remains **OPEN**. The ported `week-carousel` source uses the intended four-part seam, while the pinned Astryx 0.7.13 public API does not expose it (settled-index callback, immediate reposition option, one-view item sizing and public user-scroll suspension). The source integration is present, but typecheck/build and phone deployment remain gated on the released Astryx seam and dependency pin; a local shim or restored legacy pager is not an acceptable substitute.
+The required IMP-23 physical checks were **not run against this baseline**, because it has no final WeekPager/Carousel implementation. IMP-23 remains open pending upstream publication of the four-part Astryx public seam, integration of the exact released candidate into `v1.1`, permanent Verify for that exact head, and repeat physical horizontal paging/vertical-scroll/drag-arbitration checks.

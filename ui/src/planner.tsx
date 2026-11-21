@@ -1,23 +1,17 @@
-import type { Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
-import {
-  WeekCarousel,
-  type WeekCarouselHandle,
-} from "./week-carousel";
-export type { WeekTransitionDirection } from "./week";
+import { WeekView } from "./week";
 
-export type PlannerHandle = WeekCarouselHandle;
+export type WeekTransitionDirection = "today";
 
 export interface PlannerProps {
-  readonly handleRef: Ref<PlannerHandle>;
   readonly focusCurrentDayOnMount: boolean;
   readonly todayScrollRequest: number;
-  readonly weekTransitionDirection: import("./week").WeekTransitionDirection | null;
-  readonly displayedWeekStart: string;
+  readonly weekTransitionDirection: WeekTransitionDirection | null;
   readonly tasks: readonly Task[];
   readonly recurrences: readonly RecurrenceSeries[];
   readonly now: Date;
+  readonly displayedDates: readonly string[];
   readonly selectedTask: Task | null;
   readonly onSelectTask: (task: Task) => void;
   readonly onAdd: (date: string) => void;
@@ -30,21 +24,19 @@ export interface PlannerProps {
     destinationDate: string,
     destinationIndex: number,
   ) => Promise<boolean>;
-  readonly onShiftWeek: (direction: -1 | 1) => void;
 }
 
 export function Planner(props: PlannerProps): React.ReactElement {
   return (
     <div className="jig-planner-surface">
-      <WeekCarousel
-        handleRef={props.handleRef}
+      <WeekView
         focusCurrentDayOnMount={props.focusCurrentDayOnMount}
         todayScrollRequest={props.todayScrollRequest}
         weekTransitionDirection={props.weekTransitionDirection}
-        displayedWeekStart={props.displayedWeekStart}
         tasks={props.tasks}
         recurrences={props.recurrences}
         now={props.now}
+        displayedDates={props.displayedDates}
         selectedTask={props.selectedTask}
         onSelectTask={props.onSelectTask}
         onAdd={props.onAdd}
@@ -53,7 +45,6 @@ export function Planner(props: PlannerProps): React.ReactElement {
         onSetPriority={props.onSetPriority}
         onDelete={props.onDelete}
         onMove={props.onMove}
-        onShiftWeek={props.onShiftWeek}
       />
     </div>
   );
