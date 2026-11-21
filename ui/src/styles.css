@@ -933,6 +933,7 @@ body {
   .jig-planner-surface {
     position: relative;
     min-height: 100%;
+    background: var(--jig-planner-surface);
     transition:
       background-color var(--duration-fast-max) var(--ease-standard),
       color var(--duration-fast-max) var(--ease-standard);

@@ -1,6 +1,6 @@
 # Jig brand and theme system
 
-**Status:** Canonical brand and application-theme contract v0.22, amended 2026-11-21 to restore the governed open Planner canvas/body-surface chrome contract while preserving the v1.1 Android icon derivation. v1.0.6 remains the published theme baseline; v1.1 preserves the same Jig identity and requires every app/launcher icon to derive from the one canonical standalone J-mark geometry rather than carrying a platform-specific redraw.
+**Status:** Canonical brand and application-theme contract v0.23, amended 2026-11-21 after physical review exposed insufficient separation between application chrome, Planner canvas and Task cards while preserving the v1.1 Android icon derivation. v1.0.6 remains the published theme baseline; v1.1 preserves the same Jig identity and requires every app/launcher icon to derive from the one canonical standalone J-mark geometry rather than carrying a platform-specific redraw.
 **Selected identity:** Option A — precise J guide + alignment pin.  
 **Scope:** Logo geometry, default Jig brand palette, multi-theme Light/Dark semantic theming, application integration, asset dimensions and change control.  
 **Governing product identity:** [Product identity](../product/product-identity.md).  
@@ -381,28 +381,29 @@ These values deliberately use the wider functional palette: temporal orientation
 
 ## 6.5 Open-canvas surface hierarchy and responsive parity
 
-The Planner is one open body canvas containing date tracks and discrete Task-card surfaces. Header chrome and date lanes are not separate filled panels. The governed application reference and UI solution require the desktop header to sit on the application body surface and ordinary Planner lanes to remain transparent, with at most hairline separation between adjacent dates. Task cards remain the primary elevated/discrete surfaces.
+The Planner remains one open seven-track canvas containing discrete Task-card surfaces, but the canvas must not collapse into the same visual layer as application chrome. Header and persistent bottom-navigation chrome use the body surface; the Planner canvas uses a deliberately mixed elevated Planner surface; individual date lanes remain transparent within that shared canvas; and Task cards use the theme's card surface above it. This preserves open lane geometry while giving the eye three clear layers: chrome, week canvas and Task.
 
 The shared Jig product-token mapping therefore owns only the structural surface roles that need explicit aliases across all thirteen themes:
 
 | Alias | Cross-theme derivation | Purpose |
 |---|---|---|
 | `--jig-chrome-surface` | `--color-background-body` | desktop/narrow application header and narrow/Android persistent bottom navigation; one shared owner without introducing a separate filled chrome layer |
-| `--jig-task-surface` | 97% theme surface + 3% theme card | ordinary outstanding/completed Task-card elevation across Planner and History |
+| `--jig-planner-surface` | 88% theme surface + 12% theme muted | shared Planner canvas behind all seven transparent date lanes |
+| `--jig-task-surface` | `--color-background-card` | ordinary outstanding/completed Task-card elevation across Planner and History |
 | `--jig-task-border` | emphasized neutral border | Task-card edge separation |
 
-There is intentionally **no `--jig-lane-surface`**. Ordinary Monday–Sunday lanes inherit the application canvas by remaining transparent; the body surface beneath them is the visual background. This keeps the week open rather than turning seven tracks into cards.
+There is intentionally **no `--jig-lane-surface`**. Ordinary Monday–Sunday lanes inherit the shared Planner canvas by remaining transparent; the canvas is not repeated as seven boxed panels. This keeps the week open rather than turning seven tracks into cards.
 
 Rules:
 
 1. Header chrome and persistent narrow/Android bottom navigation consume exactly the same `--jig-chrome-surface`, and that alias resolves directly to the selected theme's body background.
-2. Ordinary Planner date lanes have no background fill. Adjacent dates may use the governed subtle hairline separator, and the exact current day may add only its governed border/text treatment.
-3. Every ordinary Task card consumes `--jig-task-surface`; it must remain visibly distinct from the open body canvas before hover/selection/focus.
+2. The Planner canvas consumes `--jig-planner-surface`; ordinary Planner date lanes have no individual background fill. Adjacent dates may use the governed subtle hairline separator, and the exact current day may add only its governed border/text treatment.
+3. Every ordinary Task card consumes `--jig-task-surface`; it must remain visibly distinct from the Planner canvas before hover/selection/focus.
 4. The mapping is shared in `ui/src/themes/product-tokens.ts`. Theme-specific source files must not reintroduce a lane-surface alias, override the chrome/body equivalence, or branch on theme identity.
 5. Hover may add the ordinary transient overlay, but the un-hovered card must already be visibly distinct.
 6. Selected Task continues to use the governed info-blue selected surface/border; keyboard focus adds Amber; drag adds transient Amber; priority remains the narrow leading cue. These states do not redefine the base card surface contract.
 7. History Task rows use the same base Task surface family unless an Astryx component public semantic surface already provides the exact same resolved role.
-8. Generated theme artifacts move only through the pinned Astryx theme compiler, and the exhaustive theme matrix must prove body/chrome equivalence, transparent Planner lanes and Task-card separation for every theme in Light, Dark and live System mode.
+8. Generated theme artifacts move only through the pinned Astryx theme compiler, and the exhaustive theme matrix must prove body/chrome equivalence, Planner/chrome separation, transparent Planner lanes and Task-card separation for every theme in Light, Dark and live System mode.
 9. Do not introduce raw feature-local colors in `styles.css`.
 
 ### v1.0.5 icon and header-brand normalization

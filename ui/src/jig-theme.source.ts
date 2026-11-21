@@ -22,8 +22,8 @@ export const jigTheme = defineTheme({
       "var(--jig-ink-900)",
     ],
     "--color-background-card": [
-      "var(--jig-white)",
-      "var(--jig-ink-900)",
+      "var(--jig-paper-50)",
+      "var(--jig-ink-800)",
     ],
     "--color-background-popover": [
       "var(--jig-white)",

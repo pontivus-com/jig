@@ -372,3 +372,32 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 **Release-candidate promotion authorized:** NO
 
 Promotion from `v1.1` to `master` remains prohibited until all required gates pass on the governed candidate lineage.
+
+## 6. 2026-11-21 current `v1.1` baseline smoke and local API-24 run
+
+This entry records checks performed against the exact current `v1.1` head. It is not final release certification: the tree is the clean post-purge baseline and does not yet contain the released-dependency SD-43 Carousel implementation.
+
+| Fact | Observed value |
+|---|---|
+| Source SHA checked | `a5a1b99b80543483361943c796f5acbc3c5e4523` |
+| APK | `android/app/build/outputs/apk/debug/app-debug.apk` |
+| APK SHA-256 | `40f18e8f9f641b00d1416ad2d529d32bf30ea6da73ae283b3ae0291692f56ffb` |
+| APK identity | `com.pontivus.jig`, versionName `1.0.6`, versionCode `1000006` |
+| Physical device | Samsung SM-S901E, Android 16 / API 36 |
+| adb serial | `R5CT62VA0MX` |
+| WebView | `com.google.android.webview` 158.0.8127.46 |
+| JDK / SDK | JDK 21.0.13 / Android SDK 36 |
+| Local API-24 runtime | 5/5 instrumentation tests, `BUILD SUCCESSFUL` |
+| Browser acceptance | 81/81 Playwright tests passed locally |
+| Native static gates | version derivation, Android dependency boundary, unit tests and lint passed |
+
+Physical checks on the installed APK:
+
+- **PASS — launch and identity:** the APK installed with `adb install -r`, launched as `com.pontivus.jig/.MainActivity`, and remained the resumed activity.
+- **PASS — Planner real-input scroll:** a physical-device swipe moved the Planner vertically without a crash or stranded overlay.
+- **PASS — editable workspace real input:** tapping the visible `Audit Workflow` Task opened the shared editable BottomSheet, focused the Title field and raised the Android IME; close/back returned to the app without a fatal exception.
+- **PASS — runtime stability:** the inspected logcat window contained no `FATAL EXCEPTION`, `AndroidRuntime` crash or Jig crash entry.
+
+Screenshots retained locally: `/tmp/jig-physical-before.png`, `/tmp/jig-physical-scrolled.png`, `/tmp/jig-physical-workspace.png`, `/tmp/jig-physical-after-close.png`.
+
+The required IMP-23 physical checks were **not run against this baseline**, because it has no final WeekPager/Carousel implementation. IMP-23 remains open pending upstream publication of the four-part Astryx public seam, integration of the exact released candidate into `v1.1`, permanent Verify for that exact head, and repeat physical horizontal paging/vertical-scroll/drag-arbitration checks.

@@ -109,6 +109,7 @@ async function themeSnapshot(page: Page): Promise<{
   readonly bodyBackground: string;
   readonly bodyText: string;
   readonly chromeBackground: string;
+  readonly plannerBackground: string;
   readonly laneBackground: string;
   readonly taskBackground: string;
   readonly taskText: string;
@@ -177,6 +178,7 @@ async function themeSnapshot(page: Page): Promise<{
       bodyBackground: bodyStyle.backgroundColor,
       bodyText: bodyStyle.color,
       chromeBackground: getComputedStyle(header).backgroundColor,
+      plannerBackground: getComputedStyle(active ?? document.body).backgroundColor,
       laneBackground: getComputedStyle(lane).backgroundColor,
       taskBackground: taskStyle.backgroundColor,
       taskText: taskStyle.color,
@@ -1892,10 +1894,12 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       expect(snapshot.explicitMode).toBe(mode);
       expect(snapshot.chromeBackground, `${preset}/${mode} chrome matches body`)
         .toBe(snapshot.bodyBackground);
+      expect(snapshot.plannerBackground, `${preset}/${mode} Planner separates from chrome`)
+        .not.toBe(snapshot.chromeBackground);
       expect(snapshot.laneBackground, `${preset}/${mode} lane remains open`)
         .toBe("rgba(0, 0, 0, 0)");
       expect(snapshot.taskBackground, `${preset}/${mode} task vs canvas`)
-        .not.toBe(snapshot.bodyBackground);
+        .not.toBe(snapshot.plannerBackground);
       expect(snapshot.taskBorder).not.toBe("rgba(0, 0, 0, 0)");
       expect(
         contrastRatio(snapshot.bodyText, snapshot.bodyBackground),
@@ -1942,8 +1946,9 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
     expect(systemDark.rootTheme).toBe(preset);
     expect(systemDark.explicitMode).toBeNull();
     expect(systemDark.chromeBackground).toBe(systemDark.bodyBackground);
+    expect(systemDark.plannerBackground).not.toBe(systemDark.chromeBackground);
     expect(systemDark.laneBackground).toBe("rgba(0, 0, 0, 0)");
-    expect(systemDark.taskBackground).not.toBe(systemDark.bodyBackground);
+    expect(systemDark.taskBackground).not.toBe(systemDark.plannerBackground);
   }
 
   await page.emulateMedia({ colorScheme: "no-preference" });
