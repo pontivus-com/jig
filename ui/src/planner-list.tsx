@@ -1,19 +1,17 @@
 import { List, useAnimatedLayout } from "@astryxdesign/core";
-import { Fragment, useRef, type Ref } from "react";
+import { Fragment, useRef, useState, type Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import {
-  DraggableTaskRow,
+  TaskDraggableRegistration,
   TaskInsertionSlot,
+  type TaskDragBinding,
 } from "./drag";
+import { TaskRow } from "./task-row";
 
-export interface PlannerTaskListProps {
-  readonly tasks: readonly Task[];
-  readonly recurrences: readonly RecurrenceSeries[];
-  readonly now: Date;
-  readonly date: string;
-  readonly selectedTask: Task | null;
+export interface PlannerTaskListCanonicalCapabilities {
+  readonly kind: "canonical";
   readonly onSelectTask: (task: Task) => void;
   readonly onEdit: (task: Task) => void;
   readonly onToggleComplete: (task: Task) => Promise<boolean>;
@@ -26,17 +24,21 @@ export interface PlannerTaskListProps {
   ) => Promise<boolean>;
 }
 
-interface PlannerSequenceRowProps
-  extends Omit<
-    PlannerTaskListProps,
-    "tasks" | "recurrences" | "date" | "selectedTask"
-  > {
-  readonly task: Task;
-  readonly recurrenceSeries: RecurrenceSeries | null;
-  readonly index: number;
+export interface PlannerTaskListAdjacentCapabilities {
+  readonly kind: "adjacent";
+}
+
+export type PlannerTaskListCapabilities =
+  | PlannerTaskListCanonicalCapabilities
+  | PlannerTaskListAdjacentCapabilities;
+
+export interface PlannerTaskListProps {
+  readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
+  readonly now: Date;
   readonly date: string;
-  readonly sequenceLength: number;
-  readonly isSelected: boolean;
+  readonly selectedTask: Task | null;
+  readonly capabilities: PlannerTaskListCapabilities;
 }
 
 interface PlannerTaskPresentationItem {
@@ -102,51 +104,85 @@ function PlannerTaskSequence({
 }
 
 function PlannerSequenceRow({
-  task,
-  recurrenceSeries,
-  now,
-  index,
+  item,
   date,
-  sequenceLength,
-  isSelected,
-  onSelectTask,
-  onEdit,
-  onToggleComplete,
-  onSetPriority,
-  onDelete,
-  onMove,
-}: PlannerSequenceRowProps): React.ReactElement {
+  now,
+  selectedTask,
+  capabilities,
+}: Readonly<{
+  item: PlannerTaskPresentationItem;
+  date: string;
+  now: Date;
+  selectedTask: Task | null;
+  capabilities: PlannerTaskListCapabilities;
+}>): React.ReactElement {
+  const [dragBinding, setDragBinding] =
+    useState<TaskDragBinding | null>(null);
+  const isCanonical = capabilities.kind === "canonical";
+
   return (
-    <DraggableTaskRow
-      task={task}
-      recurrenceSeries={recurrenceSeries}
-      now={now}
-      index={index}
-      isSelected={isSelected}
-      onSelect={() => onSelectTask(task)}
-      onToggleComplete={() => {
-        void onToggleComplete(task);
-      }}
-      onEdit={() => onEdit(task)}
-      onSetPriority={(priority: Priority) => {
-        void onSetPriority(task, priority);
-      }}
-      onDelete={() => onDelete(task)}
-      {...(index > 0
-        ? {
-            onMoveUp: () => {
-              void onMove(task.id, date, index - 1);
-            },
-          }
-        : {})}
-      {...(index < sequenceLength - 1
-        ? {
-            onMoveDown: () => {
-              void onMove(task.id, date, index + 1);
-            },
-          }
-        : {})}
-    />
+    <>
+      {isCanonical ? (
+        <TaskDraggableRegistration
+          key="registration"
+          task={item.task}
+          index={item.index}
+          onBindingChange={setDragBinding}
+        />
+      ) : null}
+      <TaskRow
+        key="presentation"
+        task={item.task}
+        recurrenceSeries={item.recurrenceSeries}
+        now={now}
+        isSelected={selectedTask?.id === item.task.id}
+        interaction={
+          isCanonical
+            ? {
+                kind: "canonical",
+                ...(dragBinding === null
+                  ? {}
+                  : {
+                      rowRef: dragBinding.rowRef,
+                      dragHandleRef: dragBinding.dragHandleRef,
+                    }),
+                isDragging: dragBinding?.isDragging ?? false,
+                onSelect: () => capabilities.onSelectTask(item.task),
+                onToggleComplete: () => {
+                  void capabilities.onToggleComplete(item.task);
+                },
+                onEdit: () => capabilities.onEdit(item.task),
+                onSetPriority: (priority: Priority) => {
+                  void capabilities.onSetPriority(item.task, priority);
+                },
+                onDelete: () => capabilities.onDelete(item.task),
+                ...(item.index > 0
+                  ? {
+                      onMoveUp: () => {
+                        void capabilities.onMove(
+                          item.task.id,
+                          date,
+                          item.index - 1,
+                        );
+                      },
+                    }
+                  : {}),
+                ...(item.index < item.sequenceLength - 1
+                  ? {
+                      onMoveDown: () => {
+                        void capabilities.onMove(
+                          item.task.id,
+                          date,
+                          item.index + 1,
+                        );
+                      },
+                    }
+                  : {}),
+              }
+            : { kind: "adjacent" }
+        }
+      />
+    </>
   );
 }
 
@@ -160,6 +196,7 @@ export function PlannerTaskList(
   );
   const listRef = useRef<HTMLUListElement>(null);
   const animatedLayout = useAnimatedLayout({ containerRef: listRef });
+  const isCanonical = props.capabilities.kind === "canonical";
 
   return (
     <PlannerTaskSequence
@@ -167,23 +204,19 @@ export function PlannerTaskList(
       listRef={listRef}
       animatedLayout={animatedLayout}
       renderInsertionSlot={(slotIndex) => (
-        <TaskInsertionSlot date={props.date} slotIndex={slotIndex} />
+        <TaskInsertionSlot
+          date={props.date}
+          slotIndex={slotIndex}
+          isInteractive={isCanonical}
+        />
       )}
       renderTaskRow={(item) => (
         <PlannerSequenceRow
-          task={item.task}
-          recurrenceSeries={item.recurrenceSeries}
-          now={props.now}
-          index={item.index}
+          item={item}
           date={props.date}
-          sequenceLength={item.sequenceLength}
-          isSelected={props.selectedTask?.id === item.task.id}
-          onSelectTask={props.onSelectTask}
-          onEdit={props.onEdit}
-          onToggleComplete={props.onToggleComplete}
-          onSetPriority={props.onSetPriority}
-          onDelete={props.onDelete}
-          onMove={props.onMove}
+          now={props.now}
+          selectedTask={props.selectedTask}
+          capabilities={props.capabilities}
         />
       )}
     />

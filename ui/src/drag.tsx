@@ -11,8 +11,11 @@ import {
 } from "@dnd-kit/dom";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   type ReactNode,
   type Ref,
@@ -20,11 +23,7 @@ import {
 import type { Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import { todayCivilDate } from "./dates";
-import {
-  TaskDragOverlayCard,
-  TaskRow,
-  type TaskRowProps,
-} from "./task-row";
+import { TaskDragOverlayCard } from "./task-row";
 
 export interface TaskDropIntent {
   readonly task_id: string;
@@ -48,6 +47,31 @@ const TaskDragContext = createContext<TaskDragState>(EMPTY_DRAG_STATE);
 
 export function useTaskDragState(): TaskDragState {
   return useContext(TaskDragContext);
+}
+
+export interface TaskDragScopePresentationProps {
+  readonly children: ReactNode;
+  readonly activeTaskId?: string | null;
+  readonly destinationDate?: string | null;
+  readonly destinationIndex?: number | null;
+}
+
+export function TaskDragScopePresentation({
+  children,
+  activeTaskId = null,
+  destinationDate = null,
+  destinationIndex = null,
+}: TaskDragScopePresentationProps): React.ReactElement {
+  return (
+    <div
+      className="jig-task-drag-scope"
+      data-jig-drag-active={activeTaskId === null ? "false" : "true"}
+      data-jig-drop-date={destinationDate ?? ""}
+      data-jig-drop-index={destinationIndex ?? ""}
+    >
+      {children}
+    </div>
+  );
 }
 
 export interface TaskDragProviderProps {
@@ -221,14 +245,7 @@ export function TaskDragProvider({
       }}
     >
       <TaskDragContext.Provider value={state}>
-        <div
-          className="jig-task-drag-scope"
-          data-jig-drag-active={state.activeTaskId === null ? "false" : "true"}
-          data-jig-drop-date={state.intent?.destination_date ?? ""}
-          data-jig-drop-index={state.intent?.destination_index ?? ""}
-        >
-          {children}
-        </div>
+        {children}
         <DragOverlay>
           {activeTask === null ? null : (
             <TaskDragOverlayCard task={activeTask} />
@@ -239,19 +256,23 @@ export function TaskDragProvider({
   );
 }
 
-export interface DraggableTaskRowProps
-  extends Omit<
-    TaskRowProps,
-    "rowRef" | "dragHandleRef" | "isDragging"
-  > {
-  readonly index: number;
+export interface TaskDragBinding {
+  readonly rowRef: (element: HTMLLIElement | null) => void;
+  readonly dragHandleRef: (element: HTMLSpanElement | null) => void;
+  readonly isDragging: boolean;
 }
 
-export function DraggableTaskRow({
+export interface TaskDraggableRegistrationProps {
+  readonly task: Task;
+  readonly index: number;
+  readonly onBindingChange: (binding: TaskDragBinding | null) => void;
+}
+
+export function TaskDraggableRegistration({
   task,
   index,
-  ...rowProps
-}: DraggableTaskRowProps): React.ReactElement {
+  onBindingChange,
+}: TaskDraggableRegistrationProps): null {
   const draggable = useDraggable({
     id: task.id,
     type: "jig-task",
@@ -261,22 +282,39 @@ export function DraggableTaskRow({
     },
   });
 
-  const rowRef = (element: HTMLLIElement | null): void => {
-    draggable.ref(element);
-  };
-  const dragHandleRef = (element: HTMLSpanElement | null): void => {
-    draggable.handleRef(element);
-  };
+  const draggableRef = useRef(draggable.ref);
+  const draggableHandleRef = useRef(draggable.handleRef);
+  draggableRef.current = draggable.ref;
+  draggableHandleRef.current = draggable.handleRef;
 
-  return (
-    <TaskRow
-      {...rowProps}
-      task={task}
-      rowRef={rowRef}
-      dragHandleRef={dragHandleRef}
-      isDragging={draggable.isDragging}
-    />
+  const rowRef = useCallback(
+    (element: HTMLLIElement | null): void => {
+      draggableRef.current(element);
+    },
+    [],
   );
+  const dragHandleRef = useCallback(
+    (element: HTMLSpanElement | null): void => {
+      draggableHandleRef.current(element);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    onBindingChange({
+      rowRef,
+      dragHandleRef,
+      isDragging: draggable.isDragging,
+    });
+    return () => onBindingChange(null);
+  }, [
+    dragHandleRef,
+    draggable.isDragging,
+    onBindingChange,
+    rowRef,
+  ]);
+
+  return null;
 }
 
 export interface TaskInsertionSlotPresentationProps {
@@ -319,16 +357,24 @@ export function TaskInsertionSlotPresentation({
   );
 }
 
-export interface TaskInsertionSlotProps {
-  readonly date: string;
-  readonly slotIndex: number;
+interface TaskInsertionSlotBinding {
+  readonly slotRef: (element: HTMLLIElement | null) => void;
+  readonly isDropTarget: boolean;
 }
 
-export function TaskInsertionSlot({
+interface TaskInsertionSlotRegistrationProps {
+  readonly date: string;
+  readonly slotIndex: number;
+  readonly onBindingChange: (
+    binding: TaskInsertionSlotBinding | null,
+  ) => void;
+}
+
+function TaskInsertionSlotRegistration({
   date,
   slotIndex,
-}: TaskInsertionSlotProps): React.ReactElement {
-  const isPastDate = date < todayCivilDate();
+  onBindingChange,
+}: TaskInsertionSlotRegistrationProps): null {
   const { ref, isDropTarget } = useDroppable({
     id: `jig-slot-${date}-${slotIndex}`,
     type: "jig-insertion-slot",
@@ -339,33 +385,75 @@ export function TaskInsertionSlot({
     },
   });
 
-  const slotRef = (element: HTMLLIElement | null): void => {
-    ref(element);
-  };
+  const droppableRef = useRef(ref);
+  droppableRef.current = ref;
+  const slotRef = useCallback(
+    (element: HTMLLIElement | null): void => {
+      droppableRef.current(element);
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    onBindingChange({ slotRef, isDropTarget });
+    return () => onBindingChange(null);
+  }, [isDropTarget, onBindingChange, slotRef]);
+
+  return null;
+}
+
+export interface TaskInsertionSlotProps {
+  readonly date: string;
+  readonly slotIndex: number;
+  readonly isInteractive: boolean;
+}
+
+export function TaskInsertionSlot({
+  date,
+  slotIndex,
+  isInteractive,
+}: TaskInsertionSlotProps): React.ReactElement {
+  const [binding, setBinding] =
+    useState<TaskInsertionSlotBinding | null>(null);
+  const isPastDate = date < todayCivilDate();
 
   return (
-    <TaskInsertionSlotPresentation
-      slotRef={slotRef}
-      slotIndex={slotIndex}
-      isDropTarget={isDropTarget}
-      isPastDate={isPastDate}
-    />
+    <>
+      {isInteractive ? (
+        <TaskInsertionSlotRegistration
+          key="registration"
+          date={date}
+          slotIndex={slotIndex}
+          onBindingChange={setBinding}
+        />
+      ) : null}
+      <TaskInsertionSlotPresentation
+        key="presentation"
+        {...(binding === null ? {} : { slotRef: binding.slotRef })}
+        slotIndex={slotIndex}
+        isDropTarget={isInteractive && (binding?.isDropTarget ?? false)}
+        isPastDate={isPastDate}
+      />
+    </>
   );
 }
 
 export interface DateDropZoneProps {
   readonly date: string;
   readonly children: ReactNode;
+  readonly isInteractive: boolean;
   readonly className?: string;
 }
 
 export function DateDropZone({
   date,
   children,
+  isInteractive,
   className,
 }: DateDropZoneProps): React.ReactElement {
   const state = useTaskDragState();
   const crossDateActive =
+    isInteractive &&
     state.intent?.destination_date === date &&
     state.sourceDate !== null &&
     state.sourceDate !== date;
