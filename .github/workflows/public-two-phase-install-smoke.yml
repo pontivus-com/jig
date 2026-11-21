@@ -1,0 +1,124 @@
+name: Public two-phase install smoke
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  public-two-phase-install:
+    if: github.event.pull_request.number == 64
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Execute published two-phase install end to end
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TMP_ROOT="$(mktemp -d)"
+          trap 'rm -rf "$TMP_ROOT"' EXIT
+
+          export HOME="$TMP_ROOT/home"
+          export PATH="$TMP_ROOT/bin:$HOME/.local/bin:$PATH"
+          mkdir -p "$HOME" "$TMP_ROOT/bin" "$TMP_ROOT/planning-repo"
+
+          cat > "$TMP_ROOT/bin/systemctl" <<'EOF'
+          #!/usr/bin/env bash
+          exit 1
+          EOF
+          chmod +x "$TMP_ROOT/bin/systemctl"
+
+          cat > "$TMP_ROOT/bin/xdg-open" <<'EOF'
+          #!/usr/bin/env bash
+          exit 0
+          EOF
+          chmod +x "$TMP_ROOT/bin/xdg-open"
+
+          git -C "$TMP_ROOT/planning-repo" init >/dev/null
+          git -C "$TMP_ROOT/planning-repo" config user.name "Jig Public Install Smoke"
+          git -C "$TMP_ROOT/planning-repo" config user.email "jig-public-install@local.invalid"
+          printf 'planning data\n' > "$TMP_ROOT/planning-repo/README.md"
+          git -C "$TMP_ROOT/planning-repo" add README.md
+          git -C "$TMP_ROOT/planning-repo" commit -m "Planning repository baseline" >/dev/null
+
+          # Phase 1: execute the exact public Quick start command.
+          curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
+            | bash
+
+          test -x "$HOME/.local/bin/jig"
+          test -x "$HOME/.local/share/jig/runtime/bun"
+          test ! -e "$HOME/.config/jig/config.json"
+          test "$(node -p "require('$HOME/.local/share/jig/package.json').version")" = "1.1.0"
+          jig status | grep -q '^setup: repository required$'
+
+          # Hosted runners do not provide a normal systemd --user session, so
+          # exercise the documented foreground fallback while proving that the
+          # installed 'jig' launcher reaches the real bootstrap UI.
+          jig serve >"$TMP_ROOT/jig-serve.log" 2>&1 &
+          JIG_PID=$!
+          cleanup_jig() {
+            kill -TERM "$JIG_PID" >/dev/null 2>&1 || true
+            wait "$JIG_PID" >/dev/null 2>&1 || true
+          }
+          trap 'cleanup_jig; rm -rf "$TMP_ROOT"' EXIT
+
+          READY=false
+          for _ in $(seq 1 80); do
+            if curl -fsS http://127.0.0.1:47831/api/v1/setup/status \
+              | grep -q '"mode":"bootstrap"'; then
+              READY=true
+              break
+            fi
+            sleep 0.1
+          done
+          test "$READY" = true
+
+          test "$(jig | head -n1)" = "http://127.0.0.1:47831"
+          curl -fsS http://127.0.0.1:47831/ >/dev/null
+
+          TOKEN="$(
+            "$HOME/.local/share/jig/runtime/bun" -e \
+              "const h=await (await fetch('http://127.0.0.1:47831/')).text(); const m=/window\\.__JIG_WRITE_TOKEN__=(\"[0-9a-f]{64}\");/.exec(h); if(!m) process.exit(1); process.stdout.write(JSON.parse(m[1]));"
+          )"
+
+          JIG_TOKEN="$TOKEN" JIG_REPO="$TMP_ROOT/planning-repo" \
+            "$HOME/.local/share/jig/runtime/bun" -e '
+              const response = await fetch(
+                "http://127.0.0.1:47831/api/v1/setup/local-repository",
+                {
+                  method: "POST",
+                  headers: {
+                    "content-type": "application/json",
+                    "x-jig-write-token": process.env.JIG_TOKEN,
+                  },
+                  body: JSON.stringify({
+                    repository_path: process.env.JIG_REPO,
+                  }),
+                },
+              );
+              if (!response.ok) {
+                console.error(await response.text());
+                process.exit(1);
+              }
+            '
+
+          CONFIGURED=false
+          for _ in $(seq 1 80); do
+            if curl -fsS http://127.0.0.1:47831/api/v1/setup/status \
+              | grep -q '"mode":"configured"'; then
+              CONFIGURED=true
+              break
+            fi
+            sleep 0.1
+          done
+          test "$CONFIGURED" = true
+
+          test -f "$HOME/.config/jig/config.json"
+          test -f "$TMP_ROOT/planning-repo/.jig/local/jig.sqlite"
+          jig status | grep -q "^repository: $TMP_ROOT/planning-repo$"
+
+          cleanup_jig
+          trap 'rm -rf "$TMP_ROOT"' EXIT
