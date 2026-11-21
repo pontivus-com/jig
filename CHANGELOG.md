@@ -4,6 +4,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-21
+
 ### Documentation
 
 - **Installation:** Made the public README Quick start follow the governed two-phase flow: install Jig first with the release bootstrap script, then run `jig` and choose/connect the planning repository inside the application. Kept direct `--repo` installation as an explicit automation path and corrected the pinned-version example to v1.1.0.
@@ -208,3 +210,4 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - Certified five-minute idle one-core CPU average at 0.0167% against a 1.0% limit.
 - Certified running-service launcher handoff p95/20 at 30 ms against a 500 ms limit.
 - Certified stopped-service HTTP readiness p95/20 at 53 ms against a 2,000 ms limit.
+
