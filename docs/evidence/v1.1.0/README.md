@@ -139,7 +139,7 @@ The post-UX candidate is reviewed against `../../design/reference/jig-v1.1-appli
 | Android Git native HTTP transport | **PASS at the native-transport/API-24 boundary** — selected native smart-HTTP/isomorphic-git transport remains certified; live private-repository acquisition remains external/physical evidence. |
 | Android GitHub Device Flow native HTTP composition | **PASS** — shared Device Flow request/poll/user-lookup contract is permanently tested. Live authorization remains external/physical evidence. |
 | Android reminder scheduling/reconciliation | **PASS for repository/emulator-capable semantics** — permanent unit/reconciliation coverage passed. API 31/33/36 policy/permission behavior and physical notification delivery remain IMP-15 evidence. |
-| F-Droid candidate metadata lint | **PASS** — permanent Android certification lint passed. External submission/publication has not occurred. |
+| F-Droid candidate metadata lint | **PASS** — permanent Android readiness lint passed. External submission/publication is intentionally deferred until product stability and marketing/store-material readiness. |
 | FLOSS/proprietary dependency gate | **PASS** — no Play Services/Firebase/proprietary runtime SDK is accepted by the permanent Android gate. |
 | Linux x64 packaged configured/bootstrap smoke | Permanent Release certification implemented; **release-commit execution pending**. |
 | Linux arm64 packaged configured/bootstrap smoke | Permanent Release certification implemented; **release-commit execution pending**. |
@@ -174,7 +174,7 @@ The development APK retained by permanent Verify #1746 is the **current physical
 - GitHub Actions artifact id: `14706565629`.
 - Artifact archive digest: `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`.
 - Extracted `app-debug.apk` SHA-256: **not yet recorded for this artifact**; record it before final physical execution.
-- This remains a certification artifact only. Public Android distribution is owned by the later F-Droid release path.
+- This remains a certification artifact only. Future public Android distribution is intended for F-Droid, but submission/publication is deferred until product stability and marketing/store-material readiness.
 ## Still required before release-candidate closure
 
 Repository-executable implementation is complete on the certified `a9044f9…` lineage. The remaining order is:
