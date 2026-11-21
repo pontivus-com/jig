@@ -53,7 +53,7 @@
 
 This candidate remains valid provenance for the gates it actually passed, but it is **not** the current release-candidate lineage after later executable changes. J110-IMP-09 remains complete, but the 2026-11-20 executable/session evidence and the amended IMP-18..23 authority supersede this baseline for final certification.
 
-## Current post-remediation certified candidate — 2026-11-20
+## Historical post-remediation certified candidate — 2026-11-20
 
 - Exact certified source/head: `3b60ad938f2173521c4eb2aa8b59603a15d930b1`.
 - Permanent Verify: `44652277552` / #1598 — **PASS** across all three required jobs.
@@ -63,7 +63,7 @@ This candidate remains valid provenance for the gates it actually passed, but it
 - Unpacked `app-debug.apk`: 9,780,552 bytes; SHA-256 `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`.
 - API-24 runtime: **PASS** — Android Emulator 37.3.10 booted with `ANDROID_I_WANT_MY_TCG=yes`; 5/5 instrumentation tests completed; Gradle ended `BUILD SUCCESSFUL`.
 - The TCG environment flag is a narrow hosted-runner compatibility correction. Emulator 37.3.10 had begun rejecting the action's software `-accel off` fallback before instrumentation; the prior product/test code was not implicated.
-- J110-IMP-18, IMP-19 and IMP-20 are **COMPLETE**. J110-IMP-21 is **IN PROGRESS** only for focused physical Android confirmation.
+- J110-IMP-18, IMP-19 and IMP-20 are **COMPLETE**. This candidate was later superseded; IMP-21 is retained as historical re-certification provenance and no longer owns a separate final physical gate.
 
 ### Local follow-up correction — mobile header safe-area inset
 
@@ -77,7 +77,7 @@ This candidate remains valid provenance for the gates it actually passed, but it
 - The latest local follow-up adds the reminder lifecycle correction. Future cards show `Reminder scheduled`; elapsed incomplete current-day reminders show `Reminder due · time passed`; after the browser service-worker or Android local-notification adapter reports display, the card shows `Reminder notified`. Android already-due reminders now request an immediate foreground notification with an explicitly non-exact request, avoiding an unnecessary exact-alarm settings detour.
 - On Samsung SM-S901E / Android 16, the connected foreground app produced a real `Jig reminder` notification for the already-due `Audit Workflow` Task while the app was open; returning to Jig showed `Reminder notified` on the card. Evidence screenshots: `/tmp/jig-reminder-after-rebuild.png` and `/tmp/jig-reminder-notified-card.png`. Final local APK SHA-256 is `f3ddc820d7519a7aff32841e3dda1e886eaba2f4db1e1041c5dc20d79d02387f`.
 - The latest local follow-up adds Android Back navigation through the existing destination owner: Back returns Settings → History → Planner, closes the Task workspace after Android first dismisses the focused keyboard, and exits at the Planner root. The installed local APK SHA-256 is `e28953853c242fd68ab41e533ff40567cddf57b7f4d8d5eccf52c37fe538141f`; source tests/typecheck passed at 42 files / 264 tests. Hosted re-certification remains required for this executable change.
-- Hosted re-certification is still required before this local result can close IMP-21/IMP-15; issue #31 live Linux/Desktop acceptance and the remaining physical synchronization/notification matrix remain open.
+- This local follow-up was subsequently incorporated into the `a9044f9…` executable lineage and hosted re-certified by permanent Verify #1746. Issue #31 live Linux/Desktop acceptance and the remaining IMP-15 physical/runtime matrix remain open.
 
 ### Local follow-up correction — Android system-bar appearance
 
@@ -110,7 +110,7 @@ This candidate remains valid provenance for the gates it actually passed, but it
 3. explicit current/future scheduling rule plus past-date rejection feedback;
 4. recurring rollover non-accumulation.
 
-The original physical findings were governed by J110-IMP-18..23. IMP-18..20 remain implemented/non-device certified; IMP-21 owns their remaining focused physical confirmation. IMP-22/23/24 are now implemented and non-device certified on Verify #1632, with only their physical/real-input acceptance rows still open. These bounded presentation changes do not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture, reminder/notification-delivery architecture or SD-34/35 dnd-kit framework ownership.
+The original physical findings were governed by J110-IMP-18..24. IMP-18..22 and IMP-24 are implemented; IMP-23/FR-33/SD-43 is deferred beyond v1.1. Permanent Verify #1746 re-certified the current `a9044f9…` executable lineage. All still-required physical/real-input acceptance is consolidated under IMP-15. These bounded presentation changes do not reopen the already-proved Android Git synchronization fix, Secret Service fix, GitHub orchestration architecture, reminder/notification-delivery architecture or SD-34/35 dnd-kit framework ownership.
 
 ## Historical pre-remediation candidate
 
@@ -129,27 +129,26 @@ The post-UX candidate is reviewed against `../../design/reference/jig-v1.1-appli
 
 | Gate | Evidence state |
 | --- | --- |
-| Linux/browser permanent Verify | **PASS — CURRENT** — run `44690410706` / #1632 on source head `59f7d1642211739df88dc188a4fdfe17af2c26c9` through GitHub PR merge candidate `7d4225312b9e6e3983b9a5d494977dcc4ae19782`; strict typecheck, 42/42 core/integration/architecture files with 267/267 tests, production build, browser bootstrap, 82/82 real-browser tests, shell syntax and installer/lifecycle smoke passed. |
-| Governed browser screenshot evidence | **PASS — CURRENT HOSTED EVIDENCE** — artifact `14607679872`, `jig-v1.1-browser-evidence-7d4225312b9e6e3983b9a5d494977dcc4ae19782`, workflow source head `59f7d1642211739df88dc188a4fdfe17af2c26c9`, archive digest `sha256:7d05a1d5561faa6433e2a4022f7415a8a537937504d15cb2e4943e9aa85b8a9e`. The governed browser matrix includes the WeekPager and operational-attention geometry regressions; earlier explicit visual-review artifact `14591328349` remains historical supporting evidence for the prior compact-shell remediation. |
-| Browser/native platform isolation | **PASS** — permanent architecture tests require lazy native-runtime/native-GitHub loading; hosted browser bootstrap smoke proves Android Git/isomorphic-git is not evaluated in the browser entrypoint. |
-| Android deterministic build certification | **PASS — CURRENT** — run `44690410706` / #1632; Android synchronization, Gradle dependency locks, unit/static checks, FLOSS boundary, version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention passed. APK artifact id `14608147658`; extracted `app-debug.apk` is 9,787,835 bytes with SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. |
-| Android API-24 instrumentation | **PASS — CURRENT** — run `44690410706` / #1632; API-24 emulator execution completed 5/5 instrumentation tests and `:app:connectedDebugAndroidTest` ended `BUILD SUCCESSFUL`. |
-| Android bundled SQLite transaction/restart proof | **PASS at the native-driver/API-24 boundary** — covered by the committed API-24 instrumentation. Cross-platform physical-device continuity remains J110-IMP-15 evidence. |
-| Cross-installation synchronization convergence | **PASS for repository/host/emulator scope** — reciprocal Desktop→Android→Desktop and Android→Desktop→Android coverage, the four normal FR-24 outcomes, SYNC-E1..SYNC-E6, unrelated-repository preservation and architecture/strict-typing gates pass on the certified candidate. Physical same-repository confirmation remains J110-IMP-15 evidence. |
+| Linux/browser permanent Verify | **PASS — CURRENT** — permanent Verify `44901439819` / #1746 on executable source head `a9044f9906db80f8fc5e32872884bd007c47ea91`; strict typecheck, core/integration/architecture tests, production build, browser bootstrap, real-browser acceptance, shell syntax and installer/lifecycle smoke passed. |
+| Governed browser evidence | **PASS — CURRENT HOSTED EVIDENCE** — artifact `14705539010`, archive digest `sha256:92895db0bb9eeb9d95faa187786e0cd355c68c33f25003883360b1dfb5b87211`. Earlier reviewed screenshot artifacts remain historical supporting evidence where unaffected. |
+| Browser/native platform isolation | **PASS** — permanent architecture tests require lazy native-runtime/native-GitHub loading; hosted browser bootstrap proves Android Git/isomorphic-git is not evaluated in the browser entrypoint. |
+| Android deterministic build certification | **PASS — CURRENT** — Verify #1746; dependency locks, unit/static checks, FLOSS boundary, version derivation, development APK/native bridge compilation, F-Droid lint and artifact retention passed. Android artifact `14706565629`, archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. |
+| Android API-24 instrumentation | **PASS — CURRENT** — Verify #1746 Android API-24 runtime job completed successfully. |
+| Android bundled SQLite transaction/restart proof | **PASS at the native-driver/API-24 boundary** — covered by committed API-24 instrumentation. Cross-platform physical-device continuity remains IMP-15 evidence. |
+| Cross-installation synchronization convergence | **PASS for repository/host/emulator scope** — reciprocal Desktop↔Android coverage and the governed synchronization matrix remain certified; physical same-repository confirmation remains IMP-15 evidence. |
 | Android Git native HTTP transport | **PASS at the native-transport/API-24 boundary** — selected native smart-HTTP/isomorphic-git transport remains certified; live private-repository acquisition remains external/physical evidence. |
-| Android GitHub Device Flow native HTTP composition | **PASS** — shared Device Flow request/poll/user-lookup contract is exercised through the Android native HTTP adapter, including canonical client ID, `offline_access`, pending→authorized transition and absence of `client_secret`/`redirect_uri`. Live authorization remains external/physical evidence. |
-| Android reminder scheduling/reconciliation | **PASS for repository/emulator-capable semantics** — permanent unit/reconciliation coverage passed. API 31/33/36 policy/permission behavior and physical notification delivery remain J110-IMP-15 evidence. |
-| F-Droid candidate metadata lint | **PASS** — permanent Android certification lint passed against the pinned F-Droid category authority. External submission/publication has not occurred. |
+| Android GitHub Device Flow native HTTP composition | **PASS** — shared Device Flow request/poll/user-lookup contract is permanently tested. Live authorization remains external/physical evidence. |
+| Android reminder scheduling/reconciliation | **PASS for repository/emulator-capable semantics** — permanent unit/reconciliation coverage passed. API 31/33/36 policy/permission behavior and physical notification delivery remain IMP-15 evidence. |
+| F-Droid candidate metadata lint | **PASS** — permanent Android certification lint passed. External submission/publication has not occurred. |
 | FLOSS/proprietary dependency gate | **PASS** — no Play Services/Firebase/proprietary runtime SDK is accepted by the permanent Android gate. |
 | Linux x64 packaged configured/bootstrap smoke | Permanent Release certification implemented; **release-commit execution pending**. |
 | Linux arm64 packaged configured/bootstrap smoke | Permanent Release certification implemented; **release-commit execution pending**. |
 | Local `act` rehearsal | **NOT A CLOSURE GATE** — optional developer preflight only. Permanent hosted Verify/Release are authoritative. |
-| Live Linux/Desktop GitHub Device Flow/private-repo acquisition | **IMPLEMENTATION COMPLETE / EXTERNAL LIVE ACCEPTANCE PENDING** — deterministic protocol, Secret Service, managed transport, pagination, access recheck, clone/adoption, refresh/reconnect and failure semantics are permanently tested. Real interactive acceptance remains issue #31. |
-| Live/physical Android GitHub Device Flow/private-repo acquisition | **PENDING physical-device verification** under J110-IMP-15. |
-
+| Live Linux/Desktop GitHub Device Flow/private-repo acquisition | **IMPLEMENTATION COMPLETE / EXTERNAL LIVE ACCEPTANCE PENDING** — real interactive acceptance remains issue #31. |
+| Live/physical Android GitHub Device Flow/private-repo acquisition | **PENDING physical-device verification** under IMP-15. |
 ## Non-device functional + UX/UI closure audit
 
-The current candidate retains the already-certified synchronization convergence, bootstrap/GitHub orchestration, Android build/runtime boundaries and replacement dnd-kit movement owner, and additionally closes the latest IMP-18 presentation remediation, IMP-19 active-scheduling rule and IMP-20 recurrence-rollover non-accumulation. Geometry assertions and screenshots remain supporting evidence; presentation closure is based on the governed state matrix plus explicit visual review.
+The current `a9044f9…` candidate retains the certified synchronization convergence, bootstrap/GitHub orchestration, Android build/runtime boundaries and replacement dnd-kit movement owner, and includes the completed IMP-18 presentation remediation, IMP-19 active-scheduling rule, IMP-20 recurrence-rollover non-accumulation, IMP-22 active motion scope, IMP-24 operational-attention presentation and IMP-25 rolling horizon. Geometry assertions and screenshots remain supporting evidence; presentation closure is based on the governed state matrix plus explicit visual review.
 
 The closure audit confirms:
 
@@ -169,26 +168,13 @@ The real Linux/Desktop Device Flow/private-repository exercise is deliberately c
 
 ## Development APK identity
 
-The development APK retained by Verify run `44690410706` / #1632 is the **current physical-certification input**; it is not a GitHub Release asset or public Android distribution channel.
+The development APK retained by permanent Verify #1746 is the **current physical-certification input**; it is not a GitHub Release asset or public Android distribution channel.
 
-- Current source head: `59f7d1642211739df88dc188a4fdfe17af2c26c9`.
-- GitHub Actions artifact id: `14591926175`.
-- Artifact name: `jig-android-debug-184c8c824b32ff53c53136eaf1c1e4ab78fe480a` (artifact naming uses the PR merge-ref SHA; source head is recorded above).
-- Artifact ZIP size: `7,173,854` bytes.
-- Artifact digest: `sha256:dbb4f96a39af353adfee7360d2b0ebe36ae954d119407273a486fd66e6b610b9`.
-- APK file in the artifact: `app-debug.apk`.
-- Unpacked `app-debug.apk` size: `9,780,552` bytes.
-- Unpacked `app-debug.apk` SHA-256: `501efb58cbf3e0e9bef9163f501426b9ef8a14e095f3584ef234db690ad686a0`, computed directly from artifact `14591926175`.
-- Repository package authority expects Android application ID `com.pontivus.jig` with package-derived version identity. The physical preflight must still verify those APK badging fields with governed Build Tools `aapt`; the recorded SHA does not substitute for that check.
-
-Before physical certification, the device preflight must record/verify the unpacked APK identity/hash for this exact artifact. Any later **executable** change invalidates that APK identity and requires a new certified artifact; later documentation-only closure commits do not change the recorded executable/APK lineage.
-
-## Known corrective evidence
-
-The candidate includes a browser-bootstrap correction for the Android Git runtime boundary. Static reachability from the browser entrypoint had pulled `isomorphic-git`'s Node `Buffer` path into the production browser bundle, causing module-evaluation failure before React mounted. The corrected boundary dynamically loads `runtime-native` only after `Capacitor.isNativePlatform()` is true, and dynamically loads Android GitHub onboarding only on the native path. Permanent architecture tests forbid the static native imports, and the hosted bootstrap smoke plus the current 79/79 browser suite pass prove the browser surface mounts correctly.
-
-The 2026-11-19 authority remediation also replaced the superseded process-shaped setup/reconnect presentation. The certified candidate keeps onboarding inside the canonical Jig shell, presents one Connect GitHub repository intent plus GitHub's required user code/Copy/Open-GitHub handoff, automatically polls and rechecks provider access, consumes complete pagination, routes restricted installations to GitHub-owned access surfaces, auto-continues an unambiguous repository, limits React to coarse-state observation, and exposes reconnect only when managed GitHub authorization actually requires user action. Browser and architecture acceptance explicitly forbid the old Refresh/Grant/Manage/manual-acquire workflow.
-
+- Executable source head: `a9044f9906db80f8fc5e32872884bd007c47ea91`.
+- GitHub Actions artifact id: `14706565629`.
+- Artifact archive digest: `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`.
+- Extracted `app-debug.apk` SHA-256: **not yet recorded for this artifact**; record it before final physical execution.
+- This remains a certification artifact only. Public Android distribution is owned by the later F-Droid release path.
 ## Still required before release-candidate closure
 
 Repository-executable implementation is complete on the certified `a9044f9…` lineage. The remaining order is:
