@@ -1,29 +1,38 @@
 import { Button, IconButton } from "@astryxdesign/core";
-import { useEffect, useRef, type Ref } from "react";
+import type { Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import {
   defaultAddDate,
   outstandingForDate,
 } from "../../src/core/planning";
-import { DateDropZone, TaskDragProvider } from "./drag";
+import {
+  DateDropZone,
+  TaskDragScopePresentation,
+  useTaskDragState,
+} from "./drag";
 import {
   formatCivilDate,
   formatPlannerDateHeader,
   todayCivilDate,
 } from "./dates";
-import { PlannerTaskList } from "./planner-list";
+import {
+  PlannerTaskList,
+  type PlannerTaskListCapabilities,
+} from "./planner-list";
 import { JigIcon } from "./jig-icons";
-import type { WeekTransitionDirection } from "./planner";
+
+export type WeekTransitionDirection = "today";
 
 interface WeekPresentationProps {
   readonly tasks: readonly Task[];
   readonly recurrences: readonly RecurrenceSeries[];
   readonly now: Date;
+  readonly selectedTask: Task | null;
 }
 
-interface WeekMutationProps {
-  readonly selectedTask: Task | null;
+export interface CanonicalWeekCapabilities {
+  readonly kind: "canonical";
   readonly onSelectTask: (task: Task) => void;
   readonly onAdd: (date: string) => void;
   readonly onEdit: (task: Task) => void;
@@ -37,36 +46,55 @@ interface WeekMutationProps {
   ) => Promise<boolean>;
 }
 
-interface WeekTaskProps extends WeekPresentationProps, WeekMutationProps {}
-
-export interface WeekViewProps extends WeekTaskProps {
-  readonly focusCurrentDayOnMount: boolean;
-  readonly todayScrollRequest: number;
-  readonly weekTransitionDirection: WeekTransitionDirection | null;
-  readonly displayedDates: readonly string[];
+export interface AdjacentWeekCapabilities {
+  readonly kind: "adjacent";
 }
 
-interface DatedSectionProps extends WeekTaskProps {
+export type WeekCapabilities =
+  | CanonicalWeekCapabilities
+  | AdjacentWeekCapabilities;
+
+export interface WeekPageProps extends WeekPresentationProps {
+  readonly dates: readonly string[];
+  readonly transition: WeekTransitionDirection | null;
+  readonly todaySectionRef?: Ref<HTMLDivElement> | undefined;
+  readonly capabilities: WeekCapabilities;
+}
+
+interface DatedSectionProps extends WeekPresentationProps {
   readonly date: string;
   readonly isToday: boolean;
-  readonly todaySectionRef: Ref<HTMLDivElement>;
+  readonly todaySectionRef?: Ref<HTMLDivElement> | undefined;
+  readonly capabilities: WeekCapabilities;
+}
+
+function taskListCapabilities(
+  capabilities: WeekCapabilities,
+): PlannerTaskListCapabilities {
+  if (capabilities.kind === "adjacent") {
+    return { kind: "adjacent" };
+  }
+
+  return {
+    kind: "canonical",
+    onSelectTask: capabilities.onSelectTask,
+    onEdit: capabilities.onEdit,
+    onToggleComplete: capabilities.onToggleComplete,
+    onSetPriority: capabilities.onSetPriority,
+    onDelete: capabilities.onDelete,
+    onMove: capabilities.onMove,
+  };
 }
 
 function DatedSection({
   tasks,
   recurrences,
   now,
+  selectedTask,
   date,
   isToday,
   todaySectionRef,
-  selectedTask,
-  onSelectTask,
-  onAdd,
-  onEdit,
-  onToggleComplete,
-  onSetPriority,
-  onDelete,
-  onMove,
+  capabilities,
 }: DatedSectionProps): React.ReactElement {
   const dateTasks = outstandingForDate(tasks, date);
   const columnClassName = [
@@ -79,7 +107,9 @@ function DatedSection({
 
   return (
     <div
-      ref={isToday ? todaySectionRef : undefined}
+      {...(isToday && todaySectionRef !== undefined
+        ? { ref: todaySectionRef }
+        : {})}
       className={columnClassName}
       data-date={date}
     >
@@ -99,7 +129,9 @@ function DatedSection({
               icon={<JigIcon name="add" color="inherit" />}
               variant="ghost"
               className="jig-date-add"
-              onClick={() => onAdd(date)}
+              {...(capabilities.kind === "canonical"
+                ? { onClick: () => capabilities.onAdd(date) }
+                : {})}
             />
           </div>
           <span
@@ -109,19 +141,18 @@ function DatedSection({
             {dateTasks.length}
           </span>
         </header>
-        <DateDropZone date={date} className="jig-week-task-area">
+        <DateDropZone
+          date={date}
+          isInteractive={capabilities.kind === "canonical"}
+          className="jig-week-task-area"
+        >
           <PlannerTaskList
             tasks={tasks}
             recurrences={recurrences}
             now={now}
             date={date}
             selectedTask={selectedTask}
-            onSelectTask={onSelectTask}
-            onEdit={onEdit}
-            onToggleComplete={onToggleComplete}
-            onSetPriority={onSetPriority}
-            onDelete={onDelete}
-            onMove={onMove}
+            capabilities={taskListCapabilities(capabilities)}
           />
         </DateDropZone>
       </section>
@@ -129,17 +160,19 @@ function DatedSection({
   );
 }
 
-interface WeekBoardProps extends WeekTaskProps {
+interface WeekBoardProps extends WeekPresentationProps {
   readonly dates: readonly string[];
   readonly transition: WeekTransitionDirection | null;
-  readonly todaySectionRef: Ref<HTMLDivElement>;
+  readonly todaySectionRef?: Ref<HTMLDivElement> | undefined;
+  readonly capabilities: WeekCapabilities;
 }
 
 function WeekBoard({
   dates,
   transition,
   todaySectionRef,
-  ...taskProps
+  capabilities,
+  ...presentation
 }: WeekBoardProps): React.ReactElement {
   const today = todayCivilDate();
 
@@ -157,35 +190,27 @@ function WeekBoard({
       {dates.map((date) => (
         <DatedSection
           key={date}
-          {...taskProps}
+          {...presentation}
           date={date}
           isToday={date === today}
           todaySectionRef={todaySectionRef}
+          capabilities={capabilities}
         />
       ))}
     </div>
   );
 }
 
-interface WeekPageProps extends WeekTaskProps {
-  readonly dates: readonly string[];
-  readonly transition: WeekTransitionDirection | null;
-  readonly todaySectionRef: Ref<HTMLDivElement>;
-}
-
-function WeekPage({
-  dates,
-  transition,
-  todaySectionRef,
-  ...taskProps
-}: WeekPageProps): React.ReactElement {
-  const firstDate = dates[0] ?? todayCivilDate();
-  const isEmpty = dates.every(
-    (date) => outstandingForDate(taskProps.tasks, date).length === 0,
+function WeekPageContent(
+  props: WeekPageProps,
+): React.ReactElement {
+  const firstDate = props.dates[0] ?? todayCivilDate();
+  const isEmpty = props.dates.every(
+    (date) => outstandingForDate(props.tasks, date).length === 0,
   );
 
   return (
-    <TaskDragProvider tasks={taskProps.tasks} onMove={taskProps.onMove}>
+    <>
       {isEmpty ? (
         <div className="jig-planner-empty-state">
           <strong>Your week is clear</strong>
@@ -194,77 +219,49 @@ function WeekPage({
             label="Add your first task"
             variant="primary"
             className="jig-planner-empty-primary"
-            onClick={() =>
-              taskProps.onAdd(defaultAddDate(firstDate, todayCivilDate()))
-            }
+            {...(props.capabilities.kind === "canonical"
+              ? {
+                  onClick: () =>
+                    props.capabilities.kind === "canonical" &&
+                    props.capabilities.onAdd(
+                      defaultAddDate(firstDate, todayCivilDate()),
+                    ),
+                }
+              : {})}
           />
         </div>
       ) : null}
       <WeekBoard
-        {...taskProps}
-        dates={dates}
-        transition={transition}
-        todaySectionRef={todaySectionRef}
+        dates={props.dates}
+        transition={props.transition}
+        todaySectionRef={props.todaySectionRef}
+        tasks={props.tasks}
+        recurrences={props.recurrences}
+        now={props.now}
+        selectedTask={props.selectedTask}
+        capabilities={props.capabilities}
       />
-    </TaskDragProvider>
+    </>
   );
 }
 
-export function WeekView(props: WeekViewProps): React.ReactElement {
-  const today = todayCivilDate();
-  const todaySectionRef = useRef<HTMLDivElement>(null);
-  const displayedWeekKey = props.displayedDates.join("|");
-
-  useEffect(() => {
-    if (
-      !props.focusCurrentDayOnMount ||
-      !props.displayedDates.includes(today)
-    ) {
-      return;
-    }
-    const frame = window.requestAnimationFrame(() => {
-      todaySectionRef.current?.scrollIntoView({
-        block: "start",
-        inline: "nearest",
-        behavior: "auto",
-      });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [displayedWeekKey, props.focusCurrentDayOnMount, today]);
-
-  useEffect(() => {
-    if (
-      props.todayScrollRequest === 0 ||
-      !props.displayedDates.includes(today)
-    ) {
-      return;
-    }
-    const frame = window.requestAnimationFrame(() => {
-      todaySectionRef.current?.scrollIntoView({
-        block: "start",
-        inline: "nearest",
-        behavior: "auto",
-      });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [displayedWeekKey, props.todayScrollRequest, today]);
+export function WeekPage(
+  props: WeekPageProps,
+): React.ReactElement {
+  const dragState = useTaskDragState();
+  const isCanonical = props.capabilities.kind === "canonical";
 
   return (
-    <WeekPage
-      dates={props.displayedDates}
-      transition={props.weekTransitionDirection}
-      todaySectionRef={todaySectionRef}
-      tasks={props.tasks}
-      recurrences={props.recurrences}
-      now={props.now}
-      selectedTask={props.selectedTask}
-      onSelectTask={props.onSelectTask}
-      onAdd={props.onAdd}
-      onEdit={props.onEdit}
-      onToggleComplete={props.onToggleComplete}
-      onSetPriority={props.onSetPriority}
-      onDelete={props.onDelete}
-      onMove={props.onMove}
-    />
+    <TaskDragScopePresentation
+      activeTaskId={isCanonical ? dragState.activeTaskId : null}
+      destinationDate={
+        isCanonical ? dragState.intent?.destination_date ?? null : null
+      }
+      destinationIndex={
+        isCanonical ? dragState.intent?.destination_index ?? null : null
+      }
+    >
+      <WeekPageContent {...props} />
+    </TaskDragScopePresentation>
   );
 }
