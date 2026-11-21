@@ -4,6 +4,8 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-21
+
 > v1.1 functional scope and disposition are governed by the [functional amendment assessment](docs/requirements/v1.1-mobile-functional-design.md#12-v11-functional-amendment-and-implementation-assessment). Entries below are ordered from major product impact to smaller implementation/documentation detail.
 
 ### Added
