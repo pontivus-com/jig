@@ -484,6 +484,10 @@ test("retains governed synchronization-attention evidence without exposing techn
     path: testInfo.outputPath("v1.1-sync-attention-planner-desktop.png"),
     fullPage: true,
   });
+  await page.waitForTimeout(10_500);
+  await expect(
+    page.getByText("Sync needs attention", { exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(

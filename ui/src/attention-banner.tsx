@@ -12,7 +12,6 @@ export interface JigAttentionBannerProps {
   readonly endContent?: ReactNode;
   readonly container?: JigAttentionContainer;
   readonly onDismiss?: () => void;
-  readonly autoDismissMs?: number;
 }
 
 export function JigAttentionBanner({
@@ -22,24 +21,12 @@ export function JigAttentionBanner({
   endContent,
   container = "card",
   onDismiss,
-  autoDismissMs = 10_000,
 }: JigAttentionBannerProps): React.ReactElement {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     setDismissed(false);
   }, [status, title, description]);
-
-  useEffect(() => {
-    if (autoDismissMs <= 0) {
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      setDismissed(true);
-      onDismiss?.();
-    }, autoDismissMs);
-    return () => window.clearTimeout(timeout);
-  }, [autoDismissMs, status, title, description]);
 
   if (dismissed) {
     return <></>;
