@@ -19,7 +19,6 @@ import {
   addCivilDays,
   defaultAddDate,
   startOfWeekMonday,
-  weekDates,
 } from "../../src/core/planning";
 import type {
   CanonicalState,
@@ -40,7 +39,11 @@ import {
   submitTaskCommand,
   triggerSync,
 } from "./runtime";
-import { Planner, type WeekTransitionDirection } from "./planner";
+import {
+  Planner,
+  type PlannerHandle,
+  type WeekTransitionDirection,
+} from "./planner";
 import {
   CompactApplicationNavigation,
   PlannerHeader,
@@ -185,6 +188,7 @@ function ConfiguredApp({
     useState<Destination | null>(null);
   const [plannerState, setPlannerState] =
     useState<PlannerState>(initialPlannerState);
+  const plannerHandleRef = useRef<PlannerHandle>(null);
   const [todayScrollRequest, setTodayScrollRequest] = useState(0);
   const [weekTransitionDirection, setWeekTransitionDirection] =
     useState<WeekTransitionDirection | null>(null);
@@ -222,8 +226,6 @@ function ConfiguredApp({
     deleteTaskId === null
       ? null
       : tasks.find((task) => task.id === deleteTaskId) ?? null;
-  const displayedDates = weekDates(plannerState.displayedWeekStart);
-
   const refreshCanonical = useCallback(async (): Promise<void> => {
     const next = await readCanonicalTasks();
     setCanonical(next);
@@ -671,18 +673,22 @@ function ConfiguredApp({
     };
   }, [githubReconnect !== null, refreshOperationalState]);
 
-  const requestPreviousWeek = useCallback((): void => {
+  const shiftDisplayedWeek = useCallback((direction: -1 | 1): void => {
     setWeekTransitionDirection(null);
     setPlannerState((current) => ({
-      displayedWeekStart: addCivilDays(current.displayedWeekStart, -7),
+      displayedWeekStart: addCivilDays(
+        current.displayedWeekStart,
+        direction * 7,
+      ),
     }));
   }, []);
 
+  const requestPreviousWeek = useCallback((): void => {
+    plannerHandleRef.current?.movePrevious();
+  }, []);
+
   const requestNextWeek = useCallback((): void => {
-    setWeekTransitionDirection(null);
-    setPlannerState((current) => ({
-      displayedWeekStart: addCivilDays(current.displayedWeekStart, 7),
-    }));
+    plannerHandleRef.current?.moveNext();
   }, []);
 
   const goToToday = useCallback((): void => {
@@ -696,6 +702,7 @@ function ConfiguredApp({
     setPlannerState({
       displayedWeekStart: todayWeekStart,
     });
+    plannerHandleRef.current?.recenter();
     setTodayScrollRequest((current) => current + 1);
   }, [layoutMode, plannerState.displayedWeekStart]);
 
@@ -814,13 +821,14 @@ function ConfiguredApp({
       </div>
     ) : destination === "planner" ? (
       <Planner
+        handleRef={plannerHandleRef}
         focusCurrentDayOnMount={layoutMode === "narrow"}
         todayScrollRequest={todayScrollRequest}
         weekTransitionDirection={weekTransitionDirection}
+        displayedWeekStart={plannerState.displayedWeekStart}
         tasks={tasks}
         recurrences={canonical.recurrences}
         now={reminderNow}
-        displayedDates={displayedDates}
         selectedTask={selectedTask}
         onSelectTask={selectTask}
         onAdd={openCreate}
@@ -829,6 +837,7 @@ function ConfiguredApp({
         onSetPriority={setPriority}
         onDelete={(task) => setDeleteTaskId(task.id)}
         onMove={moveTaskExact}
+        onShiftWeek={shiftDisplayedWeek}
       />
     ) : destination === "history" ? (
       <HistoryView
