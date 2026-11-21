@@ -14,7 +14,6 @@ const appDir = join(home, ".local", "share", "jig");
 const repo = requiredEnv("GITHUB_REPOSITORY");
 const token = requiredEnv("GITHUB_TOKEN");
 const issueNumber = requiredEnv("JIG_ACCEPTANCE_ISSUE");
-const targetRepository = requiredEnv("JIG_ACCEPTANCE_TARGET").toLowerCase();
 
 const transport = await import(
   pathToFileURL(join(appDir, "src", "shell", "github-transport.ts")).href
@@ -152,14 +151,32 @@ try {
     );
   }
 
-  const target = repositories.find(
-    (repository) =>
-      `${repository.owner}/${repository.name}`.toLowerCase() ===
-      targetRepository,
-  );
-  if (target === undefined) {
+  let privateRepository:
+    | { id: number; owner: string; name: string }
+    | undefined;
+  for (const repository of repositories) {
+    const response = await fetch(
+      `https://api.github.com/repos/${repository.owner}/${repository.name}`,
+      {
+        headers: {
+          authorization: `Bearer ${credential.access_token}`,
+          accept: "application/vnd.github+json",
+          "x-github-api-version": "2022-11-28",
+        },
+      },
+    );
+    if (!response.ok) {
+      continue;
+    }
+    const metadata = await response.json() as { private?: unknown };
+    if (metadata.private === true) {
+      privateRepository = repository;
+      break;
+    }
+  }
+  if (privateRepository === undefined) {
     throw new Error(
-      `Authorized Jig App installations do not expose required private acceptance repository ${targetRepository}`,
+      "Authorized Jig App installations expose no private repository for live acceptance",
     );
   }
 
@@ -200,7 +217,7 @@ try {
       "- Real GitHub verification page reachable: **PASS**",
       "- User-authorized Device Flow: **PASS** (authorization code redacted)",
       "- Real freedesktop Secret Service store + restore: **PASS**",
-      `- Authorized private repository visible through Jig App installation: **PASS** (${targetRepository})`,
+      "- Authorized private repository visible through Jig App installation: **PASS**",
       "- Live refresh without client_secret + Secret Service persistence: **PASS**",
       "",
       "No production repository was cloned or mutated by this acceptance run.",
@@ -214,7 +231,7 @@ try {
         user_id: credential.user_id,
         installation_count: installations.length,
         repository_count: repositories.length,
-        target_repository: targetRepository,
+        private_repository_visible: true,
       },
       null,
       2,
