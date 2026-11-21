@@ -58,22 +58,42 @@ sits in the day, whether it is complete, and whether a reminder is due.**
 Jig v1 supports Linux x86_64/amd64 and aarch64/arm64. The stable release bundle
 contains the pinned Bun runtime and production UI.
 
-Install into an existing Git repository:
+### Phase 1 — install Jig
+
+```bash
+curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
+  | bash
+```
+
+This installs the certified Jig runtime and starts the local bootstrap service. A
+plain `curl -fsSL …/jig-install.sh` only prints the installer source; the
+`| bash` is what executes it.
+
+### Phase 2 — choose your planning repository in Jig
+
+```bash
+jig
+```
+
+Jig opens the local setup flow. Choose either:
+
+- **Use a repository already on this computer** — select an existing writable Git worktree; or
+- **Connect GitHub repository** — authorize the shared **Jig Desktop & Mobile** GitHub App, then choose an eligible repository when a choice is required.
+
+Repository setup completes inside Jig. Planner, History, Settings and synchronization
+become available only after that second phase succeeds. A repository without a usable
+remote remains fully usable in **Local only** mode.
+
+For noninteractive automation, you may still install directly into an existing repository:
 
 ```bash
 curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-install.sh \
   | bash -s -- --repo /absolute/path/to/your/planning-repo
 ```
 
-Jig uses the selected repository's Git configuration for automatic background synchronization. The installer may also take a repository URL plus checkout destination and delegate the clone to Git before continuing through the same installation path. If the repository has no usable remote, Jig remains fully usable in `local-only` mode.
-
-Then:
-
-```bash
-jig
-```
-
-See [Install Jig](docs/install.md) for existing-repository and repository-URL setup, pinned versions, upgrade, Git-native continuity, foreground fallback and uninstall.
+See [Install Jig](docs/install.md) for the two-phase setup, automation modes,
+repository-URL acquisition, pinned versions, upgrade, Git-native continuity,
+foreground fallback and uninstall.
 
 ## What stays where
 
