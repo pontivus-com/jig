@@ -62,6 +62,7 @@ const JIG_PRODUCT_TOKENS = new Set([
   "--jig-status-healthy-border",
   "--jig-status-healthy-text",
   "--jig-chrome-surface",
+  "--jig-planner-surface",
   "--jig-state-hover-bg",
   "--jig-state-pressed-bg",
   "--jig-task-surface",
