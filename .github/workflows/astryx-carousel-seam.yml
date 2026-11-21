@@ -58,7 +58,7 @@ jobs:
           printf '%s\\n' "$changed"
           while IFS= read -r path; do
             case "$path" in
-              packages/core/src/Carousel/Carousel.tsx|packages/core/src/Carousel/index.ts|packages/core/src/Carousel/Carousel.doc.mjs|packages/core/src/Carousel/Carousel.test.tsx|packages/core/src/SnapPaging/SnapPaging.ts|packages/core/src/SnapPaging/snapPagingValue.ts|packages/core/src/SnapPaging/useSnapPaging.doc.mjs|packages/core/src/SnapPaging/SnapPaging.test.tsx|.changeset/carousel-settled-reposition.md) ;;
+              packages/core/src/Carousel/Carousel.tsx|packages/core/src/Carousel/index.ts|packages/core/src/Carousel/Carousel.doc.mjs|packages/core/src/Carousel/Carousel.test.tsx|packages/core/src/SnapPaging/SnapPaging.ts|packages/core/src/SnapPaging/snapPagingValue.ts|packages/core/src/SnapPaging/useSnapPaging.doc.mjs|packages/core/src/SnapPaging/SnapPaging.test.tsx|docs/specs/components/Carousel/Carousel.spec.md|.changeset/carousel-settled-reposition.md) ;;
               *) echo "::error::Unexpected Astryx patch path: $path"; exit 1 ;;
             esac
           done <<< "$changed"
@@ -90,17 +90,18 @@ jobs:
         working-directory: astryx
         run: pnpm -F @astryxdesign/core build
 
-      - name: Changeset and package-boundary checks
+      - name: Changeset knowledge/spec and package-boundary checks
         working-directory: astryx
         run: |
           pnpm check:changesets
+          pnpm check:knowledge
           pnpm check:package-boundaries
 
-      - name: Create tested three-part patch artifact
+      - name: Create tested four-part patch artifact
         shell: bash
         run: |
           set -euo pipefail
-          git -C astryx add packages/core/src/Carousel packages/core/src/SnapPaging .changeset/carousel-settled-reposition.md
+          git -C astryx add packages/core/src/Carousel packages/core/src/SnapPaging docs/specs/components/Carousel/Carousel.spec.md .changeset/carousel-settled-reposition.md
           git -C astryx diff --binary --cached "$ASTRYX_BASE_SHA" > astryx-carousel-lifecycle.patch
           test -s astryx-carousel-lifecycle.patch
           sha256sum astryx-carousel-lifecycle.patch > astryx-carousel-lifecycle.patch.sha256
@@ -118,7 +119,7 @@ jobs:
       - name: Record validated Astryx patch
         shell: bash
         run: |
-          echo "Validated three-part Astryx patch retained for exact base $ASTRYX_BASE_SHA."
+          echo "Validated four-part Astryx patch retained for exact base $ASTRYX_BASE_SHA."
           echo "Publication runs as a separate job and requires an upstream-capable Actions secret."
 
   publish-upstream:
@@ -157,7 +158,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "feat(Carousel): expose bounded paging lifecycle and view sizing"
+          git commit -m "feat(Carousel): expose bounded paging lifecycle and suspension"
           echo "ASTRYX_CANDIDATE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Require upstream-capable Actions credential
@@ -197,8 +198,8 @@ jobs:
             --repo meta/astryx \
             --base main \
             --head "$UPSTREAM_BRANCH" \
-            --title "feat(Carousel): expose bounded paging lifecycle and view sizing" \
-            --body "Expose SnapPaging final-rest notification, CarouselHandle.scrollTo(index, {animated:false}), and public one-view Carousel item sizing so consumers do not measure or target private slide wrappers. The exact three-part patch was validated in the Jig IMP-23 Actions harness with focused Carousel/SnapPaging tests, strict core typecheck, core build, changeset validation, and package-boundary checks.")"
+            --title "feat(Carousel): expose bounded paging lifecycle and suspension" \
+            --body "Expose the complete four-part bounded paging seam required by Jig v1.1: SnapPaging final-rest notification, CarouselHandle.scrollTo(index, {animated:false}), public one-view Carousel item sizing, and public scrollingBehavior='suspended' so external Task drag can suspend Carousel-owned horizontal touch/pen/trackpad/wheel travel without consumer scroll interception. The exact candidate was validated by Jig IMP-23 Actions with focused Carousel/SnapPaging tests, strict source/test/docs typecheck, Core build, changeset validation, knowledge/spec validation, package-boundary checks, and 63/63 real-browser consumer acceptance tests.")"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Opened $url"
 
