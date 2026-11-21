@@ -385,6 +385,20 @@ describe("UI ownership architecture", () => {
     expect(deviceFlow).not.toContain("onRefresh");
   });
 
+  it("keeps active-date scheduling policy in the planning core", () => {
+    const planning = source("src/core/planning.ts");
+    const drag = source("ui/src/drag.tsx");
+    const week = source("ui/src/week.tsx");
+    const editor = source("ui/src/task-editor.tsx");
+
+    expect(planning).toContain("export function isActiveScheduleDate(");
+    expect(drag).toContain("isActiveScheduleDate");
+    expect(week).toContain("isActiveScheduleDate");
+    expect(editor).toContain("assertActiveScheduleDate");
+    expect(drag).not.toMatch(/date\s*<\s*todayCivilDate\(\)/);
+    expect(week).not.toMatch(/date\s*<\s*todayCivilDate\(\)/);
+  });
+
   it("keeps v1.1 mobile form and onboarding composition on governed public owners", () => {
     const taskEditor = source("ui/src/task-editor.tsx");
     const setup = source("ui/src/setup.tsx");

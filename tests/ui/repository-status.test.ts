@@ -117,10 +117,14 @@ describe("repository status presentation", () => {
     expect(repositoryStatusPresentation(configured("pending"))).toMatchObject({
       key: "pending",
       label: "Syncing",
+      icon: "info",
+      iconColor: "secondary",
     });
     expect(repositoryStatusPresentation(configured("retrying"))).toMatchObject({
       key: "retrying",
       label: "Syncing",
+      icon: "info",
+      iconColor: "secondary",
     });
     expect(remoteGitStatusPresentation(configured("retrying"))).toMatchObject({
       label: "Retrying",
@@ -128,6 +132,24 @@ describe("repository status presentation", () => {
     expect(repositoryStatusPresentation(null)).toMatchObject({
       key: "unknown",
       label: "Status",
+      iconColor: "secondary",
+    });
+    expect(
+      repositoryStatusPresentation(configured("pending"), {
+        initialSync: true,
+      }),
+    ).toMatchObject({
+      key: "pending",
+      label: "Syncing",
+      icon: "info",
+      iconColor: "secondary",
+    });
+    expect(
+      repositoryStatusPresentation(null, { initialSync: true }),
+    ).toMatchObject({
+      key: "unknown",
+      label: "Checking",
+      icon: "info",
       iconColor: "secondary",
     });
   });

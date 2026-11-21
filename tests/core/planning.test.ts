@@ -8,6 +8,7 @@ import {
   defaultAddDate,
   deleteTask,
   editTask,
+  isActiveScheduleDate,
   moveTask,
   reopenTask,
   rollForwardOutstanding,
@@ -328,6 +329,9 @@ describe("daily rollover", () => {
 
 describe("active scheduling dates", () => {
   it("accepts today and future dates and rejects past dates", () => {
+    expect(isActiveScheduleDate("2026-11-20", "2026-11-20")).toBe(true);
+    expect(isActiveScheduleDate("2026-11-20", "2026-11-21")).toBe(true);
+    expect(isActiveScheduleDate("2026-11-20", "2026-11-19")).toBe(false);
     expect(() =>
       assertActiveScheduleDate("2026-11-20", "2026-11-20"),
     ).not.toThrow();

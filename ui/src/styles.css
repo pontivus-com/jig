@@ -58,12 +58,10 @@ body {
 @keyframes jig-attention-reveal {
   from {
     opacity: 0;
-    transform: translateY(-0.25rem);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -1076,6 +1074,13 @@ body {
     align-items: center;
     justify-content: flex-end;
     margin-inline-start: auto;
+  }
+
+  .jig-attention-banner-dismiss {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
   }
 
   .jig-task-sheet-header {

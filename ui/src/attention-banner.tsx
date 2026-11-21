@@ -1,5 +1,6 @@
-import { Icon } from "@astryxdesign/core";
+import { Icon, IconButton } from "@astryxdesign/core";
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 export type JigAttentionStatus = "error" | "warning";
 export type JigAttentionContainer = "card" | "section";
@@ -10,6 +11,8 @@ export interface JigAttentionBannerProps {
   readonly description: ReactNode;
   readonly endContent?: ReactNode;
   readonly container?: JigAttentionContainer;
+  readonly onDismiss?: () => void;
+  readonly autoDismissMs?: number;
 }
 
 export function JigAttentionBanner({
@@ -18,7 +21,35 @@ export function JigAttentionBanner({
   description,
   endContent,
   container = "card",
+  onDismiss,
+  autoDismissMs = 10_000,
 }: JigAttentionBannerProps): React.ReactElement {
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setDismissed(false);
+  }, [status, title, description]);
+
+  useEffect(() => {
+    if (autoDismissMs <= 0) {
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setDismissed(true);
+      onDismiss?.();
+    }, autoDismissMs);
+    return () => window.clearTimeout(timeout);
+  }, [autoDismissMs, status, title, description]);
+
+  if (dismissed) {
+    return <></>;
+  }
+
+  const dismiss = (): void => {
+    setDismissed(true);
+    onDismiss?.();
+  };
+
   return (
     <section
       className={[
@@ -44,6 +75,15 @@ export function JigAttentionBanner({
       {endContent === undefined ? null : (
         <div className="jig-attention-banner-action">{endContent}</div>
       )}
+      <div className="jig-attention-banner-dismiss">
+        <IconButton
+          label="Dismiss notification"
+          icon={<Icon icon="close" color="inherit" />}
+          variant="ghost"
+          size="sm"
+          onClick={dismiss}
+        />
+      </div>
     </section>
   );
 }

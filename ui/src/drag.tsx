@@ -18,7 +18,10 @@ import {
   type Ref,
 } from "react";
 import type { Task } from "../../src/core/task";
-import { outstandingForDate } from "../../src/core/planning";
+import {
+  isActiveScheduleDate,
+  outstandingForDate,
+} from "../../src/core/planning";
 import { todayCivilDate } from "./dates";
 import {
   TaskDragOverlayCard,
@@ -79,6 +82,7 @@ function destinationIndexForSlot(
 function dropIntent(
   tasks: readonly Task[],
   taskId: string,
+  currentLocalDate: string,
   target: {
     readonly type?: unknown;
     readonly data?: Readonly<Record<string, unknown>>;
@@ -95,6 +99,9 @@ function dropIntent(
     !Number.isInteger(slotIndex) ||
     slotIndex < 0
   ) {
+    return null;
+  }
+  if (!isActiveScheduleDate(currentLocalDate, date)) {
     return null;
   }
 
@@ -183,6 +190,7 @@ export function TaskDragProvider({
         const intent = dropIntent(
           tasks,
           String(source.id),
+          todayCivilDate(),
           target,
         );
         setState((current) => ({ ...current, intent }));
@@ -193,7 +201,12 @@ export function TaskDragProvider({
         const intent =
           source === null
             ? null
-            : dropIntent(tasks, String(source.id), target);
+            : dropIntent(
+                tasks,
+                String(source.id),
+                todayCivilDate(),
+                target,
+              );
         setState(EMPTY_DRAG_STATE);
         onDragActiveChange?.(false);
 
@@ -328,7 +341,7 @@ export function TaskInsertionSlot({
   date,
   slotIndex,
 }: TaskInsertionSlotProps): React.ReactElement {
-  const isPastDate = date < todayCivilDate();
+  const isPastDate = !isActiveScheduleDate(todayCivilDate(), date);
   const { ref, isDropTarget } = useDroppable({
     id: `jig-slot-${date}-${slotIndex}`,
     type: "jig-insertion-slot",
@@ -370,7 +383,7 @@ export function DateDropZone({
     state.sourceDate !== null &&
     state.sourceDate !== date;
   const unavailableActive =
-    crossDateActive && date < todayCivilDate();
+    crossDateActive && !isActiveScheduleDate(todayCivilDate(), date);
 
   return (
     <div

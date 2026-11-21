@@ -17,6 +17,10 @@ export interface RepositoryStatusPresentation {
   readonly iconColor: IconColor;
 }
 
+export interface RepositoryStatusPresentationOptions {
+  readonly initialSync?: boolean;
+}
+
 export interface RepositoryDetailPresentation {
   readonly label: string;
   readonly message: string;
@@ -161,12 +165,16 @@ export function planningDataHomePresentation(
 
 export function repositoryStatusPresentation(
   status: ServiceStatus | null,
+  options: RepositoryStatusPresentationOptions = {},
 ): RepositoryStatusPresentation {
   if (status === null) {
     return {
       key: "unknown",
-      label: "Status",
-      message: "Synchronization status is unavailable.",
+      label: options.initialSync === true ? "Checking" : "Status",
+      message:
+        options.initialSync === true
+          ? "Jig is checking synchronization in the background."
+          : "Synchronization status is unavailable.",
       icon: "info",
       iconColor: "secondary",
     };
@@ -198,8 +206,8 @@ export function repositoryStatusPresentation(
       key: "pending",
       label: "Syncing",
       message: "Saved locally. Repository continuity is updating.",
-      icon: "warning",
-      iconColor: "warning",
+      icon: "info",
+      iconColor: "secondary",
     };
   }
 
@@ -217,16 +225,16 @@ export function repositoryStatusPresentation(
         key: "pending",
         label: "Syncing",
         message: "Saved locally. Remote continuity is updating.",
-        icon: "warning",
-        iconColor: "warning",
+        icon: "info",
+        iconColor: "secondary",
       };
     case "retrying":
       return {
         key: "retrying",
         label: "Syncing",
         message: "Saved locally. Remote continuity is retrying automatically.",
-        icon: "warning",
-        iconColor: "warning",
+        icon: "info",
+        iconColor: "secondary",
       };
     case "synchronized":
       return {

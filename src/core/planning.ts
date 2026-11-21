@@ -44,14 +44,21 @@ export function assertActiveScheduleDate(
   currentLocalDate: string,
   candidateDate: string,
 ): void {
-  assertCivilDate(currentLocalDate, "current_local_date");
-  assertCivilDate(candidateDate, "scheduled_date");
-  if (candidateDate < currentLocalDate) {
+  if (!isActiveScheduleDate(currentLocalDate, candidateDate)) {
     throw new PlanningError(
       "INVALID_OPERATION",
       "Outstanding Tasks can only be scheduled for today or a future date",
     );
   }
+}
+
+export function isActiveScheduleDate(
+  currentLocalDate: string,
+  candidateDate: string,
+): boolean {
+  assertCivilDate(currentLocalDate, "current_local_date");
+  assertCivilDate(candidateDate, "scheduled_date");
+  return candidateDate >= currentLocalDate;
 }
 
 function activeSequence(

@@ -4,6 +4,7 @@ import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import {
   defaultAddDate,
+  isActiveScheduleDate,
   outstandingForDate,
 } from "../../src/core/planning";
 import { DateDropZone, TaskDragProvider } from "./drag";
@@ -164,7 +165,9 @@ function WeekBoard({
           {...taskProps}
           date={date}
           isToday={date === today}
-          canAddTask={date > today}
+          canAddTask={
+            date !== today && isActiveScheduleDate(today, date)
+          }
           todaySectionRef={todaySectionRef}
         />
       ))}

@@ -111,13 +111,11 @@ function errorMessage(error: unknown): string {
 
 interface ApplicationShellProps {
   readonly topNav: ReactNode;
-  readonly banner?: ReactNode;
   readonly children: ReactNode;
 }
 
 function ApplicationShell({
   topNav,
-  banner,
   children,
 }: ApplicationShellProps): React.ReactElement {
   const [motionReady, setMotionReady] = useState(false);
@@ -131,7 +129,6 @@ function ApplicationShell({
       className={motionReady ? "jig-app-shell jig-app-shell-motion-ready" : "jig-app-shell"}
       topNav={topNav}
       mobileNav={false}
-      banner={banner}
       contentPadding={0}
       height="fill"
       variant="section"
@@ -195,6 +192,10 @@ function ConfiguredApp({
     useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null);
+  const [initialSyncSettled, setInitialSyncSettled] = useState(false);
+  const [dismissedSyncAttention, setDismissedSyncAttention] = useState<
+    string | null
+  >(null);
   const [isOperating, setIsOperating] = useState(false);
   const [githubReconnect, setGitHubReconnect] =
     useState<GitHubReconnectSnapshot | null>(null);
@@ -248,8 +249,23 @@ function ConfiguredApp({
     [],
   );
 
+  const updateRepositoryStatus = useCallback(
+    (repositoryStatus: ServiceStatus["repository_status"]): void => {
+      setStatus((current) =>
+        current === null
+          ? current
+          : {
+              ...current,
+              repository_status: repositoryStatus,
+            },
+      );
+    },
+    [],
+  );
+
   const load = useCallback(async (): Promise<void> => {
     setLoadError(null);
+    setInitialSyncSettled(false);
     try {
       await Promise.all([
         refreshCanonical(),
@@ -257,6 +273,8 @@ function ConfiguredApp({
       ]);
     } catch (error) {
       setLoadError(errorMessage(error));
+    } finally {
+      setInitialSyncSettled(true);
     }
   }, [refreshCanonical, refreshOperationalState]);
 
@@ -275,16 +293,7 @@ function ConfiguredApp({
   useEffect(() => {
     const onOnline = (): void => {
       void triggerSync()
-        .then((repositoryStatus) => {
-          setStatus((current) =>
-            current === null
-              ? current
-              : {
-                  ...current,
-                  repository_status: repositoryStatus,
-                },
-          );
-        })
+        .then(updateRepositoryStatus)
         .catch(() => undefined);
     };
     window.addEventListener("online", onOnline);
@@ -304,14 +313,7 @@ function ConfiguredApp({
         refreshCanonical(),
         triggerSync().then((next) => {
           if (!disposed) {
-            setStatus((current) =>
-              current === null
-                ? current
-                : {
-                    ...current,
-                    repository_status: next,
-                  },
-            );
+            updateRepositoryStatus(next);
           }
         }),
       ]).catch((error: unknown) => {
@@ -335,7 +337,7 @@ function ConfiguredApp({
         void cleanup();
       }
     };
-  }, [refreshCanonical]);
+  }, [refreshCanonical, updateRepositoryStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -698,7 +700,16 @@ function ConfiguredApp({
     setTodayScrollRequest((current) => current + 1);
   }, [layoutMode, plannerState.displayedWeekStart]);
 
-  const repositoryStatus = repositoryStatusPresentation(status);
+  const repositoryStatus = repositoryStatusPresentation(status, {
+    initialSync: !initialSyncSettled,
+  });
+
+  useEffect(() => {
+    if (repositoryStatus.key !== "sync-issue") {
+      setDismissedSyncAttention(null);
+    }
+  }, [repositoryStatus.key]);
+
   const statusClassName =
     `jig-status-control jig-status-${repositoryStatus.key}`;
   const statusIcon = (
@@ -735,14 +746,17 @@ function ConfiguredApp({
       title="Jig could not complete the operation"
       description={operationError}
       container="section"
+      onDismiss={() => setOperationError(null)}
     />
   ) : repositoryStatus.key === "sync-issue" &&
-    destination !== "settings" ? (
+    destination !== "settings" &&
+    dismissedSyncAttention !== repositoryStatus.message ? (
     <JigAttentionBanner
       status="warning"
       title="Sync needs attention"
       description={repositoryStatus.message}
       container="section"
+      onDismiss={() => setDismissedSyncAttention(repositoryStatus.message)}
       endContent={
         <Button
           label="Open Settings"
@@ -902,8 +916,8 @@ function ConfiguredApp({
               onNavigate={navigateDestination}
             />
           }
-          banner={durableBanner ?? undefined}
         >
+          {durableBanner}
           <div
             className={[
               "jig-content-frame",

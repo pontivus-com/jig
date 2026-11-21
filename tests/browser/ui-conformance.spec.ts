@@ -473,6 +473,13 @@ test("retains governed synchronization-attention evidence without exposing techn
     1,
   );
   expect(desktopBannerGeometry.overflow).toBeLessThanOrEqual(1);
+  const headerBox = await page.locator(".jig-app-header").boundingBox();
+  const bannerBox = await page.locator(".jig-attention-banner").boundingBox();
+  expect(headerBox).not.toBeNull();
+  expect(bannerBox).not.toBeNull();
+  if (headerBox !== null && bannerBox !== null) {
+    expect(bannerBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height);
+  }
   await page.screenshot({
     path: testInfo.outputPath("v1.1-sync-attention-planner-desktop.png"),
     fullPage: true,
@@ -558,6 +565,10 @@ test("retains governed synchronization-attention evidence without exposing techn
     mobileBannerGeometry.messageBottom - 1,
   );
   expect(mobileBannerGeometry.overflow).toBeLessThanOrEqual(1);
+  await page
+    .getByRole("button", { name: "Dismiss notification", exact: true })
+    .click();
+  await expect(page.locator(".jig-attention-banner")).toHaveCount(0);
 });
 
 test("temporal group stays page-centered in one row and navigation has no selected-day state", async ({
