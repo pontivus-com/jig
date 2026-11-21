@@ -9,6 +9,7 @@ import {
   copyText,
   nativeClipboardAvailable,
 } from "./native/clipboard";
+import { openVerificationUri } from "./native/browser";
 
 export interface GitHubDeviceFlowPanelProps {
   readonly authorization: GitHubAuthorizationPresentation | null;
@@ -45,11 +46,7 @@ export function GitHubDeviceFlowPanel({
       if (nativeClipboardAvailable()) {
         await copyCode(authorization.user_code);
       }
-      window.open(
-        authorization.verification_uri,
-        "_blank",
-        "noopener,noreferrer",
-      );
+      await openVerificationUri(authorization.verification_uri);
     })();
   }, [authorization]);
 
@@ -85,11 +82,7 @@ export function GitHubDeviceFlowPanel({
           label="Open GitHub"
           variant="secondary"
           onClick={() => {
-            window.open(
-              authorization.verification_uri,
-              "_blank",
-              "noopener,noreferrer",
-            );
+            void openVerificationUri(authorization.verification_uri);
           }}
         />
       </div>
