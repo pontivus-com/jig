@@ -476,6 +476,7 @@ describe("UI ownership architecture", () => {
   it("keeps Planner and Task workspace state singular", () => {
     const app = source("ui/src/app.tsx");
     const planner = source("ui/src/planner.tsx");
+    const carousel = source("ui/src/week-carousel.tsx");
     const week = source("ui/src/week.tsx");
     const list = source("ui/src/planner-list.tsx");
     const workspace = source("ui/src/task-workspace.tsx");
@@ -496,12 +497,39 @@ describe("UI ownership architecture", () => {
     expect(workspace).toContain('readonly mode: "create"');
     expect(workspace).not.toContain('readonly mode: "view"');
 
-    expect(planner).toContain("<WeekView");
+    expect(planner).toContain("<WeekCarousel");
     expect(planner).not.toContain("layoutMode");
     expect(planner).not.toContain("enableDrag");
     expect(planner).not.toContain("DateStrip");
 
-    expect(week).toContain("<TaskDragProvider");
+    expect(carousel).toContain("<Carousel");
+    expect(carousel).toContain("useSnapPaging");
+    expect(carousel).toContain('itemWidth="view"');
+    expect(carousel).toContain("onSettle");
+    expect(carousel).toContain("scrollTo(MIDDLE_SLIDE_INDEX");
+    expect(carousel).toContain("animated: false");
+    expect(carousel).toContain("<TaskDragProvider");
+    expect(carousel).toContain("data-jig-week-canonical");
+    expect(carousel).toContain("hasSnap={snapPaging}");
+    expect(carousel).toContain(
+      'scrollingBehavior={isTaskDragActive ? "suspended" : "enabled"}',
+    );
+    expect(carousel).not.toContain("isScrollEnabled");
+    expect(carousel).not.toContain(
+      "hasSnap={isTaskDragActive ? false : snapPaging}",
+    );
+    expect(carousel).not.toContain("scrollLeft");
+    expect(carousel).not.toContain("scrollend");
+    expect(carousel).not.toContain("ResizeObserver");
+    expect(carousel).not.toContain("getBoundingClientRect");
+    expect(carousel).not.toContain("clientWidth");
+    expect(carousel).not.toContain("scrollWidth");
+
+    const styles = source("ui/src/styles.css");
+    expect(styles).not.toContain("100vw");
+
+    expect(week).toContain("<TaskDragScopePresentation");
+    expect(week).not.toContain("<TaskDragProvider");
     expect(week).toContain("<DateDropZone");
     expect(week).toContain('"jig-week-board"');
     expect(week).toContain("<PlannerTaskList");
@@ -509,10 +537,13 @@ describe("UI ownership architecture", () => {
     expect(week).not.toContain("jig-planner-narrow");
     expect(week).not.toContain("SortableTaskRow");
 
-    expect(list).toContain("<DraggableTaskRow");
+    expect(list).toContain("<TaskDraggableRegistration");
+    expect(list).toContain("<TaskRow");
+    expect(list).not.toContain("<DraggableTaskRow");
     expect(list).not.toContain("<SortableTaskRow");
     expect(list).not.toContain("isSortable");
     expect(list).toContain("<TaskInsertionSlot");
+    expect(list).toContain("isInteractive={isCanonical}");
     expect(list).not.toContain("@dnd-kit/");
 
     expect(editor).not.toContain("optionalText");
