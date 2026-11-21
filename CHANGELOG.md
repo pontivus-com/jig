@@ -4,6 +4,10 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+### Documentation
+
+- **Release ceremony:** Clarified that a multi-commit `release/vX.Y.Z` branch must be merged through a normal PR merge/squash so the release commit's first parent is the pre-release `master` candidate; direct fast-forward promotion is not a valid publication trigger, and the governed same-version finalization path is used for pre-tag recovery.
+
 ## [1.1.0] - 2026-11-21
 
 > v1.1 functional scope and disposition are governed by the [functional amendment assessment](docs/requirements/v1.1-mobile-functional-design.md#12-v11-functional-amendment-and-implementation-assessment). Entries below are ordered from major product impact to smaller implementation/documentation detail.

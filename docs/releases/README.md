@@ -86,6 +86,8 @@ The release PR must pass `scripts/verify-release.ts --mode pr`, which verifies t
 
 Do not merge the release PR merely because the implementation candidate was already green. The release metadata gate is part of release correctness.
 
+The merge must produce one release/finalization commit whose **first parent is the pre-release `master` candidate**. A normal GitHub merge commit or squash merge satisfies this contract. Do **not** promote a multi-commit `release/vX.Y.Z` branch by directly fast-forwarding the `master` ref: the permanent Release workflow intentionally evaluates the release commit against `HEAD^`, and a direct fast-forward can leave `HEAD^` inside the metadata branch after the version transition, causing a correct release tree to be treated as a no-op. If a pre-tag release tree was already fast-forwarded, use the governed same-version finalization path: land any corrective ordinary work under `[Unreleased]`, then finalize it through a new `release/vX.Y.Z` PR that empties `[Unreleased]` into the existing version section and merge that PR normally.
+
 ### 4. Certify the exact merged release commit
 
 After the release PR merges to `master`, `.github/workflows/release.yml` must detect the release transition and re-certify the exact merged commit.
