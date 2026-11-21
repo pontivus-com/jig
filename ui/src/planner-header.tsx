@@ -123,6 +123,7 @@ function TemporalNavigator({
         icon={<Icon icon="chevronLeft" color="inherit" />}
         variant="ghost"
         size="sm"
+        className="jig-temporal-control"
         onClick={onPreviousWeek}
       />
       <strong className="jig-header-week-range">{weekLabel}</strong>
@@ -131,6 +132,7 @@ function TemporalNavigator({
         icon={<Icon icon="chevronRight" color="inherit" />}
         variant="ghost"
         size="sm"
+        className="jig-temporal-control"
         onClick={onNextWeek}
       />
       {compact === true ? (
@@ -138,15 +140,16 @@ function TemporalNavigator({
           label="Today"
           variant="ghost"
           size="sm"
-          className="jig-mobile-today"
+          className="jig-mobile-today jig-temporal-control"
           onClick={onToday}
         />
       ) : (
         <Button
           label="Today"
           icon={<Icon icon="calendar" size="sm" color="inherit" />}
-          variant="secondary"
+          variant="ghost"
           size="sm"
+          className="jig-temporal-control"
           onClick={onToday}
         />
       )}

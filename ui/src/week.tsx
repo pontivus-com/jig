@@ -49,6 +49,7 @@ export interface WeekViewProps extends WeekTaskProps {
 interface DatedSectionProps extends WeekTaskProps {
   readonly date: string;
   readonly isToday: boolean;
+  readonly canAddTask: boolean;
   readonly todaySectionRef: Ref<HTMLDivElement>;
 }
 
@@ -58,6 +59,7 @@ function DatedSection({
   now,
   date,
   isToday,
+  canAddTask,
   todaySectionRef,
   selectedTask,
   onSelectTask,
@@ -87,20 +89,22 @@ function DatedSection({
         <header className="jig-week-column-header">
           <div className="jig-week-date-signifier">
             <strong id={headingId}>{formatPlannerDateHeader(date)}</strong>
-            <IconButton
-              label={
-                "Add task to " +
-                formatCivilDate(date, {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })
-              }
-              icon={<JigIcon name="add" color="inherit" />}
-              variant="ghost"
-              className="jig-date-add"
-              onClick={() => onAdd(date)}
-            />
+            {canAddTask ? (
+              <IconButton
+                label={
+                  "Add task to " +
+                  formatCivilDate(date, {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                  })
+                }
+                icon={<JigIcon name="add" color="inherit" />}
+                variant="ghost"
+                className="jig-date-add"
+                onClick={() => onAdd(date)}
+              />
+            ) : null}
           </div>
           <span
             className="jig-task-count"
@@ -160,6 +164,7 @@ function WeekBoard({
           {...taskProps}
           date={date}
           isToday={date === today}
+          canAddTask={date > today}
           todaySectionRef={todaySectionRef}
         />
       ))}
@@ -183,6 +188,9 @@ function WeekPage({
   const isEmpty = dates.every(
     (date) => outstandingForDate(taskProps.tasks, date).length === 0,
   );
+  const today = todayCivilDate();
+  const suggestedDate = defaultAddDate(firstDate, today);
+  const firstTaskDate = suggestedDate > today ? suggestedDate : today;
 
   return (
     <TaskDragProvider tasks={taskProps.tasks} onMove={taskProps.onMove}>
@@ -194,9 +202,7 @@ function WeekPage({
             label="Add your first task"
             variant="primary"
             className="jig-planner-empty-primary"
-            onClick={() =>
-              taskProps.onAdd(defaultAddDate(firstDate, todayCivilDate()))
-            }
+            onClick={() => taskProps.onAdd(firstTaskDate)}
           />
         </div>
       ) : null}

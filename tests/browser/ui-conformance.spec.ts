@@ -582,6 +582,24 @@ test("temporal group stays page-centered in one row and navigation has no select
     expect(temporalBox.height).toBeLessThanOrEqual(44);
   }
 
+  const temporalControls = temporal.locator(".jig-temporal-control");
+  await expect(temporalControls).toHaveCount(3);
+  const temporalControlStyles = await temporalControls.evaluateAll((elements) =>
+    elements.map((element) => {
+      const style = getComputedStyle(element);
+      return {
+        borderWidth: style.borderWidth,
+        borderColor: style.borderColor,
+        background: style.backgroundColor,
+      };
+    }),
+  );
+  for (const style of temporalControlStyles) {
+    expect(style.borderWidth).not.toBe("0px");
+    expect(style.borderColor).toBe("rgba(0, 0, 0, 0)");
+    expect(style.background).toBe("rgba(0, 0, 0, 0)");
+  }
+
   const rangeBefore = await range.textContent();
   const activeWeek = page.locator(
     '.jig-planner-surface',
@@ -636,8 +654,8 @@ test("desktop lanes keep equal widths but content-driven independent heights", a
   expect(Math.max(...geometry.map((column) => column.height)))
     .toBeGreaterThan(Math.min(...geometry.map((column) => column.height)));
 
-  const todayColumn = activeWeek(page).locator(`[data-date="${today}"]`);
-  await expect(todayColumn.getByRole("button", { name: /^Add task to / })).toBeVisible();
+  const futureColumn = activeWeek(page).locator(`[data-date="${tomorrow}"]`);
+  await expect(futureColumn.getByRole("button", { name: /^Add task to / })).toBeVisible();
 });
 
 test("narrow Planner opens with the current day at the top", async ({
@@ -701,7 +719,7 @@ test("narrow Planner opens with the current day at the top", async ({
   );
 });
 
-test("global Add exposes the full form and derives the current weekday in the displayed week", async ({
+test("global Add exposes the full form and defaults to today", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -724,31 +742,52 @@ test("global Add exposes the full form and derives the current weekday in the di
   const rangeBefore = await range.textContent();
   await page.getByRole("button", { name: "Next week" }).click();
   await expect(range).not.toHaveText(rangeBefore ?? "");
-  const correspondingNextWeekDate = await browserCivilDate(page, 7);
   await page.getByRole("button", { name: "Add task", exact: true }).first().click();
   workspace = page.getByRole("dialog", { name: "Add task" });
   await expect(workspace.getByLabel("Date")).toHaveValue(
-    await displayedDateValue(page, correspondingNextWeekDate),
+    await displayedDateValue(page, today),
   );
+});
+
+test("per-date add controls are limited to today and future dates", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const today = await browserCivilDate(page);
+  const active = activeWeek(page);
+
+  for (const column of await active.locator(".jig-week-column").all()) {
+    const date = await column.getAttribute("data-date");
+    if (date === null) {
+      throw new Error("Planner date is unavailable");
+    }
+    const add = column.getByRole("button", { name: /^Add task to / });
+    await expect(add).toHaveCount(date > today ? 1 : 0);
+  }
+
+  await page.getByRole("button", { name: "Next week", exact: true }).click();
+  await expect(
+    active.locator(".jig-week-column").first().getByRole("button", {
+      name: /^Add task to /,
+    }),
+  ).toHaveCount(1);
 });
 
 test("per-date plus opens the same full form for its explicit date", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Next week", exact: true }).click();
   const active = activeWeek(page);
-  const firstDate = await active.locator(".jig-week-column").first().getAttribute("data-date");
-  if (firstDate === null) {
-    throw new Error("First Planner date is unavailable");
+  const futureColumn = active.locator(".jig-week-column").first();
+  const futureDate = await futureColumn.getAttribute("data-date");
+  if (futureDate === null) {
+    throw new Error("Future Planner date is unavailable");
   }
 
-  await active
-    .locator(".jig-week-column")
-    .first()
-    .getByRole("button", { name: /^Add task to / })
-    .click();
+  await futureColumn.getByRole("button", { name: /^Add task to / }).click();
 
   const workspace = page.getByRole("dialog", { name: "Add task" });
   await expect(workspace.getByLabel("Date")).toHaveValue(
-    await displayedDateValue(page, firstDate),
+    await displayedDateValue(page, futureDate),
   );
   await expect(workspace.getByLabel("Context")).toBeVisible();
   await expect(workspace.getByLabel("Notes")).toBeVisible();
@@ -1821,7 +1860,7 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
         throw new Error("Compact bottom-navigation geometry unavailable");
       }
       const contentPaddingBottom = await page
-        .locator(".jig-content-configured")
+        .locator(".jig-content-configured-planner .jig-planner-surface")
         .evaluate((element) =>
           Number.parseFloat(getComputedStyle(element).paddingBottom),
         );

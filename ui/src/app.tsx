@@ -17,7 +17,6 @@ import type { ReactNode } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
   addCivilDays,
-  defaultAddDate,
   startOfWeekMonday,
   weekDates,
 } from "../../src/core/planning";
@@ -899,14 +898,7 @@ function ConfiguredApp({
               onPreviousWeek={requestPreviousWeek}
               onToday={goToToday}
               onNextWeek={requestNextWeek}
-              onAdd={() =>
-                openCreate(
-                  defaultAddDate(
-                    plannerState.displayedWeekStart,
-                    todayCivilDate(),
-                  ),
-                )
-              }
+              onAdd={() => openCreate(todayCivilDate())}
               onNavigate={navigateDestination}
             />
           }
@@ -927,6 +919,9 @@ function ConfiguredApp({
               className={[
                 "jig-content",
                 "jig-content-configured",
+                destination === "planner"
+                  ? "jig-content-configured-planner"
+                  : "",
                 destinationTransition === destination
                   ? "jig-content-configured-transition"
                   : "",
@@ -943,14 +938,7 @@ function ConfiguredApp({
             <CompactApplicationNavigation
               destination={destination}
               showAdd
-              onAdd={() =>
-                openCreate(
-                  defaultAddDate(
-                    plannerState.displayedWeekStart,
-                    todayCivilDate(),
-                  ),
-                )
-              }
+              onAdd={() => openCreate(todayCivilDate())}
               onNavigate={navigateDestination}
             />
           ) : null}
