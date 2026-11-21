@@ -1,14 +1,27 @@
 # Jig v1.1.0 implementation evidence
 
-**Status:** CURRENT V1.1 IMPLEMENTATION EVIDENCE / Carousel/swipe paging DEFERRED BEYOND V1.1 / J110-IMP-09 + J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22 + IMP-24 IMPLEMENTED, PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL + LIVE DESKTOP ACCEPTANCE OPEN — prior hosted artifacts are retained as historical evidence only. The deferred Carousel material does not gate the v1.1 release.
+**Status:** CURRENT V1.1 IMPLEMENTATION EVIDENCE / exact executable candidate `a9044f9906db80f8fc5e32872884bd007c47ea91` / permanent Verify #1746 PASS across Linux/browser, Android build certification and API-24 runtime / J110-IMP-09 + J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED BEYOND V1.1 / J110-IMP-15 FINAL PHYSICAL/LIVE CERTIFICATION + ISSUE #31 OPEN. IMP-21 is retained as historical re-certification provenance, not a separate final gate.
 
 **Scope amendment (2026-11-21):** v1.1 does not build, expose or certify direct adjacent-week horizontal paging/swipe. Explicit Previous/Next/Today controls remain. IMP-23/FR-33/SD-43 are future work and must not be presented as v1.1 closure requirements.
 
-**WeekPager evidence boundary (2026-11-21):** only a final candidate implementing JIG-110-SD-43 with the released four-part public Astryx Carousel seam can certify JIG-110-FR-33 / IMP-23: settled-index notification, immediate/non-animated recentering, one-Carousel-view slide sizing, and public user-scroll suspension that prevents physical horizontal touch/pen/trackpad/wheel Carousel travel during Task drag while preserving imperative recentering. The complete implementation shape is now validated on temporary Jig head `23bd3537a7481a71651eb7654deecc21533ce4b1`, GitHub Actions run `44853591058`: 76/76 targeted Astryx Carousel/SnapPaging tests passed together with strict source/test/docs typecheck, build, changeset, knowledge/spec and package-boundary validation; Jig strict TypeScript, 273/273 unit/integration/architecture tests, 15/15 dedicated UI-ownership architecture tests and production build passed; and 63/63 real-browser tests passed, including desktop mouse/trackpad-equivalent and touch Task-drag no-travel assertions, repeated adjacent settlement, 73rem reflow preservation and reduced-motion paging. This temporary overlay is implementation-shape evidence only and is not a released dependency or final v1.1 executable candidate. All earlier WeekPager runs in this ledger remain historical implementation evidence only and provide no final SD-43 architectural acceptance. Upstream Astryx owner acceptance/release, the matching Jig package pin, released-dependency browser/desktop real-input and Android evidence remain pending before IMP-23 closes.
+**Deferred WeekPager evidence boundary (2026-11-21):** FR-33/SD-43/IMP-23 Carousel/swipe work is future work and is not part of v1.1 certification. Earlier temporary Carousel/WeekPager runs remain historical implementation-shape evidence only and must not be used as a v1.1 release prerequisite, fallback implementation, or current-candidate acceptance result.
 
-**Operational-attention Banner evidence boundary (2026-11-20):** Verify #1632/browser artifact `14607679872` now certifies the shared desktop+narrow geometry and ownership checks for IMP-24. The defect remains separate from browser/Android notification delivery. Physical Android WebView confirmation of the same exact candidate geometry remains required before IMP-24 closes.
+**Operational-attention Banner evidence boundary (2026-11-21):** the shared `JigAttentionBanner` implementation remains the v1.1 owner and was re-certified on exact executable candidate `a9044f9…` by permanent Verify #1746. Remaining physical WebView geometry/interaction confirmation is executed once inside the IMP-15 final physical matrix; it does not leave IMP-24 implementation open.
 
 **Governing authority:** `docs/implementation/v1.1-complete-implementation-plan.md`.
+
+## Current exact implementation candidate — 2026-11-21
+
+- Executable source/head: `a9044f9906db80f8fc5e32872884bd007c47ea91`.
+- Permanent Verify: run `44901439819` / #1746 — **PASS**.
+- Linux/browser Verify job: **PASS**, including strict typecheck, core/integration/architecture tests, production build, browser bootstrap, real-browser acceptance and installer/lifecycle smoke.
+- Android build certification: **PASS**, including dependency locks, unit/static checks, FLOSS boundary, version derivation, APK/native bridge compile and F-Droid metadata lint.
+- Android API-24 runtime: **PASS**.
+- Browser evidence artifact: `14705539010`, archive digest `sha256:92895db0bb9eeb9d95faa187786e0cd355c68c33f25003883360b1dfb5b87211`.
+- Android development APK artifact: `14706565629`, archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`.
+- The extracted `app-debug.apk` SHA-256 must be recorded when the artifact is materialized for the final physical run; do not substitute a hash from an older candidate.
+- Documentation-only reconciliation commits after `a9044f9…` do not change this executable/APK lineage. Any later executable or verification-path change requires a new exact-candidate entry.
+
 
 ## Historical WeekPager + attention-banner evidence
 
@@ -178,20 +191,21 @@ The 2026-11-19 authority remediation also replaced the superseded process-shaped
 
 ## Still required before release-candidate closure
 
-J110-IMP-18..20 and the repository-executable portions of IMP-22..24 are implemented and non-device certified. Remaining order:
+Repository-executable implementation is complete on the certified `a9044f9…` lineage. The remaining order is:
 
-1. Run the focused **J110-IMP-21 physical Android confirmation** on the current exact APK candidate, including compact header/title/height, readable interactive labels, grip/checkbox centering, Task creation, past-date rejection feedback, recurrence non-accumulation, restart persistence and synchronization continuity.
-2. In the same exact-candidate physical wave, close IMP-24 real-device attention-banner geometry and the remaining IMP-15 interaction matrix; no Carousel/WeekPager checks are required for v1.1.
-3. Complete the remaining **J110-IMP-15** physical/native matrix. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost record.
-4. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acceptance tracked by **issue #31**.
-5. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
+1. Materialize the #1746 Android artifact, record the extracted APK SHA-256, and execute the remaining **J110-IMP-15** physical Android/runtime/interoperability matrix against that exact APK. This one matrix includes still-relevant checks formerly listed under IMP-21/22/24; no separate closure waves remain.
+2. Complete the external live Linux/Desktop GitHub Device Flow/private-repository acquisition and synchronization acceptance tracked by **issue #31**.
+3. Reconcile the final physical/live results into this ledger and `physical-android-certification.md` without copying PASS values from older candidates.
+4. Only then may `v1.1` be promoted to `master` and the governed release ceremony begin.
+
+No Carousel/WeekPager checks are required for v1.1. J110-IMP-09 remains complete and is not rerun merely to reconstruct its lost detailed record.
 
 Do not create a competing branch, platform-specific recurrence/scheduling rule or substitute UI/error architecture to close these findings.
 
 ## Physical-device evidence
 
-Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and the earlier Samsung/Android-16 sessions as historical evidence. The **current candidate awaiting physical certification** is source `59f7d1642211739df88dc188a4fdfe17af2c26c9`, hosted APK artifact `14608147658`, extracted APK SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`.
+Use [physical-android-certification.md](physical-android-certification.md) as the canonical physical record. It preserves J110-IMP-09 as complete with its detailed record lost and the earlier Samsung/Android-16 sessions as historical evidence. The **current candidate awaiting final physical certification** is executable source `a9044f9906db80f8fc5e32872884bd007c47ea91`, Verify #1746, hosted Android artifact `14706565629` with archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. Record the extracted `app-debug.apk` SHA-256 before physical execution.
 
-**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22 + IMP-24 PHYSICAL ACCEPTANCE OPEN / J110-IMP-23 DEFERRED / J110-IMP-15 PARTIAL.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. Physical Android confirmation, IMP-24 and the remaining IMP-15 matrix are still open; historical WeekPager evidence is not part of v1.1 closure.
+**J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED / J110-IMP-15 FINAL CERTIFICATION OPEN.** The replacement Task-movement implementation remains closed. The detailed IMP-09 record was not retained and must not be reconstructed. All still-required physical Android/runtime/interoperability observations are owned by IMP-15; historical WeekPager evidence is not part of v1.1 closure.
 
 Do not replace those results with browser, emulator, hosted-CI or generated-APK evidence.
