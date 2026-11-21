@@ -29,6 +29,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 ### Fixed
 
 - **Android reliability:** Fixed Task creation `Illegal invocation`, restored correct GitHub credential use across managed smart-HTTP operations, normalized native response headers, restored secure authorization before Device Flow, corrected Android Back navigation, removed the duplicated safe-area inset and synchronized native status/navigation-bar appearance with Light/Dark/System.
+- **Release certification:** Fixed the permanent Verify/Release F-Droid metadata check to match the valid YAML build-list `versionName` entry instead of rejecting the v1.1.0 release transition.
 - **Planner and Task interaction:** Fixed narrow Planner startup so today aligns to the content viewport; stabilized keyboard movement with the single dnd-kit KeyboardSensor and exact insertion-slot traversal; aligned History/Settings narrow insets with Planner.
 - **Operational attention:** Replaced the misaligned shared Banner surface with the bounded Jig-owned attention composition. Multi-line messages and actions now align/wrap correctly across operation, sync, load, setup and Settings states without changing reminder/OS-notification behavior.
 - **Reminder lifecycle:** Fixed lifecycle copy and attention precedence for scheduled, due and platform-notified reminders. Notification delivery remains separate from canonical Task state; unresolved elapsed reminders retain attention.
