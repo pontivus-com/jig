@@ -938,6 +938,17 @@ body {
       color var(--duration-fast-max) var(--ease-standard);
   }
 
+  .jig-week-carousel {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .jig-week-carousel-slide {
+    width: 100%;
+    min-width: 0;
+    align-self: flex-start;
+  }
+
   .jig-planner-empty-state {
     display: grid;
     width: min(100% - 2 * var(--spacing-4), 28rem);
