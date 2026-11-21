@@ -1,6 +1,6 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED BEYOND V1.1 / J110-IMP-15 FINAL PHYSICAL/RUNTIME CERTIFICATION OPEN. The current executable candidate is `a9044f9906db80f8fc5e32872884bd007c47ea91`; permanent Verify #1746 passed Linux/browser, Android build certification and API-24 runtime. The current hosted Android artifact is `14706565629`, archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. Record the extracted `app-debug.apk` SHA-256 before the final physical run; earlier device sessions remain historical evidence only.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED BEYOND V1.1 / J110-IMP-15 FINAL PHYSICAL/RUNTIME CERTIFICATION OPEN. The current executable candidate is `a9044f9906db80f8fc5e32872884bd007c47ea91`; permanent Verify #1746 passed Linux/browser, Android build certification and API-24 runtime. The current hosted Android artifact is `14706565629`, archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. The extracted `app-debug.apk` is 9,789,275 bytes with SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`; use this exact APK for the final physical run; earlier device sessions remain historical evidence only.
 
 **Partial-session executable source:** `222f2fe0e672b122424042b3fa39747efb991610`  
 **GitHub Actions APK artifact:** not retained in the session record  
@@ -11,7 +11,7 @@
 
 **IMP-15 operational-attention physical row:** the Android application renders the same shared operational-attention component as desktop. The final exact-candidate physical matrix must confirm multi-line error/warning icon centering and optional recovery/navigation action alignment/wrapping in the WebView. No native Android notification/banner implementation is authorized; this is final certification of the implemented IMP-24 surface, not open IMP-24 implementation.
 
-**Current candidate awaiting final physical execution:** executable source `a9044f9906db80f8fc5e32872884bd007c47ea91`; Verify `44901439819` / #1746 PASS; Android artifact `14706565629`; archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. The extracted APK SHA-256 must be recorded before device execution. Hosted Linux/browser, Android build and API-24 success do not substitute for the remaining IMP-15 physical/runtime checks.
+**Current candidate awaiting final physical execution:** executable source `a9044f9906db80f8fc5e32872884bd007c47ea91`; Verify `44901439819` / #1746 PASS; Android artifact `14706565629`; archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. The extracted `app-debug.apk` is 9,789,275 bytes with SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`; this is the required final physical-execution input. Hosted Linux/browser, Android build and API-24 success do not substitute for the remaining IMP-15 physical/runtime checks.
 
 ### Historical post-remediation candidate — physical confirmation attempted
 
@@ -350,7 +350,7 @@ Record paths, attachment IDs or URLs for at least:
 **Evidence locations:**  
 
 **IMP-15 verdict:** **IN PROGRESS — exact hosted re-certification is complete on `a9044f9…` / Verify #1746; the remaining work is the final physical/native/runtime/interoperability matrix on that exact APK lineage.**
-**Remaining confirmation:** materialize artifact `14706565629`, record the extracted APK SHA-256, then complete the remaining J110-IMP-15 matrix including recurrence non-accumulation, operational-attention geometry and synchronization continuity.
+**Remaining confirmation:** install and exercise the exact APK SHA-256 `8988985f6bb7e03019d5a0a2791844e53cf69a82b2782d6a120c3d682bc9fd49`, then complete the remaining J110-IMP-15 matrix including recurrence non-accumulation, operational-attention geometry and synchronization continuity.
 
 ## 4. External acceptance still separate from this device record
 
