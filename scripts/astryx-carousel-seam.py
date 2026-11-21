@@ -195,7 +195,9 @@ def main() -> None:
         "   * width to the child content.\n"
         "   * @default 'content'\n"
         "   */\n"
-        "  itemWidth?: 'content' | 'view';\n",
+        "  itemWidth?: 'content' | 'view';\n"
+        "  /** User-originated horizontal scrolling and paging. @default 'enabled' */\n"
+        "  scrollingBehavior?: 'enabled' | 'suspended';\n",
     )
     replace_once(
         carousel,
@@ -203,7 +205,68 @@ def main() -> None:
         "  gap = 1,",
         "  children,\n"
         "  itemWidth = 'content',\n"
+        "  scrollingBehavior = 'enabled',\n"
         "  gap = 1,",
+    )
+    replace_once(
+        carousel,
+        "  const snapPaging = isSnapPaging(hasSnap) ? hasSnap : null;\n"
+        "  const isPaging = snapPaging != null;\n"
+        "  const [attachedPaging, setAttachedPaging] = useState(snapPaging);\n"
+        "  if ((attachedPaging != null) !== isPaging) {\n"
+        "    setAttachedPaging(snapPaging);\n"
+        "  }",
+        "  const snapPaging = isSnapPaging(hasSnap) ? hasSnap : null;\n"
+        "  const isPaging = snapPaging != null;\n"
+        "  const isScrollingEnabled = scrollingBehavior === 'enabled';\n"
+        "  const shouldAttachPaging = isPaging && isScrollingEnabled;\n"
+        "  const [attachedPaging, setAttachedPaging] = useState(\n"
+        "    shouldAttachPaging ? snapPaging : null,\n"
+        "  );\n"
+        "  if ((attachedPaging != null) !== shouldAttachPaging) {\n"
+        "    setAttachedPaging(shouldAttachPaging ? snapPaging : null);\n"
+        "  }",
+    )
+    replace_once(
+        carousel,
+        "        const delta = event.deltaX || (event.shiftKey ? event.deltaY : 0);\n"
+        "        if (\n",
+        "        const delta = event.deltaX || (event.shiftKey ? event.deltaY : 0);\n"
+        "        if (!isScrollingEnabled) {\n"
+        "          if (delta !== 0) {\n"
+        "            event.preventDefault();\n"
+        "            event.stopPropagation();\n"
+        "          }\n"
+        "          return;\n"
+        "        }\n"
+        "        if (\n",
+    )
+    replace_once(
+        carousel,
+        "    hasOverflow,\n"
+        "  );\n\n"
+        "  const scrollBy",
+        "    hasOverflow\n"
+        "      ? isScrollingEnabled\n"
+        "        ? 'overflow-enabled'\n"
+        "        : 'overflow-suspended'\n"
+        "      : 'fit',\n"
+        "  );\n\n"
+        "  const scrollBy",
+    )
+    replace_once(
+        carousel,
+        "  const canScrollStart = hasLoop && hasOverflow ? true : overflowStart;\n"
+        "  const canScrollEnd = hasLoop && hasOverflow ? true : overflowEnd;",
+        "  const canScrollStart =\n"
+        "    isScrollingEnabled && (hasLoop && hasOverflow ? true : overflowStart);\n"
+        "  const canScrollEnd =\n"
+        "    isScrollingEnabled && (hasLoop && hasOverflow ? true : overflowEnd);",
+    )
+    replace_once(
+        carousel,
+        "        tabIndex={hasOverflow ? 0 : -1}",
+        "        tabIndex={hasOverflow && isScrollingEnabled ? 0 : -1}",
     )
     replace_once(
         carousel,
@@ -236,6 +299,9 @@ def main() -> None:
         "    width: '100%',\n"
         "    minWidth: 0,\n"
         "  },\n"
+        "  scrollerLocked: {\n"
+        "    overflowX: 'hidden',\n"
+        "  },\n"
         "  fadeStart:",
     )
     replace_once(
@@ -244,6 +310,7 @@ def main() -> None:
         "            // A tab stop whose shared ring the root paints.",
         "            styles.scroller,\n"
         "            itemWidth === 'view' && styles.scrollerView,\n"
+        "            !isScrollingEnabled && styles.scrollerLocked,\n"
         "            // A tab stop whose shared ring the root paints.",
     )
     replace_once(
@@ -344,6 +411,27 @@ def main() -> None:
 
     replace_once(
         carousel_test,
+        "  it('exposes each slide as a group with aria-roledescription=\"slide\" and a positional name', () => {",
+        "  it('keeps imperative reposition available while user scrolling is suspended', () => {\n"
+        "    const handle = createRef<CarouselHandle>();\n"
+        "    render(\n"
+        "      <Carousel scrollingBehavior=\"suspended\" handleRef={handle} aria-label=\"Locked\">\n"
+        "        <div>One</div>\n"
+        "        <div>Two</div>\n"
+        "      </Carousel>,\n"
+        "    );\n"
+        "    const scroller = screen.getByRole('group', {name: 'Locked'});\n"
+        "    const scrollBy = vi.fn();\n"
+        "    scroller.scrollBy = scrollBy;\n"
+        "    act(() => handle.current?.scrollTo(1, {animated: false}));\n"
+        "    expect(scrollBy).toHaveBeenCalled();\n"
+        "    expect(scroller.tabIndex).toBe(-1);\n"
+        "  });\n\n"
+        "  it('exposes each slide as a group with aria-roledescription=\"slide\" and a positional name', () => {",
+    )
+
+    replace_once(
+        carousel_test,
         "    it('scrollTo scrolls the container and clamps out-of-range indices', () => {",
         "    it('scrollTo can force an immediate contained reposition', () => {\n"
         "      const handle = createRef<CarouselHandle>();\n"
@@ -436,19 +524,22 @@ def main() -> None:
         carousel_doc,
         "    {name: 'children', type: 'ReactNode', description: 'Carousel items rendered in a horizontal scroll container.', required: true},",
         "    {name: 'children', type: 'ReactNode', description: 'Carousel items rendered in a horizontal scroll container.', required: true},\n"
-        "    {name: 'itemWidth', type: \"'content' | 'view'\", description: \"Width owned by each Carousel slide wrapper. 'view' makes every slide exactly one Carousel scroll viewport wide.\", default: \"'content'\"},",
+        "    {name: 'itemWidth', type: \"'content' | 'view'\", description: \"Width owned by each Carousel slide wrapper. 'view' makes every slide exactly one Carousel scroll viewport wide.\", default: \"'content'\"},\n"
+        "    {name: 'scrollingBehavior', type: \"'enabled' | 'suspended'\", description: \"User-originated horizontal scrolling and paging. 'suspended' cancels/suspends Carousel-owned horizontal input while programmatic handle movement remains available.\", default: \"'enabled'\"},",
     )
     replace_once(
         carousel_doc,
         "    children: '在水平滚动容器中渲染的轮播项目。',",
         "    children: '在水平滚动容器中渲染的轮播项目。',\n"
-        "    itemWidth: \"每个轮播项目包装器的宽度。'view' 使每个项目恰好占满一个轮播视口。\",",
+        "    itemWidth: \"每个轮播项目包装器的宽度。'view' 使每个项目恰好占满一个轮播视口。\",\n"
+        "    scrollingBehavior: \"用户发起的水平滚动和分页；'suspended' 会暂停 Carousel 输入，同时命令式句柄仍可移动。\",",
     )
     replace_once(
         carousel_doc,
         "    children: 'carousel items in horizontal scroll',",
         "    children: 'carousel items in horizontal scroll',\n"
-        "    itemWidth: \"slide wrapper width; 'view' = one Carousel viewport\",",
+        "    itemWidth: \"slide wrapper width; 'view' = one Carousel viewport\",\n"
+        "    scrollingBehavior: \"user horizontal scroll/paging behavior; 'suspended' keeps imperative movement available\",",
     )
 
     replace_once(
@@ -479,6 +570,59 @@ def main() -> None:
         "      \"{pages: 'view' | 'item', onSettle}: what one flick moves and an optional final-rest callback. Default pages is 'view'.\",",
     )
 
+
+    spec = root / "docs/specs/components/Carousel/Carousel.spec.md"
+    replace_once(
+        spec,
+        "The edge scroll buttons hide and hand off focus at an edge (FR1–FR4).",
+        "Controlled paging additionally exposes final-rest notification, immediate contained repositioning, one-view slide sizing and suspendable user scrolling (FR10). The edge scroll buttons hide and hand off focus at an edge (FR1–FR4).",
+    )
+    replace_once(
+        spec,
+        "Implementation gap: shipped Carousel still uses native `disabled` on edge buttons.",
+        "The FR10 additions are additive and preserve released defaults. Implementation gap: shipped Carousel still uses native `disabled` on edge buttons.",
+    )
+    replace_once(
+        spec,
+        "focus left on a hidden edge button.",
+        "a Carousel with `scrollingBehavior='suspended'` that still moves from user input or loses imperative movement; focus left on a hidden edge button.",
+    )
+    replace_once(
+        spec,
+        "- Controlled/uncontrolled behavior: unchanged.",
+        "- Controlled paging additions are additive: `SnapPagingOptions.onSettle`, `CarouselHandle.scrollTo(index, {animated})`, `itemWidth` and `scrollingBehavior`. Omitted values preserve released behavior; `scrollingBehavior` defaults to `'enabled'` and `itemWidth` to `'content'`.\n- Controlled/uncontrolled behavior: unchanged.",
+    )
+    replace_once(
+        spec,
+        "- Edge scroll button visibility, tab order, and the focus destination when one\n  runs out.",
+        "- Bounded controlled-paging seams: final-rest notification, immediate contained repositioning, slide-wrapper view sizing, and suspension of user-originated Carousel scrolling while imperative movement remains available (FR10).\n- Edge scroll button visibility, tab order, and the focus destination when one\n  runs out.",
+    )
+    replace_once(
+        spec,
+        "| `SnapPagingOptions`       | `{pages?: 'view' \\| 'item'}`          | Options for the hook. `pages` sets what one flick moves (FR7). A field is added only by a current record                          | —                                         | `{pages: 'view'}` | `component:Carousel` | stable    | TypeScript rejects unknown fields and values |",
+        "| `SnapPagingOptions`       | `{pages?: 'view' \\| 'item'; onSettle?: (index: number, previous: number) => void}` | Options for the hook. `pages` sets what one flick moves (FR7); `onSettle` reports the final rested page after a gesture or Carousel programmatic paging move (FR10). | — | `{pages: 'view'}` | `component:Carousel` | stable | TypeScript rejects unknown fields and values |\n| `itemWidth`               | `'content' \\| 'view'`                 | Width owned by each Carousel slide wrapper; `'view'` makes every slide exactly one Carousel scroll viewport wide (FR10). | Every Carousel | `'content'` | `component:Carousel` | proposed | TypeScript rejects other values |\n| `scrollingBehavior`       | `'enabled' \\| 'suspended'`            | User-originated horizontal Carousel scrolling/paging. `'suspended'` cancels/detaches active paging and prevents user travel while imperative handle movement remains available (FR10). | Every Carousel | `'enabled'` | `component:Carousel` | proposed | TypeScript rejects other values |\n| `CarouselHandle.scrollTo` | `(index: number, options?: {animated?: boolean}) => void` | Moves to a slide; `animated: false` forces immediate contained repositioning (FR10). | `handleRef` callers | animated | `component:Carousel` | proposed | Index remains clamped |",
+    )
+    replace_once(
+        spec,
+        "\n### Representative states",
+        "\n| FR10 | A bounded controlled-paging consumer may opt into four independent caller-owned seams. `itemWidth='view'` makes every public slide wrapper exactly one Carousel scroll viewport wide. `SnapPagingOptions.onSettle(index, previous)` reports after paging fully rests on a page selected by a gesture or Carousel programmatic move. `CarouselHandle.scrollTo(index, {animated: false})` repositions immediately without scrolling an ancestor. `scrollingBehavior='suspended'` cancels/detaches active snap paging, prevents user-originated horizontal touch/pen/trackpad/wheel travel, removes the scroll area from the tab order and makes built-in edge navigation unavailable while leaving imperative handle movement available; `'enabled'` restores the same paging value. Carousel cannot derive an external gesture owner's lock, a consumer's bounded-window canonical commit or its recenter point, so these are caller-owned inputs. | `architecture:public-component-api` INV2–INV4; `spec:AST-094` FR24 | proposed; owner review required |\n\n### Representative states",
+    )
+    replace_once(
+        spec,
+        "\n## Accessibility contract",
+        "\n| User scrolling suspended              | No user-originated horizontal Carousel travel; any active snap paging is cancelled; imperative `scrollTo(..., {animated: false})` still repositions | Child controls remain independently interactive |\n\n## Accessibility contract",
+    )
+    replace_once(
+        spec,
+        "| FR8      | Bundle test over Core's source",
+        "| FR10     | `Carousel.test.tsx` and `SnapPaging.test.tsx` plus real-browser consumer acceptance before merge | one-view slide wrappers; final-rest callback; immediate recenter; enabled→suspended→enabled lifecycle; suspension during an active external drag | A wrong wrapper width, missing/duplicate final-rest report, animated immediate recenter, any user-originated horizontal Carousel travel while suspended, a surviving paging gesture after suspension, or loss of imperative reposition fails | — |\n| FR8      | Bundle test over Core's source",
+    )
+    replace_once(
+        spec,
+        "## Open questions\n\nNone.",
+        "## Open questions\n\n- Owner review is required before merge for the FR10 public delta and exact public names. The candidate names are `itemWidth`, `scrollingBehavior`, `SnapPagingOptions.onSettle` and `CarouselHandle.scrollTo(index, {animated})`; equivalent owner-approved names are acceptable only if they preserve the same ownership and defaults.",
+    )
+
     changeset = root / ".changeset/carousel-settled-reposition.md"
     changeset.write_text(
         "---\n"
@@ -486,7 +630,8 @@ def main() -> None:
         "---\n\n"
         "[feature] Carousel snap paging can report its final settled page, "
         "CarouselHandle.scrollTo can reposition without animation, and "
-        "itemWidth='view' can make each public slide exactly one Carousel viewport wide.\n\n"
+        "itemWidth='view' can make each public slide exactly one Carousel viewport wide, and "
+        "scrollingBehavior can suspend user-originated Carousel travel without blocking imperative repositioning.\n\n"
         "@rpstreef\n"
     )
 
