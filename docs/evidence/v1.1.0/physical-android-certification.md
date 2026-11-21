@@ -150,11 +150,11 @@ Focused physical observations:
 This resolves the motion audit's implementation, ownership, interruption and physical-WebView reduced-motion findings. Hosted re-certification of the combined executable changes and the broader J110-IMP-15 matrix remain required before release promotion.
 
 
-The earlier `222f2fe…` source/APK is retained as partial historical physical evidence only. J110-IMP-18..20 are now complete; the corrected physical candidate identity and this run's observations are recorded above for IMP-21 and the remaining IMP-15 work.
+The earlier `222f2fe…` source/APK is retained as partial historical physical evidence only. J110-IMP-18..20 are complete; this run's observations remain provenance for the final IMP-15 matrix but do not establish PASS on the current exact candidate.
 
 ## 1. Physical certification environment
 
-The table below preserves the recorded 2026-11-20 partial Samsung session. For the next physical run, record the exact device/host against the **current post-remediation candidate** below. The historical J110-IMP-09 device/toolchain metadata was not retained and remains explicitly unknown.
+The table below preserves the recorded 2026-11-20 partial Samsung session only. Do not reuse its SHA/device results as the current certification record. For the next physical run, use the current exact candidate identified at the top of this document and record a fresh device/host/APK identity under J110-IMP-15. The historical J110-IMP-09 device/toolchain metadata was not retained and remains explicitly unknown.
 
 | Fact | Recorded value |
 |---|---|
@@ -190,7 +190,7 @@ ANDROID_SDK_ROOT="$HOME/Android/Sdk" \
 Paste or attach the complete output. The preflight must report exactly one authorized **physical** device, package `com.pontivus.jig`, the package-derived version identity and the APK SHA above.
 
 **Preflight result:** **PASS for the 2026-11-20 partial session**  
-**Evidence location / attachment:** session output was observed; formal attachment/path still needs to be recorded during IMP-21 final evidence closure.  
+**Evidence location / attachment:** session output was observed; formal attachment/path remains historical. Current-candidate evidence is recorded during IMP-15 final evidence closure.  
 
 ## 2. J110-IMP-09 — replacement Task-movement physical gate
 
@@ -249,11 +249,11 @@ This session is retained as real-device evidence but **does not close IMP-15**.
 - Android Git path: local changes committed, remote push completed, Settings showed **Up to date**, restart/relaunch preserved Planner data and synchronization state.
 - UI evidence was captured for Planner, Task form/IME, Repeat states, History, Settings and healthy synchronization.
 - Physical review found blockers: compact Planner has no centered title; History/Settings replace Jig identity; header chrome is taller than needed; interactive button/navigation text is too small in places; grip/checkbox are vertically top-biased; past-date drag rejection has no clear feedback; recurring rollover can accumulate stale outstanding occurrences.
-- These findings are now implemented and non-device certified under J110-IMP-18..20. They must be physically confirmed under J110-IMP-21 on the corrected APK recorded below.
+- These findings are now implemented and hosted-certified. Any still-relevant physical confirmation is performed once under the final J110-IMP-15 exact-candidate matrix; there is no separate IMP-21 physical wave.
 
 ## 3. J110-IMP-15 — physical mobile UX/runtime certification
 
-J110-IMP-09 is already complete. First run the focused J110-IMP-21 physical confirmation on the governed post-remediation candidate, then continue the remaining J110-IMP-15 matrix on that lineage. Do not rerun IMP-09 solely to reconstruct its lost detailed record.
+J110-IMP-09 is already complete. Execute the remaining physical/native/runtime/interoperability checks once under J110-IMP-15 against the exact current hosted APK lineage. This matrix includes still-relevant observations formerly assigned to IMP-21/22/24. Do not rerun IMP-09 solely to reconstruct its lost detailed record.
 
 ### Configured shell and Planner
 
