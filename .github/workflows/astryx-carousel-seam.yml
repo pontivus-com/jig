@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      ASTRYX_BASE_SHA: f58e64459aa0aa534e8e5913eea8e9c277f3118b
+      ASTRYX_BASE_SHA: 51d94100f703b70b46578b6ad6a5778831cc8f96
     steps:
       - name: Checkout Jig harness
         uses: actions/checkout@v4
@@ -127,7 +127,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      ASTRYX_BASE_SHA: f58e64459aa0aa534e8e5913eea8e9c277f3118b
+      ASTRYX_BASE_SHA: 51d94100f703b70b46578b6ad6a5778831cc8f96
     steps:
       - name: Checkout exact Astryx authority
         uses: actions/checkout@v4
