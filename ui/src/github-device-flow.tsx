@@ -5,6 +5,10 @@ import {
   useState,
 } from "react";
 import type { GitHubAuthorizationPresentation } from "../../src/github";
+import {
+  copyText,
+  nativeClipboardAvailable,
+} from "./native/clipboard";
 
 export interface GitHubDeviceFlowPanelProps {
   readonly authorization: GitHubAuthorizationPresentation | null;
@@ -17,6 +21,17 @@ export function GitHubDeviceFlowPanel({
 }: GitHubDeviceFlowPanelProps): React.ReactElement | null {
   const openedCode = useRef<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState(false);
+
+  const copyCode = async (code: string): Promise<void> => {
+    try {
+      await copyText(code);
+      setCopiedCode(code);
+      setCopyError(false);
+    } catch {
+      setCopyError(true);
+    }
+  };
 
   useEffect(() => {
     if (
@@ -26,21 +41,21 @@ export function GitHubDeviceFlowPanel({
       return;
     }
     openedCode.current = authorization.user_code;
-    window.open(
-      authorization.verification_uri,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    void (async (): Promise<void> => {
+      if (nativeClipboardAvailable()) {
+        await copyCode(authorization.user_code);
+      }
+      window.open(
+        authorization.verification_uri,
+        "_blank",
+        "noopener,noreferrer",
+      );
+    })();
   }, [authorization]);
 
   if (authorization === null) {
     return null;
   }
-
-  const copyCode = async (): Promise<void> => {
-    await navigator.clipboard.writeText(authorization.user_code);
-    setCopiedCode(authorization.user_code);
-  };
 
   return (
     <div className="jig-setup-github-state">
@@ -57,11 +72,13 @@ export function GitHubDeviceFlowPanel({
           label={
             copiedCode === authorization.user_code
               ? "Code copied"
-              : "Copy code"
+              : copyError
+                ? "Retry copy"
+                : "Copy code"
           }
           variant="secondary"
           onClick={() => {
-            void copyCode();
+            void copyCode(authorization.user_code);
           }}
         />
         <Button

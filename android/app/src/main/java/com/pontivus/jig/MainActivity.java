@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(JigSecureCredentialsPlugin.class);
         registerPlugin(JigNotificationRegistryPlugin.class);
         registerPlugin(JigSystemBarsPlugin.class);
+        registerPlugin(JigClipboardPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
