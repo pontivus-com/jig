@@ -122,36 +122,24 @@ jig uninstall       # remove runtime/configuration; preserve repo planning data
 
 ## Release status
 
-Jig **1.1.0** extends the local-first planner from Linux/Desktop to a shared
-Linux + Android product implementation while preserving one canonical Task,
-planning, persistence and portable Git-data contract.
+Jig **1.1.1** is a patch release over v1.1.0. Product/runtime behavior is unchanged; this patch corrects the public installation path and hardens the release ceremony documentation.
 
-The release adds the independently installable Android application, real GitHub
-Device Flow onboarding, secure credential storage, native reminders, bounded
-recurrence, the rolling seven-day Planner horizon, the corrected dnd-kit Task
-movement owner, shared motion/status feedback, and the v1.1 mobile/desktop
-application hierarchy.
+The public Quick start now follows the governed two-phase flow:
 
-Linux/Desktop live acceptance for the shared **Jig Desktop & Mobile** GitHub App
-passed through the real installed Linux path with GitHub Device Flow, Secret
-Service credential store/restore, authorized private-repository visibility and
-refresh without a `client_secret`. Adjacent-week Carousel/swipe paging remains
-deferred beyond v1.1; explicit Previous/Next/Today controls are the v1.1
-navigation contract.
+1. install the certified release bundle with `curl …/jig-install.sh | bash`;
+2. run `jig` and choose/connect the planning repository inside the application.
 
-The public GitHub Release remains Linux x64/arm64 only. Android implementation
-and F-Droid-readiness certification are complete, but external F-Droid
-submission/publication is intentionally deferred until Jig is stable and the
-required marketing/store material is ready.
+The exact public release-channel command was exercised end to end in hosted smoke run `44915232912`: installation, bootstrap status, the installed `jig` launcher, the real bootstrap UI, local-repository setup, generated configuration and SQLite initialization all passed.
 
-Release publication remains PR-bound and immutable. The dedicated
-`release/v1.1.0` metadata transition is verified before merge, and the exact
-merged release commit must be re-certified by the permanent Release workflow
-before the `v1.1.0` tag and Linux x64/arm64 assets are valid.
+The release process also now explicitly requires the final release/finalization commit to have the pre-release `master` candidate as its first parent, preventing a multi-commit release branch fast-forward from being misclassified as a no-op publication.
 
+The v1.1 runtime remains the independently installable Linux/Desktop + Android implementation introduced in v1.1.0. The public GitHub Release remains Linux x64/arm64 only. F-Droid compatibility/readiness remains maintained, while external F-Droid submission/publication remains deferred until Jig is stable and the required marketing/store material is ready.
+
+Release publication remains PR-bound and immutable. The dedicated `release/v1.1.1` metadata transition must be verified before merge, and the exact merged release commit must be re-certified by the permanent Release workflow before the `v1.1.1` tag and Linux x64/arm64 assets are valid.
+
+- [v1.1.1 release notes](docs/releases/v1.1.1.md)
 - [v1.1.0 implementation evidence](docs/evidence/v1.1.0/README.md)
 - [release process, validity contract and asset matrix](docs/releases/README.md)
-- [v1.1.0 release notes](docs/releases/v1.1.0.md)
 - [changelog](CHANGELOG.md)
 
 ## Documentation
