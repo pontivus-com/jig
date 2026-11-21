@@ -118,7 +118,7 @@ v1.1 adds one independently installable **Android** application while preserving
 - Android uses app-owned private repository/SQLite storage; arbitrary device-local worktree selection is outside v1.1.
 - Offline Task mutation commits locally before synchronization. Background Git synchronization is an optimization rather than a correctness dependency.
 - Android daily rollover runs through the same canonical persistence transaction on initial activation, resume and foreground local-midnight transition.
-- Development APKs are local certification artifacts. **F-Droid is the first public Android distribution target**. Google Play is deferred; no core behavior may depend on Play Services/Firebase/proprietary runtime services.
+- Development APKs are local certification artifacts. **F-Droid is the first intended public Android distribution target**, but external F-Droid submission/publication is deferred until Jig is stable and the required marketing/store material is ready. F-Droid compatibility/readiness remains an engineering constraint; publication is not a v1.1 implementation or release gate. Google Play is deferred; no core behavior may depend on Play Services/Firebase/proprietary runtime services.
 - Native dependency/build choices must remain FLOSS/source-build compatible for F-Droid.
 
 ## Architecture discipline
