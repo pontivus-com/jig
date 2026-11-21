@@ -13,7 +13,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 function activeWeek(page: Page) {
-  return page.locator(".jig-planner-surface");
+  return page.locator('[data-jig-week-canonical="true"]');
 }
 
 function expectNear(actual: number, expected: number, tolerance = 3): void {
@@ -130,7 +130,7 @@ async function themeSnapshot(page: Page): Promise<{
 
   return page.evaluate(() => {
     const active = document.querySelector<HTMLElement>(
-      '.jig-planner-surface',
+      '[data-jig-week-canonical="true"]',
     );
     const header = document.querySelector<HTMLElement>(".jig-app-header");
     const lane = active?.querySelector<HTMLElement>(".jig-week-column") ?? null;
@@ -205,6 +205,17 @@ async function createTask(
     note: null,
     reminder_time: null,
   });
+}
+
+function offsetCivilDate(value: string, days: number): string {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1));
+  date.setUTCDate(date.getUTCDate() + days);
+  return [
+    date.getUTCFullYear().toString().padStart(4, "0"),
+    (date.getUTCMonth() + 1).toString().padStart(2, "0"),
+    date.getUTCDate().toString().padStart(2, "0"),
+  ].join("-");
 }
 
 async function displayedDateValue(
@@ -582,7 +593,7 @@ test("temporal group stays page-centered in one row and navigation has no select
 
   const rangeBefore = await range.textContent();
   const activeWeek = page.locator(
-    '.jig-planner-surface',
+    '[data-jig-week-canonical="true"]',
   );
   await expect(activeWeek.locator(".jig-week-column-today")).toHaveCount(1);
 
@@ -603,6 +614,366 @@ test("temporal group stays page-centered in one row and navigation has no select
   await expect(activeWeek.locator(".jig-week-board")).not.toHaveClass(
     /jig-week-board-(previous|next)/,
   );
+});
+
+test("real touch paging preserves incoming Task DOM and geometry through settlement", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+
+  const canonical = activeWeek(page);
+  const firstBefore = await canonical
+    .locator(".jig-week-column")
+    .first()
+    .getAttribute("data-date");
+  if (firstBefore === null) {
+    throw new Error("Canonical week start is unavailable");
+  }
+  const nextWeekStart = offsetCivilDate(firstBefore, 7);
+  const title = "Incoming Carousel fidelity task";
+  await apiCommand(page, {
+    type: "create",
+    title,
+    scheduled_date: nextWeekStart,
+    priority: "HIGH",
+    context: "Client",
+    reference: "https://example.com/case",
+    note: null,
+    reminder_time: "09:00",
+  });
+  await page.reload();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+
+  await expect(page.locator('[data-jig-week-canonical="true"]')).toHaveCount(1);
+  const adjacent = page.locator('[data-jig-week-canonical="false"]');
+  await expect(adjacent).toHaveCount(2);
+  for (const slide of await adjacent.all()) {
+    await expect(slide).toHaveAttribute("inert", "");
+    await expect(slide).toHaveAttribute("aria-hidden", "true");
+  }
+
+  const incoming = page.locator('[data-jig-week-canonical="false"]', {
+    has: page.locator(`[data-date="${nextWeekStart}"]`),
+  });
+  await expect(incoming).toHaveCount(1);
+  const incomingTask = incoming
+    .getByText(title, { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  await expect(incomingTask).toHaveCount(1);
+  await incomingTask.evaluate((element) => {
+    (
+      element as HTMLElement & {
+        __jigCarouselIdentity?: string;
+      }
+    ).__jigCarouselIdentity = "incoming";
+  });
+
+  const carousel = page.locator(".jig-week-carousel");
+  const box = await carousel.boundingBox();
+  const viewport = page.viewportSize();
+  if (box === null || viewport === null) {
+    throw new Error("Carousel touch geometry is unavailable");
+  }
+  const visibleTop = Math.max(box.y, 0);
+  const visibleBottom = Math.min(box.y + box.height, viewport.height);
+  const y = visibleTop + Math.max(1, (visibleBottom - visibleTop) / 2);
+  const startX = box.x + box.width * 0.82;
+  const partialX = box.x + box.width * 0.48;
+  const endX = box.x + box.width * 0.12;
+  const point = (x: number) => ({
+    x,
+    y,
+    radiusX: 1,
+    radiusY: 1,
+    force: 1,
+    id: 77,
+  });
+
+  const client = await page.context().newCDPSession(page);
+  await client.send("Emulation.setTouchEmulationEnabled", {
+    enabled: true,
+    maxTouchPoints: 1,
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [point(startX)],
+  });
+  for (let step = 1; step <= 5; step += 1) {
+    const progress = step / 5;
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        point(startX + (partialX - startX) * progress),
+      ],
+    });
+    await page.waitForTimeout(24);
+  }
+
+  const partialGeometry = await incomingTask.evaluate((element) => {
+    const root = element.getBoundingClientRect();
+    const leading = element
+      .querySelector<HTMLElement>(".jig-task-card-leading")
+      ?.getBoundingClientRect();
+    const body = element
+      .querySelector<HTMLElement>(".jig-task-body")
+      ?.getBoundingClientRect();
+    const menu = element
+      .querySelector<HTMLElement>(".jig-task-menu")
+      ?.getBoundingClientRect();
+    if (leading === undefined || body === undefined || menu === undefined) {
+      throw new Error("Incoming Task geometry is incomplete");
+    }
+    return {
+      width: root.width,
+      height: root.height,
+      leadingWidth: leading.width,
+      leadingHeight: leading.height,
+      bodyWidth: body.width,
+      bodyHeight: body.height,
+      menuWidth: menu.width,
+      menuHeight: menu.height,
+    };
+  });
+
+  for (let step = 1; step <= 5; step += 1) {
+    const progress = step / 5;
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        point(partialX + (endX - partialX) * progress),
+      ],
+    });
+    await page.waitForTimeout(24);
+  }
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+
+  // Keep the same coarse-pointer environment through settlement measurement.
+  // Jig's governed narrow theme intentionally raises its dynamic type scale
+  // under (pointer: coarse); disabling touch emulation here would compare two
+  // different responsive typography modes rather than Carousel fidelity.
+  await expect
+    .poll(async () =>
+      activeWeek(page)
+        .locator(".jig-week-column")
+        .first()
+        .getAttribute("data-date"),
+    )
+    .toBe(nextWeekStart);
+
+  const canonicalTask = activeWeek(page)
+    .getByText(title, { exact: true })
+    .locator("xpath=ancestor::li[1]");
+  await expect(canonicalTask).toHaveCount(1);
+  const identity = await canonicalTask.evaluate(
+    (element) =>
+      (
+        element as HTMLElement & {
+          __jigCarouselIdentity?: string;
+        }
+      ).__jigCarouselIdentity ?? null,
+  );
+  expect(identity).toBe("incoming");
+
+  const settledGeometry = await canonicalTask.evaluate((element) => {
+    const root = element.getBoundingClientRect();
+    const leading = element
+      .querySelector<HTMLElement>(".jig-task-card-leading")
+      ?.getBoundingClientRect();
+    const body = element
+      .querySelector<HTMLElement>(".jig-task-body")
+      ?.getBoundingClientRect();
+    const menu = element
+      .querySelector<HTMLElement>(".jig-task-menu")
+      ?.getBoundingClientRect();
+    if (leading === undefined || body === undefined || menu === undefined) {
+      throw new Error("Settled Task geometry is incomplete");
+    }
+    return {
+      width: root.width,
+      height: root.height,
+      leadingWidth: leading.width,
+      leadingHeight: leading.height,
+      bodyWidth: body.width,
+      bodyHeight: body.height,
+      menuWidth: menu.width,
+      menuHeight: menu.height,
+    };
+  });
+
+  const numericKeys = [
+    "width",
+    "height",
+    "leadingWidth",
+    "leadingHeight",
+    "bodyWidth",
+    "bodyHeight",
+    "menuWidth",
+    "menuHeight",
+  ] as const;
+  const geometryDifferences = Object.fromEntries(
+    numericKeys.map((key) => [
+      key,
+      settledGeometry[key] - partialGeometry[key],
+    ]),
+  );
+  const discontinuities = numericKeys.filter(
+    (key) => Math.abs(geometryDifferences[key] ?? 0) > 1,
+  );
+  expect(
+    discontinuities,
+    `diff=${JSON.stringify(geometryDifferences)} partial=${JSON.stringify(
+      partialGeometry,
+    )} settled=${JSON.stringify(settledGeometry)}`,
+  ).toEqual([]);
+  await expect(
+    activeWeek(page).locator('.jig-task-drag-handle[role="button"]'),
+  ).toHaveCount(1);
+
+  await client.send("Emulation.setTouchEmulationEnabled", {
+    enabled: false,
+  });
+  await client.detach();
+});
+
+test("interrupted horizontal touch does not mutate the canonical week", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  const firstBefore = await activeWeek(page)
+    .locator(".jig-week-column")
+    .first()
+    .getAttribute("data-date");
+  if (firstBefore === null) {
+    throw new Error("Canonical week start is unavailable");
+  }
+
+  const carousel = page.locator(".jig-week-carousel");
+  const box = await carousel.boundingBox();
+  const viewport = page.viewportSize();
+  if (box === null || viewport === null) {
+    throw new Error("Carousel touch geometry is unavailable");
+  }
+  const y =
+    Math.max(box.y, 0) +
+    Math.max(
+      1,
+      (Math.min(box.y + box.height, viewport.height) -
+        Math.max(box.y, 0)) /
+        2,
+    );
+  const startX = box.x + box.width * 0.65;
+  const moveX = box.x + box.width * 0.58;
+  const point = (x: number) => ({
+    x,
+    y,
+    radiusX: 1,
+    radiusY: 1,
+    force: 1,
+    id: 78,
+  });
+  const client = await page.context().newCDPSession(page);
+  await client.send("Emulation.setTouchEmulationEnabled", {
+    enabled: true,
+    maxTouchPoints: 1,
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [point(startX)],
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [point(moveX)],
+  });
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchCancel",
+    touchPoints: [],
+  });
+  await client.send("Emulation.setTouchEmulationEnabled", {
+    enabled: false,
+  });
+  await client.detach();
+
+  await page.waitForTimeout(150);
+  await expect
+    .poll(async () =>
+      activeWeek(page)
+        .locator(".jig-week-column")
+        .first()
+        .getAttribute("data-date"),
+    )
+    .toBe(firstBefore);
+});
+
+test("repeated Carousel settlements advance exactly one adjacent week", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  const first = activeWeek(page).locator(".jig-week-column").first();
+  const start = await first.getAttribute("data-date");
+  if (start === null) {
+    throw new Error("Canonical week start is unavailable");
+  }
+
+  for (const step of [
+    { name: "Next week", offset: 7 },
+    { name: "Next week", offset: 14 },
+    { name: "Previous week", offset: 7 },
+    { name: "Previous week", offset: 0 },
+  ] as const) {
+    await page.getByRole("button", { name: step.name, exact: true }).click();
+    await expect.poll(() => first.getAttribute("data-date")).toBe(
+      offsetCivilDate(start, step.offset),
+    );
+  }
+});
+
+test("Carousel week state survives the 73rem responsive reflow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const first = activeWeek(page).locator(".jig-week-column").first();
+  const start = await first.getAttribute("data-date");
+  if (start === null) {
+    throw new Error("Canonical week start is unavailable");
+  }
+  await page.getByRole("button", { name: "Next week", exact: true }).click();
+  const viewed = offsetCivilDate(start, 7);
+  await expect.poll(() => first.getAttribute("data-date")).toBe(viewed);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  await expect.poll(() => first.getAttribute("data-date")).toBe(viewed);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await waitForResponsiveHeader(page, 1440);
+  await expect.poll(() => first.getAttribute("data-date")).toBe(viewed);
+});
+
+test("reduced motion preserves Carousel week paging semantics", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  const first = activeWeek(page).locator(".jig-week-column").first();
+  const start = await first.getAttribute("data-date");
+  if (start === null) {
+    throw new Error("Canonical week start is unavailable");
+  }
+
+  await page.getByRole("button", { name: "Next week", exact: true }).click();
+  await expect.poll(() => first.getAttribute("data-date")).toBe(
+    offsetCivilDate(start, 7),
+  );
+  await page.getByRole("button", { name: "Previous week", exact: true }).click();
+  await expect.poll(() => first.getAttribute("data-date")).toBe(start);
 });
 
 test("desktop lanes keep equal widths but content-driven independent heights", async ({
@@ -656,7 +1027,7 @@ test("narrow Planner opens with the current day at the top", async ({
   const initialGeometry = await page.evaluate(() => {
     const frame = document.querySelector<HTMLElement>(".jig-content-frame");
     const active = document.querySelector<HTMLElement>(
-      '.jig-planner-surface',
+      '[data-jig-week-canonical="true"]',
     );
     const today =
       active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
@@ -682,7 +1053,7 @@ test("narrow Planner opens with the current day at the top", async ({
   const scrolledUpGeometry = await page.evaluate(() => {
     const frame = document.querySelector<HTMLElement>(".jig-content-frame");
     const active = document.querySelector<HTMLElement>(
-      '.jig-planner-surface',
+      '[data-jig-week-canonical="true"]',
     );
     const today =
       active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
@@ -787,10 +1158,40 @@ test("Task click opens the editable Drawer directly and blank content dismisses 
 });
 
 test("selecting another Task retargets the open editable workspace", async ({ page }) => {
-  const today = await browserCivilDate(page);
-  await createTask(page, "Retarget first", today);
-  await createTask(page, "Retarget second", today);
+  const currentWeekStart = await activeWeek(page)
+    .locator(".jig-week-column")
+    .first()
+    .getAttribute("data-date");
+  if (currentWeekStart === null) {
+    throw new Error("Planner week start is unavailable");
+  }
+
+  await page.getByRole("button", { name: "Next week", exact: true }).click();
+  await expect
+    .poll(async () =>
+      activeWeek(page)
+        .locator(".jig-week-column")
+        .first()
+        .getAttribute("data-date"),
+    )
+    .not.toBe(currentWeekStart);
+
+  const nextWeekStart = await activeWeek(page)
+    .locator(".jig-week-column")
+    .first()
+    .getAttribute("data-date");
+  if (nextWeekStart === null) {
+    throw new Error("Next Planner week start is unavailable");
+  }
+
+  await createTask(page, "Retarget first", nextWeekStart);
+  await createTask(page, "Retarget second", nextWeekStart);
   await page.reload();
+
+  await page.getByRole("button", { name: "Next week", exact: true }).click();
+  await expect(
+    activeWeek(page).locator(".jig-week-column").first(),
+  ).toHaveAttribute("data-date", nextWeekStart);
 
   await page.getByText("Retarget first", { exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Retarget first" })).toBeVisible();
@@ -1379,7 +1780,7 @@ test("selected Task today priority and status use distinct governed semantics", 
 
   const semantics = await page.evaluate(() => {
     const active = document.querySelector<HTMLElement>(
-      '.jig-planner-surface',
+      '[data-jig-week-canonical="true"]',
     );
     const todayElement =
       active?.querySelector<HTMLElement>(
