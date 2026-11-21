@@ -19,7 +19,6 @@ jobs:
     timeout-minutes: 20
     env:
       JIG_ACCEPTANCE_ISSUE: "31"
-      JIG_ACCEPTANCE_TARGET: "pontivus-com/legal"
     steps:
       - uses: actions/checkout@v4
         with:
