@@ -1,6 +1,6 @@
 # Jig v1.1 — physical Android certification evidence
 
-**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..20 COMPLETE / J110-IMP-21 PHYSICAL CONFIRMATION OPEN / J110-IMP-22..24 IMPLEMENTED + NON-DEVICE CERTIFIED ON CERTIFIED EXECUTABLE SOURCE `59f7d1642211739df88dc188a4fdfe17af2c26c9` / VERIFY #1632 / J110-IMP-23 + IMP-24 PHYSICAL ACCEPTANCE OPEN / J110-IMP-15 PARTIAL — hosted certification is green across Linux/browser, Android build certification and API-24 runtime. The current physical target is APK artifact `14608147658`, extracted SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. No physical result for this candidate is recorded yet; earlier device sessions remain historical evidence only.
+**Status:** J110-IMP-09 COMPLETE / DETAILED EXECUTION RECORD LOST / J110-IMP-18..22 + IMP-24 + IMP-25 IMPLEMENTED OR COMPLETE / J110-IMP-23 DEFERRED BEYOND V1.1 / J110-IMP-15 FINAL PHYSICAL/RUNTIME CERTIFICATION OPEN. The current executable candidate is `a9044f9906db80f8fc5e32872884bd007c47ea91`; permanent Verify #1746 passed Linux/browser, Android build certification and API-24 runtime. The current hosted Android artifact is `14706565629`, archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. Record the extracted `app-debug.apk` SHA-256 before the final physical run; earlier device sessions remain historical evidence only.
 
 **Partial-session executable source:** `222f2fe0e672b122424042b3fa39747efb991610`  
 **GitHub Actions APK artifact:** not retained in the session record  
@@ -9,9 +9,9 @@
 **Expected Android application ID:** `com.pontivus.jig`  
 **Governed references:** `../../design/reference/jig-v1.1-application-ux-ui-governed-reference.html`, `../../design/reference/jig-v1.1-mobile-ux-ui-governed-reference.html`, `../../design/ui-solution.md`, `../../development/android-v1.1.md`.
 
-**IMP-24 physical boundary:** the Android application renders the same shared operational-attention component as desktop. A fresh candidate must physically confirm multi-line error/warning icon centering and optional recovery/navigation action alignment/wrapping in the WebView. No native Android notification/banner implementation is authorized; prior APKs do not close this geometry defect.
+**IMP-15 operational-attention physical row:** the Android application renders the same shared operational-attention component as desktop. The final exact-candidate physical matrix must confirm multi-line error/warning icon centering and optional recovery/navigation action alignment/wrapping in the WebView. No native Android notification/banner implementation is authorized; this is final certification of the implemented IMP-24 surface, not open IMP-24 implementation.
 
-**Current candidate awaiting physical execution:** source `59f7d1642211739df88dc188a4fdfe17af2c26c9`; Verify `44690410706` / #1632 PASS; Android artifact `14608147658`; `app-debug.apk` 9,787,835 bytes; SHA-256 `b68a6f973a9c77a3e67f022d3d83fbd15d18915aab7a72b03ca858a4cbaed2f6`. Hosted API-24 5/5 and browser 82/82 are non-device evidence and do not substitute for the checks below.
+**Current candidate awaiting final physical execution:** executable source `a9044f9906db80f8fc5e32872884bd007c47ea91`; Verify `44901439819` / #1746 PASS; Android artifact `14706565629`; archive digest `sha256:b47251bc105039a3897daeac0f4304674371fb7ec29f457c404de9bde54b4933`. The extracted APK SHA-256 must be recorded before device execution. Hosted Linux/browser, Android build and API-24 success do not substitute for the remaining IMP-15 physical/runtime checks.
 
 ### Historical post-remediation candidate — physical confirmation attempted
 
@@ -349,8 +349,8 @@ Record paths, attachment IDs or URLs for at least:
 
 **Evidence locations:**  
 
-**IMP-15 verdict:** **IN PROGRESS — the older hosted artifact failed Task creation; the local follow-up APK passes creation and restart persistence, but exact hosted re-certification is pending.**
-**Remaining confirmation:** certify the follow-up executable, then complete the remaining J110-IMP-15 matrix including recurrence non-accumulation and synchronization continuity.
+**IMP-15 verdict:** **IN PROGRESS — exact hosted re-certification is complete on `a9044f9…` / Verify #1746; the remaining work is the final physical/native/runtime/interoperability matrix on that exact APK lineage.**
+**Remaining confirmation:** materialize artifact `14706565629`, record the extracted APK SHA-256, then complete the remaining J110-IMP-15 matrix including recurrence non-accumulation, operational-attention geometry and synchronization continuity.
 
 ## 4. External acceptance still separate from this device record
 
@@ -364,9 +364,9 @@ Issue #31 live Linux/Desktop GitHub Device Flow + private-repository acceptance 
 | Gate | Result |
 |---|---|
 | J110-IMP-09 physical Task movement | **PASS — completed; detailed execution record lost** |
-| J110-IMP-23 FR-33/SD-43 cross-platform WeekPager | **IMPLEMENTED + NON-DEVICE CERTIFIED — Verify #1632/browser 82/82/API-24 5/5 pass; exact-candidate physical touch/scroll/drag arbitration remains OPEN** |
-| J110-IMP-24 shared operational-attention Banner geometry | **IMPLEMENTED + NON-DEVICE CERTIFIED — desktop/narrow browser geometry passes; exact-candidate physical WebView confirmation remains OPEN** |
-| J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS — exact hosted re-certification is now green on Verify #1632; remaining physical matrix is pending** |
+| J110-IMP-23 FR-33/SD-43 cross-platform WeekPager | **DEFERRED BEYOND V1.1 — not a v1.1 implementation or certification gate** |
+| J110-IMP-24 shared operational-attention Banner geometry | **IMPLEMENTED — hosted re-certified on Verify #1746; final physical WebView confirmation is an IMP-15 row** |
+| J110-IMP-15 physical UX/runtime matrix | **IN PROGRESS — exact hosted re-certification is green on Verify #1746; remaining physical/native/runtime/interoperability matrix is pending** |
 | Issue #31 live Linux/Desktop GitHub acceptance | NOT RUN |
 
 **Release-candidate promotion authorized:** NO
@@ -375,7 +375,7 @@ Promotion from `v1.1` to `master` remains prohibited until all required gates pa
 
 ## 6. 2026-11-21 current `v1.1` baseline smoke and local API-24 run
 
-This entry records checks performed against the exact current `v1.1` head. It is not final release certification: the tree is the clean post-purge baseline and does not yet contain the released-dependency SD-43 Carousel implementation.
+This entry records historical checks performed against the then-current `v1.1` baseline. It is not final release certification and it predates the product decision to defer FR-33/SD-43 Carousel/swipe paging beyond v1.1.
 
 | Fact | Observed value |
 |---|---|
@@ -400,4 +400,4 @@ Physical checks on the installed APK:
 
 Screenshots retained locally: `/tmp/jig-physical-before.png`, `/tmp/jig-physical-scrolled.png`, `/tmp/jig-physical-workspace.png`, `/tmp/jig-physical-after-close.png`.
 
-The required IMP-23 physical checks were **not run against this baseline**, because it has no final WeekPager/Carousel implementation. IMP-23 remains open pending upstream publication of the four-part Astryx public seam, integration of the exact released candidate into `v1.1`, permanent Verify for that exact head, and repeat physical horizontal paging/vertical-scroll/drag-arbitration checks.
+No IMP-23 physical checks are required for v1.1. FR-33/SD-43 Carousel/swipe paging was subsequently deferred beyond the release, so this baseline remains historical evidence only and must not be treated as an unfinished v1.1 paging gate.
