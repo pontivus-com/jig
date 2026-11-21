@@ -220,7 +220,31 @@ def main() -> None:
         "  itemView: {\n"
         "    width: '100%',\n"
         "    minWidth: 0,\n"
+        "    flexBasis: '100%',\n"
         "  },",
+    )
+    replace_once(
+        carousel,
+        "    scrollbarWidth: 'none',\n"
+        "    maskImage: 'none',\n"
+        "  },\n"
+        "  fadeStart:",
+        "    scrollbarWidth: 'none',\n"
+        "    maskImage: 'none',\n"
+        "  },\n"
+        "  scrollerView: {\n"
+        "    width: '100%',\n"
+        "    minWidth: 0,\n"
+        "  },\n"
+        "  fadeStart:",
+    )
+    replace_once(
+        carousel,
+        "            styles.scroller,\n"
+        "            // A tab stop whose shared ring the root paints.",
+        "            styles.scroller,\n"
+        "            itemWidth === 'view' && styles.scrollerView,\n"
+        "            // A tab stop whose shared ring the root paints.",
     )
     replace_once(
         carousel,
