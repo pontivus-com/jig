@@ -185,6 +185,53 @@ def main() -> None:
     )
     replace_once(
         carousel,
+        "  /** Carousel items — rendered in a horizontal scroll container. */\n"
+        "  children: ReactNode;\n",
+        "  /** Carousel items — rendered in a horizontal scroll container. */\n"
+        "  children: ReactNode;\n"
+        "  /**\n"
+        "   * Width owned by each Carousel slide wrapper. 'view' makes every\n"
+        "   * slide exactly one Carousel scroll viewport wide; 'content' leaves\n"
+        "   * width to the child content.\n"
+        "   * @default 'content'\n"
+        "   */\n"
+        "  itemWidth?: 'content' | 'view';\n",
+    )
+    replace_once(
+        carousel,
+        "  children,\n"
+        "  gap = 1,",
+        "  children,\n"
+        "  itemWidth = 'content',\n"
+        "  gap = 1,",
+    )
+    replace_once(
+        carousel,
+        "  item: {\n"
+        "    scrollSnapAlign: 'start',\n"
+        "    display: 'flex',\n"
+        "    flexShrink: 0,\n"
+        "  },",
+        "  item: {\n"
+        "    scrollSnapAlign: 'start',\n"
+        "    display: 'flex',\n"
+        "    flexShrink: 0,\n"
+        "  },\n"
+        "  itemView: {\n"
+        "    width: '100%',\n"
+        "    minWidth: 0,\n"
+        "  },",
+    )
+    replace_once(
+        carousel,
+        "            {...stylex.props(styles.item)}>",
+        "            {...stylex.props(\n"
+        "              styles.item,\n"
+        "              itemWidth === 'view' && styles.itemView,\n"
+        "            )}>",
+    )
+    replace_once(
+        carousel,
         "  const scrollToIndex = useCallback((index: number) => {",
         "  const scrollToIndex = useCallback((\n"
         "    index: number,\n"
@@ -246,6 +293,31 @@ def main() -> None:
     )
 
     carousel_test = root / "packages/core/src/Carousel/Carousel.test.tsx"
+    replace_once(
+        carousel_test,
+        "  it('exposes each slide as a group with aria-roledescription=\"slide\" and a positional name', () => {",
+        "  it('can size each public slide wrapper to one Carousel view', () => {\n"
+        "    const {rerender} = render(\n"
+        "      <Carousel itemWidth=\"view\" aria-label=\"Paged\">\n"
+        "        <div>One</div>\n"
+        "        <div>Two</div>\n"
+        "      </Carousel>,\n"
+        "    );\n"
+        "    const viewSlides = screen.getAllByRole('group', {name: /^Slide /});\n"
+        "    const viewClasses = viewSlides.map(slide => slide.className);\n"
+        "    expect(viewClasses[0]).toBe(viewClasses[1]);\n"
+        "    rerender(\n"
+        "      <Carousel itemWidth=\"content\" aria-label=\"Paged\">\n"
+        "        <div>One</div>\n"
+        "        <div>Two</div>\n"
+        "      </Carousel>,\n"
+        "    );\n"
+        "    const contentSlides = screen.getAllByRole('group', {name: /^Slide /});\n"
+        "    expect(contentSlides[0]?.className).not.toBe(viewClasses[0]);\n"
+        "  });\n\n"
+        "  it('exposes each slide as a group with aria-roledescription=\"slide\" and a positional name', () => {",
+    )
+
     replace_once(
         carousel_test,
         "    it('scrollTo scrolls the container and clamps out-of-range indices', () => {",
@@ -338,6 +410,25 @@ def main() -> None:
     carousel_doc = root / "packages/core/src/Carousel/Carousel.doc.mjs"
     replace_once(
         carousel_doc,
+        "    {name: 'children', type: 'ReactNode', description: 'Carousel items rendered in a horizontal scroll container.', required: true},",
+        "    {name: 'children', type: 'ReactNode', description: 'Carousel items rendered in a horizontal scroll container.', required: true},\n"
+        "    {name: 'itemWidth', type: \"'content' | 'view'\", description: \"Width owned by each Carousel slide wrapper. 'view' makes every slide exactly one Carousel scroll viewport wide.\", default: \"'content'\"},",
+    )
+    replace_once(
+        carousel_doc,
+        "    children: '在水平滚动容器中渲染的轮播项目。',",
+        "    children: '在水平滚动容器中渲染的轮播项目。',\n"
+        "    itemWidth: \"每个轮播项目包装器的宽度。'view' 使每个项目恰好占满一个轮播视口。\",",
+    )
+    replace_once(
+        carousel_doc,
+        "    children: 'carousel items in horizontal scroll',",
+        "    children: 'carousel items in horizontal scroll',\n"
+        "    itemWidth: \"slide wrapper width; 'view' = one Carousel viewport\",",
+    )
+
+    replace_once(
+        carousel_doc,
         "    {name: 'handleRef', type: 'React.Ref<CarouselHandle>', description: 'Imperative handle exposing scrollNext(), scrollPrev(), scrollTo(index), canScrollNext(), and canScrollPrev() for programmatic scroll control.'},",
         "    {name: 'handleRef', type: 'React.Ref<CarouselHandle>', description: 'Imperative handle exposing scrollNext(), scrollPrev(), scrollTo(index, {animated}), canScrollNext(), and canScrollPrev(). Pass animated: false to reposition immediately.'},",
     )
@@ -369,8 +460,9 @@ def main() -> None:
         "---\n"
         "'@astryxdesign/core': patch\n"
         "---\n\n"
-        "[feature] Carousel snap paging can report its final settled page, and "
-        "CarouselHandle.scrollTo can reposition without animation.\n\n"
+        "[feature] Carousel snap paging can report its final settled page, "
+        "CarouselHandle.scrollTo can reposition without animation, and "
+        "itemWidth='view' can make each public slide exactly one Carousel viewport wide.\n\n"
         "@rpstreef\n"
     )
 
