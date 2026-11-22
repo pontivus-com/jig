@@ -1,8 +1,5 @@
 import type { TaskCommand } from "../../src/core/task";
-import type {
-  JigDataConflictCase,
-  JigDataResolution,
-} from "../../src/core/synchronization-recovery";
+import type * as Recovery from "../../src/core/synchronization-recovery";
 import {
   PORTABLE_FORMAT_VERSION,
   SQLITE_SCHEMA_VERSION,
@@ -147,7 +144,7 @@ export async function submitTaskCommand(
 }
 
 export async function readSynchronizationConflict(): Promise<
-  JigDataConflictCase | null
+  Recovery.JigDataConflictCase | null
 > {
   const connection = await database();
   return (
@@ -156,7 +153,7 @@ export async function readSynchronizationConflict(): Promise<
 }
 
 export async function resolveSynchronizationConflict(
-  resolution: JigDataResolution,
+  resolution: Recovery.JigDataResolution,
 ): Promise<RepositorySynchronizationStatus> {
   const connection = await database();
   return (
