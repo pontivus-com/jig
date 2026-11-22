@@ -60,19 +60,10 @@ async function taskDropTarget(
   const cards = page.locator(
     `[data-date="${date}"] .jig-task-card`,
   );
-  const count = await cards.count();
-  const available: number[] = [];
-  let sourceIndex = -1;
-  for (let index = 0; index < count; index += 1) {
-    const title = (
-      await cards.nth(index).locator(".jig-task-title").innerText()
-    ).trim();
-    if (title === sourceTitle) {
-      sourceIndex = index;
-    } else {
-      available.push(index);
-    }
-  }
+  const titles = (await cards.locator(".jig-task-title").allTextContents())
+    .map((title) => title.trim());
+  const sourceIndex = titles.indexOf(sourceTitle);
+  const available = titles.filter((title) => title !== sourceTitle);
 
   if (available.length === 0 || destinationIndex >= available.length) {
     return {
@@ -81,16 +72,20 @@ async function taskDropTarget(
     };
   }
 
-  if (sourceIndex >= 0 && destinationIndex >= sourceIndex) {
-    return {
-      target: cards.nth(available[Math.max(0, destinationIndex - 1)] ?? 0),
-      targetYRatio: 0.75,
-    };
+  const targetTitle =
+    sourceIndex >= 0 && destinationIndex >= sourceIndex
+      ? available[Math.max(0, destinationIndex - 1)]
+      : available[destinationIndex];
+  if (targetTitle === undefined) {
+    throw new Error(
+      `No sortable Task target for ${date} index ${destinationIndex}`,
+    );
   }
 
   return {
-    target: cards.nth(available[destinationIndex] ?? 0),
-    targetYRatio: 0.25,
+    target: await taskCard(page, targetTitle),
+    targetYRatio:
+      sourceIndex >= 0 && destinationIndex >= sourceIndex ? 0.75 : 0.25,
   };
 }
 
