@@ -859,7 +859,6 @@ function ConfiguredApp({
     ) : destination === "planner" ? (
       <Planner
         focusCurrentDayOnMount={layoutMode === "narrow"}
-        todayScrollRequest={todayScrollRequest}
         weekTransitionDirection={weekTransitionDirection}
         tasks={tasks}
         recurrences={canonical.recurrences}
@@ -926,7 +925,6 @@ function ConfiguredApp({
         transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
         destinationTransition={destinationTransition}
-        todayScrollRequest={todayScrollRequest}
         onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
@@ -959,7 +957,6 @@ function ConfiguredApp({
         transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
         destinationTransition={destinationTransition}
-        todayScrollRequest={todayScrollRequest}
         onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
