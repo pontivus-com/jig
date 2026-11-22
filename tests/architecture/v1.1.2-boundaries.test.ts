@@ -34,10 +34,6 @@ const production = [
 ];
 
 const EXPECTED_FAILURES = {
-  recoveryPolicyOwner: {
-    task: "J112-IMP-17",
-    violations: ["missing:src/core/synchronization-recovery.ts"],
-  },
   resolverDraftOwner: {
     task: "J112-IMP-17",
     violations: ["missing:ui/src/sync-conflict-state.ts"],
@@ -377,12 +373,31 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     const recoveryViolations = existsSync(recoveryPath)
       ? []
       : [`missing:${recoveryPath}`];
-    expectGuardViolations("recoveryPolicyOwner", recoveryViolations);
+    expect(recoveryViolations).toEqual([]);
 
     if (existsSync(recoveryPath)) {
       const recovery = source(recoveryPath);
       expect(recovery).not.toMatch(
         /from\s+["'][^"']*(?:shell|persistence|protocol|github|ui)\/|node:|bun:|Bun\.|@capacitor|isomorphic-git|\bfetch\(/,
+      );
+      for (const entryPoint of [
+        "reconcileRelatedPortableSnapshots",
+        "buildJigDataConflictCase",
+        "jigDataConflictKey",
+        "deriveJigDataDateOrders",
+        "applyJigDataResolution",
+        "validateJigDataConflictCase",
+        "validateOptionalJigDataConflictCase",
+        "validateJigDataResolution",
+        "recoveryCommitSpec",
+      ]) {
+        expect(recovery).toContain(`export function ${entryPoint}`);
+      }
+      expect(recovery).not.toMatch(
+        /\bas\s+unknown\s+as\b|\bas\s+any\b|:\s*any\b|<any>|\bArray<any>\b/,
+      );
+      expect(recovery).not.toMatch(
+        /\b[A-Za-z_$][\w$]*!\s*(?:\.|[;,)}\]])/,
       );
     }
 

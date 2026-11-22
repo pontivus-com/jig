@@ -69,6 +69,18 @@ function stableJson(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+export function canonicalTaskRecordJson(task: Task): string {
+  return stableJson(canonicalTaskRecord(validateTask(task)));
+}
+
+export function canonicalRecurrenceRecordJson(
+  series: RecurrenceSeries,
+): string {
+  return stableJson(
+    canonicalRecurrenceRecord(validateRecurrenceSeries(series)),
+  );
+}
+
 export function portableSnapshotsEqual(
   left: PortableSnapshot,
   right: PortableSnapshot,
@@ -106,7 +118,7 @@ export function serializeSnapshot(
   )) {
     files.set(
       `tasks/${task.id}.json`,
-      stableJson(canonicalTaskRecord(task)),
+      canonicalTaskRecordJson(task),
     );
   }
 
@@ -115,7 +127,7 @@ export function serializeSnapshot(
   )) {
     files.set(
       `recurrences/${series.id}.json`,
-      stableJson(canonicalRecurrenceRecord(series)),
+      canonicalRecurrenceRecordJson(series),
     );
   }
 
