@@ -389,3 +389,30 @@
   padding-block: 0 var(--jig-safe-area-bottom);
 }
 
+.jig-configured-narrow .jig-feedback-transient-narrow {
+  position: fixed;
+  z-index: 5;
+  inset-block-end: calc(
+    64px + env(safe-area-inset-bottom, 0px) + var(--spacing-3)
+  );
+  inset-inline-start: max(
+    var(--spacing-3),
+    env(safe-area-inset-left, 0px)
+  );
+  inset-inline-end: max(
+    var(--spacing-3),
+    env(safe-area-inset-right, 0px)
+  );
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.jig-configured-narrow .jig-feedback-transient-narrow .jig-feedback-transient-stack {
+  max-inline-size: 32rem;
+}
+
+.jig-configured-narrow .jig-feedback-durable-narrow {
+  margin: var(--spacing-2) var(--spacing-3) 0;
+}
+
