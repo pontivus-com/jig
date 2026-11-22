@@ -1024,11 +1024,21 @@ test("adding and editing a Task confirm success and close the workspace", async 
       scrollRegion.scrollTop = scrollRegion.scrollHeight;
     });
     await editWorkspace.getByLabel("Title").fill(`Edited ${width}`);
+    let saveCommandCount = 0;
+    const observeSaveCommand = (request: import("@playwright/test").Request): void => {
+      const url = new URL(request.url());
+      if (url.pathname === "/api/v1/commands" && request.method() === "POST") {
+        saveCommandCount += 1;
+      }
+    };
+    page.on("request", observeSaveCommand);
     await editWorkspace.getByRole("button", {
       name: "Save",
       exact: true,
     }).click();
     await expect(editWorkspace).toBeHidden();
+    await expect.poll(() => saveCommandCount).toBe(1);
+    page.off("request", observeSaveCommand);
     await expect(
       page.getByRole("status").filter({ hasText: "Task saved" }),
     ).toBeVisible();
@@ -1489,7 +1499,9 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await repeat.click();
     await page.getByRole("option", { name: "Weekly", exact: true }).click();
 
-    const actionRegion = workspace.locator(".jig-editor-actions");
+    const actionRegion = workspace.locator(
+      ".jig-task-workspace-actions-narrow",
+    );
     const actionBefore = await actionRegion.boundingBox();
     if (actionBefore === null) {
       throw new Error("Task action region geometry unavailable");
@@ -1503,6 +1515,26 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await expect(
       workspace.getByRole("button", { name: "Save", exact: true }),
     ).toBeVisible();
+
+    await page.setViewportSize({ width, height: 560 });
+    await expect(notes).toBeFocused();
+    await notes.scrollIntoViewIfNeeded();
+    await expect(notes).toBeVisible();
+    await expect(
+      workspace.getByRole("button", { name: "Cancel", exact: true }),
+    ).toBeVisible();
+    await expect(
+      workspace.getByRole("button", { name: "Save", exact: true }),
+    ).toBeVisible();
+    await expectTarget(
+      workspace.getByRole("button", { name: "Mark complete", exact: true }),
+      "Task lifecycle action under IME",
+    );
+    await expectTarget(
+      workspace.getByRole("button", { name: "Delete…", exact: true }),
+      "Task delete action under IME",
+    );
+    await page.setViewportSize({ width, height: 844 });
 
     const actionAfter = await actionRegion.boundingBox();
     if (actionAfter === null) {
