@@ -1,4 +1,3 @@
-import { Capacitor } from "@capacitor/core";
 import {
   useEffect,
   useRef,
@@ -11,10 +10,10 @@ import {
   reminderFingerprint,
 } from "../../src/core/reminder";
 import {
-  deliverAndroidTaskReminder,
-  listenForAndroidReminderDisplay,
-} from "./native/notifications";
-import { allocateAndroidReminderId } from "./native/reminder-registry";
+  installRuntimeReminderDisplayObserver,
+  requestRuntimeDueReminderDisplay,
+  usesNativeReminderDelivery,
+} from "./runtime";
 import {
   browserNotificationState,
   displayBrowserNotification,
@@ -139,60 +138,50 @@ export function ReminderMonitor({
   const nativeListenerReady = useRef<Promise<boolean> | null>(null);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) {
+    if (!usesNativeReminderDelivery()) {
       return;
     }
 
     let active = true;
-    let listener: { remove: () => Promise<void> } | null = null;
-    const ready = listenForAndroidReminderDisplay((notification) => {
-      const extra =
-        notification.extra !== null &&
-        typeof notification.extra === "object" &&
-        !Array.isArray(notification.extra)
-          ? Object.fromEntries(Object.entries(notification.extra))
-          : null;
-      const taskId =
-        extra !== null && typeof extra.jig_task_id === "string"
-          ? extra.jig_task_id
-          : null;
-      const fingerprint =
-        extra !== null &&
-        typeof extra.jig_reminder_fingerprint === "string"
-          ? extra.jig_reminder_fingerprint
-          : null;
-      const task = tasksRef.current.find(
-        (candidate) =>
-          candidate.id === taskId &&
-          reminderDeliveryKey(candidate) !== null &&
-          reminderFingerprint(candidate) === fingerprint,
-      );
-      const key = task === undefined ? null : reminderDeliveryKey(task);
-      if (key !== null) {
-        markReminderNotified(key);
-        onReminderNotified();
-        attemptingKeys.current.delete(key);
-      }
-    }).then((handle) => {
-      if (!active) {
-        void handle.remove();
+    let removeListener: (() => Promise<void>) | null = null;
+    const ready = installRuntimeReminderDisplayObserver(
+      (taskId, fingerprint) => {
+        const task = tasksRef.current.find(
+          (candidate) =>
+            candidate.id === taskId &&
+            reminderDeliveryKey(candidate) !== null &&
+            reminderFingerprint(candidate) === fingerprint,
+        );
+        const key = task === undefined ? null : reminderDeliveryKey(task);
+        if (key !== null) {
+          markReminderNotified(key);
+          onReminderNotified();
+          attemptingKeys.current.delete(key);
+        }
+      },
+    ).then((remove) => {
+      if (remove === null) {
         return false;
       }
-      listener = handle;
+      if (!active) {
+        void remove();
+        return false;
+      }
+      removeListener = remove;
       return true;
     }).catch(() => false);
     nativeListenerReady.current = ready;
 
     return () => {
       active = false;
-      if (listener !== null) {
-        void listener.remove();
+      if (removeListener !== null) {
+        void removeListener();
       }
     };
   }, [onReminderNotified]);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) {
+    if (!usesNativeReminderDelivery()) {
       return;
     }
     const ready = nativeListenerReady.current;
@@ -216,12 +205,9 @@ export function ReminderMonitor({
           continue;
         }
         attemptingKeys.current.add(key);
-        void allocateAndroidReminderId()
-          .then((notificationId) =>
-            deliverAndroidTaskReminder(task, notificationId),
-          )
-          .then((outcome) => {
-            if (outcome !== "display-requested") {
+        void requestRuntimeDueReminderDisplay(task)
+          .then((requested) => {
+            if (!requested) {
               attemptingKeys.current.delete(key);
             }
           })
@@ -233,14 +219,14 @@ export function ReminderMonitor({
   }, [now, tasks]);
 
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
+    if (usesNativeReminderDelivery()) {
       return;
     }
     void prepareBrowserNotificationServiceWorker();
   }, []);
 
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
+    if (usesNativeReminderDelivery()) {
       return;
     }
     pruneOldReminderKeys(todayCivilDate(now));
