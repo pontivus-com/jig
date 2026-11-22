@@ -15,12 +15,14 @@ interface FeedbackContentProps {
   readonly title?: ReactNode;
   readonly message: ReactNode;
   readonly action?: ReactNode;
-  readonly onDismiss?: () => void;
+  readonly onDismiss?: (() => void) | undefined;
   readonly className: string;
   readonly dismissLabel: string;
   readonly role: "alert" | "status";
   readonly ariaLive: "assertive" | "polite";
-  readonly onAnimationEnd?: (event: AnimationEvent<HTMLElement>) => void;
+  readonly onAnimationEnd?:
+    | ((event: AnimationEvent<HTMLElement>) => void)
+    | undefined;
 }
 
 function FeedbackContent({
