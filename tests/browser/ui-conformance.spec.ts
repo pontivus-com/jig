@@ -18,7 +18,7 @@ function activeWeek(page: Page) {
 
 
 function applicationScrollOwner(page: Page) {
-  return page.locator(".jig-app-shell main");
+  return page.locator("#astryx-app-shell-main");
 }
 
 function expectNear(actual: number, expected: number, tolerance = 3): void {
@@ -695,7 +695,7 @@ test("narrow Planner opens with the current day at the top", async ({
   await expect(scrollOwner).toHaveCount(1);
 
   const initialGeometry = await page.evaluate(() => {
-    const owner = document.querySelector<HTMLElement>(".jig-app-shell main");
+    const owner = document.querySelector<HTMLElement>("#astryx-app-shell-main");
     const active = document.querySelector<HTMLElement>(
       ".jig-planner-surface",
     );
@@ -719,7 +719,7 @@ test("narrow Planner opens with the current day at the top", async ({
   });
   await expect.poll(() => today.boundingBox()).not.toBeNull();
   const scrolledUpGeometry = await page.evaluate(() => {
-    const owner = document.querySelector<HTMLElement>(".jig-app-shell main");
+    const owner = document.querySelector<HTMLElement>("#astryx-app-shell-main");
     const active = document.querySelector<HTMLElement>(
       ".jig-planner-surface",
     );
@@ -1257,7 +1257,9 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       fullPage: true,
     });
 
-    await page.getByText("Mobile geometry inventory", { exact: true }).click();
+    await page
+      .getByRole("button", { name: /Mobile geometry inventory/ })
+      .click();
     const workspace = page.getByRole("dialog", {
       name: "Mobile geometry inventory",
     });
@@ -1978,7 +1980,7 @@ test("AppShell main is the sole configured scroller across governed widths", asy
 
     const geometry = await page.evaluate(() => {
       const frame = document.querySelector<HTMLElement>(".jig-content-frame");
-      const owner = document.querySelector<HTMLElement>(".jig-app-shell main");
+      const owner = document.querySelector<HTMLElement>("#astryx-app-shell-main");
       const planner = document.querySelector<HTMLElement>(".jig-planner-surface");
       if (frame === null || owner === null || planner === null) {
         throw new Error("Configured viewport geometry unavailable");
@@ -2047,7 +2049,7 @@ test("AppShell main is the sole configured scroller across governed widths", asy
     await waitForResponsiveHeader(page, viewport.width);
     const overflow = await page.evaluate(() => {
       const frame = document.querySelector<HTMLElement>(".jig-content-frame");
-      const owner = document.querySelector<HTMLElement>(".jig-app-shell main");
+      const owner = document.querySelector<HTMLElement>("#astryx-app-shell-main");
       if (frame === null || owner === null) {
         throw new Error("Configured scroll owner unavailable");
       }
