@@ -32,8 +32,11 @@ import { HistoryView } from "./history";
 import { isStaleRevision } from "./http";
 import {
   readCanonicalTasks,
+  readCanonicalTasksAfterActivationRollover,
   readDiagnostics,
   readStatus,
+  reconcileRuntimeReminders,
+  rollForwardRuntimeLocalDay,
   submitTaskCommand,
   triggerSync,
 } from "./runtime";
@@ -89,6 +92,7 @@ import {
   readSetupStatus,
   reconnectGitHub as reconnectGitHubIntent,
   resumeGitHubReconnect,
+  resumeGitHubSetup,
   type GitHubReconnectSnapshot,
   type SetupStatus,
 } from "./setup-http";
@@ -237,6 +241,30 @@ function ConfiguredApp({
     [],
   );
 
+
+  const applyObservedLocalDay = useCallback(
+    (nextToday: string): void => {
+      if (nextToday === observedToday) {
+        return;
+      }
+      setWeekTransitionDirection(null);
+      setPlannerState((current) => {
+        const nextStart =
+          current.displayedHorizonStart === observedToday
+            ? nextToday
+            : clampPlannerHorizonStart(
+                current.displayedHorizonStart,
+                nextToday,
+              );
+        return nextStart === current.displayedHorizonStart
+          ? current
+          : { displayedHorizonStart: nextStart };
+      });
+      setObservedToday(nextToday);
+    },
+    [observedToday],
+  );
+
   const load = useCallback(async (): Promise<void> => {
     setLoadError(null);
     setInitialSyncSettled(false);
@@ -281,16 +309,51 @@ function ConfiguredApp({
     let disposed = false;
     let cleanup: (() => Promise<void>) | null = null;
 
+    const activateConfiguredRuntime = async (): Promise<void> => {
+      const nextToday = todayCivilDate();
+      if (nextToday !== observedToday) {
+        await rollForwardRuntimeLocalDay();
+        if (!disposed) {
+          applyObservedLocalDay(nextToday);
+        }
+      }
+
+      await resumeGitHubReconnect();
+
+      const nextCanonical =
+        await readCanonicalTasksAfterActivationRollover();
+
+      await reconcileRuntimeReminders(
+        nextCanonical.tasks,
+        new Date(),
+      );
+
+      await triggerSync();
+
+      const [
+        nextStatus,
+        nextDiagnostics,
+        githubCapabilities,
+      ] = await Promise.all([
+        readStatus(),
+        readDiagnostics(),
+        readGitHubCapabilityStatus(),
+      ]);
+
+      if (disposed) {
+        return;
+      }
+      setCanonical(nextCanonical);
+      setStatus(nextStatus);
+      setDiagnostics(nextDiagnostics);
+      setGitHubReconnectAvailable(
+        githubCapabilities.reconnect_available,
+      );
+      setInitialSyncSettled(true);
+    };
+
     void installNativeActiveListener(() => {
-      void Promise.all([
-        resumeGitHubReconnect(),
-        refreshCanonical(),
-        triggerSync().then((next) => {
-          if (!disposed) {
-            updateRepositoryStatus(next);
-          }
-        }),
-      ]).catch((error: unknown) => {
+      void activateConfiguredRuntime().catch((error: unknown) => {
         if (!disposed) {
           setOperationError(
             `Jig could not refresh after Android resumed: ${errorMessage(error)}. Reload the application.`,
@@ -311,7 +374,7 @@ function ConfiguredApp({
         void cleanup();
       }
     };
-  }, [refreshCanonical, updateRepositoryStatus]);
+  }, [applyObservedLocalDay, observedToday]);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,20 +386,7 @@ function ConfiguredApp({
         return false;
       }
 
-      setWeekTransitionDirection(null);
-      setPlannerState((current) => {
-        const nextStart =
-          current.displayedHorizonStart === observedToday
-            ? nextToday
-            : clampPlannerHorizonStart(
-                current.displayedHorizonStart,
-                nextToday,
-              );
-        return nextStart === current.displayedHorizonStart
-          ? current
-          : { displayedHorizonStart: nextStart };
-      });
-      setObservedToday(nextToday);
+      applyObservedLocalDay(nextToday);
 
       try {
         await refreshCanonical();
@@ -381,7 +431,7 @@ function ConfiguredApp({
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [observedToday, refreshCanonical]);
+  }, [applyObservedLocalDay, observedToday, refreshCanonical]);
 
   const runCommand = useCallback(
     async (command: TaskCommand): Promise<CommandResult | null> => {
@@ -1010,6 +1060,39 @@ export function App(): React.ReactElement {
   useEffect(() => {
     void refreshSetup();
   }, [refreshSetup]);
+
+
+  useEffect(() => {
+    if (setupStatus?.mode === "configured") {
+      return;
+    }
+
+    let disposed = false;
+    let cleanup: (() => Promise<void>) | null = null;
+
+    void installNativeActiveListener(() => {
+      void resumeGitHubSetup()
+        .then(refreshSetup)
+        .catch((error: unknown) => {
+          if (!disposed) {
+            setSetupError(errorMessage(error));
+          }
+        });
+    }).then((remove) => {
+      if (disposed) {
+        void remove();
+        return;
+      }
+      cleanup = remove;
+    });
+
+    return () => {
+      disposed = true;
+      if (cleanup !== null) {
+        void cleanup();
+      }
+    };
+  }, [refreshSetup, setupStatus?.mode]);
 
   const changeThemePreset = (value: ThemePreset): void => {
     setThemePreset(value);
