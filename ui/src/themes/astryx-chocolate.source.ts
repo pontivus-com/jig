@@ -6,6 +6,11 @@ export const astryxChocolateTheme = defineTheme({
   name: "astryx-chocolate",
   extends: chocolateTheme,
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: "var(--color-background-body)",
+      planner:
+        "color-mix(in oklab, var(--color-background-surface) 65%, var(--color-background-muted) 35%)",
+      task: "var(--color-background-card)",
+    }),
   },
 });
