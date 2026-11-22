@@ -295,7 +295,7 @@ The normal resolver shows one conflict at a time in planning language. For a Tas
 
 After record/family choices, affected dates enter **Review order**. Render the surviving Tasks as the normal Jig ordered list, reuse the ordinary ordering interaction plus Move up/down, and require explicit confirmation for each affected date before final resolution. Then show one summary and primary **Use this resolution** + secondary **Cancel**.
 
-Desktop presents this workflow in the governed 40rem end Drawer. Narrow/mobile presents it in an available-height BottomSheet with >=48px actions and primary confirmation reachable above the IME/safe area. Android Back is equivalent to Cancel before confirmation and changes no authoritative state.
+Desktop presents this workflow in a modal Astryx end Drawer with `width="40rem"` and scrim/focus containment. Narrow/mobile presents it in a modal tall Astryx BottomSheet with >=48px actions and primary confirmation reachable above the IME/safe area. Android Back is equivalent to Cancel before confirmation and changes no authoritative state.
 
 A collapsed **Technical details** disclosure inside the resolver may show the classified reason, abbreviated ancestor/local/remote heads and read-only/copyable canonical JSON for the currently displayed conflict. It never offers editable JSON, Git commands, a shell, credentials or unrelated repository data.
 
