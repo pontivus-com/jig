@@ -19,6 +19,11 @@ import {
   validateSnapshot,
 } from "../../src/core/portable";
 import {
+  reconcileRelatedPortableSnapshots,
+  recoveryCommitSpec,
+} from "../../src/core/synchronization-recovery";
+import {
+  adoptCanonicalSnapshot,
   applyTaskCommand as applyTaskCommandAtLocalDate,
   markExported,
   readCanonicalState,
@@ -56,11 +61,17 @@ import type { CanonicalState } from "../../src/protocol/runtime";
 import {
   acquireAndroidPortableRepository,
   alignAndroidPortableHead,
+  androidPortableHead,
+  androidRecoveryCommitterTimestampSeconds,
   cloneAndroidPortableRepository,
   commitAndroidPortableSnapshot,
   observeAndroidPortableRemote,
   pushAndroidPortableRepository,
+  readAndroidRecoveryCandidateHead,
+  readAndroidSnapshotAtOid,
   reopenAndroidPortableRepository,
+  uniqueAndroidRecoveryMergeBase,
+  writeAndroidRecoveryCandidate,
   type AndroidGitEffects,
 } from "../../ui/src/native/git";
 import {
@@ -862,6 +873,229 @@ describe("Android Git smart-HTTP feasibility", () => {
       desktopSync.stop();
       androidSync.stop();
       await desktopDb.close();
+      await androidDb.close();
+    }
+  });
+
+  it("resumes Android recovery after SQLite adoption and before the local ref move", async () => {
+    const { remote, remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+
+    const { port: filesystemPort } = fakeFilesystem();
+    const androidEffects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const credential = async (): Promise<string> => PASSWORD;
+    await cloneAndroidPortableRepository(
+      androidEffects,
+      remoteUrl,
+      credential,
+    );
+    const androidDb = await initializeDatabase(
+      join(root, "recovery-resume-android.sqlite"),
+      DATASET_ID,
+    );
+    const initialController = createAndroidSyncController(
+      androidDb,
+      androidEffects,
+      credential,
+    );
+
+    try {
+      await initialController.start();
+      await initialController.trigger();
+
+      await applyTaskCommand(
+        androidDb,
+        {
+          type: "create",
+          title: "Android before crash",
+          scheduled_date: "2026-11-18",
+        },
+        (await readCanonicalState(androidDb)).revision,
+        "2026-11-18T05:40:00.000Z",
+        () =>
+          "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4042",
+      );
+      const localState = await readCanonicalState(androidDb);
+      const localHead = await commitAndroidPortableSnapshot(
+        androidEffects,
+        serializeSnapshot(
+          localState.tasks,
+          DATASET_ID,
+          localState.recurrences,
+        ),
+        localState.revision,
+      );
+      await markExported(
+        androidDb,
+        localState.revision,
+        localHead,
+      );
+
+      const writer = join(root, "recovery-resume-writer");
+      await runGit(root, [
+        "clone",
+        "--branch",
+        "jig-data",
+        remote,
+        writer,
+      ]);
+      await runGit(writer, ["config", "user.name", "Fixture"]);
+      await runGit(writer, [
+        "config",
+        "user.email",
+        "fixture@example.invalid",
+      ]);
+      await writeSnapshot(
+        writer,
+        serializeSnapshot(
+          [task(
+            "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4043",
+            "Remote before crash",
+            0,
+          )],
+          DATASET_ID,
+        ),
+      );
+      await runGit(writer, ["add", "-A"]);
+      await runGit(writer, [
+        "commit",
+        "-m",
+        "Remote independent before recovery crash",
+      ]);
+      await runGit(writer, ["push", "origin", "jig-data"]);
+
+      const metadata = await readMetadata(androidDb);
+      const observed = await observeAndroidPortableRemote(
+        androidEffects,
+        DATASET_ID,
+        metadata.last_adopted_head,
+        credential,
+      );
+      if (
+        observed.state !== "present" ||
+        observed.lineage !== "diverged" ||
+        observed.local_head === null
+      ) {
+        throw new Error("expected related Android divergence");
+      }
+
+      const mergeBase = await uniqueAndroidRecoveryMergeBase(
+        androidEffects,
+        observed.local_head,
+        observed.remote_head,
+      );
+      if (mergeBase === null) {
+        throw new Error("expected a unique recovery merge base");
+      }
+      const ancestor = await readAndroidSnapshotAtOid(
+        androidEffects,
+        mergeBase,
+        DATASET_ID,
+      );
+      const localSnapshot = await reopenAndroidPortableRepository(
+        androidEffects,
+        DATASET_ID,
+      );
+      const reconciliation = reconcileRelatedPortableSnapshots(
+        ancestor,
+        localSnapshot,
+        observed.remote_snapshot,
+      );
+      if (reconciliation.kind !== "resolved") {
+        throw new Error("expected automatic recovery candidate");
+      }
+      const [localTimestamp, remoteTimestamp] = await Promise.all([
+        androidRecoveryCommitterTimestampSeconds(
+          androidEffects,
+          observed.local_head,
+        ),
+        androidRecoveryCommitterTimestampSeconds(
+          androidEffects,
+          observed.remote_head,
+        ),
+      ]);
+      const candidate = await writeAndroidRecoveryCandidate(
+        androidEffects,
+        DATASET_ID,
+        reconciliation.snapshot,
+        recoveryCommitSpec(
+          "automatic",
+          observed.local_head,
+          localTimestamp,
+          observed.remote_head,
+          remoteTimestamp,
+        ),
+      );
+
+      await adoptCanonicalSnapshot(
+        androidDb,
+        reconciliation.snapshot.tasks,
+        reconciliation.snapshot.recurrences,
+        candidate,
+        metadata.revision,
+      );
+      expect(await androidPortableHead(androidEffects)).toBe(localHead);
+      expect(
+        await readAndroidRecoveryCandidateHead(
+          androidEffects,
+          DATASET_ID,
+        ),
+      ).toBe(candidate);
+
+      initialController.stop();
+      const restartedController = createAndroidSyncController(
+        androidDb,
+        {
+          ...androidEffects,
+          fs: createAndroidGitFilesystem(filesystemPort),
+        },
+        credential,
+      );
+      await restartedController.start();
+      await expect(
+        restartedController.trigger(),
+      ).resolves.toMatchObject({
+        local_git: "committed",
+        remote: { state: "synchronized" },
+      });
+      expect(restartedController.diagnostics()).toMatchObject({
+        phase: "idle",
+        reason: null,
+        recovery_attempted: true,
+        recovery_outcome: "resumed",
+      });
+      expect(
+        await readAndroidRecoveryCandidateHead(
+          androidEffects,
+          DATASET_ID,
+        ),
+      ).toBeNull();
+      expect(
+        (await readCanonicalState(androidDb)).tasks
+          .map((candidateTask) => candidateTask.title)
+          .sort(),
+      ).toEqual([
+        "Android before crash",
+        "Remote before crash",
+      ]);
+      expect(
+        await runGit(root, [
+          "--git-dir",
+          remote,
+          "rev-parse",
+          "jig-data",
+        ]),
+      ).toBe(candidate);
+      restartedController.stop();
+    } finally {
+      initialController.stop();
       await androidDb.close();
     }
   });
