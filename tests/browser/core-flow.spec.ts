@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import { apiState, resetCanonicalTasks } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -163,7 +163,7 @@ test("configured presenter replacement preserves controller state and appearance
 
   let canonicalReadsDuringReflow = 0;
   let commandsDuringReflow = 0;
-  const observeReflowRequest = (request: Parameters<Parameters<typeof page.on<"request">>[1]>[0]): void => {
+  const observeReflowRequest = (request: Request): void => {
     const url = new URL(request.url());
     if (url.pathname === "/api/v1/tasks" && request.method() === "GET") {
       canonicalReadsDuringReflow += 1;
