@@ -320,9 +320,10 @@ describe("related Jig-data reconciliation", () => {
       recurrence_series_id: S1,
       recurrence_occurrence_date: DATE,
     });
-    const baseU = task(U, "U", 1, {
+    const baseU = task(U, "U", 0, {
+      scheduled_date: NEXT_DATE,
       recurrence_series_id: S1,
-      recurrence_occurrence_date: DATE,
+      recurrence_occurrence_date: NEXT_DATE,
     });
     const ancestor = snapshot([baseT, baseU], [series]);
     const local = snapshot([
