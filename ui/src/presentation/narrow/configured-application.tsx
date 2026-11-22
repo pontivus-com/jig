@@ -1,5 +1,6 @@
 import { NarrowBottomNavigation } from "./bottom-navigation";
 import { NarrowConfiguredHeader } from "./header";
+import { NarrowFeedbackRegion } from "./feedback-region";
 import { TaskWorkspaceBottomSheet } from "../../task-workspace";
 import {
   ApplicationShell,
@@ -29,8 +30,10 @@ export function NarrowConfiguredApplication(
         topNav={<NarrowConfiguredHeader {...componentProps} />}
       >
         <div className="jig-configured-body">
-          {durableFeedback}
-          {transientFeedback}
+          <NarrowFeedbackRegion
+            durable={durableFeedback}
+            transient={transientFeedback}
+          />
           <div
             className={[
               "jig-content-frame",
