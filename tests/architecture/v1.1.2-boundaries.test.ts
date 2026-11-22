@@ -408,6 +408,59 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     }
   });
 
+  it("exposes exactly the two governed synchronization-conflict runtime operations", () => {
+    const browserRuntime = source("ui/src/http.ts");
+    const nativeRuntime = source("ui/src/runtime-native.ts");
+    const runtimeDispatch = source("ui/src/runtime.ts");
+    const shellHttp = source("src/shell/http.ts");
+
+    const operationPattern =
+      /\b(?:export\s+(?:async\s+function|const)\s+)([A-Za-z_$][\w$]*SynchronizationConflict[\w$]*)/g;
+    const configuredOperations = [
+      ...browserRuntime.matchAll(operationPattern),
+      ...nativeRuntime.matchAll(operationPattern),
+      ...runtimeDispatch.matchAll(operationPattern),
+    ].map((match) => match[1]);
+
+    expect([...new Set(configuredOperations)].sort()).toEqual([
+      "readSynchronizationConflict",
+      "resolveSynchronizationConflict",
+    ]);
+    expect(runtimeDispatch).toContain(
+      "typeof webRuntime.readSynchronizationConflict",
+    );
+    expect(runtimeDispatch).toContain(
+      "typeof webRuntime.resolveSynchronizationConflict",
+    );
+    expect(runtimeDispatch).toContain(
+      "runtime.readSynchronizationConflict(...args)",
+    );
+    expect(runtimeDispatch).toContain(
+      "runtime.resolveSynchronizationConflict(...args)",
+    );
+
+    const conflictRoutes = [
+      ...shellHttp.matchAll(
+        /["'](\/api\/v1\/sync\/conflict(?:\/resolve)?)["']/g,
+      ),
+    ].map((match) => match[1]);
+    expect([...new Set(conflictRoutes)].sort()).toEqual([
+      "/api/v1/sync/conflict",
+      "/api/v1/sync/conflict/resolve",
+    ]);
+
+    for (const content of [
+      browserRuntime,
+      nativeRuntime,
+      runtimeDispatch,
+      shellHttp,
+    ]) {
+      expect(content).not.toMatch(
+        /\b(?:create|update|delete|list|start|finish|open|close)SynchronizationConflict\b|\/api\/v1\/sync\/conflict\/(?:create|update|delete|list|session|draft)/,
+      );
+    }
+  });
+
   it("keeps resolver Back cancellation ephemeral and ahead of other shared Back owners", () => {
     const app = source("ui/src/app.tsx");
     const handleStart = app.indexOf(
