@@ -389,6 +389,7 @@ body {
   min-width: 0;
   min-height: 72px;
   align-items: center;
+  color: var(--jig-task-text);
   border: var(--border-width) solid var(--jig-task-border, var(--color-border));
   border-radius: var(--radius-element);
   background: var(--jig-task-surface, var(--color-background-surface));
@@ -437,14 +438,14 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-element);
-  color: var(--color-text-secondary);
+  color: var(--jig-task-text);
   cursor: grab;
   touch-action: none;
   user-select: none;
 }
 
 .jig-task-drag-handle:hover {
-  color: var(--color-text-primary);
+  color: var(--jig-task-text);
   background: var(--jig-state-hover-bg);
 }
 
@@ -519,7 +520,7 @@ body {
 
 .jig-reminder-scheduled-indicator,
 .jig-reminder-notified-indicator {
-  color: var(--color-text-secondary);
+  color: var(--jig-task-text);
   font-weight: var(--font-weight-normal);
 }
 
@@ -579,7 +580,7 @@ body {
 
 .jig-task-title-completed {
   text-decoration: line-through;
-  color: var(--color-text-secondary);
+  color: var(--jig-task-text);
 }
 
 .jig-task-meta {
@@ -587,7 +588,7 @@ body {
   min-width: 0;
   flex-wrap: wrap;
   gap: var(--spacing-1) var(--spacing-2);
-  color: var(--color-text-secondary);
+  color: var(--jig-task-text);
   font-size: var(--font-size-sm);
 }
 
@@ -663,7 +664,7 @@ body {
 }
 
 .jig-task-drag-overlay-checkbox {
-  color: var(--color-text-secondary);
+  color: var(--jig-task-text);
 }
 
 .jig-planner-surface {
