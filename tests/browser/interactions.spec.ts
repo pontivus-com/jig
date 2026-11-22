@@ -549,7 +549,7 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
     { steps: 3 },
   );
 
-  const overlay = page.locator(".jig-drag-card-overlay");
+  const overlay = page.locator(".jig-drag-card-overlay .jig-task-card");
   await expect(overlay).toBeVisible();
   const dragColors = await overlay.evaluate((element) => {
     const probe = document.createElement("span");
@@ -566,10 +566,10 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
 
   await page.mouse.move(
     targetBox.x + targetBox.width / 2,
-    targetBox.y + targetBox.height / 2,
+    targetBox.y + targetBox.height * combinedTarget.targetYRatio,
     { steps: 8 },
   );
-  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(1);
   await page.screenshot({
     path: testInfo.outputPath("v1.1-drag-active-desktop.png"),
     fullPage: true,
@@ -793,24 +793,35 @@ test("narrow touch drag moves into an empty adjacent date and persists", async (
 });
 
 
-test("desktop drag keeps a stable insertion intent through inter-card whitespace", async ({
+test("desktop drag projects one measured card footprint without pre-release mutation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
   await createTask(page, "Gap source", today);
   await createTask(page, "Gap target one", today);
-  await createTask(page, "Gap target two with a deliberately longer title for height", today);
+  await createTask(
+    page,
+    "Gap target two with a deliberately longer title for height",
+    today,
+  );
   await page.reload();
 
-  const source = await dragHandle(page, "Gap source");
-  const slot = page.locator(
-    `[data-date="${today}"] [data-jig-drop-slot="2"]`,
+  const sourceCard = await taskCard(page, "Gap source");
+  const sourceHeight = await sourceCard.evaluate(
+    (element) => element.getBoundingClientRect().height,
   );
+  const source = await dragHandle(page, "Gap source");
   const sourceBox = await source.boundingBox();
   if (sourceBox === null) {
     throw new Error("Gap drag source geometry unavailable");
   }
+  const { target } = await taskDropTarget(
+    page,
+    today,
+    1,
+    "Gap source",
+  );
 
   await page.mouse.move(
     sourceBox.x + sourceBox.width / 2,
@@ -824,29 +835,34 @@ test("desktop drag keeps a stable insertion intent through inter-card whitespace
   );
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
-  const slotBox = await slot.boundingBox();
-  if (slotBox === null) {
-    throw new Error("Explicit insertion-slot geometry unavailable");
+  const targetBox = await target.boundingBox();
+  if (targetBox === null) {
+    throw new Error("Sortable target geometry unavailable");
   }
-  const x = slotBox.x + slotBox.width / 2;
-  await page.mouse.move(x, slotBox.y + slotBox.height * 0.25, { steps: 8 });
-  const firstIntent = await page.locator(".jig-task-drag-scope").evaluate(
-    (element) => ({
-      date: element.getAttribute("data-jig-drop-date"),
-      index: element.getAttribute("data-jig-drop-index"),
-    }),
-  );
-  await page.mouse.move(x, slotBox.y + slotBox.height * 0.75, { steps: 2 });
-  const secondIntent = await page.locator(".jig-task-drag-scope").evaluate(
-    (element) => ({
-      date: element.getAttribute("data-jig-drop-date"),
-      index: element.getAttribute("data-jig-drop-index"),
-    }),
-  );
+  const x = targetBox.x + targetBox.width / 2;
+  for (const ratio of [0.2, 0.35] as const) {
+    await page.mouse.move(
+      x,
+      targetBox.y + targetBox.height * ratio,
+      { steps: 6 },
+    );
+    await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+      "data-jig-drop-index",
+      "1",
+    );
+    await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(1);
+    const footprintHeight = await page
+      .locator(".jig-task-prospective-footprint")
+      .evaluate((element) => element.getBoundingClientRect().height);
+    expect(Math.abs(footprintHeight - sourceHeight)).toBeLessThanOrEqual(1);
+    expect((await taskByTitle(page, "Gap source")).position).toBe(0);
+  }
 
-  expect(firstIntent).toEqual(secondIntent);
-  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
   await page.mouse.up();
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
+  await expect
+    .poll(async () => (await taskByTitle(page, "Gap source")).position)
+    .toBe(1);
 });
 
 
