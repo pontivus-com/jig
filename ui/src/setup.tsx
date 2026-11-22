@@ -6,7 +6,7 @@ import {
   VStack,
 } from "@astryxdesign/core";
 
-import { JigAttentionBanner } from "./attention-banner";
+import { AttentionFeedbackContent } from "./presentation/shared/feedback-content";
 import {
   useCallback,
   useEffect,
@@ -254,10 +254,10 @@ export function SetupView({
 
         <section className="jig-setup-pane" aria-label="Set up planning data">
           {error === null ? null : (
-            <JigAttentionBanner
+            <AttentionFeedbackContent
               status="error"
               title="Jig needs attention"
-              description={error}
+              message={error}
             />
           )}
 
