@@ -12,6 +12,7 @@ import type {
   TaskWorkspaceOverlayProps,
   TaskWorkspacePresentation,
 } from "../../task-workspace";
+import type { SyncConflictWorkspaceProps } from "./sync-conflict-content";
 
 interface ApplicationShellProps {
   readonly topNav: ReactNode;
@@ -54,6 +55,7 @@ export interface ConfiguredPresentationProps
   readonly durableFeedback: ReactNode;
   readonly transientFeedback: ReactNode;
   readonly workspace: TaskWorkspacePresentation | null;
+  readonly syncConflictWorkspace: SyncConflictWorkspaceProps | null;
   readonly destinationTransition: Destination | null;
   readonly onContentPointerDown: (
     event: PointerEvent<HTMLDivElement>,
