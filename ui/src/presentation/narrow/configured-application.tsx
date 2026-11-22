@@ -1,7 +1,7 @@
 import { NarrowBottomNavigation } from "./bottom-navigation";
 import { NarrowConfiguredHeader } from "./header";
 import { NarrowFeedbackRegion } from "./feedback-region";
-import { TaskWorkspaceBottomSheet } from "../../task-workspace";
+import { NarrowTaskWorkspace } from "./task-workspace";
 import {
   ApplicationShell,
   type ConfiguredPresentationProps,
@@ -63,7 +63,7 @@ export function NarrowConfiguredApplication(
           {content}
         </div>
           </div>
-          <TaskWorkspaceBottomSheet
+          <NarrowTaskWorkspace
             workspace={props.destination === "settings" ? null : workspace}
             externalError={componentProps.externalError}
             isSaving={componentProps.isSaving}
