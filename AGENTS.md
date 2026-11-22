@@ -142,13 +142,14 @@ v1.1 adds one independently installable **Android** application while preserving
 - v1.1.2 synchronization recovery has one functional-core policy/type owner: `src/core/synchronization-recovery.ts`. Automatic three-way selection, recurrence conflict grouping, user-resolution validation, affected-date ordering and deterministic recovery commit policy live there once. Linux/system-Git and Android/isomorphic-git shells supply evidence/effects only. `ui/src/sync-conflict-state.ts` owns only the ephemeral resolver draft above the desktop/narrow branch. Desktop/narrow resolver presenters share `SyncConflictContent`, use public Astryx Drawer/BottomSheet/RadioList/Collapsible/Button/List primitives and active semantic/theme tokens, and must not define platform-specific conflict models, custom selected/focus systems, raw resolver colors or theme-name/Light-Dark branches.
 - At an external-system integration boundary, preserve the authoritative system's protocol/configuration terminology for fields and concepts. Jig may classify how that material is handled, but must not rename the external concern into a parallel Jig vocabulary. v1.1 GitHub authorization uses GitHub App Device Flow directly between Jig and GitHub: the native registration owns only the public `client_id` plus public App routing metadata. `client_secret` and `redirect_uri` are not part of the governed Device Flow client contract and must not be added merely because other GitHub OAuth flows use them.
 
-## v1.1 branch governance
+## v1.1.2 branch governance
 
-- `v1.1` is the single authoritative integration branch for all v1.1 implementation, documentation, evidence and physical-certification corrections until the version is ready for final promotion.
-- Do not distribute v1.1 implementation state across parallel `work/v1.1-*`, remediation, certification or synchronization branches. Temporary branches may be used only as short-lived transport/CI mechanisms; once their content is accepted it must be integrated into `v1.1` immediately and they are not product-state authority.
-- All v1.1 status/evidence assessments must read the `v1.1` branch. A green temporary-branch SHA is evidence only when that exact executable content is contained in `v1.1`.
-- IMP-09 and IMP-15 block **promotion from `v1.1` to `master` / release**, not integration of the candidate implementation into `v1.1`. Physical failures are corrected on `v1.1`; do not fork a competing implementation line.
-- `master` remains the published-release line until the governed v1.1 promotion/release sequence explicitly advances it.
+- `docs/v1.1.2-corrective-changelog` is the single authoritative integration branch for the active v1.1.2 corrective campaign, despite its historical documentation-oriented name. It owns the binding authority, implementation, evidence and corrective changes until the candidate is promoted to `master`.
+- Implementation must be integrated into this branch. Do not create a competing long-lived `v1.1.2`, `work/v1.1.2-*`, remediation, certification or synchronization product-state branch.
+- Short-lived task/transport branches are permitted only when needed for review or CI; accepted work must be merged back into `docs/v1.1.2-corrective-changelog` immediately, and only the integrated branch is authoritative.
+- PR #67 is the current `docs/v1.1.2-corrective-changelog` -> `master` integration PR. Its head may accumulate the governed implementation; a green task branch is evidence only when its exact executable content is contained in the authoritative integration branch.
+- IMP-15's evidence gate and IMP-16's causal correction block **final promotion to master/release**, not integration of earlier prerequisite work into the authoritative branch.
+- `master` remains the published-release line until the complete v1.1.2 candidate passes IMP-18 and the separate governed release/v1.1.2 metadata transition explicitly advances publication.
 
 ## v1.1 physical-acceptance domain correction
 
