@@ -9,6 +9,10 @@ export const gruvboxTheme = defineTheme({
   extends: neutralTheme,
   tokens: communityColorTokens(gruvboxPalette),
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: gruvboxPalette.body,
+      planner: gruvboxPalette.surface,
+      task: gruvboxPalette.card,
+    }),
   },
 });
