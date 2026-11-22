@@ -1,6 +1,5 @@
 import {
   AlertDialog,
-  AppShell,
   Button,
   Icon,
   IconButton,
@@ -13,7 +12,6 @@ import {
   useRef,
   useState,
 } from "react";
-import type { ReactNode } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
 import {
   clampPlannerHorizonStart,
@@ -41,10 +39,6 @@ import {
 } from "./runtime";
 import { Planner, type WeekTransitionDirection } from "./planner";
 import {
-  CompactApplicationNavigation,
-  PlannerHeader,
-} from "./planner-header";
-import {
   ReminderMonitor,
   useReminderClock,
 } from "./reminder";
@@ -65,12 +59,13 @@ import {
   todayCivilDate,
 } from "./dates";
 import {
-  TaskWorkspaceBottomSheet,
-  TaskWorkspaceDrawer,
   type TaskWorkspacePresentation,
   type TaskWorkspaceState,
 } from "./task-workspace";
 import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
+import { DesktopConfiguredApplication } from "./presentation/desktop/configured-application";
+import { NarrowConfiguredApplication } from "./presentation/narrow/configured-application";
+import { ApplicationShell } from "./presentation/shared/application-shell";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
 import {
@@ -110,35 +105,6 @@ function initialPlannerState(): PlannerState {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-interface ApplicationShellProps {
-  readonly topNav: ReactNode;
-  readonly children: ReactNode;
-}
-
-function ApplicationShell({
-  topNav,
-  children,
-}: ApplicationShellProps): React.ReactElement {
-  const [motionReady, setMotionReady] = useState(false);
-
-  useEffect(() => {
-    setMotionReady(true);
-  }, []);
-
-  return (
-    <AppShell
-      className={motionReady ? "jig-app-shell jig-app-shell-motion-ready" : "jig-app-shell"}
-      topNav={topNav}
-      mobileNav={false}
-      contentPadding={0}
-      height="fill"
-      variant="section"
-    >
-      {children}
-    </AppShell>
-  );
 }
 
 function OnboardingHeader(): React.ReactElement {
@@ -903,10 +869,32 @@ function ConfiguredApp({
       />
     );
 
-  const workspaceSurface =
-    destination === "settings" ? null : layoutMode === "narrow" ? (
-      <TaskWorkspaceBottomSheet
+
+  const configuredPresentation =
+    layoutMode === "desktop" ? (
+      <DesktopConfiguredApplication
+        destination={destination}
+        weekLabel={formatPlannerHorizonRange(
+          plannerState.displayedHorizonStart,
+        )}
+        canGoPrevious={
+          plannerState.displayedHorizonStart > todayCivilDate()
+        }
+        statusControl={statusControl}
+        compactStatusControl={compactStatusControl}
+        onHome={() => navigateDestination("planner")}
+        onPreviousWeek={requestPreviousWeek}
+        onToday={goToToday}
+        onNextWeek={requestNextWeek}
+        onAdd={() => openCreate(todayCivilDate())}
+        onNavigate={navigateDestination}
+        content={content}
+        durableFeedback={durableBanner}
+        transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
+        destinationTransition={destinationTransition}
+        todayScrollRequest={todayScrollRequest}
+        onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
         recurrenceSeries={selectedRecurrenceSeries}
@@ -917,8 +905,29 @@ function ConfiguredApp({
         onClose={closeWorkspace}
       />
     ) : (
-      <TaskWorkspaceDrawer
+      <NarrowConfiguredApplication
+        destination={destination}
+        weekLabel={formatPlannerHorizonRange(
+          plannerState.displayedHorizonStart,
+        )}
+        canGoPrevious={
+          plannerState.displayedHorizonStart > todayCivilDate()
+        }
+        statusControl={statusControl}
+        compactStatusControl={compactStatusControl}
+        onHome={() => navigateDestination("planner")}
+        onPreviousWeek={requestPreviousWeek}
+        onToday={goToToday}
+        onNextWeek={requestNextWeek}
+        onAdd={() => openCreate(todayCivilDate())}
+        onNavigate={navigateDestination}
+        content={content}
+        durableFeedback={durableBanner}
+        transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
+        destinationTransition={destinationTransition}
+        todayScrollRequest={todayScrollRequest}
+        onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
         recurrenceSeries={selectedRecurrenceSeries}
@@ -932,70 +941,7 @@ function ConfiguredApp({
 
   return (
     <>
-        <ApplicationShell
-          topNav={
-            <PlannerHeader
-              destination={destination}
-              layoutMode={layoutMode}
-              weekLabel={formatPlannerHorizonRange(
-                plannerState.displayedHorizonStart,
-              )}
-              canGoPrevious={
-                plannerState.displayedHorizonStart > todayCivilDate()
-              }
-              statusControl={statusControl}
-              compactStatusControl={compactStatusControl}
-              onHome={() => navigateDestination("planner")}
-              onPreviousWeek={requestPreviousWeek}
-              onToday={goToToday}
-              onNextWeek={requestNextWeek}
-              onAdd={() => openCreate(todayCivilDate())}
-              onNavigate={navigateDestination}
-            />
-          }
-        >
-          {durableBanner}
-          {operationConfirmationView}
-          <div
-            className={[
-              "jig-content-frame",
-              layoutMode === "narrow" && todayScrollRequest > 0
-                ? "jig-content-frame-today-smooth"
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <div
-              key={destination}
-              className={[
-                "jig-content",
-                "jig-content-configured",
-                destination === "planner"
-                  ? "jig-content-configured-planner"
-                  : "",
-                destinationTransition === destination
-                  ? "jig-content-configured-transition"
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onPointerDown={dismissWorkspaceFromContent}
-            >
-              {content}
-            </div>
-          </div>
-          {workspaceSurface}
-          {layoutMode === "narrow" && workspacePresentation === null ? (
-            <CompactApplicationNavigation
-              destination={destination}
-              showAdd
-              onAdd={() => openCreate(todayCivilDate())}
-              onNavigate={navigateDestination}
-            />
-          ) : null}
-        </ApplicationShell>
-
+      {configuredPresentation}
         <AlertDialog
           isOpen={deleteTask !== null}
           onOpenChange={(open) => {
