@@ -148,19 +148,51 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
 });
 
-test("responsive reflow preserves an open workspace draft and appearance remains presentation-only", async ({ page }) => {
-  await openGlobalAdd(page);
-  const desktopWorkspace = page.getByRole("dialog", { name: "Add task" });
-  await desktopWorkspace.getByLabel("Title").fill("Draft survives reflow");
+test("configured presenter replacement preserves controller state and appearance remains presentation-only", async ({ page }) => {
+  await page.setViewportSize({ width: 1168, height: 900 });
+  await expect(
+    page.locator('[data-jig-configured-presentation="desktop"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('[data-jig-configured-presentation="narrow"]'),
+  ).toHaveCount(0);
 
-  await page.setViewportSize({ width: 640, height: 900 });
-  const narrowWorkspace = page.getByRole("dialog", { name: "Add task" });
-  await expect(narrowWorkspace).toBeVisible();
-  await expect(narrowWorkspace.getByLabel("Title")).toHaveValue("Draft survives reflow");
-  await narrowWorkspace.getByRole("button", { name: "Cancel", exact: true }).click();
+  await openGlobalAdd(page);
+  let workspace = page.getByRole("dialog", { name: "Add task" });
+  await workspace.getByLabel("Title").fill("Draft survives presenter replacement");
+
+  await page.setViewportSize({ width: 1167, height: 900 });
+  await expect(
+    page.locator('[data-jig-configured-presentation="desktop"]'),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('[data-jig-configured-presentation="narrow"]'),
+  ).toHaveCount(1);
+  workspace = page.getByRole("dialog", { name: "Add task" });
+  await expect(workspace).toBeVisible();
+  await expect(workspace.getByLabel("Title")).toHaveValue(
+    "Draft survives presenter replacement",
+  );
+
+  await page.setViewportSize({ width: 1168, height: 900 });
+  await expect(
+    page.locator('[data-jig-configured-presentation="desktop"]'),
+  ).toHaveCount(1);
+  workspace = page.getByRole("dialog", { name: "Add task" });
+  await expect(workspace.getByLabel("Title")).toHaveValue(
+    "Draft survives presenter replacement",
+  );
+  await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await navigateTo(page, "Settings");
+  await page.setViewportSize({ width: 1167, height: 900 });
+  await expect(
+    page
+      .getByRole("navigation", { name: "Primary" })
+      .getByRole("button", { name: "Settings", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
-  await navigateTo(page, "Settings");
   await page.getByText("Dark", { exact: true }).click();
   await expect
     .poll(() =>
