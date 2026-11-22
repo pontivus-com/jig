@@ -1006,9 +1006,9 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
   if (sourceBox === null) {
     throw new Error("Auto-scroll source geometry unavailable");
   }
-  const frame = page.locator(".jig-content-frame");
+  const scrollOwner = page.locator("#astryx-app-shell-main");
   await expect.poll(
-    async () => frame.evaluate((element) => element.scrollTop),
+    async () => scrollOwner.evaluate((element) => element.scrollTop),
   ).toBe(0);
 
   await page.mouse.move(
