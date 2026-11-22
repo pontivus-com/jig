@@ -625,7 +625,7 @@ export function buildJigDataConflictCase(
   );
   if (automatic.kind === "resolved") return null;
 
-  return {
+  const conflictCase: JigDataConflictCase = {
     dataset_id: analysis.dataset_id,
     ancestor_head: ancestorHead,
     local_head: localHead,
@@ -642,6 +642,25 @@ export function buildJigDataConflictCase(
       sortedSourceRecurrences(analysis.remote.recurrences),
     conflicts: analysis.conflicts,
   };
+
+  if (conflictCase.conflicts.length === 0) {
+    const orders = deriveJigDataDateOrders(conflictCase, []);
+    if (orders === null || orders.length === 0) return null;
+    const orderOnly = applyJigDataResolution(
+      conflictCase,
+      {
+        ancestor_head: ancestorHead,
+        local_head: localHead,
+        remote_head: remoteHead,
+        expected_revision: expectedRevision,
+        choices: [],
+        date_orders: orders,
+      },
+    );
+    if (orderOnly.kind !== "resolved") return null;
+  }
+
+  return conflictCase;
 }
 
 function choiceMap(

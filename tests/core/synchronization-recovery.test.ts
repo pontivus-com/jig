@@ -314,6 +314,49 @@ describe("related Jig-data reconciliation", () => {
     });
   });
 
+  it("does not expose a resolver for an unresolvable combined recurrence invariant", () => {
+    const series = recurrence(S1);
+    const baseT = task(T, "T", 0, {
+      recurrence_series_id: S1,
+      recurrence_occurrence_date: DATE,
+    });
+    const baseU = task(U, "U", 1, {
+      recurrence_series_id: S1,
+      recurrence_occurrence_date: DATE,
+    });
+    const ancestor = snapshot([baseT, baseU], [series]);
+    const local = snapshot([
+      task(T, "T", 0, {
+        recurrence_series_id: null,
+        recurrence_occurrence_date: null,
+        updated_at: "2026-11-22T01:00:00.000Z",
+      }),
+      baseU,
+    ], [series]);
+    const remote = snapshot([baseT], [series]);
+
+    const automatic = reconcileRelatedPortableSnapshots(
+      ancestor,
+      local,
+      remote,
+    );
+    expect(automatic).toStrictEqual({
+      kind: "semantic-conflict",
+      conflicts: [],
+    });
+    expect(
+      buildJigDataConflictCase(
+        ANCESTOR_HEAD,
+        LOCAL_HEAD,
+        REMOTE_HEAD,
+        7,
+        ancestor,
+        local,
+        remote,
+      ),
+    ).toBeNull();
+  });
+
   it("repairs only user-confirmed ordering when independent additions collide on position", () => {
     const baseA = task(A, "A", 0);
     const ancestor = snapshot([baseA]);
