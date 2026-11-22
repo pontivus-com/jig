@@ -32,6 +32,7 @@ jobs:
       - name: Regenerate Astryx theme artifacts for corrective implementation
         run: |
           bun run theme:build
+          bun run theme:check
           git diff -- ui/src/jig.css ui/src/jig.js ui/src/themes > "${RUNNER_TEMP}/theme-generated.diff"
           cat "${RUNNER_TEMP}/theme-generated.diff"
       - name: Retain generated theme diff
