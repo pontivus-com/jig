@@ -110,6 +110,7 @@ export async function readDiagnostics(): Promise<Diagnostics> {
     repository_adapter_healthy:
       status.local_git !== "issue" &&
       status.remote.state !== "sync-issue",
+    synchronization: synchronization.diagnostics(),
   };
 }
 

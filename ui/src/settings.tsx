@@ -8,9 +8,10 @@ import {
 } from "@astryxdesign/core";
 
 import { useEffect, useState } from "react";
-import type {
-  Diagnostics,
-  ServiceStatus,
+import {
+  formatSynchronizationDiagnostics,
+  type Diagnostics,
+  type ServiceStatus,
 } from "../../src/protocol/runtime";
 import {
   localGitStatusPresentation,
@@ -27,6 +28,7 @@ import {
   type NotificationSettingsState,
 } from "./notification-settings";
 import { NotificationSettingsContent } from "./notification-settings-content";
+import { copyText } from "./native/clipboard";
 import {
   THEME_DEFINITIONS,
   THEME_GROUPS,
@@ -332,8 +334,81 @@ export function SettingsView({
                       </dd>
                     </div>
                   )}
+                  <div>
+                    <dt>Synchronization phase</dt>
+                    <dd>{diagnostics?.synchronization.phase ?? "Unavailable"}</dd>
+                  </div>
+                  <div>
+                    <dt>Failure reason</dt>
+                    <dd>{diagnostics?.synchronization.reason ?? "None"}</dd>
+                  </div>
+                  <div>
+                    <dt>Retryable</dt>
+                    <dd>
+                      {diagnostics?.synchronization.retryable === null ||
+                      diagnostics === null
+                        ? "—"
+                        : diagnostics.synchronization.retryable
+                          ? "Yes"
+                          : "No"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Attempt count</dt>
+                    <dd>{diagnostics?.synchronization.attempt_count ?? 0}</dd>
+                  </div>
+                  <div>
+                    <dt>Last attempt</dt>
+                    <dd>{diagnostics?.synchronization.last_attempt_at ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Next retry</dt>
+                    <dd>{diagnostics?.synchronization.next_retry_at ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Local Jig head</dt>
+                    <dd>{diagnostics?.synchronization.local_head ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Remote Jig head</dt>
+                    <dd>{diagnostics?.synchronization.remote_head ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Last adopted head</dt>
+                    <dd>{diagnostics?.synchronization.last_adopted_head ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Lineage</dt>
+                    <dd>{diagnostics?.synchronization.lineage ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Recovery</dt>
+                    <dd>
+                      {diagnostics?.synchronization.recovery_attempted
+                        ? diagnostics.synchronization.recovery_outcome ??
+                          "In progress"
+                        : "Not attempted"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Adapter summary</dt>
+                    <dd>{diagnostics?.synchronization.error_summary ?? "—"}</dd>
+                  </div>
                 </dl>
                 <div className="jig-settings-diagnostics-actions">
+                  <Button
+                    label="Copy diagnostics"
+                    variant="secondary"
+                    isDisabled={diagnostics === null}
+                    onClick={() => {
+                      if (diagnostics === null) return;
+                      void copyText(
+                        formatSynchronizationDiagnostics(
+                          diagnostics.synchronization,
+                        ),
+                      );
+                    }}
+                  />
                   <Button
                     label="Sync now"
                     variant="secondary"

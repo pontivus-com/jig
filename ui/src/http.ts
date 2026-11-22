@@ -16,6 +16,7 @@ import type {
   Diagnostics,
   RepositorySynchronizationStatus,
   ServiceStatus,
+  SynchronizationDiagnostics,
 } from "../../src/protocol/runtime";
 
 declare global {
@@ -329,6 +330,184 @@ export async function readStatus(): Promise<ServiceStatus> {
   };
 }
 
+function parseSynchronizationDiagnostics(
+  value: unknown,
+): SynchronizationDiagnostics {
+  const payload = objectValue(value);
+  const phase = payload.phase;
+  const reason = payload.reason;
+  const retryable = payload.retryable;
+  const attemptCount = payload.attempt_count;
+  const lastAttemptAt = payload.last_attempt_at;
+  const nextRetryAt = payload.next_retry_at;
+  const localHead = payload.local_head;
+  const remoteHead = payload.remote_head;
+  const lastAdoptedHead = payload.last_adopted_head;
+  const lineage = payload.lineage;
+  const remoteName = payload.remote_name;
+  const remoteLocation = payload.remote_location;
+  const recoveryAttempted = payload.recovery_attempted;
+  const recoveryOutcome = payload.recovery_outcome;
+  const errorSummary = payload.error_summary;
+
+  if (
+    phase !== "idle" &&
+    phase !== "local-reconcile" &&
+    phase !== "observe-remote" &&
+    phase !== "classify" &&
+    phase !== "adopt-remote" &&
+    phase !== "export-local" &&
+    phase !== "push" &&
+    phase !== "verify-remote" &&
+    phase !== "recover-divergence" &&
+    phase !== "resolve-conflict"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  if (
+    reason !== null &&
+    reason !== "local-export-failed" &&
+    reason !== "transport" &&
+    reason !== "authentication" &&
+    reason !== "remote-ambiguous" &&
+    reason !== "remote-absent-after-sync" &&
+    reason !== "remote-rewritten" &&
+    reason !== "diverged" &&
+    reason !== "ancestry-unknown" &&
+    reason !== "invalid-snapshot" &&
+    reason !== "dataset-mismatch" &&
+    reason !== "semantic-conflict" &&
+    reason !== "ref-race" &&
+    reason !== "unknown"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  if (
+    retryable !== null &&
+    typeof retryable !== "boolean"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  if (
+    typeof attemptCount !== "number" ||
+    !Number.isInteger(attemptCount) ||
+    attemptCount < 0
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  const nullableStrings = [
+    lastAttemptAt,
+    nextRetryAt,
+    remoteName,
+    remoteLocation,
+    errorSummary,
+  ];
+  if (
+    nullableStrings.some(
+      (candidate) =>
+        candidate !== null &&
+        typeof candidate !== "string",
+    )
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  for (const head of [localHead, remoteHead, lastAdoptedHead]) {
+    if (
+      head !== null &&
+      (typeof head !== "string" ||
+        !/^[0-9a-f]{12}$/.test(head))
+    ) {
+      throw new JigHttpError(
+        500,
+        value,
+        "Jig service returned invalid synchronization diagnostics",
+      );
+    }
+  }
+  if (
+    lineage !== null &&
+    lineage !== "equal" &&
+    lineage !== "remote-ahead" &&
+    lineage !== "local-ahead" &&
+    lineage !== "diverged" &&
+    lineage !== "unknown"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  if (typeof recoveryAttempted !== "boolean") {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  if (
+    recoveryOutcome !== null &&
+    recoveryOutcome !== "accepted" &&
+    recoveryOutcome !== "refused" &&
+    recoveryOutcome !== "resumed" &&
+    recoveryOutcome !== "failed"
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  if (
+    recoveryAttempted === false &&
+    recoveryOutcome !== null
+  ) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+
+  return {
+    phase,
+    reason,
+    retryable,
+    attempt_count: attemptCount,
+    last_attempt_at: lastAttemptAt as string | null,
+    next_retry_at: nextRetryAt as string | null,
+    local_head: localHead as string | null,
+    remote_head: remoteHead as string | null,
+    last_adopted_head: lastAdoptedHead as string | null,
+    lineage,
+    remote_name: remoteName as string | null,
+    remote_location: remoteLocation as string | null,
+    recovery_attempted: recoveryAttempted,
+    recovery_outcome: recoveryOutcome,
+    error_summary: errorSummary as string | null,
+  };
+}
+
 export async function readDiagnostics(): Promise<Diagnostics> {
   const payload = objectValue(await fetchJson("/api/v1/diagnostics"));
   const booleanFields = [
@@ -369,6 +548,8 @@ export async function readDiagnostics(): Promise<Diagnostics> {
     repository_path: payload.repository_path,
     portable_format_version: payload.portable_format_version,
     repository_adapter_healthy: payload.repository_adapter_healthy,
+    synchronization:
+      parseSynchronizationDiagnostics(payload.synchronization),
   };
 }
 

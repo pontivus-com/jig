@@ -1084,7 +1084,10 @@ describe("Android Git smart-HTTP feasibility", () => {
         null,
         credential,
       ),
-    ).resolves.toMatchObject({ state: "unsafe" });
+    ).resolves.toMatchObject({
+      state: "unsafe",
+      unsafe_reason: "invalid-snapshot",
+    });
     expect(
       await reopenAndroidPortableRepository(
         effects,

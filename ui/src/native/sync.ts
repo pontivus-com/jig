@@ -10,8 +10,13 @@ import {
   reconcilePersistedPortableSnapshot,
   synchronizationPending,
 } from "../../../src/persistence/synchronization";
-import type {
-  RepositorySynchronizationStatus,
+import {
+  sanitizeSynchronizationErrorSummary,
+  synchronizationHeadPrefix,
+  type RepositorySynchronizationStatus,
+  type SynchronizationDiagnosticPhase,
+  type SynchronizationDiagnostics,
+  type SynchronizationFailureReason,
 } from "../../../src/protocol/runtime";
 import {
   decideSynchronization,
@@ -33,6 +38,7 @@ import {
 
 interface ObservedAndroidRemote {
   readonly revision: number;
+  readonly last_adopted_head: string | null;
   readonly observation: AndroidPortableRemoteObservation;
 }
 
@@ -40,6 +46,7 @@ export interface AndroidSyncController {
   readonly start: () => Promise<void>;
   readonly stop: () => void;
   readonly status: () => RepositorySynchronizationStatus;
+  readonly diagnostics: () => SynchronizationDiagnostics;
   readonly notifyMutation: () => void;
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
 }
@@ -66,11 +73,66 @@ function observationFacts(
   }
 }
 
+function androidObservationFailureReason(
+  observation: AndroidPortableRemoteObservation,
+  localPending: boolean,
+): SynchronizationFailureReason | null {
+  switch (observation.state) {
+    case "unsafe":
+      return observation.unsafe_reason;
+    case "absent":
+      return observation.previously_synchronized
+        ? "remote-absent-after-sync"
+        : null;
+    case "present":
+      if (observation.remote_rewritten) return "remote-rewritten";
+      if (observation.lineage === "diverged") return "diverged";
+      if (observation.lineage === "unknown") return "ancestry-unknown";
+      if (observation.lineage === "remote-ahead" && localPending) {
+        return "diverged";
+      }
+      return null;
+  }
+}
+
+function androidAdapterFailureReason(
+  error: unknown,
+): SynchronizationFailureReason {
+  const summary = sanitizeSynchronizationErrorSummary(error);
+  return /auth|credential|token/i.test(summary)
+    ? "authentication"
+    : "transport";
+}
+
+function initialAndroidSynchronizationDiagnostics(): SynchronizationDiagnostics {
+  return {
+    phase: "idle",
+    reason: null,
+    retryable: null,
+    attempt_count: 0,
+    last_attempt_at: null,
+    next_retry_at: null,
+    local_head: null,
+    remote_head: null,
+    last_adopted_head: null,
+    lineage: null,
+    remote_name: "origin",
+    remote_location: "Android managed Git repository",
+    recovery_attempted: false,
+    recovery_outcome: null,
+    error_summary: null,
+  };
+}
+
 export function createAndroidSyncController(
   database: JigSqlConnection,
   effects: AndroidGitEffects,
   credential: GitCredentialProvider,
 ): AndroidSyncController {
+  let currentDiagnostics = initialAndroidSynchronizationDiagnostics();
+  let attemptStartedAt: string | null = null;
+  let diagnosticFailureReason: SynchronizationFailureReason | null = null;
+  let diagnosticFailureCount = 0;
   let current: RepositorySynchronizationStatus = {
     local_git: "pending",
     remote: {
@@ -82,6 +144,93 @@ export function createAndroidSyncController(
   let running: Promise<RepositorySynchronizationStatus> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
+
+  const beginPhase = (
+    phase: SynchronizationDiagnosticPhase,
+  ): void => {
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      phase,
+      reason: null,
+      retryable: null,
+      attempt_count: 0,
+      last_attempt_at: attemptStartedAt,
+      next_retry_at: null,
+      error_summary: null,
+    };
+  };
+
+  const beginAttempt = (): void => {
+    attemptStartedAt = new Date().toISOString();
+    beginPhase("local-reconcile");
+  };
+
+  const completeDiagnostics = (): void => {
+    diagnosticFailureReason = null;
+    diagnosticFailureCount = 0;
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      phase: "idle",
+      reason: null,
+      retryable: null,
+      attempt_count: 0,
+      last_attempt_at: attemptStartedAt,
+      next_retry_at: null,
+      recovery_attempted: false,
+      recovery_outcome: null,
+      error_summary: null,
+    };
+  };
+
+  const recordFailure = (
+    phase: SynchronizationDiagnosticPhase,
+    reason: SynchronizationFailureReason,
+    retryable: boolean,
+    error?: unknown,
+  ): void => {
+    if (diagnosticFailureReason === reason) {
+      diagnosticFailureCount += 1;
+    } else {
+      diagnosticFailureReason = reason;
+      diagnosticFailureCount = 1;
+    }
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      phase,
+      reason,
+      retryable,
+      attempt_count: diagnosticFailureCount,
+      last_attempt_at:
+        attemptStartedAt ?? new Date().toISOString(),
+      next_retry_at: null,
+      recovery_attempted: false,
+      recovery_outcome: null,
+      error_summary:
+        error === undefined
+          ? null
+          : sanitizeSynchronizationErrorSummary(error),
+    };
+  };
+
+  const applyObservationDiagnostics = (
+    observed: ObservedAndroidRemote,
+  ): void => {
+    const observation = observed.observation;
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      local_head: synchronizationHeadPrefix(observation.local_head),
+      remote_head:
+        observation.state === "present"
+          ? synchronizationHeadPrefix(observation.remote_head)
+          : null,
+      last_adopted_head:
+        synchronizationHeadPrefix(observed.last_adopted_head),
+      lineage:
+        observation.state === "present"
+          ? observation.lineage
+          : null,
+    };
+  };
 
   const clearTimer = (): void => {
     if (timer !== null) {
@@ -109,6 +258,11 @@ export function createAndroidSyncController(
           remote_name: remote.name,
           remote_location: remote.location,
         },
+      };
+      currentDiagnostics = {
+        ...currentDiagnostics,
+        remote_name: remote.name,
+        remote_location: remote.location,
       };
     } catch {
       current = {
@@ -147,10 +301,14 @@ export function createAndroidSyncController(
     );
   };
 
-  const observe = async (): Promise<ObservedAndroidRemote> => {
+  const observe = async (
+    phase: "observe-remote" | "verify-remote" = "observe-remote",
+  ): Promise<ObservedAndroidRemote> => {
+    beginPhase(phase);
     const metadata = await readMetadata(database);
-    return {
+    const observed = {
       revision: metadata.revision,
+      last_adopted_head: metadata.last_adopted_head,
       observation: await observeAndroidPortableRemote(
         effects,
         metadata.dataset_id,
@@ -158,6 +316,8 @@ export function createAndroidSyncController(
         credential,
       ),
     };
+    applyObservationDiagnostics(observed);
+    return observed;
   };
 
   const finishInterruptedAdoption = (
@@ -193,11 +353,21 @@ export function createAndroidSyncController(
     mayPush: boolean,
   ): Promise<RepositorySynchronizationStatus | null> => {
     const { observation } = observed;
+    beginPhase("classify");
+    const localPending = await isPending();
     const decision = decideSynchronization(
-      observationFacts(observation, await isPending()),
+      observationFacts(observation, localPending),
     );
 
     if (decision.kind === "attention") {
+      recordFailure(
+        "classify",
+        androidObservationFailureReason(
+          observation,
+          localPending,
+        ) ?? "unknown",
+        false,
+      );
       return setRemoteState("sync-issue");
     }
     if (decision.kind === "synchronized") {
@@ -205,39 +375,71 @@ export function createAndroidSyncController(
         return setRemoteState("sync-issue");
       }
       await markAdoptedHead(database, observation.remote_head);
-      return setRemoteState("synchronized");
+      currentDiagnostics = {
+        ...currentDiagnostics,
+        last_adopted_head:
+          synchronizationHeadPrefix(observation.remote_head),
+      };
+      const status = await setRemoteState("synchronized");
+      completeDiagnostics();
+      return status;
     }
     if (decision.kind === "adopt-remote") {
       if (observation.state !== "present") {
         return setRemoteState("sync-issue");
       }
+      beginPhase("adopt-remote");
       try {
         await adoptRemote(observation, observed.revision);
-      } catch {
+      } catch (error) {
+        recordFailure("adopt-remote", "ref-race", false, error);
         return setRemoteState("sync-issue");
       }
       return null;
     }
     if (decision.kind === "local-only") {
+      recordFailure("classify", "unknown", false);
       return setRemoteState("sync-issue");
     }
     if (!mayPush) {
+      recordFailure(
+        "verify-remote",
+        "transport",
+        true,
+        "Remote verification still requires a local push",
+      );
       return setRemoteState("sync-issue");
     }
 
     try {
-      if (await isPending()) await exportCurrent();
-    } catch {
+      if (await isPending()) {
+        beginPhase("export-local");
+        await exportCurrent();
+      }
+    } catch (error) {
+      recordFailure(
+        "export-local",
+        "local-export-failed",
+        true,
+        error,
+      );
       return setRemoteState("pending", "issue");
     }
 
+    beginPhase("push");
     try {
       await pushAndroidPortableRepository(effects, credential);
-    } catch {
+    } catch (error) {
       let afterFailure: ObservedAndroidRemote;
       try {
-        afterFailure = await observe();
-      } catch {
+        afterFailure = await observe("verify-remote");
+      } catch (observeError) {
+        recordFailure(
+          "verify-remote",
+          androidAdapterFailureReason(observeError),
+          true,
+          observeError,
+        );
         return setRemoteState("sync-issue");
       }
       const afterDecision = decideSynchronization(
@@ -247,29 +449,52 @@ export function createAndroidSyncController(
         ),
       );
       if (afterDecision.kind === "push-local") {
+        recordFailure(
+          "push",
+          androidAdapterFailureReason(error),
+          true,
+          error,
+        );
         return setRemoteState("sync-issue");
       }
       return processObservation(afterFailure, false);
     }
 
     try {
-      return processObservation(await observe(), false);
-    } catch {
+      return processObservation(
+        await observe("verify-remote"),
+        false,
+      );
+    } catch (error) {
+      recordFailure(
+        "verify-remote",
+        androidAdapterFailureReason(error),
+        true,
+        error,
+      );
       return setRemoteState("sync-issue");
     }
   };
 
   const runOnce = async (): Promise<RepositorySynchronizationStatus> => {
+    beginAttempt();
     try {
       await reconcileLocalSnapshot();
-    } catch {
+    } catch (error) {
+      recordFailure("local-reconcile", "unknown", true, error);
       return setRemoteState("pending", "issue");
     }
 
     let observed: ObservedAndroidRemote;
     try {
       observed = await observe();
-    } catch {
+    } catch (error) {
+      recordFailure(
+        "observe-remote",
+        androidAdapterFailureReason(error),
+        true,
+        error,
+      );
       return setRemoteState("sync-issue");
     }
 
@@ -277,12 +502,24 @@ export function createAndroidSyncController(
       const interrupted =
         await finishInterruptedAdoption(observed.observation);
       if (interrupted === "unsafe") {
+        recordFailure(
+          "adopt-remote",
+          "ref-race",
+          false,
+          "Interrupted adoption evidence is inconsistent",
+        );
         return setRemoteState("sync-issue");
       }
       if (interrupted === "finished") {
         try {
-          observed = await observe();
-        } catch {
+          observed = await observe("verify-remote");
+        } catch (error) {
+          recordFailure(
+            "verify-remote",
+            androidAdapterFailureReason(error),
+            true,
+            error,
+          );
           return setRemoteState("sync-issue");
         }
       }
@@ -294,11 +531,25 @@ export function createAndroidSyncController(
     try {
       return (
         await processObservation(
-          await observe(),
+          await observe("verify-remote"),
           false,
         )
-      ) ?? setRemoteState("sync-issue");
-    } catch {
+      ) ?? (() => {
+        recordFailure(
+          "verify-remote",
+          "unknown",
+          false,
+          "Remote verification did not settle",
+        );
+        return setRemoteState("sync-issue");
+      })();
+    } catch (error) {
+      recordFailure(
+        "verify-remote",
+        androidAdapterFailureReason(error),
+        true,
+        error,
+      );
       return setRemoteState("sync-issue");
     }
   };
@@ -317,7 +568,9 @@ export function createAndroidSyncController(
       stopped = false;
       try {
         await reconcileLocalSnapshot();
-      } catch {
+      } catch (error) {
+        attemptStartedAt = new Date().toISOString();
+        recordFailure("local-reconcile", "unknown", true, error);
         await setRemoteState("pending", "issue");
         return;
       }
@@ -328,6 +581,7 @@ export function createAndroidSyncController(
       clearTimer();
     },
     status: () => current,
+    diagnostics: () => currentDiagnostics,
     notifyMutation: () => {
       void setRemoteState("pending");
       if (stopped) return;

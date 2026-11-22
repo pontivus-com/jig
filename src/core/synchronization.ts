@@ -7,6 +7,11 @@ export type SynchronizationLineage =
   | "diverged"
   | "unknown";
 
+export type SynchronizationUnsafeReason =
+  | "invalid-snapshot"
+  | "dataset-mismatch"
+  | "unknown";
+
 export type SynchronizationFacts =
   | {
       readonly kind: "no-remote";

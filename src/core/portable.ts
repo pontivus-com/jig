@@ -26,6 +26,13 @@ export class SnapshotValidationError extends Error {
   }
 }
 
+export class SnapshotDatasetMismatchError extends SnapshotValidationError {
+  constructor() {
+    super("Snapshot dataset identity does not match the configured dataset");
+    this.name = "SnapshotDatasetMismatchError";
+  }
+}
+
 function canonicalTaskRecord(task: Task): Record<string, unknown> {
   return {
     completed_at: task.completed_at,
@@ -361,9 +368,7 @@ export function validateSnapshot(
     expectedDatasetId !== undefined &&
     format.dataset_id !== expectedDatasetId
   ) {
-    throw new SnapshotValidationError(
-      "Snapshot dataset identity does not match the configured dataset",
-    );
+    throw new SnapshotDatasetMismatchError();
   }
 
   const tasks: Task[] = [];

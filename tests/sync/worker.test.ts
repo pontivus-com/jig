@@ -163,6 +163,7 @@ function observation(
         state: "unsafe",
         remote: REMOTE,
         local_head: repo.localHead,
+        unsafe_reason: "invalid-snapshot",
       };
     case "present":
       if (
@@ -400,6 +401,21 @@ describe("cross-installation synchronization worker", () => {
     );
     expect(await readMetadata(db)).toMatchObject({
       last_adopted_head: BASE_HEAD,
+    });
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "idle",
+      reason: null,
+      retryable: null,
+      attempt_count: 0,
+      local_head: "aaaaaaaaaaaa",
+      remote_head: "aaaaaaaaaaaa",
+      last_adopted_head: "aaaaaaaaaaaa",
+      lineage: "equal",
+      remote_name: "origin",
+      remote_location: REMOTE.location,
+      recovery_attempted: false,
+      recovery_outcome: null,
+      error_summary: null,
     });
   });
 
@@ -653,6 +669,17 @@ describe("cross-installation synchronization worker", () => {
       last_exported_revision: 0,
       pending_sync: true,
     });
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "observe-remote",
+      reason: "authentication",
+      retryable: false,
+      attempt_count: 1,
+      last_attempt_at: "2026-11-19T00:00:00.000Z",
+      next_retry_at: null,
+      recovery_attempted: false,
+      recovery_outcome: null,
+      error_summary: "GitHub authorization is unavailable",
+    });
   });
 
   it("SYNC-E4 exports accepted local planning before retrying a transport outage", async () => {
@@ -698,6 +725,17 @@ describe("cross-installation synchronization worker", () => {
       revision: 1,
       last_exported_revision: 1,
       pending_sync: false,
+    });
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "observe-remote",
+      reason: "transport",
+      retryable: true,
+      attempt_count: 1,
+      last_attempt_at: "2026-11-19T00:00:00.000Z",
+      next_retry_at: "2026-11-19T00:00:05.000Z",
+      recovery_attempted: false,
+      recovery_outcome: null,
+      error_summary: "synthetic transport outage",
     });
   });
 
@@ -853,7 +891,10 @@ describe("cross-installation synchronization worker", () => {
     const base = serializeSnapshot([], DATASET_ID);
     await markExported(db, 0, BASE_HEAD);
 
-    for (const mode of ["ambiguous", "unsafe"] as const) {
+    for (const [mode, expectedReason] of [
+      ["ambiguous", "remote-ambiguous"],
+      ["unsafe", "invalid-snapshot"],
+    ] as const) {
       const repo: FakeRepository = {
         mode,
         localHead: BASE_HEAD,
@@ -876,6 +917,13 @@ describe("cross-installation synchronization worker", () => {
       });
       expect(writes.count).toBe(0);
       expect(pushes.count).toBe(0);
+      expect(controller.diagnostics()).toMatchObject({
+        phase: "classify",
+        reason: expectedReason,
+        retryable: false,
+        attempt_count: 1,
+        local_head: "aaaaaaaaaaaa",
+      });
     }
 
     const divergent: FakeRepository = {
@@ -900,5 +948,16 @@ describe("cross-installation synchronization worker", () => {
     });
     expect(divergentEffects.writes.count).toBe(0);
     expect(divergentEffects.pushes.count).toBe(0);
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "classify",
+      reason: "diverged",
+      retryable: false,
+      attempt_count: 1,
+      local_head: "aaaaaaaaaaaa",
+      remote_head: "999999999999",
+      lineage: "diverged",
+      remote_name: "origin",
+      remote_location: REMOTE.location,
+    });
   });
 });

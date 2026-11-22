@@ -23,10 +23,14 @@ import {
 } from "isomorphic-git";
 import {
   serializeSnapshot,
+  SnapshotDatasetMismatchError,
   validateSnapshot,
   type PortableSnapshot,
 } from "../../../src/core/portable";
-import type { SynchronizationLineage } from "../../../src/core/synchronization";
+import type {
+  SynchronizationLineage,
+  SynchronizationUnsafeReason,
+} from "../../../src/core/synchronization";
 import {
   AndroidFsError,
   createAndroidGitFilesystem,
@@ -650,6 +654,7 @@ export type AndroidPortableRemoteObservation =
   | {
       readonly state: "unsafe";
       readonly local_head: string;
+      readonly unsafe_reason: SynchronizationUnsafeReason;
     }
   | {
       readonly state: "present";
@@ -682,6 +687,7 @@ export async function observeAndroidPortableRemote(
     return {
       state: "unsafe",
       local_head: localHead,
+      unsafe_reason: "unknown",
     };
   }
 
@@ -711,6 +717,7 @@ export async function observeAndroidPortableRemote(
     return {
       state: "unsafe",
       local_head: localHead,
+      unsafe_reason: "unknown",
     };
   }
 
@@ -743,7 +750,7 @@ export async function observeAndroidPortableRemote(
       remoteHead,
       expectedDatasetId,
     );
-  } catch {
+  } catch (error) {
     if (previousRemoteHead !== null) {
       await writeRef({
         fs: effects.fs,
@@ -756,6 +763,10 @@ export async function observeAndroidPortableRemote(
     return {
       state: "unsafe",
       local_head: localHead,
+      unsafe_reason:
+        error instanceof SnapshotDatasetMismatchError
+          ? "dataset-mismatch"
+          : "invalid-snapshot",
     };
   }
 

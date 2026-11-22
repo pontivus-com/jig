@@ -1,5 +1,11 @@
 import type { SynchronizationLineage } from "../../core/synchronization";
-import type { PortableSnapshot } from "../../core/portable";
+import {
+  SnapshotDatasetMismatchError,
+  type PortableSnapshot,
+} from "../../core/portable";
+import type {
+  SynchronizationUnsafeReason,
+} from "../../core/synchronization";
 import { GitAdapterError, requireGit, runGit } from "./process";
 import {
   assertAdapterPaths,
@@ -52,6 +58,7 @@ export type PortableRemoteObservation =
       readonly state: "unsafe";
       readonly remote: SynchronizationRemote;
       readonly local_head: string | null;
+      readonly unsafe_reason: SynchronizationUnsafeReason;
     }
   | {
       readonly state: "present";
@@ -426,11 +433,15 @@ export async function observePortableRemote(
       remoteHead,
       expectedDatasetId,
     );
-  } catch {
+  } catch (error) {
     return {
       state: "unsafe",
       remote: authority.remote,
       local_head: localHead,
+      unsafe_reason:
+        error instanceof SnapshotDatasetMismatchError
+          ? "dataset-mismatch"
+          : "invalid-snapshot",
     };
   }
 

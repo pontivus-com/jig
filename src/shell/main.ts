@@ -4,7 +4,10 @@ import {
   SQLITE_SCHEMA_VERSION,
 } from "../persistence/sqlite";
 import { PORTABLE_FORMAT_VERSION } from "../core/portable";
-import type { RepositorySynchronizationStatus } from "../protocol/runtime";
+import type {
+  RepositorySynchronizationStatus,
+  SynchronizationDiagnostics,
+} from "../protocol/runtime";
 import { openDatabase } from "./sqlite-bun";
 import {
   createHttpHandler,
@@ -57,6 +60,7 @@ function createStatus(
 function createDiagnostics(
   config: JigConfig,
   repositoryStatus: RepositorySynchronizationStatus,
+  synchronization: SynchronizationDiagnostics,
 ): Diagnostics {
   return {
     service_healthy: true,
@@ -67,6 +71,7 @@ function createDiagnostics(
     repository_adapter_healthy:
       repositoryStatus.local_git !== "issue" &&
       repositoryStatus.remote.state !== "sync-issue",
+    synchronization,
   };
 }
 
@@ -170,7 +175,12 @@ async function runConfigured(config: JigConfig): Promise<void> {
     current_local_date: () => localCivilDate(new Date()),
     create_id: () => crypto.randomUUID(),
     get_status: () => createStatus(config, sync.status()),
-    get_diagnostics: () => createDiagnostics(config, sync.status()),
+    get_diagnostics: () =>
+      createDiagnostics(
+        config,
+        sync.status(),
+        sync.diagnostics(),
+      ),
     trigger_sync: sync.trigger,
     ensure_current_day_rollover: ensureCurrentDayRollover,
     on_task_mutation: sync.notifyMutation,
