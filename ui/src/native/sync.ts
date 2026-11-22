@@ -15,7 +15,7 @@ import type {
 } from "../../../src/protocol/runtime";
 import {
   decideSynchronization,
-  SYNCHRONIZATION_SYNCHRONIZATION_MUTATION_DEBOUNCE_MS,
+  SYNCHRONIZATION_MUTATION_DEBOUNCE_MS,
   type SynchronizationFacts,
 } from "../../../src/core/synchronization";
 import {
