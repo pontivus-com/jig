@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import {
   chmod,
   mkdtemp,
@@ -9,7 +10,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
-import { runGit } from "../../src/shell/git/process";
 import {
   apiCommand,
   apiState,
@@ -26,11 +26,27 @@ async function git(
   cwd: string,
   args: readonly string[],
 ): Promise<string> {
-  const result = await runGit(cwd, args);
-  if (result.exit_code !== 0) {
-    throw new Error(result.stderr || result.stdout);
-  }
-  return result.stdout.trim();
+  return new Promise((resolve, reject) => {
+    execFile(
+      "git",
+      [...args],
+      { cwd, encoding: "utf8" },
+      (error, stdout, stderr) => {
+        if (error !== null) {
+          reject(
+            new Error(
+              "git " +
+                args.join(" ") +
+                " failed: " +
+                (stderr || stdout),
+            ),
+          );
+          return;
+        }
+        resolve(stdout.trim());
+      },
+    );
+  });
 }
 
 async function repositoryStatus(
