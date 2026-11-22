@@ -478,10 +478,20 @@ test("retains governed synchronization-attention evidence without exposing techn
   expect(desktopBannerGeometry.overflow).toBeLessThanOrEqual(1);
   const headerBox = await page.locator(".jig-app-header").boundingBox();
   const bannerBox = await page.locator(".jig-attention-banner").boundingBox();
+  const durableRegionBox = await page
+    .locator(".jig-feedback-durable-desktop")
+    .boundingBox();
   expect(headerBox).not.toBeNull();
   expect(bannerBox).not.toBeNull();
-  if (headerBox !== null && bannerBox !== null) {
+  expect(durableRegionBox).not.toBeNull();
+  if (headerBox !== null && bannerBox !== null && durableRegionBox !== null) {
     expect(bannerBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height);
+    expect(durableRegionBox.width).toBeLessThanOrEqual(800 + 1);
+    expectNear(
+      durableRegionBox.x + durableRegionBox.width / 2,
+      1440 / 2,
+      1,
+    );
   }
   await page.screenshot({
     path: testInfo.outputPath("v1.1-sync-attention-planner-desktop.png"),
@@ -572,6 +582,14 @@ test("retains governed synchronization-attention evidence without exposing techn
     mobileBannerGeometry.messageBottom - 1,
   );
   expect(mobileBannerGeometry.overflow).toBeLessThanOrEqual(1);
+  const narrowDurableBox = await page
+    .locator(".jig-feedback-durable-narrow")
+    .boundingBox();
+  expect(narrowDurableBox).not.toBeNull();
+  if (narrowDurableBox !== null) {
+    expect(narrowDurableBox.x).toBeGreaterThan(0);
+    expect(narrowDurableBox.x + narrowDurableBox.width).toBeLessThan(320);
+  }
   await page
     .getByRole("button", { name: "Dismiss notification", exact: true })
     .click();
