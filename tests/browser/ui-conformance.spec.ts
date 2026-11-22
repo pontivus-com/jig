@@ -1258,7 +1258,10 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     });
 
     await page
-      .getByRole("button", { name: /Mobile geometry inventory/ })
+      .getByRole("button", {
+        name: "Mobile geometry inventory Open reference",
+        exact: true,
+      })
       .click();
     const workspace = page.getByRole("dialog", {
       name: "Mobile geometry inventory",
