@@ -765,7 +765,8 @@ describe("UI ownership architecture", () => {
     expect(narrow).not.toContain("AttentionFeedbackContent");
     expect(app).toContain("<AttentionFeedbackContent");
     expect(app).toContain("<SuccessFeedbackContent");
-    expect(settings).toContain("<AttentionFeedbackContent");
+    expect(settings).not.toContain("<AttentionFeedbackContent");
+    expect(settings).not.toContain("operationError");
     expect(setup).toContain("<AttentionFeedbackContent");
     expect(app).not.toContain("<Banner");
     expect(settings).not.toContain("<Banner");
