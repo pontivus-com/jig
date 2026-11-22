@@ -10,6 +10,11 @@ import {
   type Task,
   type TaskCommand,
 } from "../../src/core/task";
+import {
+  validateOptionalJigDataConflictCase,
+  type JigDataConflictCase,
+  type JigDataResolution,
+} from "../../src/core/synchronization-recovery";
 import type {
   CanonicalState,
   CommandResult,
@@ -620,6 +625,25 @@ export async function submitTaskCommand(
     revision,
     task: validateTask(payload.task),
   };
+}
+
+export async function readSynchronizationConflict(): Promise<
+  JigDataConflictCase | null
+> {
+  return validateOptionalJigDataConflictCase(
+    await fetchJson("/api/v1/sync/conflict"),
+  );
+}
+
+export async function resolveSynchronizationConflict(
+  resolution: JigDataResolution,
+): Promise<RepositorySynchronizationStatus> {
+  const payload = objectValue(
+    await postJson("/api/v1/sync/conflict/resolve", resolution),
+  );
+  return parseRepositorySynchronizationStatus(
+    payload.repository_status,
+  );
 }
 
 export async function triggerSync(): Promise<RepositorySynchronizationStatus> {
