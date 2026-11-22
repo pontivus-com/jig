@@ -29,9 +29,8 @@ import {
   buildJigDataConflictCase,
   reconcileRelatedPortableSnapshots,
   recoveryCommitSpec,
-  type JigDataConflictCase,
-  type JigDataResolution,
 } from "../../../src/core/synchronization-recovery";
+import type * as Recovery from "../../../src/core/synchronization-recovery";
 import {
   SnapshotDatasetMismatchError,
   SnapshotValidationError,
@@ -69,9 +68,9 @@ export interface AndroidSyncController {
   readonly stop: () => void;
   readonly status: () => RepositorySynchronizationStatus;
   readonly diagnostics: () => SynchronizationDiagnostics;
-  readonly readSynchronizationConflict: () => JigDataConflictCase | null;
+  readonly readSynchronizationConflict: () => Recovery.JigDataConflictCase | null;
   readonly resolveSynchronizationConflict: (
-    resolution: JigDataResolution,
+    resolution: Recovery.JigDataResolution,
   ) => Promise<RepositorySynchronizationStatus>;
   readonly notifyMutation: () => void;
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
@@ -137,7 +136,7 @@ export function createAndroidSyncController(
   credential: GitCredentialProvider,
 ): AndroidSyncController {
   let currentDiagnostics = initialAndroidSynchronizationDiagnostics();
-  let currentConflictCase: JigDataConflictCase | null = null;
+  let currentConflictCase: Recovery.JigDataConflictCase | null = null;
   let attemptStartedAt: string | null = null;
   let diagnosticFailureReason: SynchronizationFailureReason | null = null;
   let diagnosticFailureCount = 0;
@@ -1019,7 +1018,7 @@ export function createAndroidSyncController(
   };
 
   const resolveCurrentConflict = async (
-    resolution: JigDataResolution,
+    resolution: Recovery.JigDataResolution,
   ): Promise<RepositorySynchronizationStatus> => {
     const conflictCase = currentConflictCase;
     if (conflictCase === null) {
@@ -1234,7 +1233,7 @@ export function createAndroidSyncController(
   };
 
   const resolveSynchronizationConflict = async (
-    resolution: JigDataResolution,
+    resolution: Recovery.JigDataResolution,
   ): Promise<RepositorySynchronizationStatus> => {
     if (running !== null) {
       await running;
