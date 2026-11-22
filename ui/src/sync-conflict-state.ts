@@ -1,14 +1,10 @@
 import type { PortableSnapshot } from "../../src/core/portable";
 import {
   applyJigDataResolution,
-  deriveJigDataDateOrders,
+  deriveRecovery.JigDataDateOrders,
   jigDataConflictKey,
-  type JigDataConflictCase,
-  type JigDataConflictChoice,
-  type JigDataDateOrder,
-  type JigDataResolution,
-  type ReconciliationSide,
 } from "../../src/core/synchronization-recovery";
+import type * as Recovery from "../../src/core/synchronization-recovery";
 
 export type SyncConflictStep =
   | "choices"
@@ -16,10 +12,10 @@ export type SyncConflictStep =
   | "confirm";
 
 export interface SyncConflictDraftState {
-  readonly conflict_case: JigDataConflictCase;
+  readonly conflict_case: Recovery.JigDataConflictCase;
   readonly step: SyncConflictStep;
   readonly conflict_index: number;
-  readonly choices: ReadonlyMap<string, ReconciliationSide>;
+  readonly choices: ReadonlyMap<string, Recovery.ReconciliationSide>;
   readonly date_orders: ReadonlyMap<string, readonly string[]>;
   readonly confirmed_date_orders: ReadonlySet<string>;
   readonly technical_details: ReadonlySet<string>;
@@ -30,7 +26,7 @@ export type SyncConflictDraftAction =
   | {
       readonly type: "select-side";
       readonly conflict_key: string;
-      readonly side: ReconciliationSide;
+      readonly side: Recovery.ReconciliationSide;
     }
   | {
       readonly type: "set-conflict-index";
@@ -62,7 +58,7 @@ export type SyncConflictDraftAction =
     };
 
 function conflictKeys(
-  conflictCase: JigDataConflictCase,
+  conflictCase: Recovery.JigDataConflictCase,
 ): ReadonlySet<string> {
   return new Set(
     conflictCase.conflicts.map((conflict) =>
@@ -72,9 +68,9 @@ function conflictKeys(
 }
 
 function choicesFor(
-  conflictCase: JigDataConflictCase,
-  choices: ReadonlyMap<string, ReconciliationSide>,
-): readonly JigDataConflictChoice[] {
+  conflictCase: Recovery.JigDataConflictCase,
+  choices: ReadonlyMap<string, Recovery.ReconciliationSide>,
+): readonly Recovery.JigDataConflictChoice[] {
   return conflictCase.conflicts.flatMap((conflict) => {
     const conflictKey = jigDataConflictKey(conflict);
     const side = choices.get(conflictKey);
@@ -85,18 +81,18 @@ function choicesFor(
 }
 
 function requiredDateOrders(
-  conflictCase: JigDataConflictCase,
-  choices: ReadonlyMap<string, ReconciliationSide>,
-): readonly JigDataDateOrder[] | null {
-  return deriveJigDataDateOrders(
+  conflictCase: Recovery.JigDataConflictCase,
+  choices: ReadonlyMap<string, Recovery.ReconciliationSide>,
+): readonly Recovery.JigDataDateOrder[] | null {
+  return deriveRecovery.JigDataDateOrders(
     conflictCase,
     choicesFor(conflictCase, choices),
   );
 }
 
 function stepFor(
-  conflictCase: JigDataConflictCase,
-  choices: ReadonlyMap<string, ReconciliationSide>,
+  conflictCase: Recovery.JigDataConflictCase,
+  choices: ReadonlyMap<string, Recovery.ReconciliationSide>,
   confirmedDates: ReadonlySet<string>,
 ): SyncConflictStep {
   const required = requiredDateOrders(conflictCase, choices);
@@ -107,7 +103,7 @@ function stepFor(
 }
 
 function seededDateOrders(
-  required: readonly JigDataDateOrder[],
+  required: readonly Recovery.JigDataDateOrder[],
 ): ReadonlyMap<string, readonly string[]> {
   return new Map(
     required.map((order) => [order.date, order.task_ids] as const),
@@ -117,10 +113,10 @@ function seededDateOrders(
 function resolutionFromDraft(
   state: SyncConflictDraftState,
   requireConfirmedOrders: boolean,
-): JigDataResolution | null {
+): Recovery.JigDataResolution | null {
   const conflictCase = state.conflict_case;
   const choices = choicesFor(conflictCase, state.choices);
-  const required = deriveJigDataDateOrders(conflictCase, choices);
+  const required = deriveRecovery.JigDataDateOrders(conflictCase, choices);
   if (
     required === null ||
     (
@@ -133,7 +129,7 @@ function resolutionFromDraft(
     return null;
   }
 
-  const dateOrders: JigDataDateOrder[] = [];
+  const dateOrders: Recovery.JigDataDateOrder[] = [];
   for (const requiredOrder of required) {
     const taskIds = state.date_orders.get(requiredOrder.date);
     if (taskIds === undefined) return null;
@@ -154,7 +150,7 @@ function resolutionFromDraft(
 }
 
 export function createSyncConflictDraft(
-  conflictCase: JigDataConflictCase,
+  conflictCase: Recovery.JigDataConflictCase,
 ): SyncConflictDraftState {
   return {
     conflict_case: conflictCase,
@@ -347,7 +343,7 @@ export function syncConflictPreview(
 
 export function syncConflictResolution(
   state: SyncConflictDraftState,
-): JigDataResolution | null {
+): Recovery.JigDataResolution | null {
   const resolution = resolutionFromDraft(state, true);
   if (resolution === null) return null;
   return applyJigDataResolution(
