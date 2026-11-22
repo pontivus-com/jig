@@ -323,6 +323,7 @@
     --jig-status-healthy-text: var(--color-text-success);
     --jig-state-hover-bg: color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%);
     --jig-state-pressed-bg: color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%);
+    --jig-task-text: light-dark(var(--color-on-light), var(--color-on-dark));
     --jig-task-border: var(--color-border-emphasized);
     --jig-brand-primary: var(--color-icon-primary);
     --jig-brand-accent: var(--color-icon-accent);
