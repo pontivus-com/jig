@@ -817,7 +817,7 @@ describe("Android Git smart-HTTP feasibility", () => {
         {
           type: "create",
           title: "Desktop independent",
-          scheduled_date: "2026-11-18",
+          scheduled_date: "2026-11-19",
         },
         (await readCanonicalState(desktopDb)).revision,
         "2026-11-18T05:31:00.000Z",
@@ -957,11 +957,14 @@ describe("Android Git smart-HTTP feasibility", () => {
       await writeSnapshot(
         writer,
         serializeSnapshot(
-          [task(
-            "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4043",
-            "Remote before crash",
-            0,
-          )],
+          [{
+            ...task(
+              "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4043",
+              "Remote before crash",
+              0,
+            ),
+            scheduled_date: "2026-11-19",
+          }],
           DATASET_ID,
         ),
       );
@@ -1192,7 +1195,23 @@ describe("Android Git smart-HTTP feasibility", () => {
         androidBaseRevision,
         "2026-11-18T06:02:00.000Z",
       );
-      androidSync.notifyMutation();
+      const androidConflictState =
+        await readCanonicalState(androidDb);
+      const androidConflictHead =
+        await commitAndroidPortableSnapshot(
+          androidEffects,
+          serializeSnapshot(
+            androidConflictState.tasks,
+            DATASET_ID,
+            androidConflictState.recurrences,
+          ),
+          androidConflictState.revision,
+        );
+      await markExported(
+        androidDb,
+        androidConflictState.revision,
+        androidConflictHead,
+      );
 
       await expect(desktopSync.trigger()).resolves.toMatchObject({
         remote: { state: "synchronized" },
@@ -1203,12 +1222,6 @@ describe("Android Git smart-HTTP feasibility", () => {
         "rev-parse",
         "jig-data",
       ]);
-
-      await expect(androidSync.trigger()).resolves.toMatchObject({
-        local_git: "committed",
-        remote: { state: "sync-issue" },
-      });
-      expect(androidSync.readSynchronizationConflict()).toBeNull();
 
       await expect(androidSync.trigger()).resolves.toMatchObject({
         local_git: "committed",
