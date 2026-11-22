@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding functional design through v1.1.2. The [v1.1.2 corrective functional design](v1.1.2-corrective-functional-design.md) supersedes affected prior clauses for Task drag feedback, synchronization diagnostics/recovery, per-theme surface separation, configured viewport fill, motion tempo and desktop/narrow presentation ownership. The v1.1 reduced-scope authority remains binding for unaffected behavior; adjacent-week direct paging/swipe remains deferred and explicit Previous/Next/Today controls remain.
+**Status:** Binding functional design through v1.1.2. The [v1.1.2 corrective functional design](v1.1.2-corrective-functional-design.md) supersedes affected prior clauses for Task drag feedback, synchronization diagnostics/recovery, per-theme surface separation, configured viewport fill, motion tempo, desktop/narrow presentation ownership and Linux/browser versus Android/native capability separation. The v1.1 reduced-scope authority remains binding for unaffected behavior; adjacent-week direct paging/swipe remains deferred and explicit Previous/Next/Today controls remain.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
