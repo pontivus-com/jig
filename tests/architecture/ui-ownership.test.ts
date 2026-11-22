@@ -961,6 +961,9 @@ describe("UI ownership architecture", () => {
     expect(drag).toContain("TaskProspectivePlacement");
     expect(drag).toContain("TaskProspectiveFootprint");
     expect(drag).not.toContain('type: "jig-prospective"');
+    expect(drag).not.toContain("document.querySelectorAll");
+    expect(drag).toContain("manager.registry.droppables");
+    expect(drag).toContain("target.shape?.boundingRectangle");
     expect(drag).toContain("getBoundingClientRect().height");
     expect(drag).toContain("prospectiveRef.current");
     expect(drag).toContain("new PointerActivationConstraints.Distance({");
