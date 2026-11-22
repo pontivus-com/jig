@@ -86,6 +86,7 @@ const JIG_PRODUCT_TOKENS = new Set([
   "--jig-state-hover-bg",
   "--jig-state-pressed-bg",
   "--jig-task-surface",
+  "--jig-task-text",
   "--jig-task-border",
   "--jig-brand-primary",
   "--jig-brand-accent",
@@ -298,6 +299,9 @@ describe("UI ownership architecture", () => {
       expect(common).toContain(`"${token}"`);
     }
     expect(common).not.toContain('"--jig-lane-surface"');
+    expect(common).toContain(
+      '"--jig-task-text": "light-dark(var(--color-on-light), var(--color-on-dark))"',
+    );
     expect(common).toContain(
       '"--jig-chrome-surface": surfaceRoles.chrome',
     );
