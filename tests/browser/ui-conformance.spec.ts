@@ -204,6 +204,7 @@ async function themeSnapshot(page: Page): Promise<{
   readonly laneBackground: string;
   readonly taskBackground: string;
   readonly taskText: string;
+  readonly taskMetaText: string;
   readonly taskBorder: string;
   readonly todayBorder: string;
   readonly logoPrimary: string;
@@ -246,6 +247,10 @@ async function themeSnapshot(page: Page): Promise<{
 
     const bodyStyle = getComputedStyle(document.body);
     const taskStyle = getComputedStyle(task);
+    const taskMeta = task.querySelector<HTMLElement>(".jig-task-meta");
+    if (taskMeta === null) {
+      throw new Error("Task metadata fixture is unavailable");
+    }
     const statusPairs = (["info", "success", "warning", "error"] as const).map(
       (status) => {
         const probe = document.createElement("span");
@@ -273,6 +278,7 @@ async function themeSnapshot(page: Page): Promise<{
       laneBackground: getComputedStyle(lane).backgroundColor,
       taskBackground: taskStyle.backgroundColor,
       taskText: taskStyle.color,
+      taskMetaText: getComputedStyle(taskMeta).color,
       taskBorder: taskStyle.borderColor,
       todayBorder: getComputedStyle(today).borderBottomColor,
       logoPrimary: getComputedStyle(logoPrimary).stroke || getComputedStyle(logoPrimary).fill,
@@ -2424,6 +2430,10 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       expect(
         contrastRatio(snapshot.taskText, snapshot.taskBackground),
         `${preset}/${mode} Task text contrast`,
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(snapshot.taskMetaText, snapshot.taskBackground),
+        `${preset}/${mode} Task metadata contrast`,
       ).toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
       expect(
