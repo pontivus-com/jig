@@ -15,6 +15,7 @@ export function NarrowConfiguredApplication(
     transientFeedback,
     workspace,
     destinationTransition,
+    todayScrollRequest,
     onContentPointerDown,
     ...componentProps
   } = props;
