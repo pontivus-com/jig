@@ -8,10 +8,10 @@ import { JIG_ICON_KEYS, JigIcon } from "./jig-icons";
 import {
   DESTINATIONS,
   destinationDefinition,
+  type Destination,
   type DestinationIconName,
 } from "./destinations";
 import { JigLogo } from "./jig-logo";
-import type { Destination } from "./navigation";
 
 export interface PlannerHeaderProps {
   readonly destination: Destination;
