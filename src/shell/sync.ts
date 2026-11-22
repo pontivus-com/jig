@@ -873,28 +873,13 @@ export function createSyncController(
     );
 
     if (decision.kind === "attention") {
-      if (decision.reason === "diverged" && mayPush) {
-        if (localPending) {
-          try {
-            beginPhase("export-local");
-            await exportCurrent();
-          } catch (error) {
-            return localIssue(
-              "export-local",
-              "local-export-failed",
-              error,
-            );
-          }
-          const afterExport = await observe(
-            environment,
-            "recover-divergence",
-          );
-          return processObservation(
-            afterExport,
-            environment,
-            true,
-          );
-        }
+      if (
+        decision.reason === "diverged" &&
+        mayPush &&
+        !localPending &&
+        observation.state === "present" &&
+        observation.lineage === "diverged"
+      ) {
         const recovery = await attemptDivergenceRecovery(
           observed,
           environment,
