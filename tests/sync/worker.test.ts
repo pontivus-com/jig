@@ -825,6 +825,148 @@ describe("cross-installation synchronization worker", () => {
     expect(fake.pushes.count).toBe(0);
   });
 
+  it("discards a private recovery candidate left before SQLite adoption", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    const candidateHead = "c".repeat(40);
+    await markExported(db, 0, BASE_HEAD);
+
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: BASE_HEAD,
+      remoteSnapshot: base,
+      remoteRewritten: false,
+      lineage: "equal",
+      previouslySynchronized: true,
+    };
+    const fake = fakeEffects(repo);
+    let recoveryCandidate: string | null = candidateHead;
+    let deletes = 0;
+    const effects: SyncEffects = {
+      ...fake.effects,
+      readRecoveryCandidateHead: async () => recoveryCandidate,
+      deleteRecoveryCandidate: async (
+        _config,
+        _datasetId,
+        expectedHead,
+      ) => {
+        expect(expectedHead).toBe(candidateHead);
+        recoveryCandidate = null;
+        deletes += 1;
+      },
+    };
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
+    expect(deletes).toBe(1);
+    expect(recoveryCandidate).toBeNull();
+    expect(fake.writes.count).toBe(0);
+    expect(fake.pushes.count).toBe(0);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 0,
+      last_exported_revision: 0,
+      last_exported_head: BASE_HEAD,
+      pending_sync: false,
+    });
+  });
+
+  it("resumes a recovery candidate after the local ref moved but before markExported", async () => {
+    const remoteHead = "b".repeat(40);
+    const candidateHead = "c".repeat(40);
+    const candidateTask = task("218", "Recovered before restart");
+    const candidateSnapshot = serializeSnapshot(
+      [candidateTask],
+      DATASET_ID,
+    );
+    const remoteSnapshot = serializeSnapshot([], DATASET_ID);
+
+    await markExported(db, 0, BASE_HEAD);
+    const adopted = await adoptCanonicalSnapshot(
+      db,
+      [candidateTask],
+      [],
+      candidateHead,
+      0,
+    );
+    expect(adopted.revision).toBe(1);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 1,
+      last_exported_revision: 0,
+      last_exported_head: BASE_HEAD,
+      last_adopted_head: candidateHead,
+      pending_sync: true,
+    });
+
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: candidateHead,
+      localSnapshot: candidateSnapshot,
+      remoteHead,
+      remoteSnapshot,
+      remoteRewritten: false,
+      lineage: "local-ahead",
+      previouslySynchronized: true,
+    };
+    const fake = fakeEffects(repo);
+    let recoveryCandidate: string | null = candidateHead;
+    let deletes = 0;
+    const effects: SyncEffects = {
+      ...fake.effects,
+      readRecoveryCandidateHead: async () => recoveryCandidate,
+      recoveryCandidateParents: async (
+        _config,
+        expectedCandidate,
+      ) => {
+        expect(expectedCandidate).toBe(candidateHead);
+        return [BASE_HEAD, remoteHead];
+      },
+      deleteRecoveryCandidate: async (
+        _config,
+        _datasetId,
+        expectedHead,
+      ) => {
+        expect(expectedHead).toBe(candidateHead);
+        recoveryCandidate = null;
+        deletes += 1;
+      },
+    };
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
+    expect(deletes).toBe(1);
+    expect(recoveryCandidate).toBeNull();
+    expect(fake.writes.count).toBe(0);
+    expect(fake.pushes.count).toBe(1);
+    expect(repo.localHead).toBe(candidateHead);
+    expect(repo.remoteHead).toBe(candidateHead);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 1,
+      last_exported_revision: 1,
+      last_exported_head: candidateHead,
+      last_adopted_head: candidateHead,
+      pending_sync: false,
+    });
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "idle",
+      reason: null,
+      recovery_attempted: true,
+      recovery_outcome: "resumed",
+    });
+  });
+
   it("SYNC-E5 finishes SQLite-adopted remote state without creating another snapshot", async () => {
     const base = serializeSnapshot([], DATASET_ID);
     const remoteTask = task("208", "Adopted before restart");
