@@ -3,8 +3,8 @@ import {
   rollForwardOutstandingInDatabase,
   SQLITE_SCHEMA_VERSION,
 } from "../persistence/sqlite";
-import { PORTABLE_FORMAT_VERSION } from "../portable";
-import type { RepositorySynchronizationStatus } from "../protocol";
+import { PORTABLE_FORMAT_VERSION } from "../core/portable";
+import type { RepositorySynchronizationStatus } from "../protocol/runtime";
 import { openDatabase } from "./sqlite-bun";
 import {
   createHttpHandler,
@@ -12,9 +12,9 @@ import {
   type ServiceStatus,
 } from "./http";
 import { createBootstrapHttpHandler } from "./bootstrap-http";
-import { GitHubOnboardingController } from "../github-onboarding";
-import { GitHubReconnectController } from "../github-reconnect";
-import { GITHUB_APP_REGISTRATION } from "../github-registration";
+import { GitHubOnboardingController } from "../github/onboarding";
+import { GitHubReconnectController } from "../github/reconnect";
+import { GITHUB_APP_REGISTRATION } from "../github/registration";
 import { createGitHubHttpHandler } from "./github-http";
 import { acquireManagedGitHubRepository } from "./github-managed-checkout";
 import {

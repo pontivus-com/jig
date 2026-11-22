@@ -35,7 +35,7 @@ import { initializeDatabase } from "../../src/shell/sqlite-bun";
 import {
   serializeSnapshot,
   validateSnapshot,
-} from "../../src/shell/git";
+} from "../../src/core/portable";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
 let root = "";

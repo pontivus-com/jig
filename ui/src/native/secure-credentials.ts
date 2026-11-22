@@ -1,5 +1,5 @@
 import { registerPlugin } from "@capacitor/core";
-import type { GitHubCredential } from "../../../src/github";
+import type { GitHubCredential } from "../../../src/github/model";
 
 export interface SecureCredentialsPort {
   readonly store: (options: {

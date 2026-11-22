@@ -3,32 +3,28 @@ import { relative, resolve, sep } from "node:path";
 import type {
   GitHubAppRegistration,
   GitHubCredential,
-} from "../github";
-import { GitHubDeviceFlowSession } from "../github-device-flow";
+} from "../github/model";
+import { GitHubDeviceFlowSession } from "../github/device-flow";
 import {
   GitHubAuthError,
   refreshGitHubCredential,
-} from "../github-auth";
-import { GITHUB_APP_REGISTRATION } from "../github-registration";
+} from "../github/auth";
+import { GITHUB_APP_REGISTRATION } from "../github/registration";
 import {
   createGitHubAskpassHelper,
   githubGitEnvironment,
   type GitHubAskpassHelper,
 } from "./github-git-auth";
-import {
-  discoverSynchronizationRemote,
-  runGit,
-} from "./git";
+import { discoverSynchronizationRemote } from "./git/remote";
+import { runGit } from "./git/process";
 import {
   assertSecretServiceAvailable,
   loadCurrentGitHubCredential,
   SecretServiceError,
   storeGitHubCredential,
 } from "./secret-service";
-import {
-  InstallationError,
-  normalizedGitHubRepository,
-} from "./setup";
+import { normalizedGitHubRepository } from "../github/model";
+import { InstallationError } from "./setup";
 
 interface ManagedGitHubRepositoryIdentity {
   readonly owner: string;

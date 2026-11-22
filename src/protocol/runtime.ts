@@ -1,5 +1,5 @@
-import type { RecurrenceSeries } from "./core/recurrence";
-import type { Task } from "./core/task";
+import type { RecurrenceSeries } from "../core/recurrence";
+import type { Task } from "../core/task";
 
 /**
  * Architecture-neutral API/envelope contracts shared by the imperative shell

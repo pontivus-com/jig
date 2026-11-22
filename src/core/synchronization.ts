@@ -1,3 +1,5 @@
+export const SYNCHRONIZATION_MUTATION_DEBOUNCE_MS = 3_000;
+
 export type SynchronizationLineage =
   | "equal"
   | "remote-ahead"

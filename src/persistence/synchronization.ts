@@ -3,7 +3,7 @@ import {
   portableSnapshotsEqual,
   serializeSnapshot,
   type PortableSnapshot,
-} from "../portable";
+} from "../core/portable";
 import {
   adoptCanonicalSnapshot,
   markExported,

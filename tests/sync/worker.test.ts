@@ -43,11 +43,11 @@ function applyTaskCommand(
 import {
   serializeSnapshot,
   type PortableSnapshot,
-} from "../../src/portable";
+} from "../../src/core/portable";
 import type {
   PortableRemoteObservation,
   SynchronizationRemote,
-} from "../../src/shell/git";
+} from "../../src/shell/git/remote";
 import {
   createSyncController,
   type SyncEffects,

@@ -4,8 +4,8 @@ import {
   commit,
   init,
 } from "isomorphic-git";
-import type { CanonicalState } from "../../src/protocol";
-import { serializeSnapshot } from "../../src/portable";
+import type { CanonicalState } from "../../src/protocol/runtime";
+import { serializeSnapshot } from "../../src/core/portable";
 import type { Task } from "../../src/core/task";
 import {
   commitAndroidPortableSnapshot,

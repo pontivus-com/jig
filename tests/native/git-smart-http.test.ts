@@ -17,7 +17,7 @@ import type { Task } from "../../src/core/task";
 import {
   serializeSnapshot,
   validateSnapshot,
-} from "../../src/portable";
+} from "../../src/core/portable";
 import {
   applyTaskCommand as applyTaskCommandAtLocalDate,
   readCanonicalState,
@@ -51,7 +51,7 @@ import {
 } from "../../src/shell/sqlite-bun";
 import { initializeRepositoryInstallation } from "../../src/shell/setup";
 import { createSyncController } from "../../src/shell/sync";
-import type { CanonicalState } from "../../src/protocol";
+import type { CanonicalState } from "../../src/protocol/runtime";
 import {
   acquireAndroidPortableRepository,
   alignAndroidPortableHead,

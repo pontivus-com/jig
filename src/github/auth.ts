@@ -5,7 +5,7 @@ import type {
   GitHubDevicePollResult,
   GitHubInstallation,
   GitHubRepository,
-} from "./github";
+} from "./model";
 
 const GITHUB_API_VERSION = "2022-11-28";
 

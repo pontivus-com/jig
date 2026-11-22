@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GitHubAppRegistration } from "../../src/github";
+import type { GitHubAppRegistration } from "../../src/github/model";
 import {
   pollGitHubDeviceAuthorization,
   startGitHubDeviceAuthorization,

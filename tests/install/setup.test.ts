@@ -6,7 +6,8 @@ import {
   initializeRepositoryInstallation,
   validateSelectedRepository,
 } from "../../src/shell/setup";
-import { repositorySynchronizationMode, runGit } from "../../src/shell/git";
+import { runGit } from "../../src/shell/git/process";
+import { repositorySynchronizationMode } from "../../src/shell/git/remote";
 
 const roots: string[] = [];
 

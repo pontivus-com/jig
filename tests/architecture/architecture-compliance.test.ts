@@ -88,7 +88,7 @@ describe("architecture compliance", () => {
       const owners = production.filter(([, content]) =>
         new RegExp(`export (?:type|interface) ${typeName}\\b`).test(content),
       );
-      expect(owners.map(([path]) => path)).toEqual(["src/protocol.ts"]);
+      expect(owners.map(([path]) => path)).toEqual(["src/protocol/runtime.ts"]);
     }
   });
 
@@ -190,13 +190,13 @@ describe("architecture compliance", () => {
 
   it("enforces the SD-38 GitHub integration dependency direction", () => {
     const sync = source("src/shell/sync.ts");
-    const protocol = source("src/protocol.ts");
+    const protocol = source("src/protocol/runtime.ts");
     const http = source("src/shell/http.ts");
     const main = source("src/shell/main.ts");
-    const auth = source("src/github-auth.ts");
-    const onboarding = source("src/github-onboarding.ts");
-    const reconnect = source("src/github-reconnect.ts");
-    const deviceFlow = source("src/github-device-flow.ts");
+    const auth = source("src/github/auth.ts");
+    const onboarding = source("src/github/onboarding.ts");
+    const reconnect = source("src/github/reconnect.ts");
+    const deviceFlow = source("src/github/device-flow.ts");
     const setup = source("ui/src/setup.tsx");
     const app = source("ui/src/app.tsx");
     const deviceFlowUi = source("ui/src/github-device-flow.tsx");
@@ -268,11 +268,11 @@ describe("architecture compliance", () => {
     expect(githubHttp).toContain("/api/v1/setup/github/select-repository");
 
     for (const ownerPath of [
-      "src/github-auth.ts",
-      "src/github-device-flow.ts",
-      "src/github-onboarding.ts",
-      "src/github-reconnect.ts",
-      "src/github-registration.ts",
+      "src/github/auth.ts",
+      "src/github/device-flow.ts",
+      "src/github/onboarding.ts",
+      "src/github/reconnect.ts",
+      "src/github/registration.ts",
     ]) {
       expect(
         production.some(([path]) => path === ownerPath),
@@ -296,25 +296,25 @@ describe("architecture compliance", () => {
       /export interface GitHubAuthorizationSnapshot\b/.test(content),
     );
     expect(githubContractOwners.map(([path]) => path)).toEqual([
-      "src/github.ts",
+      "src/github/model.ts",
     ]);
   });
 
   it("reuses the shared GitHub protocol and orchestration owners on Android", () => {
     const androidSetup = source("ui/src/native/github-setup.ts");
-    const registration = source("src/github-registration.ts");
+    const registration = source("src/github/registration.ts");
 
     expect(androidSetup).toContain(
-      'from "../../../src/github-device-flow"',
+      'from "../../../src/github/device-flow"',
     );
     expect(androidSetup).toContain(
-      'from "../../../src/github-onboarding"',
+      'from "../../../src/github/onboarding"',
     );
     expect(androidSetup).toContain(
-      'from "../../../src/github-reconnect"',
+      'from "../../../src/github/reconnect"',
     );
     expect(androidSetup).toContain(
-      'from "../../../src/github-registration"',
+      'from "../../../src/github/registration"',
     );
     expect(androidSetup).toContain("new GitHubDeviceFlowSession");
     expect(androidSetup).toContain("new GitHubOnboardingController");
@@ -359,7 +359,13 @@ describe("architecture compliance", () => {
       "src/persistence/synchronization.ts",
     );
     const desktopSync = source("src/shell/sync.ts");
-    const desktopGit = source("src/shell/git.ts");
+    const desktopPortableStore = source("src/shell/git/portable-store.ts");
+    const desktopGit = [
+      source("src/shell/git/process.ts"),
+      source("src/shell/git/repository.ts"),
+      desktopPortableStore,
+      source("src/shell/git/remote.ts"),
+    ].join("\n");
     const androidSync = source("ui/src/native/sync.ts");
     const androidGit = source("ui/src/native/git.ts");
 
@@ -452,6 +458,9 @@ describe("architecture compliance", () => {
     );
 
     expect(policy).not.toMatch(/retry|timeout|poll|setTimeout/i);
+    expect(policy).toContain("SYNCHRONIZATION_MUTATION_DEBOUNCE_MS = 3_000");
+    expect(desktopSync).toContain("SYNCHRONIZATION_MUTATION_DEBOUNCE_MS");
+    expect(androidSync).toContain("SYNCHRONIZATION_MUTATION_DEBOUNCE_MS");
     expect(desktopSync).toContain("retryDelayMs");
     expect(desktopSync).toContain("SYNC_HEALTHY_POLL_MS");
     expect(androidSync).not.toMatch(
@@ -504,8 +513,8 @@ describe("architecture compliance", () => {
   });
 
   it("keeps portable records platform-neutral and Android Git provider-neutral", () => {
-    const portable = source("src/portable.ts");
-    const desktopGit = source("src/shell/git.ts");
+    const portable = source("src/core/portable.ts");
+    const desktopPortableStore = source("src/shell/git/portable-store.ts");
     const nativeGit = source("ui/src/native/git.ts");
     const nativeHttp = source("ui/src/native/git-http.ts");
     const nativeFilesystem = source(
@@ -518,8 +527,8 @@ describe("architecture compliance", () => {
     expect(portable).toContain(
       "export const PORTABLE_FORMAT_VERSION = 2",
     );
-    expect(desktopGit).toContain('from "../portable"');
-    expect(desktopGit).not.toContain(
+    expect(desktopPortableStore).toContain('from "../../core/portable"');
+    expect(desktopPortableStore).not.toContain(
       "export const PORTABLE_FORMAT_VERSION",
     );
 

@@ -7,13 +7,13 @@ import {
 } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { runGit } from "./git";
+import { runGit } from "./git/process";
 import {
   createGitHubAskpassHelper,
   githubGitEnvironment,
 } from "./github-git-auth";
+import { normalizedGitHubRepository } from "../github/model";
 import {
-  normalizedGitHubRepository,
   validateSelectedRepository,
   InstallationError,
 } from "./setup";

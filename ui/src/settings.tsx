@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import type {
   Diagnostics,
   ServiceStatus,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 import {
   localGitStatusPresentation,
   planningDataHomePresentation,

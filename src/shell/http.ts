@@ -17,8 +17,8 @@ import type {
   Diagnostics,
   RepositorySynchronizationStatus,
   ServiceStatus,
-} from "../protocol";
-export type { Diagnostics, ServiceStatus } from "../protocol";
+} from "../protocol/runtime";
+export type { Diagnostics, ServiceStatus } from "../protocol/runtime";
 import {
   applyTaskCommand,
   readCanonicalState,

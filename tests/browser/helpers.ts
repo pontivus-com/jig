@@ -6,7 +6,7 @@ import type {
 import type {
   CanonicalState,
   CommandResult,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 
 export async function apiState(
   page: Page,

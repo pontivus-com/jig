@@ -1,23 +1,21 @@
 import {
   alignPortableDataRef,
   ensurePortableData,
-  EXPORT_DEBOUNCE_MS,
-  EXPORT_MAX_FLUSH_MS,
+  readCurrentPortableSnapshot,
+  writePortableSnapshot,
+} from "./git/portable-store";
+import {
   observePortableRemote,
   pushPortableDataRef,
-  readCurrentPortableSnapshot,
-  retryDelayMs,
-  SYNC_HEALTHY_POLL_MS,
-  writePortableSnapshot,
-  type GitAdapterConfig,
   type PortableRemoteObservation,
   type SynchronizationRemote,
-} from "./git";
+} from "./git/remote";
+import type { GitAdapterConfig } from "./git/repository";
 import type {
   LocalGitSnapshotState,
   RemoteGitSynchronization,
   RepositorySynchronizationStatus,
-} from "../protocol";
+} from "../protocol/runtime";
 import {
   markAdoptedHead,
   readMetadata,
@@ -32,8 +30,21 @@ import {
 } from "../persistence/synchronization";
 import {
   decideSynchronization,
+  SYNCHRONIZATION_MUTATION_DEBOUNCE_MS,
   type SynchronizationFacts,
 } from "../core/synchronization";
+
+export const SYNC_HEALTHY_POLL_MS = 60_000;
+export const EXPORT_MAX_FLUSH_MS = 15_000;
+export const SYNC_RETRY_SECONDS = [5, 10, 20, 40, 80, 160, 300] as const;
+
+export function retryDelayMs(failureCount: number): number {
+  if (!Number.isInteger(failureCount) || failureCount < 1) {
+    throw new RangeError("failureCount must be a positive integer");
+  }
+  const index = Math.min(failureCount - 1, SYNC_RETRY_SECONDS.length - 1);
+  return (SYNC_RETRY_SECONDS[index] ?? 300) * 1000;
+}
 
 export interface SyncConfiguration {
   readonly repository_path: string;
@@ -490,7 +501,7 @@ export function createSyncController(
         Math.max(
           0,
           Math.min(
-            now + EXPORT_DEBOUNCE_MS,
+            now + SYNCHRONIZATION_MUTATION_DEBOUNCE_MS,
             firstDirtyAt + EXPORT_MAX_FLUSH_MS,
           ) - now,
         ),

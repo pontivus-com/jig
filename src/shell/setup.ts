@@ -6,16 +6,18 @@ import {
 } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
+import { serializeSnapshot } from "../core/portable";
+import { normalizedGitHubRepository } from "../github/model";
+import { GitAdapterError, runGit } from "./git/process";
 import {
   ensureJigLocalExclude,
-  ensurePortableData,
-  GitAdapterError,
-  inspectPortableCandidate,
-  runGit,
-  serializeSnapshot,
-  writePortableSnapshot,
   type GitAdapterConfig,
-} from "./git";
+} from "./git/repository";
+import {
+  ensurePortableData,
+  writePortableSnapshot,
+} from "./git/portable-store";
+import { inspectPortableCandidate } from "./git/remote";
 import {
   adoptCanonicalSnapshot,
   readCanonicalState,
@@ -65,23 +67,6 @@ async function git(
     );
   }
   return result.stdout;
-}
-
-export function normalizedGitHubRepository(value: string): string | null {
-  const trimmed = value.trim().replace(/\.git$/, "");
-  const patterns = [
-    /^https?:\/\/github\.com\/([^/]+\/[^/]+)$/i,
-    /^ssh:\/\/git@github\.com\/([^/]+\/[^/]+)$/i,
-    /^git@github\.com:([^/]+\/[^/]+)$/i,
-    /^git:\/\/github\.com\/([^/]+\/[^/]+)$/i,
-  ];
-  for (const pattern of patterns) {
-    const match = pattern.exec(trimmed);
-    if (match?.[1] !== undefined) {
-      return match[1].toLowerCase();
-    }
-  }
-  return null;
 }
 
 export async function validateSelectedRepository(

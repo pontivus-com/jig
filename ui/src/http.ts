@@ -16,7 +16,7 @@ import type {
   Diagnostics,
   RepositorySynchronizationStatus,
   ServiceStatus,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 
 declare global {
   interface Window {

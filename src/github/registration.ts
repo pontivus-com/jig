@@ -1,4 +1,4 @@
-import type { GitHubAppRegistration } from "./github";
+import type { GitHubAppRegistration } from "./model";
 
 /**
  * Public GitHub App registration material.

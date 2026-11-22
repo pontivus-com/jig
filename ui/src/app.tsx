@@ -23,7 +23,7 @@ import type {
   CommandResult,
   Diagnostics,
   ServiceStatus,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 import {
   draftFor,
   type TaskDraft,

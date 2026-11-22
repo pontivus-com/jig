@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GitHubCredential } from "../../src/github";
+import type { GitHubCredential } from "../../src/github/model";
 import {
   deleteAndroidGitHubCredential,
   loadAndroidGitHubCredential,

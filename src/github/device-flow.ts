@@ -7,11 +7,11 @@ import {
   type GitHubAuthorizationSnapshot,
   type GitHubCredential,
   type GitHubDeviceSessionState,
-} from "./github";
+} from "./model";
 import {
   pollGitHubDeviceAuthorization,
   startGitHubDeviceAuthorization,
-} from "./github-auth";
+} from "./auth";
 
 export type GitHubFlowSleep = (
   milliseconds: number,

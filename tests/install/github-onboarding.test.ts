@@ -3,10 +3,10 @@ import type {
   GitHubAppRegistration,
   GitHubCredential,
   GitHubOnboardingSnapshot,
-} from "../../src/github";
-import { GitHubDeviceFlowSession } from "../../src/github-device-flow";
-import { GitHubAuthError } from "../../src/github-auth";
-import { GitHubOnboardingController } from "../../src/github-onboarding";
+} from "../../src/github/model";
+import { GitHubDeviceFlowSession } from "../../src/github/device-flow";
+import { GitHubAuthError } from "../../src/github/auth";
+import { GitHubOnboardingController } from "../../src/github/onboarding";
 
 const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-mobile-test",

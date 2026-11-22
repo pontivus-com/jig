@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { GitHubCredential } from "../../src/github";
-import { GitHubDeviceFlowSession } from "../../src/github-device-flow";
+import type { GitHubCredential } from "../../src/github/model";
+import { GitHubDeviceFlowSession } from "../../src/github/device-flow";
 import { createGitHubHttpHandler } from "../../src/shell/github-http";
-import { GitHubOnboardingController } from "../../src/github-onboarding";
-import { GitHubReconnectController } from "../../src/github-reconnect";
+import { GitHubOnboardingController } from "../../src/github/onboarding";
+import { GitHubReconnectController } from "../../src/github/reconnect";
 
 const TOKEN = "a".repeat(64);
 const REGISTRATION = {

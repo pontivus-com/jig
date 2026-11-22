@@ -1,6 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import type { Task } from "../../src/core/task";
-import type { CanonicalState } from "../../src/protocol";
+import type { CanonicalState } from "../../src/protocol/runtime";
 import * as webRuntime from "./http";
 
 async function androidRuntime() {

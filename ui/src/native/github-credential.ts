@@ -1,9 +1,9 @@
-import type { GitHubCredential } from "../../../src/github";
+import type { GitHubCredential } from "../../../src/github/model";
 import {
   GitHubAuthError,
   refreshGitHubCredential,
-} from "../../../src/github-auth";
-import { GITHUB_APP_REGISTRATION } from "../../../src/github-registration";
+} from "../../../src/github/auth";
+import { GITHUB_APP_REGISTRATION } from "../../../src/github/registration";
 import { createAndroidGitHubFetch } from "./github-fetch";
 import {
   loadAndroidGitHubCredential,

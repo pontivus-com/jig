@@ -4,7 +4,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { GitHubAuthorizationPresentation } from "../../src/github";
+import type { GitHubAuthorizationPresentation } from "../../src/github/model";
 import {
   copyText,
   nativeClipboardAvailable,

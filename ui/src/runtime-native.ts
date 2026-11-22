@@ -14,7 +14,7 @@ import type {
   Diagnostics,
   RepositorySynchronizationStatus,
   ServiceStatus,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 import { todayCivilDate } from "./dates";
 import { configuredNativeSynchronization } from "./native/configured-sync";
 import { openNativeDatabase } from "./native/jig-sqlite";

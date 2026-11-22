@@ -12,9 +12,10 @@ import {
 } from "../../../src/persistence/synchronization";
 import type {
   RepositorySynchronizationStatus,
-} from "../../../src/protocol";
+} from "../../../src/protocol/runtime";
 import {
   decideSynchronization,
+  SYNCHRONIZATION_SYNCHRONIZATION_MUTATION_DEBOUNCE_MS,
   type SynchronizationFacts,
 } from "../../../src/core/synchronization";
 import {
@@ -29,8 +30,6 @@ import {
   type AndroidPortableRemoteObservation,
   type GitCredentialProvider,
 } from "./git";
-
-const MUTATION_DEBOUNCE_MS = 3_000;
 
 interface ObservedAndroidRemote {
   readonly revision: number;
@@ -335,7 +334,7 @@ export function createAndroidSyncController(
       clearTimer();
       timer = setTimeout(() => {
         void trigger();
-      }, MUTATION_DEBOUNCE_MS);
+      }, SYNCHRONIZATION_MUTATION_DEBOUNCE_MS);
     },
     trigger,
   };

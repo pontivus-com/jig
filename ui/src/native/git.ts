@@ -25,7 +25,7 @@ import {
   serializeSnapshot,
   validateSnapshot,
   type PortableSnapshot,
-} from "../../../src/portable";
+} from "../../../src/core/portable";
 import type { SynchronizationLineage } from "../../../src/core/synchronization";
 import {
   AndroidFsError,

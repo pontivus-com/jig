@@ -2,13 +2,13 @@ import {
   assertUuid,
   type Task,
   validateTask,
-} from "./core/task";
+} from "./task";
 import {
   validateRecurrenceSeries,
   type RecurrencePattern,
   type RecurrenceSeries,
-} from "./core/recurrence";
-import { assertRecurrenceState } from "./core/recurrence-planning";
+} from "./recurrence";
+import { assertRecurrenceState } from "./recurrence-planning";
 
 export const PORTABLE_FORMAT_VERSION = 2;
 

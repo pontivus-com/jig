@@ -34,33 +34,6 @@ const production = [
 ];
 
 const EXPECTED_FAILURES = {
-  sourceOwnershipTopology: {
-    task: "J112-IMP-14",
-    violations: [
-      "legacy:src/github-auth.ts",
-      "legacy:src/github-device-flow.ts",
-      "legacy:src/github-onboarding.ts",
-      "legacy:src/github-reconnect.ts",
-      "legacy:src/github-registration.ts",
-      "legacy:src/github.ts",
-      "legacy:src/portable.ts",
-      "legacy:src/protocol.ts",
-      "legacy:src/shell/git.ts",
-      "missing:src/core/portable.ts",
-      "missing:src/github/auth.ts",
-      "missing:src/github/device-flow.ts",
-      "missing:src/github/model.ts",
-      "missing:src/github/onboarding.ts",
-      "missing:src/github/parsing.ts",
-      "missing:src/github/reconnect.ts",
-      "missing:src/github/registration.ts",
-      "missing:src/protocol/runtime.ts",
-      "missing:src/shell/git/portable-store.ts",
-      "missing:src/shell/git/process.ts",
-      "missing:src/shell/git/remote.ts",
-      "missing:src/shell/git/repository.ts",
-    ],
-  },
   recoveryPolicyOwner: {
     task: "J112-IMP-17",
     violations: ["missing:src/core/synchronization-recovery.ts"],
@@ -471,7 +444,12 @@ describe("v1.1.2 corrective architecture boundaries", () => {
         existsSync(path) ? [] : [`missing:${path}`],
       ),
     ];
-    expectGuardViolations("sourceOwnershipTopology", violations);
+    expect(violations).toEqual([]);
+
+    const portableStore = source("src/shell/git/portable-store.ts");
+    const remote = source("src/shell/git/remote.ts");
+    expect(portableStore).not.toMatch(/from\s+["']\.\/remote["']/);
+    expect(remote).toMatch(/from\s+["']\.\/portable-store["']/);
 
     if (existsSync("src/github")) {
       for (const [path, content] of sourceFiles("src/github")) {

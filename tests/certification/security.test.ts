@@ -14,9 +14,9 @@ import {
 import type { Task } from "../../src/core/task";
 import {
   serializeSnapshot,
-  writeSnapshotToWorktree,
   type PortableSnapshot,
-} from "../../src/shell/git";
+} from "../../src/core/portable";
+import { writeSnapshotToWorktree } from "../../src/shell/git/portable-store";
 import {
   writeConfigAtomic,
   loadConfig,
@@ -48,7 +48,7 @@ describe("V1 security and trust boundaries", () => {
   });
 
   it("keeps Git invocation argument-array based and out of a shell", async () => {
-    const git = await source("src/shell/git.ts");
+    const git = await source("src/shell/git/process.ts");
 
     expect(git).toContain("Bun.spawn({");
     expect(git).toContain('cmd: ["git", ...args]');
@@ -60,7 +60,10 @@ describe("V1 security and trust boundaries", () => {
   it("keeps the per-start write token out of durable SQLite, Git and configuration owners", async () => {
     for (const path of [
       "src/shell/sqlite.ts",
-      "src/shell/git.ts",
+      "src/shell/git/process.ts",
+      "src/shell/git/repository.ts",
+      "src/shell/git/portable-store.ts",
+      "src/shell/git/remote.ts",
       "src/shell/config.ts",
       "src/shell/setup.ts",
     ]) {
@@ -150,8 +153,8 @@ describe("V1 security and trust boundaries", () => {
   });
 
   it("keeps GitHub Device Flow registration secretless and redirect-free", async () => {
-    const registration = await source("src/github-registration.ts");
-    const auth = await source("src/github-auth.ts");
+    const registration = await source("src/github/registration.ts");
+    const auth = await source("src/github/auth.ts");
     const secretService = await source("src/shell/secret-service.ts");
 
     expect(registration).toContain("GITHUB_APP_REGISTRATION");
@@ -190,7 +193,10 @@ describe("V1 security and trust boundaries", () => {
       "src/core/planning.ts",
       "src/shell/sqlite.ts",
       "src/shell/http.ts",
-      "src/shell/git.ts",
+      "src/shell/git/process.ts",
+      "src/shell/git/repository.ts",
+      "src/shell/git/portable-store.ts",
+      "src/shell/git/remote.ts",
       "src/shell/sync.ts",
     ]) {
       const contents = await source(path);

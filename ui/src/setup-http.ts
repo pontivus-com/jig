@@ -3,12 +3,12 @@ import type {
   GitHubCapabilityStatus,
   GitHubOnboardingSnapshot,
   GitHubReconnectSnapshot,
-} from "../../src/github";
+} from "../../src/github/model";
 import {
   parseGitHubCapabilityStatus,
   parseGitHubOnboardingSnapshot,
   parseGitHubReconnectSnapshot,
-} from "../../src/github";
+} from "../../src/github/parsing";
 import {
   fetchJson,
   postJson,
