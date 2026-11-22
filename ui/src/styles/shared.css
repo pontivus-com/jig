@@ -1075,6 +1075,11 @@ body {
   align-items: center;
 }
 
+.jig-content-frame-onboarding {
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .jig-setup {
   min-height: 100%;
   background: var(--color-background-body);
