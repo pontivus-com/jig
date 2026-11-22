@@ -14,6 +14,7 @@ export function DesktopConfiguredApplication(
     transientFeedback,
     workspace,
     destinationTransition,
+    todayScrollRequest: _todayScrollRequest,
     onContentPointerDown,
     ...componentProps
   } = props;
