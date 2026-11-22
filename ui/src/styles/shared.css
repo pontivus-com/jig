@@ -365,6 +365,16 @@ body {
   position: relative;
 }
 
+.jig-date-drop-tail {
+  block-size: 0;
+  pointer-events: none;
+}
+
+.jig-task-drag-scope[data-jig-drag-active="true"] .jig-date-drop-tail {
+  min-block-size: var(--spacing-3);
+  pointer-events: auto;
+}
+
 .jig-date-drop-zone-active,
 .jig-date-drop-zone-empty-target {
   background: var(--jig-state-drag-bg);
