@@ -972,7 +972,7 @@ test("adding and editing a Task confirm success and close the workspace", async 
       expect(confirmationBox).not.toBeNull();
       expect(navigationBox).not.toBeNull();
       if (confirmationBox !== null && navigationBox !== null) {
-        expect(confirmationBox.bottom).toBeLessThan(
+        expect(confirmationBox.y + confirmationBox.height).toBeLessThan(
           navigationBox.y,
         );
       }
@@ -1056,6 +1056,33 @@ test("adding and editing a Task confirm success and close the workspace", async 
       page.getByRole("status").filter({ hasText: "Task completed" }),
     ).toBeVisible();
   }
+});
+
+test("reduced motion dismisses transient feedback without an exit-animation wait", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await resetCanonicalTasks(page);
+  await page.reload();
+
+  await page.locator(".jig-mobile-add-fab").click();
+  const workspace = page.getByRole("dialog", { name: "Add task" });
+  await workspace.getByLabel("Title").fill("Reduced feedback");
+  await workspace.getByRole("button", {
+    name: "Add task",
+    exact: true,
+  }).click();
+
+  const confirmation = page
+    .getByRole("status")
+    .filter({ hasText: "Task added" });
+  await expect(confirmation).toBeVisible();
+  await confirmation
+    .getByRole("button", { name: "Dismiss confirmation" })
+    .click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(page.locator(".jig-success-confirmation-exiting")).toHaveCount(0);
 });
 
 test("selecting another Task retargets the open editable workspace", async ({ page }) => {
