@@ -326,21 +326,23 @@ function ConfiguredApp({
 
       await resumeGitHubReconnect();
 
-      const nextCanonical =
+      const preSyncCanonical =
         await readCanonicalTasksAfterActivationRollover();
 
       await reconcileRuntimeReminders(
-        nextCanonical.tasks,
+        preSyncCanonical.tasks,
         new Date(),
       );
 
       await triggerSync();
 
       const [
+        nextCanonical,
         nextStatus,
         nextDiagnostics,
         githubCapabilities,
       ] = await Promise.all([
+        readCanonicalTasksAfterActivationRollover(),
         readStatus(),
         readDiagnostics(),
         readGitHubCapabilityStatus(),
@@ -589,6 +591,13 @@ function ConfiguredApp({
   }, [destinationNavigation]);
 
   const handleBack = useCallback((): boolean => {
+    if (deleteTaskId !== null) {
+      if (!isOperating) {
+        setDeleteTaskId(null);
+      }
+      return true;
+    }
+
     if (workspace.mode !== "closed") {
       closeWorkspace();
       return true;
@@ -602,7 +611,13 @@ function ConfiguredApp({
     setDestinationTransition(previous.current);
     setDestinationNavigation(previous);
     return true;
-  }, [closeWorkspace, destinationNavigation, workspace.mode]);
+  }, [
+    closeWorkspace,
+    deleteTaskId,
+    destinationNavigation,
+    isOperating,
+    workspace.mode,
+  ]);
 
   useEffect(() => {
     nativeBackHandlerRef.current = handleBack;
