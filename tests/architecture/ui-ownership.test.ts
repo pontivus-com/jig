@@ -134,7 +134,9 @@ describe("UI ownership architecture", () => {
     expect(css).not.toContain(".jig-week-column-selected");
     expect(css).not.toContain(".jig-week-add-task");
     expect(css).toContain(".jig-task-drag-handle");
-    expect(css).toContain(".jig-task-drop-indicator");
+    expect(css).toContain(".jig-task-prospective-footprint");
+    expect(css).not.toContain(".jig-task-drop-indicator");
+    expect(css).not.toContain(".jig-task-insertion-slot");
     expect(css).not.toContain("dashed var(--jig-state-drag-border)");
     expect(css).not.toContain(".jig-mobile-quick-add");
     expect(css).not.toContain(".jig-planner-selected-date-heading");
@@ -889,6 +891,31 @@ describe("UI ownership architecture", () => {
     // as desired behavior.
     expect(list).toContain("function plannerTaskPresentationItems");
     expect(list).toContain("outstandingForDate(tasks, date)");
+    expect(list).toContain("function projectedPlannerItems");
+    expect(list).toContain("<TaskProspectiveFootprint");
+    expect(list).toContain("<SortableTaskRow");
+    expect(list).toContain("useTaskDragState()");
+    expect(list).not.toContain("TaskInsertionSlot");
+
+    expect(drag).toContain('from "@dnd-kit/react/sortable"');
+    expect(drag).toContain("useSortable({");
+    expect(drag).not.toContain("useDraggable");
+    expect(drag).not.toContain("TaskInsertionSlot");
+    expect(drag).not.toContain('"jig-insertion-slot"');
+    expect(drag).toContain("event.preventDefault()");
+    expect(drag).toContain("TaskProspectivePlacement");
+    expect(drag).toContain("TaskProspectiveFootprint");
+    expect(drag).toContain("getBoundingClientRect().height");
+    expect(drag).toContain("prospectiveRef.current");
+    expect(drag).toContain("new PointerActivationConstraints.Distance({");
+    expect(drag).toContain("value: 6");
+    expect(drag).toContain("new PointerActivationConstraints.Delay({");
+    expect(drag).toContain("value: 250");
+    expect(drag).toContain("tolerance: 8");
+    expect(drag).toContain("activatorElements(source)");
+    expect(drag).toContain("source.handle");
+    expect(taskRow).toContain("<TaskCardPresentation");
+    expect(taskRow).not.toContain("jig-task-drag-overlay-checkbox");
 
     expect(editor).not.toContain("optionalText");
     expect(editor).not.toContain("normalizeOptionalText");
