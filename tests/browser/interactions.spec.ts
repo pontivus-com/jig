@@ -115,6 +115,21 @@ async function runTaskAction(
   await page.getByRole("menuitem", { name: action, exact: true }).click();
 }
 
+async function waitForPlannerMotionToSettle(
+  page: Page,
+): Promise<void> {
+  await expect
+    .poll(() =>
+      activeWeek(page).evaluate(
+        (element) =>
+          element
+            .getAnimations({ subtree: true })
+            .filter((animation) => animation.playState === "running").length,
+      ),
+    )
+    .toBe(0);
+}
+
 async function createTask(
   page: Page,
   title: string,
@@ -142,6 +157,7 @@ async function mouseDrag(
   target: Locator,
   targetYRatio = 0.5,
 ): Promise<{ readonly date: string; readonly index: number }> {
+  await waitForPlannerMotionToSettle(page);
   const sourceBox = await source.boundingBox();
   if (sourceBox === null) {
     throw new Error("Drag source geometry unavailable");
@@ -189,6 +205,7 @@ async function touchDrag(
   targetYRatio = 0.5,
   beforeRelease?: () => Promise<void>,
 ): Promise<{ readonly date: string; readonly index: number }> {
+  await waitForPlannerMotionToSettle(page);
   const sourceBox = await source.boundingBox();
   if (sourceBox === null) {
     throw new Error("Touch drag source geometry unavailable");
