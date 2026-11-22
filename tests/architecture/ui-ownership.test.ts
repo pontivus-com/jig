@@ -706,22 +706,43 @@ describe("UI ownership architecture", () => {
     }
   });
 
-  it("keeps operational attention in one public-leaf Jig composition", () => {
-    const attention = source("ui/src/attention-banner.tsx");
+  it("keeps feedback semantics shared and placement presentation-owned", () => {
+    const feedback = source(
+      "ui/src/presentation/shared/feedback-content.tsx",
+    );
+    const desktop = source(
+      "ui/src/presentation/desktop/feedback-region.tsx",
+    );
+    const narrow = source(
+      "ui/src/presentation/narrow/feedback-region.tsx",
+    );
     const app = source("ui/src/app.tsx");
     const settings = source("ui/src/settings.tsx");
     const setup = source("ui/src/setup.tsx");
 
-    expect(attention).toContain('from "@astryxdesign/core"');
-    expect(attention).toContain("<Icon");
-    expect(attention).not.toContain("<Banner");
-    expect(attention).not.toContain("stylex");
-    expect(attention).toContain("JigSuccessConfirmation");
-    expect(attention).toContain('icon="check"');
-    expect(app).toContain("<JigAttentionBanner");
-    expect(app).toContain("<JigSuccessConfirmation");
-    expect(settings).toContain("<JigAttentionBanner");
-    expect(setup).toContain("<JigAttentionBanner");
+    expect(existsSync("ui/src/attention-banner.tsx")).toBe(false);
+    expect(feedback).toContain('from "@astryxdesign/core"');
+    expect(feedback).toContain("<Icon");
+    expect(feedback).not.toContain("<Banner");
+    expect(feedback).not.toContain("stylex");
+    expect(feedback).toContain("AttentionFeedbackContent");
+    expect(feedback).toContain("SuccessFeedbackContent");
+    expect(feedback).toContain('icon={icon}');
+    expect(feedback).toContain('event.animationName === "jig-success-confirmation-exit"');
+    expect(feedback).toContain(
+      'window.matchMedia("(prefers-reduced-motion: reduce)").matches',
+    );
+    expect(feedback).not.toContain("setTimeout(onDismiss");
+    expect(feedback).not.toContain("175");
+
+    expect(desktop).toContain("DesktopFeedbackRegion");
+    expect(narrow).toContain("NarrowFeedbackRegion");
+    expect(desktop).not.toContain("AttentionFeedbackContent");
+    expect(narrow).not.toContain("AttentionFeedbackContent");
+    expect(app).toContain("<AttentionFeedbackContent");
+    expect(app).toContain("<SuccessFeedbackContent");
+    expect(settings).toContain("<AttentionFeedbackContent");
+    expect(setup).toContain("<AttentionFeedbackContent");
     expect(app).not.toContain("<Banner");
     expect(settings).not.toContain("<Banner");
     expect(setup).not.toContain("<Banner");
