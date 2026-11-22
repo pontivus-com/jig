@@ -139,7 +139,12 @@ function pointerPlacement(
     ) {
       return false;
     }
-    const bounds = target.shape?.boundingRectangle;
+    const shapeBounds = target.shape?.boundingRectangle;
+    const liveBounds = target.element?.getBoundingClientRect();
+    const bounds =
+      liveBounds !== undefined && liveBounds.height > 0
+        ? liveBounds
+        : shapeBounds;
     return (
       bounds !== undefined &&
       pointer.x >= bounds.left &&
