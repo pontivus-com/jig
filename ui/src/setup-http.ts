@@ -42,6 +42,10 @@ async function androidGitHubSetup() {
   return import("./native/github-setup");
 }
 
+export function usesNativeSetupProviderContinuation(): boolean {
+  return Capacitor.isNativePlatform();
+}
+
 function nativeSetupUnavailable(operation: string): never {
   throw new Error(
     `${operation} is not available in the Android shell until the governed native onboarding capability is installed`,
