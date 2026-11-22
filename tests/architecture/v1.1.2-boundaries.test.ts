@@ -217,6 +217,7 @@ describe("v1.1.2 corrective architecture boundaries", () => {
   it("keeps setup state shared while LayoutMode and runtime capability remain orthogonal", () => {
     const setup = source("ui/src/setup.tsx");
     const setupHttp = source("ui/src/setup-http.ts");
+    const nativeSetup = source("ui/src/native/github-setup.ts");
     const desktop = source("ui/src/presentation/desktop/setup.tsx");
     const narrow = source("ui/src/presentation/narrow/setup.tsx");
 
@@ -235,7 +236,7 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     expect(setupHttp).toContain(
       "usesNativeSetupProviderContinuation(): boolean",
     );
-    expect(setupHttp).toContain("local_repository_available: false");
+    expect(nativeSetup).toContain("local_repository_available: false");
 
     for (const presenter of [desktop, narrow]) {
       expect(presenter).not.toMatch(
