@@ -71,7 +71,7 @@ interface DropTarget {
   readonly id: string | number;
   readonly type?: unknown;
   readonly data?: Readonly<Record<string, unknown>>;
-  readonly element?: Element | null;
+  readonly element?: Element | undefined;
 }
 
 function targetPlacement(
