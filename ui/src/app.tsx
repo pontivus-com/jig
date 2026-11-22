@@ -13,7 +13,7 @@ import {
   useState,
 } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
-import type { JigDataConflictCase } from "../../src/core/synchronization-recovery";
+import type * as Recovery from "../../src/core/synchronization-recovery";
 import {
   clampPlannerHorizonStart,
   movePlannerHorizon,
@@ -196,7 +196,7 @@ function ConfiguredApp({
   const [
     synchronizationConflict,
     setSynchronizationConflict,
-  ] = useState<JigDataConflictCase | null>(null);
+  ] = useState<Recovery.JigDataConflictCase | null>(null);
   const [syncConflictDraft, setSyncConflictDraft] =
     useState<SyncConflictDraftState | null>(null);
   const [syncConflictError, setSyncConflictError] =
@@ -250,7 +250,7 @@ function ConfiguredApp({
   }, []);
 
   const refreshOperationalState = useCallback(
-    async (): Promise<JigDataConflictCase | null> => {
+    async (): Promise<Recovery.JigDataConflictCase | null> => {
       const [
         nextStatus,
         nextDiagnostics,
