@@ -100,16 +100,7 @@ function targetPlacement(
   );
 
   let destinationIndex: number;
-  if (target.type === "jig-prospective") {
-    const prospectiveIndex = target.data?.destination_index;
-    if (
-      typeof prospectiveIndex !== "number" ||
-      !Number.isInteger(prospectiveIndex)
-    ) {
-      return null;
-    }
-    destinationIndex = prospectiveIndex;
-  } else if (target.type === "jig-date") {
+  if (target.type === "jig-date") {
     destinationIndex = available.length;
   } else if (target.type === "jig-task") {
     const targetId = String(target.id);
@@ -379,20 +370,8 @@ export function TaskProspectiveFootprint({
   destinationIndex,
   blockSize,
 }: TaskProspectiveFootprintProps): React.ReactElement {
-  const { ref } = useDroppable({
-    id: `jig-prospective-${activeTaskId}`,
-    type: "jig-prospective",
-    accept: "jig-task",
-    data: {
-      date,
-      destination_index: destinationIndex,
-    },
-    collisionPriority: 3,
-  });
-
   return (
     <li
-      ref={ref}
       className="jig-task-prospective-footprint"
       data-jig-prospective-footprint="true"
       aria-hidden="true"
