@@ -181,6 +181,8 @@ function ConfiguredApp({
   const [isOperating, setIsOperating] = useState(false);
   const [githubReconnect, setGitHubReconnect] =
     useState<GitHubReconnectSnapshot | null>(null);
+  const [showSettingsDiagnostics, setShowSettingsDiagnostics] =
+    useState(false);
   const [workspace, setWorkspace] = useState<TaskWorkspaceState>({
     mode: "closed",
   });
@@ -895,6 +897,8 @@ function ConfiguredApp({
         onAppearanceModeChange={onAppearanceModeChange}
         onSync={syncNow}
         onReconnectGitHub={reconnectGitHub}
+        showDiagnostics={showSettingsDiagnostics}
+        onShowDiagnosticsChange={setShowSettingsDiagnostics}
       />
     );
 
