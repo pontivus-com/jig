@@ -113,20 +113,43 @@ function pointerPlacement(
   const available = outstandingForDate(tasks, date).filter(
     (task) => task.id !== activeTaskId,
   );
-  const taskMidpoints = Array.from(
+  const taskRects = Array.from(
     dateZone.querySelectorAll<HTMLElement>(
       ".jig-task-card:not(.jig-task-card-dragging)",
     ),
   )
     .map((element) => {
       const bounds = element.getBoundingClientRect();
-      return bounds.top + bounds.height / 2;
+      return {
+        top: bounds.top,
+        bottom: bounds.bottom,
+        midpoint: bounds.top + bounds.height / 2,
+      };
     })
-    .sort((left, right) => left - right);
+    .sort((left, right) => left.top - right.top);
+
+  const hoveredIndex = taskRects.findIndex(
+    (bounds) =>
+      pointer.y >= bounds.top &&
+      pointer.y <= bounds.bottom,
+  );
+
+  const rawDestinationIndex =
+    hoveredIndex >= 0
+      ? activeTask.scheduled_date === date &&
+        activeTask.position !== null
+        ? activeTask.position <= hoveredIndex
+          ? hoveredIndex + 1
+          : hoveredIndex
+        : hoveredIndex +
+          (pointer.y >= (taskRects[hoveredIndex]?.midpoint ?? pointer.y)
+            ? 1
+            : 0)
+      : taskRects.filter((bounds) => pointer.y >= bounds.midpoint).length;
 
   const destinationIndex = Math.min(
     available.length,
-    taskMidpoints.filter((midpoint) => pointer.y >= midpoint).length,
+    rawDestinationIndex,
   );
 
   return {
