@@ -46,14 +46,13 @@ export function ApplicationShell({
 }
 
 export interface ConfiguredPresentationProps
-  extends Omit<PlannerHeaderProps, "layoutMode">,
+  extends PlannerHeaderProps,
     Omit<TaskWorkspaceOverlayProps, "workspace"> {
   readonly content: ReactNode;
   readonly durableFeedback: ReactNode;
   readonly transientFeedback: ReactNode;
   readonly workspace: TaskWorkspacePresentation | null;
   readonly destinationTransition: Destination | null;
-  readonly todayScrollRequest: number;
   readonly onContentPointerDown: (
     event: PointerEvent<HTMLDivElement>,
   ) => void;
