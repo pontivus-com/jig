@@ -246,14 +246,14 @@ export const astryxMatchaTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
-    "--jig-chrome-surface": "var(--color-background-body)",
-    "--jig-planner-surface": "color-mix(in srgb, var(--color-background-surface) 88%, var(--color-background-muted) 12%)",
-    "--jig-task-surface": "color-mix(in srgb, var(--color-background-card) 50%, var(--color-background-body) 50%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)"
+    "--jig-brand-accent": "var(--color-icon-accent)",
+    "--jig-chrome-surface": "var(--color-background-body)",
+    "--jig-planner-surface": "var(--color-background-surface)",
+    "--jig-task-surface": "color-mix(in oklab, var(--color-background-card) 86%, var(--color-text-primary) 14%)"
   },
   __localTokenOwners: {
     "--jig-state-today-border": "astryx-matcha",
@@ -270,14 +270,14 @@ export const astryxMatchaTheme = {
     "--jig-status-healthy-bg": "astryx-matcha",
     "--jig-status-healthy-border": "astryx-matcha",
     "--jig-status-healthy-text": "astryx-matcha",
-    "--jig-chrome-surface": "astryx-matcha",
-    "--jig-planner-surface": "astryx-matcha",
-    "--jig-task-surface": "astryx-matcha",
     "--jig-state-hover-bg": "astryx-matcha",
     "--jig-state-pressed-bg": "astryx-matcha",
     "--jig-task-border": "astryx-matcha",
     "--jig-brand-primary": "astryx-matcha",
-    "--jig-brand-accent": "astryx-matcha"
+    "--jig-brand-accent": "astryx-matcha",
+    "--jig-chrome-surface": "astryx-matcha",
+    "--jig-planner-surface": "astryx-matcha",
+    "--jig-task-surface": "astryx-matcha"
   },
   __localTokenLineage: ["astryx-matcha"],
   components: {

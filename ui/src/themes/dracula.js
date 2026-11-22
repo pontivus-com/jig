@@ -244,14 +244,14 @@ export const draculaTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
-    "--jig-chrome-surface": "var(--color-background-body)",
-    "--jig-planner-surface": "color-mix(in srgb, var(--color-background-surface) 88%, var(--color-background-muted) 12%)",
-    "--jig-task-surface": "color-mix(in srgb, var(--color-background-card) 50%, var(--color-background-body) 50%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)"
+    "--jig-brand-accent": "var(--color-icon-accent)",
+    "--jig-chrome-surface": "light-dark(#fffbeb, #282a36)",
+    "--jig-planner-surface": "light-dark(#efeddc, #343746)",
+    "--jig-task-surface": "color-mix(in oklab, var(--color-background-card) 97%, var(--color-text-primary) 3%)"
   },
   __localTokenOwners: {
     "--astryx-theme-neutral-color-status-fill-accent": "neutral",
@@ -269,14 +269,14 @@ export const draculaTheme = {
     "--jig-status-healthy-bg": "dracula",
     "--jig-status-healthy-border": "dracula",
     "--jig-status-healthy-text": "dracula",
-    "--jig-chrome-surface": "dracula",
-    "--jig-planner-surface": "dracula",
-    "--jig-task-surface": "dracula",
     "--jig-state-hover-bg": "dracula",
     "--jig-state-pressed-bg": "dracula",
     "--jig-task-border": "dracula",
     "--jig-brand-primary": "dracula",
-    "--jig-brand-accent": "dracula"
+    "--jig-brand-accent": "dracula",
+    "--jig-chrome-surface": "dracula",
+    "--jig-planner-surface": "dracula",
+    "--jig-task-surface": "dracula"
   },
   __localTokenLineage: ["neutral","dracula"],
   components: {

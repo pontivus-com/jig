@@ -232,14 +232,14 @@ export const astryxNeutralTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
-    "--jig-chrome-surface": "var(--color-background-body)",
-    "--jig-planner-surface": "color-mix(in srgb, var(--color-background-surface) 88%, var(--color-background-muted) 12%)",
-    "--jig-task-surface": "color-mix(in srgb, var(--color-background-card) 50%, var(--color-background-body) 50%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)"
+    "--jig-brand-accent": "var(--color-icon-accent)",
+    "--jig-chrome-surface": "var(--color-background-body)",
+    "--jig-planner-surface": "var(--color-background-surface)",
+    "--jig-task-surface": "color-mix(in oklab, var(--color-background-card) 84%, var(--color-text-primary) 16%)"
   },
   __localTokenOwners: {
     "--astryx-theme-neutral-color-status-fill-accent": "neutral",
@@ -257,14 +257,14 @@ export const astryxNeutralTheme = {
     "--jig-status-healthy-bg": "astryx-neutral",
     "--jig-status-healthy-border": "astryx-neutral",
     "--jig-status-healthy-text": "astryx-neutral",
-    "--jig-chrome-surface": "astryx-neutral",
-    "--jig-planner-surface": "astryx-neutral",
-    "--jig-task-surface": "astryx-neutral",
     "--jig-state-hover-bg": "astryx-neutral",
     "--jig-state-pressed-bg": "astryx-neutral",
     "--jig-task-border": "astryx-neutral",
     "--jig-brand-primary": "astryx-neutral",
-    "--jig-brand-accent": "astryx-neutral"
+    "--jig-brand-accent": "astryx-neutral",
+    "--jig-chrome-surface": "astryx-neutral",
+    "--jig-planner-surface": "astryx-neutral",
+    "--jig-task-surface": "astryx-neutral"
   },
   __localTokenLineage: ["neutral","astryx-neutral"],
   components: {

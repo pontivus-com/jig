@@ -233,14 +233,14 @@ export const jigTheme = {
     "--jig-status-healthy-bg": "var(--color-success-muted)",
     "--jig-status-healthy-border": "var(--color-border-success)",
     "--jig-status-healthy-text": "var(--color-text-success)",
-    "--jig-chrome-surface": "var(--color-background-body)",
-    "--jig-planner-surface": "color-mix(in srgb, var(--color-background-surface) 88%, var(--color-background-muted) 12%)",
-    "--jig-task-surface": "color-mix(in srgb, var(--color-background-card) 50%, var(--color-background-body) 50%)",
     "--jig-state-hover-bg": "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
     "--jig-state-pressed-bg": "color-mix(in srgb, var(--jig-task-surface) 90%, var(--color-tint-hover) 10%)",
     "--jig-task-border": "var(--color-border-emphasized)",
     "--jig-brand-primary": "var(--color-icon-primary)",
-    "--jig-brand-accent": "var(--color-icon-accent)"
+    "--jig-brand-accent": "var(--color-icon-accent)",
+    "--jig-chrome-surface": "var(--color-background-body)",
+    "--jig-planner-surface": "var(--color-background-surface)",
+    "--jig-task-surface": "color-mix(in oklab, var(--color-background-card) 94%, var(--color-text-primary) 6%)"
   },
   __localTokenOwners: {
     "--astryx-theme-neutral-color-status-fill-accent": "neutral",
@@ -258,14 +258,14 @@ export const jigTheme = {
     "--jig-status-healthy-bg": "jig",
     "--jig-status-healthy-border": "jig",
     "--jig-status-healthy-text": "jig",
-    "--jig-chrome-surface": "jig",
-    "--jig-planner-surface": "jig",
-    "--jig-task-surface": "jig",
     "--jig-state-hover-bg": "jig",
     "--jig-state-pressed-bg": "jig",
     "--jig-task-border": "jig",
     "--jig-brand-primary": "jig",
-    "--jig-brand-accent": "jig"
+    "--jig-brand-accent": "jig",
+    "--jig-chrome-surface": "jig",
+    "--jig-planner-surface": "jig",
+    "--jig-task-surface": "jig"
   },
   __localTokenLineage: ["neutral","jig"],
   components: {
