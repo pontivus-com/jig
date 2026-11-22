@@ -1145,7 +1145,7 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
 });
 
 
-test("explicit insertion slots cover every gap without pre-release mutation", async ({
+test("prospective projection covers first middle and last positions without pre-release mutation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -1177,17 +1177,22 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
   const scope = page.locator(".jig-task-drag-scope");
-  for (let slotIndex = 0; slotIndex <= 3; slotIndex += 1) {
-    const slot = page.locator(
-      `[data-date="${destinationDate}"] [data-jig-drop-slot="${slotIndex}"]`,
+  for (const destinationIndex of [0, 1, 2, 3] as const) {
+    const { target, targetYRatio } = await taskDropTarget(
+      page,
+      destinationDate,
+      destinationIndex,
+      "Gap-matrix source",
     );
-    const box = await slot.boundingBox();
+    const box = await target.boundingBox();
     if (box === null) {
-      throw new Error(`Gap-matrix slot ${slotIndex} geometry unavailable`);
+      throw new Error(
+        `Gap-matrix target ${destinationIndex} geometry unavailable`,
+      );
     }
     await page.mouse.move(
       box.x + box.width / 2,
-      box.y + box.height / 2,
+      box.y + box.height * targetYRatio,
       { steps: 6 },
     );
     await expect(scope).toHaveAttribute(
@@ -1196,8 +1201,11 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
     );
     await expect(scope).toHaveAttribute(
       "data-jig-drop-index",
-      String(slotIndex),
+      String(destinationIndex),
     );
+    await expect(
+      page.locator(".jig-task-prospective-footprint"),
+    ).toHaveCount(1);
     expect(
       (await taskByTitle(page, "Gap-matrix source")).scheduled_date,
     ).toBe(today);
@@ -1206,6 +1214,9 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
   await page.mouse.move(4, 4, { steps: 6 });
   await page.mouse.up();
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect(
+    page.locator(".jig-task-prospective-footprint"),
+  ).toHaveCount(0);
   expect(
     (await taskByTitle(page, "Gap-matrix source")).scheduled_date,
   ).toBe(today);
@@ -1233,9 +1244,9 @@ test("drag persists first middle and last positions within and across dates", as
       .map((task) => task.title);
 
   const sameDateCases = [
-    { label: "first", sourceFirst: false, slot: 0, index: 0 },
-    { label: "middle", sourceFirst: true, slot: 2, index: 1 },
-    { label: "last", sourceFirst: true, slot: 3, index: 2 },
+    { label: "first", sourceFirst: false, index: 0 },
+    { label: "middle", sourceFirst: true, index: 1 },
+    { label: "last", sourceFirst: true, index: 2 },
   ] as const;
 
   for (const scenario of sameDateCases) {
@@ -1251,12 +1262,17 @@ test("drag persists first middle and last positions within and across dates", as
     await page.reload();
 
     const sourceTitle = `Same ${scenario.label} source`;
+    const { target, targetYRatio } = await taskDropTarget(
+      page,
+      today,
+      scenario.index,
+      sourceTitle,
+    );
     const intent = await mouseDrag(
       page,
       await dragHandle(page, sourceTitle),
-      page.locator(
-        `[data-date="${today}"] [data-jig-drop-slot="${scenario.slot}"]`,
-      ),
+      target,
+      targetYRatio,
     );
     expect(intent).toEqual({ date: today, index: scenario.index });
     await expect
@@ -1265,9 +1281,9 @@ test("drag persists first middle and last positions within and across dates", as
   }
 
   const crossDateCases = [
-    { label: "first", slot: 0, index: 0 },
-    { label: "middle", slot: 1, index: 1 },
-    { label: "last", slot: 3, index: 3 },
+    { label: "first", index: 0 },
+    { label: "middle", index: 1 },
+    { label: "last", index: 3 },
   ] as const;
 
   for (const scenario of crossDateCases) {
@@ -1279,12 +1295,17 @@ test("drag persists first middle and last positions within and across dates", as
     await createTask(page, `Cross ${scenario.label} peer 3`, destinationDate);
     await page.reload();
 
+    const { target, targetYRatio } = await taskDropTarget(
+      page,
+      destinationDate,
+      scenario.index,
+      sourceTitle,
+    );
     const intent = await mouseDrag(
       page,
       await dragHandle(page, sourceTitle),
-      page.locator(
-        `[data-date="${destinationDate}"] [data-jig-drop-slot="${scenario.slot}"]`,
-      ),
+      target,
+      targetYRatio,
     );
     expect(intent).toEqual({
       date: destinationDate,
