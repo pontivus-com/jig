@@ -274,9 +274,7 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     name: "Resolve sync conflict",
   });
   await expect(desktopResolver).toBeVisible();
-  await desktopResolver
-    .getByText("This device", { exact: true })
-    .click();
+  await desktopResolver.getByRole("radio").first().click();
   await expect(
     desktopResolver.getByRole("radio").first(),
   ).toBeChecked();
@@ -324,9 +322,7 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     }),
   ).toHaveCount(0);
 
-  await reopened
-    .getByText("This device", { exact: true })
-    .click();
+  await reopened.getByRole("radio").first().click();
   await expect(
     reopened.getByRole("radio").first(),
   ).toBeChecked();
@@ -469,9 +465,7 @@ test("resolver states remain theme-safe across every Theme × Light/Dark combina
       );
 
       await technicalTrigger.click();
-      await resolver
-        .getByText("This device", { exact: true })
-        .click();
+      await resolver.getByRole("radio").first().click();
       await expect(radios.first()).toBeChecked();
       await resolver
         .getByRole("button", {
