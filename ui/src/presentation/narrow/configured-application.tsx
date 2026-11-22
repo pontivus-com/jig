@@ -34,7 +34,7 @@ export function NarrowConfiguredApplication(
           <div
             className={[
               "jig-content-frame",
-          todayScrollRequest > 0
+          todayScrollRequest !== null
             ? "jig-content-frame-today-smooth"
             : "",
         ]
