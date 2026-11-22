@@ -1,4 +1,5 @@
 import { DesktopConfiguredHeader } from "./header";
+import { DesktopFeedbackRegion } from "./feedback-region";
 import { TaskWorkspaceDrawer } from "../../task-workspace";
 import {
   ApplicationShell,
@@ -28,8 +29,10 @@ export function DesktopConfiguredApplication(
         topNav={<DesktopConfiguredHeader {...componentProps} />}
       >
         <div className="jig-configured-body">
-          {durableFeedback}
-          {transientFeedback}
+          <DesktopFeedbackRegion
+            durable={durableFeedback}
+            transient={transientFeedback}
+          />
           <div className="jig-content-frame">
         <div
           key={props.destination}
