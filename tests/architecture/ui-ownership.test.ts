@@ -533,12 +533,27 @@ describe("UI ownership architecture", () => {
     expect(styles).toContain("min-height: 48px;");
 
     const workspace = source("ui/src/task-workspace.tsx");
-    expect(workspace).toContain("LayoutFooter");
-    expect(workspace).toContain('showEditorActions={false}');
-    expect(workspace).toContain('form="jig-task-bottom-sheet-form"');
-    expect(workspace).toContain(
-      'editorFormId="jig-task-bottom-sheet-form"',
+    const desktopWorkspace = source(
+      "ui/src/presentation/desktop/task-workspace.tsx",
     );
+    const narrowWorkspace = source(
+      "ui/src/presentation/narrow/task-workspace.tsx",
+    );
+    expect(workspace).toContain("TASK_WORKSPACE_FORM_ID");
+    expect(workspace).toContain("TaskWorkspaceContent");
+    expect(workspace).toContain("TaskWorkspaceActions");
+    expect(workspace).toContain("showActions={false}");
+    expect(workspace).not.toContain("<Drawer");
+    expect(workspace).not.toContain("<BottomSheet");
+    expect(workspace).not.toContain("<LayoutFooter");
+    expect(desktopWorkspace).toContain("<Drawer");
+    expect(desktopWorkspace).toContain("<LayoutFooter");
+    expect(desktopWorkspace).toContain("<TaskWorkspaceActions");
+    expect(narrowWorkspace).toContain("<BottomSheet");
+    expect(narrowWorkspace).toContain("<LayoutFooter");
+    expect(narrowWorkspace).toContain("<TaskWorkspaceActions");
+    expect(desktopWorkspace).not.toContain("<BottomSheet");
+    expect(narrowWorkspace).not.toContain("<Drawer");
     const editorActionsStart = styles.indexOf(".jig-editor-actions {");
     const editorActionsEnd = styles.indexOf("}", editorActionsStart);
     expect(editorActionsStart).toBeGreaterThanOrEqual(0);
@@ -617,6 +632,12 @@ describe("UI ownership architecture", () => {
     expect(workspace).toContain('readonly mode: "task"');
     expect(workspace).toContain('readonly mode: "create"');
     expect(workspace).not.toContain('readonly mode: "view"');
+    expect(
+      source("ui/src/presentation/desktop/task-workspace.tsx"),
+    ).not.toContain("TaskWorkspaceState");
+    expect(
+      source("ui/src/presentation/narrow/task-workspace.tsx"),
+    ).not.toContain("TaskWorkspaceState");
 
     expect(planner).toContain("<WeekView");
     expect(planner).not.toContain("layoutMode");
