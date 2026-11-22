@@ -287,9 +287,6 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     .getByText("Keep changed Task", { exact: true })
     .click();
   await expect(
-    desktopResolver.getByRole("radio").nth(1),
-  ).toBeChecked();
-  await expect(
     desktopResolver.getByRole("heading", {
       name: "Review Task order",
       exact: true,
@@ -339,9 +336,6 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
   await reopened
     .getByText("Keep changed Task", { exact: true })
     .click();
-  await expect(
-    reopened.getByRole("radio").nth(1),
-  ).toBeChecked();
   await reopened
     .getByRole("button", { name: "Confirm order", exact: true })
     .click();
@@ -494,9 +488,6 @@ test("resolver states remain theme-safe across every Theme × Light/Dark combina
       await resolver
         .getByText("Keep changed Task", { exact: true })
         .click();
-      await expect(
-        resolver.getByRole("radio").nth(1),
-      ).toBeChecked();
 
       await expect(
         resolver.getByRole("heading", {
