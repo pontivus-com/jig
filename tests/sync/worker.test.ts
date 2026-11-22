@@ -682,7 +682,7 @@ describe("cross-installation synchronization worker", () => {
       next_retry_at: null,
       recovery_attempted: false,
       recovery_outcome: null,
-      error_summary: "GitHub authorization is unavailable",
+      error_summary: "Git authentication is unavailable",
     });
   });
 
