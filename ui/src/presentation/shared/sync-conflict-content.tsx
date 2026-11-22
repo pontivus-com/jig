@@ -113,7 +113,7 @@ function familyTitles(tasks: readonly Task[]): string {
 }
 
 function familyValues(
-  side: Recovery.Recovery.JigDataConflictFamilySide,
+  side: Recovery.JigDataConflictFamilySide,
 ): readonly ComparisonValue[] {
   if (side.series.length === 0 && side.tasks.length === 0) {
     return [["State", "Deleted"]];
