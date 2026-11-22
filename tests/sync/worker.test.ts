@@ -212,6 +212,41 @@ function fakeEffects(
         head: repo.localHead,
         snapshot: repo.localSnapshot,
       }),
+      readSnapshotAtRef: async (
+        _config,
+        ref,
+        _datasetId,
+      ) => {
+        if (ref === repo.localHead) return repo.localSnapshot;
+        if (
+          repo.remoteHead !== null &&
+          repo.remoteSnapshot !== null &&
+          ref === repo.remoteHead
+        ) {
+          return repo.remoteSnapshot;
+        }
+        throw new Error("synthetic recovery snapshot is unavailable");
+      },
+      readRecoveryCandidateHead: async () => null,
+      recoveryCandidateParents: async () => {
+        throw new Error("synthetic recovery candidate is unavailable");
+      },
+      recoveryCommitterTimestampSeconds: async () => 0,
+      uniqueRecoveryMergeBase: async () => null,
+      writeRecoveryCandidate: async () => {
+        throw new Error("synthetic recovery candidate construction is unavailable");
+      },
+      deleteRecoveryCandidate: async () => undefined,
+      compareAndSetPortableHead: async (
+        _config,
+        expectedHead,
+        targetHead,
+      ) => {
+        if (repo.localHead !== expectedHead) {
+          throw new Error("synthetic recovery local ref race");
+        }
+        repo.localHead = targetHead;
+      },
       writeSnapshot: async (
         _config,
         snapshot,
@@ -1006,8 +1041,8 @@ describe("cross-installation synchronization worker", () => {
     expect(divergentEffects.writes.count).toBe(0);
     expect(divergentEffects.pushes.count).toBe(0);
     expect(controller.diagnostics()).toMatchObject({
-      phase: "classify",
-      reason: "diverged",
+      phase: "recover-divergence",
+      reason: "ancestry-unknown",
       retryable: false,
       attempt_count: 1,
       local_head: "aaaaaaaaaaaa",
@@ -1015,6 +1050,8 @@ describe("cross-installation synchronization worker", () => {
       lineage: "diverged",
       remote_name: "origin",
       remote_location: REMOTE.location,
+      recovery_attempted: true,
+      recovery_outcome: "refused",
     });
   });
 });

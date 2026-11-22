@@ -455,7 +455,10 @@ export function createSyncController(
 
   const observe = async (
     environment: Readonly<Record<string, string>>,
-    phase: "observe-remote" | "verify-remote" = "observe-remote",
+    phase:
+      | "observe-remote"
+      | "verify-remote"
+      | "recover-divergence" = "observe-remote",
   ): Promise<ObservedPortableRemote> => {
     beginPhase(phase);
     const metadata = await readMetadata(db);
