@@ -1,4 +1,4 @@
-import { PlannerHeader } from "../../planner-header";
+import { DesktopConfiguredHeader } from "./header";
 import { TaskWorkspaceDrawer } from "../../task-workspace";
 import {
   ApplicationShell,
@@ -14,7 +14,6 @@ export function DesktopConfiguredApplication(
     transientFeedback,
     workspace,
     destinationTransition,
-    todayScrollRequest: _todayScrollRequest,
     onContentPointerDown,
     ...componentProps
   } = props;
@@ -25,7 +24,7 @@ export function DesktopConfiguredApplication(
       className="jig-configured-root jig-configured-desktop"
     >
       <ApplicationShell
-        topNav={<PlannerHeader {...componentProps} layoutMode="desktop" />}
+        topNav={<DesktopConfiguredHeader {...componentProps} />}
       >
         <div className="jig-configured-body">
           {durableFeedback}
