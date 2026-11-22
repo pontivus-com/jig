@@ -5,15 +5,12 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import type { RecurrenceSeries } from "../../../src/core/recurrence";
-import type { Task, TaskCommand } from "../../../src/core/task";
 import type { Destination } from "../../navigation";
 import type { PlannerHeaderProps } from "../../planner-header";
 import type {
   TaskWorkspaceOverlayProps,
   TaskWorkspacePresentation,
 } from "../../task-workspace";
-import type { TaskDraft } from "../../task-editor";
 
 interface ApplicationShellProps {
   readonly topNav: ReactNode;
@@ -62,13 +59,3 @@ export interface ConfiguredPresentationProps
   ) => void;
 }
 
-// Compile-time anchors: these fields deliberately remain the existing
-// canonical/component types rather than a desktop/narrow view-model layer.
-type _CanonicalWorkspaceDraft = TaskDraft;
-type _CanonicalTask = Task;
-type _CanonicalTaskCommand = TaskCommand;
-type _CanonicalRecurrence = RecurrenceSeries;
-void (0 as unknown as _CanonicalWorkspaceDraft);
-void (0 as unknown as _CanonicalTask);
-void (0 as unknown as _CanonicalTaskCommand);
-void (0 as unknown as _CanonicalRecurrence);
