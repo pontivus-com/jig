@@ -4,6 +4,16 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+> **Target release: v1.1.2.** Corrective work is tracked in issue #66. These entries describe the active corrective scope and must be reconciled to delivered `Fixed`/`Changed` outcomes before the release metadata transition.
+
+### In progress
+
+- **Desktop synchronization:** Investigate and correct the upstream cause of normal Linux/Desktop repository continuity entering `Needs attention` / `Saved locally · Sync needs attention.` Preserve genuine divergence/rewrite/unsafe attention semantics and the existing Git ownership boundary rather than hiding the status.
+- **Theme surface separation:** Restore three perceptibly distinct application surface roles across all 13 governed themes in Light and Dark: application chrome (desktop header; narrow/mobile header + bottom navigation), Planner/day canvas, and Task cards. Keep Task cards as the primary discrete surface and avoid per-theme CSS overrides.
+- **Desktop Planner viewport fill:** Correct application/Planner height ownership so the Planner canvas background extends through the full desktop viewport below the header even with zero or few Tasks, while preserving normal scrolling and narrow/mobile safe-area geometry.
+- **Desktop/theme regression audit:** Audit Planner, History and Settings background ownership; empty/short/overflowing Planner states; all synchronization presentations; and shared desktop/narrow theme-token behavior. Add any newly confirmed v1.1.2 defect to issue #66 and this `[Unreleased]` section before release.
+
+
 ## [1.1.1] - 2026-11-21
 
 ### Documentation
