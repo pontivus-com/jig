@@ -631,6 +631,7 @@ describe("UI ownership architecture", () => {
     const app = source("ui/src/app.tsx");
     const setup = source("ui/src/setup.tsx");
     const setupHttp = source("ui/src/setup-http.ts");
+    const nativeSetup = source("ui/src/native/github-setup.ts");
     const deviceFlow = source("ui/src/github-device-flow.tsx");
     const desktopSetup = source("ui/src/presentation/desktop/setup.tsx");
     const narrowSetup = source("ui/src/presentation/narrow/setup.tsx");
@@ -654,7 +655,7 @@ describe("UI ownership architecture", () => {
     expect(setup).not.toContain("isNativePlatform");
 
     expect(setupHttp).toContain("usesNativeSetupProviderContinuation");
-    expect(setupHttp).toContain("local_repository_available: false");
+    expect(nativeSetup).toContain("local_repository_available: false");
     expect(setup).toContain("BROWSER_PROVIDER_RETRY_MS");
     expect(setup).toContain('window.addEventListener("focus", observeNow)');
     expect(setup).toContain('document.addEventListener("visibilitychange", onVisible)');
