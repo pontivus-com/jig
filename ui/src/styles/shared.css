@@ -1127,32 +1127,13 @@ body {
 
 .jig-app-header-onboarding {
   display: flex;
-  min-height: 2.75rem;
   align-items: center;
-  padding: 0 var(--spacing-1);
 }
 
 .jig-setup {
   min-height: 100%;
-  padding: var(--spacing-7) var(--spacing-6);
   background: var(--color-background-body);
   color: var(--color-text-primary);
-}
-
-.jig-setup-layout {
-  display: grid;
-  width: min(100%, 72rem);
-  min-height: calc(100dvh - 2.75rem - 2 * var(--spacing-7));
-  grid-template-columns: minmax(0, 1fr) minmax(22rem, 30rem);
-  align-items: center;
-  gap: var(--spacing-8);
-  margin-inline: auto;
-}
-
-.jig-content-frame-onboarding {
-  height: calc(100dvh - 2.75rem);
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .jig-setup-value,
@@ -1176,8 +1157,6 @@ body {
 
 .jig-setup-heading h1 {
   max-width: 18ch;
-  font-size: calc(var(--font-size-2xl) * 1.35);
-  line-height: 1.08;
   letter-spacing: -0.025em;
 }
 
@@ -1191,14 +1170,11 @@ body {
 
 .jig-setup-benefits {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--spacing-4);
 }
 
 .jig-setup-benefit {
   display: grid;
   align-content: start;
-  gap: var(--spacing-2);
 }
 
 .jig-setup-benefit-icon {
@@ -1226,22 +1202,9 @@ body {
   min-width: 0;
 }
 
-.jig-setup-choice-desktop {
-  padding: var(--spacing-5);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: calc(var(--radius-element) + var(--border-width));
-  background: var(--color-background-surface);
-  box-shadow: var(--shadow-med);
-}
-
-.jig-setup-choice-narrow {
-  padding-block-start: var(--spacing-1);
-}
-
 .jig-setup-card {
   border-radius: calc(var(--radius-element) + var(--border-width));
   background: var(--color-background-surface);
-  box-shadow: var(--shadow-med);
 }
 
 .jig-setup-github-actions {
@@ -1274,59 +1237,6 @@ body {
   width: min(100% - 2 * var(--spacing-4), 42rem);
   gap: var(--spacing-3);
   margin: var(--spacing-6) auto 0;
-}
-
-@media (max-width: 72.999rem) {
-  .jig-app-header-onboarding {
-    min-height: 56px;
-    padding: 0 var(--spacing-2);
-  }
-
-  .jig-setup {
-    padding: var(--spacing-4) var(--spacing-3);
-  }
-
-  .jig-setup-layout {
-    min-height: auto;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-    gap: var(--spacing-5);
-  }
-
-  .jig-setup-benefits {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--spacing-3);
-  }
-
-  .jig-setup-benefit {
-    grid-template-columns: 40px minmax(0, 1fr);
-    align-items: start;
-    gap: var(--spacing-3);
-  }
-
-  .jig-setup-heading h1 {
-    font-size: var(--font-size-2xl);
-    line-height: 1.12;
-  }
-
-  .jig-setup-choice-narrow {
-    padding-block-start: 0;
-  }
-
-  .jig-setup-pane {
-    width: 100%;
-  }
-
-  .jig-setup-card {
-    box-shadow: none;
-  }
-
-  .jig-setup button {
-    min-width: 48px;
-    min-height: 48px;
-  }
-
-
 }
 
 .jig-configured-root {
