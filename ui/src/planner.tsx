@@ -7,7 +7,7 @@ export type WeekTransitionDirection = "today";
 export interface PlannerProps {
   readonly focusCurrentDayOnMount: boolean;
   readonly onInitialTodayFocusHandled: () => void;
-  readonly todayScrollRequest: number;
+  readonly todayScrollRequest: number | null;
   readonly onTodayScrollHandled: () => void;
   readonly weekTransitionDirection: WeekTransitionDirection | null;
   readonly tasks: readonly Task[];
