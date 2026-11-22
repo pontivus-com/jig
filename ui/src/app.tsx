@@ -161,6 +161,8 @@ function ConfiguredApp({
   const [plannerState, setPlannerState] =
     useState<PlannerState>(initialPlannerState);
   const [todayScrollRequest, setTodayScrollRequest] = useState(0);
+  const [initialTodayFocusPending, setInitialTodayFocusPending] =
+    useState(() => layoutMode === "narrow");
   const [weekTransitionDirection, setWeekTransitionDirection] =
     useState<WeekTransitionDirection | null>(null);
   const [observedToday, setObservedToday] = useState(todayCivilDate);
@@ -726,6 +728,10 @@ function ConfiguredApp({
       setTodayScrollRequest((current) => current + 1);
     }
   }, [layoutMode, plannerState.displayedHorizonStart]);
+  const clearInitialTodayFocus = useCallback((): void => {
+    setInitialTodayFocusPending(false);
+  }, []);
+
   const clearTodayScrollRequest = useCallback((): void => {
     setTodayScrollRequest(0);
   }, []);
@@ -865,7 +871,8 @@ function ConfiguredApp({
       </div>
     ) : destination === "planner" ? (
       <Planner
-        focusCurrentDayOnMount={layoutMode === "narrow"}
+        focusCurrentDayOnMount={initialTodayFocusPending}
+        onInitialTodayFocusHandled={clearInitialTodayFocus}
         todayScrollRequest={todayScrollRequest}
         onTodayScrollHandled={clearTodayScrollRequest}
         weekTransitionDirection={weekTransitionDirection}
