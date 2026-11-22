@@ -328,7 +328,9 @@ describe("UI ownership architecture", () => {
     const destinations = source("ui/src/destinations.ts");
     const desktopHeader = source("ui/src/presentation/desktop/header.tsx");
     const narrowNavigation = source("ui/src/presentation/narrow/bottom-navigation.tsx");
-    const week = source("ui/src/week.tsx");
+    const plannerDate = source(
+      "ui/src/presentation/shared/planner-date-section.tsx",
+    );
     const taskRow = source("ui/src/task-row.tsx");
     const icons = source("ui/src/jig-icons.tsx");
 
@@ -347,7 +349,7 @@ describe("UI ownership architecture", () => {
     expect(destinations).toContain("JIG_ICON_KEYS.history");
     expect(desktopHeader).toContain('<JigIcon name="add"');
     expect(narrowNavigation).toContain('<JigIcon name="add"');
-    expect(week).toContain('<JigIcon name="add"');
+    expect(plannerDate).toContain('<JigIcon name="add"');
     expect(taskRow).toContain('<JigIcon name="edit"');
     expect(taskRow).toContain('<JigIcon name="delete"');
     expect(taskRow).toContain('icon="externalLink"');
@@ -359,7 +361,7 @@ describe("UI ownership architecture", () => {
     expect(icons).toContain("satisfies Record<JigIconName, NamespacedIconName>");
     expect(icons).not.toContain("as IconName");
 
-    for (const content of [header, week, taskRow]) {
+    for (const content of [header, plannerDate, taskRow]) {
       expect(content).not.toContain('aria-hidden="true">+</span>');
       expect(content).not.toContain("•••");
       expect(content).not.toContain("≡");
@@ -491,15 +493,17 @@ describe("UI ownership architecture", () => {
   it("keeps active-date scheduling policy in the planning core", () => {
     const planning = source("src/core/planning.ts");
     const drag = source("ui/src/drag.tsx");
-    const week = source("ui/src/week.tsx");
+    const plannerDate = source(
+      "ui/src/presentation/shared/planner-date-section.tsx",
+    );
     const editor = source("ui/src/task-editor.tsx");
 
     expect(planning).toContain("export function isActiveScheduleDate(");
     expect(drag).toContain("isActiveScheduleDate");
-    expect(week).toContain("isFutureAddDate");
+    expect(plannerDate).toContain("isFutureAddDate");
     expect(editor).toContain("assertActiveScheduleDate");
     expect(drag).not.toMatch(/date\s*<\s*todayCivilDate\(\)/);
-    expect(week).not.toMatch(/date\s*<\s*todayCivilDate\(\)/);
+    expect(plannerDate).not.toMatch(/date\s*<\s*todayCivilDate\(\)/);
   });
 
   it("keeps v1.1 mobile form and onboarding composition on governed public owners", () => {
@@ -623,8 +627,11 @@ describe("UI ownership architecture", () => {
 
   it("keeps Planner and Task workspace state singular", () => {
     const app = source("ui/src/app.tsx");
-    const planner = source("ui/src/planner.tsx");
-    const week = source("ui/src/week.tsx");
+    const desktopPlanner = source("ui/src/presentation/desktop/planner.tsx");
+    const narrowPlanner = source("ui/src/presentation/narrow/planner.tsx");
+    const plannerDate = source(
+      "ui/src/presentation/shared/planner-date-section.tsx",
+    );
     const list = source("ui/src/planner-list.tsx");
     const workspace = source("ui/src/task-workspace.tsx");
     const editor = source("ui/src/task-editor.tsx");
@@ -654,18 +661,22 @@ describe("UI ownership architecture", () => {
       source("ui/src/presentation/narrow/task-workspace.tsx"),
     ).not.toContain("TaskWorkspaceState");
 
-    expect(planner).toContain("<WeekView");
-    expect(planner).not.toContain("layoutMode");
-    expect(planner).not.toContain("enableDrag");
-    expect(planner).not.toContain("DateStrip");
-
-    expect(week).toContain("<TaskDragProvider");
-    expect(week).toContain("<DateDropZone");
-    expect(week).toContain('"jig-week-board"');
-    expect(week).toContain("<PlannerTaskList");
-    expect(week).not.toContain("enableDrag");
-    expect(week).not.toContain("jig-planner-narrow");
-    expect(week).not.toContain("SortableTaskRow");
+    expect(existsSync("ui/src/planner.tsx")).toBe(false);
+    expect(existsSync("ui/src/week.tsx")).toBe(false);
+    expect(desktopPlanner).toContain("<TaskDragProvider");
+    expect(desktopPlanner).toContain("<PlannerDateSection");
+    expect(desktopPlanner).toContain("jig-planner-board-desktop");
+    expect(narrowPlanner).toContain("<TaskDragProvider");
+    expect(narrowPlanner).toContain("<PlannerDateSection");
+    expect(narrowPlanner).toContain("jig-planner-board-narrow");
+    expect(narrowPlanner).toContain("scrollIntoView");
+    expect(desktopPlanner).not.toContain("scrollIntoView");
+    expect(plannerDate).toContain("<DateDropZone");
+    expect(plannerDate).toContain("<PlannerTaskList");
+    expect(plannerDate).toContain("isFutureAddDate");
+    expect(plannerDate).not.toContain("layoutMode");
+    expect(desktopPlanner).not.toContain("layoutMode");
+    expect(narrowPlanner).not.toContain("layoutMode");
 
     // J112-IMP-11 supersedes the historical insertion-slot/raw-draggable
     // mechanics. This architecture test protects the singular Task-sequence
