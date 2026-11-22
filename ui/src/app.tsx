@@ -40,7 +40,10 @@ import {
   submitTaskCommand,
   triggerSync,
 } from "./runtime";
-import { Planner, type WeekTransitionDirection } from "./planner";
+import type {
+  PlannerPresenterProps,
+  WeekTransitionDirection,
+} from "./presentation/shared/planner-date-section";
 import {
   ReminderMonitor,
   useReminderClock,
@@ -863,6 +866,29 @@ function ConfiguredApp({
     [closeWorkspace, workspace.mode],
   );
 
+  const planner: PlannerPresenterProps | null =
+    canonical === null
+      ? null
+      : {
+          focusCurrentDayOnMount: initialTodayFocusPending,
+          onInitialTodayFocusHandled: clearInitialTodayFocus,
+          todayScrollRequest,
+          onTodayScrollHandled: clearTodayScrollRequest,
+          weekTransitionDirection,
+          tasks,
+          recurrences: canonical.recurrences,
+          now: reminderNow,
+          displayedDates,
+          selectedTask,
+          onSelectTask: selectTask,
+          onAdd: openCreate,
+          onEdit: selectTask,
+          onToggleComplete: toggleComplete,
+          onSetPriority: setPriority,
+          onDelete: (task) => setDeleteTaskId(task.id),
+          onMove: moveTaskExact,
+        };
+
   const content =
     canonical === null ? (
       <div className="jig-loading">
@@ -886,26 +912,6 @@ function ConfiguredApp({
           </>
         )}
       </div>
-    ) : destination === "planner" ? (
-      <Planner
-        focusCurrentDayOnMount={initialTodayFocusPending}
-        onInitialTodayFocusHandled={clearInitialTodayFocus}
-        todayScrollRequest={todayScrollRequest}
-        onTodayScrollHandled={clearTodayScrollRequest}
-        weekTransitionDirection={weekTransitionDirection}
-        tasks={tasks}
-        recurrences={canonical.recurrences}
-        now={reminderNow}
-        displayedDates={displayedDates}
-        selectedTask={selectedTask}
-        onSelectTask={selectTask}
-        onAdd={openCreate}
-        onEdit={selectTask}
-        onToggleComplete={toggleComplete}
-        onSetPriority={setPriority}
-        onDelete={(task) => setDeleteTaskId(task.id)}
-        onMove={moveTaskExact}
-      />
     ) : destination === "history" ? (
       <HistoryView
         tasks={tasks}
@@ -953,11 +959,11 @@ function ConfiguredApp({
         onAdd={() => openCreate(todayCivilDate())}
         onNavigate={navigateDestination}
         content={content}
+        planner={planner}
         durableFeedback={durableBanner}
         transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
         destinationTransition={destinationTransition}
-        todayScrollRequest={todayScrollRequest}
         onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
@@ -986,11 +992,11 @@ function ConfiguredApp({
         onAdd={() => openCreate(todayCivilDate())}
         onNavigate={navigateDestination}
         content={content}
+        planner={planner}
         durableFeedback={durableBanner}
         transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
         destinationTransition={destinationTransition}
-        todayScrollRequest={todayScrollRequest}
         onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
