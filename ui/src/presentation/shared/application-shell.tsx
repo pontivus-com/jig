@@ -53,6 +53,7 @@ export interface ConfiguredPresentationProps
   readonly transientFeedback: ReactNode;
   readonly workspace: TaskWorkspacePresentation | null;
   readonly destinationTransition: Destination | null;
+  readonly todayScrollRequest: number;
   readonly onContentPointerDown: (
     event: PointerEvent<HTMLDivElement>,
   ) => void;
