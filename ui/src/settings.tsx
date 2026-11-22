@@ -60,6 +60,8 @@ export interface SettingsViewProps {
   readonly onAppearanceModeChange: (value: AppearanceMode) => void;
   readonly onSync: () => Promise<void>;
   readonly onReconnectGitHub: () => Promise<void>;
+  readonly showDiagnostics: boolean;
+  readonly onShowDiagnosticsChange: (value: boolean) => void;
 }
 
 function notificationStatusMessage(
@@ -106,10 +108,11 @@ export function SettingsView({
   onAppearanceModeChange,
   onSync,
   onReconnectGitHub,
+  showDiagnostics,
+  onShowDiagnosticsChange,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
     useState<NotificationSettingsState | null>(null);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const repositoryStatus = repositoryStatusPresentation(status);
   const planningDataHome = planningDataHomePresentation(status);
   const localGitStatus = localGitStatusPresentation(status);
@@ -346,7 +349,7 @@ export function SettingsView({
             <Button
               label={showDiagnostics ? "Hide diagnostics" : "Show diagnostics"}
               variant="ghost"
-              onClick={() => setShowDiagnostics((current) => !current)}
+              onClick={() => onShowDiagnosticsChange(!showDiagnostics)}
             />
           </div>
 
