@@ -443,13 +443,13 @@ test("retains governed synchronization-attention evidence without exposing techn
     .locator(".jig-attention-banner")
     .evaluate((element) => {
       const icon = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-icon",
+        ".jig-feedback-icon",
       );
       const message = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-message",
+        ".jig-feedback-message",
       );
       const action = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-action",
+        ".jig-feedback-action",
       );
       if (icon === null || message === null || action === null) {
         throw new Error("Attention banner geometry fixture unavailable");
@@ -540,13 +540,13 @@ test("retains governed synchronization-attention evidence without exposing techn
     .locator(".jig-attention-banner")
     .evaluate((element) => {
       const icon = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-icon",
+        ".jig-feedback-icon",
       );
       const message = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-message",
+        ".jig-feedback-message",
       );
       const action = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-action",
+        ".jig-feedback-action",
       );
       if (icon === null || message === null || action === null) {
         throw new Error("Mobile attention banner geometry fixture unavailable");
@@ -941,6 +941,43 @@ test("adding and editing a Task confirm success and close the workspace", async 
       .getByRole("status")
       .filter({ hasText: "Task added" });
     await expect(addedConfirmation).toBeVisible();
+
+    if (width >= 1168) {
+      const placement = page.locator(".jig-feedback-transient-desktop");
+      await expect(placement).toHaveCSS("position", "sticky");
+      const stackBox = await placement
+        .locator(".jig-feedback-transient-stack")
+        .boundingBox();
+      expect(stackBox).not.toBeNull();
+      if (stackBox !== null) {
+        expect(stackBox.width).toBeLessThanOrEqual(384 + 1);
+      }
+      const beforeScroll = await addedConfirmation.boundingBox();
+      await applicationScrollOwner(page).evaluate((element) => {
+        element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
+      });
+      const afterScroll = await addedConfirmation.boundingBox();
+      expect(beforeScroll).not.toBeNull();
+      expect(afterScroll).not.toBeNull();
+      if (beforeScroll !== null && afterScroll !== null) {
+        expectNear(afterScroll.y, beforeScroll.y, 1);
+      }
+    } else {
+      const placement = page.locator(".jig-feedback-transient-narrow");
+      await expect(placement).toHaveCSS("position", "fixed");
+      const confirmationBox = await addedConfirmation.boundingBox();
+      const navigationBox = await page
+        .getByRole("navigation", { name: "Primary" })
+        .boundingBox();
+      expect(confirmationBox).not.toBeNull();
+      expect(navigationBox).not.toBeNull();
+      if (confirmationBox !== null && navigationBox !== null) {
+        expect(confirmationBox.bottom).toBeLessThan(
+          navigationBox.y,
+        );
+      }
+    }
+
     await addedConfirmation
       .getByRole("button", { name: "Dismiss confirmation" })
       .click();
