@@ -964,6 +964,9 @@ describe("UI ownership architecture", () => {
     expect(drag).not.toContain("document.querySelectorAll");
     expect(drag).toContain("manager.registry.droppables");
     expect(drag).toContain("target.shape?.boundingRectangle");
+    expect(drag).toContain('type: "jig-date-tail-geometry"');
+    expect(drag).toContain("collisionPriority: -2");
+    expect(drag).not.toContain('target.type === "jig-date-tail-geometry"');
     expect(drag).toContain("getBoundingClientRect().height");
     expect(drag).toContain("prospectiveRef.current");
     expect(drag).toContain("new PointerActivationConstraints.Distance({");
