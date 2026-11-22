@@ -290,8 +290,12 @@ describe("UI ownership architecture", () => {
     expect(destinations).toContain('label: "History"');
     expect(destinations).toContain('id: "settings"');
     expect(destinations).toContain('label: "Settings"');
-    expect(destinations).toContain('import type { Destination } from "./navigation"');
-    expect(destinations).not.toContain("export type Destination =");
+    expect(destinations).toContain(
+      'export type Destination = (typeof DESTINATIONS)[number]["id"]',
+    );
+    const navigation = source("ui/src/navigation.ts");
+    expect(navigation).toContain('import type { Destination } from "./destinations"');
+    expect(navigation).not.toMatch(/export type Destination\s*=/);
     expect(destinations).toContain("IconName");
     expect(destinations).toContain("NamespacedIconName");
     expect(header).toContain('from "./destinations"');
