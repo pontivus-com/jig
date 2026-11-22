@@ -472,8 +472,10 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     if (existsSync(recoveryEffects)) {
       const recovery = source(recoveryEffects);
       expect(recovery).toContain(
-        'import type { RecoveryCommitSpec } from "../../core/synchronization-recovery"',
+        'from "../../core/synchronization-recovery"',
       );
+      expect(recovery).toContain("type RecoveryCommitSpec");
+      expect(recovery).toContain("recoveryPrivateRef");
       for (const policyName of [
         "reconcileRelatedPortableSnapshots",
         "buildJigDataConflictCase",
