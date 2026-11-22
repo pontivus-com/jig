@@ -171,3 +171,9 @@
   box-shadow: var(--shadow-med);
 }
 
+
+
+.jig-configured-desktop .jig-sync-conflict-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
