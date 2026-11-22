@@ -1,6 +1,8 @@
-import { assertUuid } from "../../core/task";
 import type { PortableSnapshot } from "../../core/portable";
-import type { RecoveryCommitSpec } from "../../core/synchronization-recovery";
+import {
+  recoveryPrivateRef,
+  type RecoveryCommitSpec,
+} from "../../core/synchronization-recovery";
 import { GitAdapterError, requireGit, runGit } from "./process";
 import {
   assertAdapterPaths,
@@ -21,11 +23,6 @@ function validateObjectId(value: string, field: string): string {
     );
   }
   return value;
-}
-
-export function recoveryPrivateRef(datasetId: string): string {
-  assertUuid(datasetId, "dataset_id");
-  return `refs/jig/recovery/${datasetId}`;
 }
 
 async function optionalRefHead(

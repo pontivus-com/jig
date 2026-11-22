@@ -390,6 +390,7 @@ describe("v1.1.2 corrective architecture boundaries", () => {
         "validateOptionalJigDataConflictCase",
         "validateJigDataResolution",
         "recoveryCommitSpec",
+        "recoveryPrivateRef",
       ]) {
         expect(recovery).toContain(`export function ${entryPoint}`);
       }

@@ -6,7 +6,9 @@ import {
   clone,
   commit,
   currentBranch,
+  deleteRef,
   fetch,
+  findMergeBase,
   getConfig,
   init,
   isDescendent,
@@ -15,11 +17,15 @@ import {
   listServerRefs,
   push,
   readBlob,
+  readCommit,
   readTree,
   remove,
   resolveRef,
   statusMatrix,
+  writeBlob,
+  writeCommit,
   writeRef,
+  writeTree,
 } from "isomorphic-git";
 import {
   serializeSnapshot,
@@ -31,6 +37,10 @@ import type {
   SynchronizationLineage,
   SynchronizationUnsafeReason,
 } from "../../../src/core/synchronization";
+import {
+  recoveryPrivateRef,
+  type RecoveryCommitSpec,
+} from "../../../src/core/synchronization-recovery";
 import {
   AndroidFsError,
   createAndroidGitFilesystem,
@@ -414,7 +424,7 @@ export async function fetchAndroidPortableRepository(
   });
 }
 
-async function readAndroidSnapshotAtOid(
+export async function readAndroidSnapshotAtOid(
   effects: AndroidGitEffects,
   oid: string,
   expectedDatasetId: string,
@@ -481,6 +491,315 @@ async function optionalAndroidRef(
     });
   } catch {
     return null;
+  }
+}
+
+const ANDROID_OBJECT_ID_PATTERN = /^[0-9a-f]{40}$/;
+
+function validateAndroidObjectId(
+  value: string,
+  field: string,
+): string {
+  if (!ANDROID_OBJECT_ID_PATTERN.test(value)) {
+    throw new AndroidGitAdapterError(
+      `${field} must be a 40-character lowercase Git object id`,
+    );
+  }
+  return value;
+}
+
+export async function readAndroidRecoveryCandidateHead(
+  effects: AndroidGitEffects,
+  datasetId: string,
+): Promise<string | null> {
+  return optionalAndroidRef(effects, recoveryPrivateRef(datasetId));
+}
+
+export async function uniqueAndroidRecoveryMergeBase(
+  effects: AndroidGitEffects,
+  localHead: string,
+  remoteHead: string,
+): Promise<string | null> {
+  validateAndroidObjectId(localHead, "localHead");
+  validateAndroidObjectId(remoteHead, "remoteHead");
+  const bases = await findMergeBase({
+    fs: effects.fs,
+    dir: effects.dir,
+    oids: [localHead, remoteHead],
+  });
+  if (bases.length !== 1) return null;
+  const base = bases[0];
+  return base === undefined
+    ? null
+    : validateAndroidObjectId(base, "merge base");
+}
+
+export async function androidRecoveryCommitterTimestampSeconds(
+  effects: AndroidGitEffects,
+  head: string,
+): Promise<number> {
+  validateAndroidObjectId(head, "head");
+  const value = await readCommit({
+    fs: effects.fs,
+    dir: effects.dir,
+    oid: head,
+  });
+  const timestamp = value.commit.committer.timestamp;
+  if (!Number.isInteger(timestamp) || timestamp < 0) {
+    throw new AndroidGitAdapterError(
+      "Android Git commit has an invalid committer timestamp",
+    );
+  }
+  return timestamp;
+}
+
+function assertAndroidRecoverySnapshotPaths(
+  snapshot: PortableSnapshot,
+): void {
+  if (!snapshot.files.has("format.json")) {
+    throw new AndroidGitAdapterError(
+      "Recovery snapshot is missing canonical format.json",
+    );
+  }
+  for (const path of snapshot.files.keys()) {
+    if (
+      path !== "format.json" &&
+      !/^tasks\/[0-9a-f-]+\.json$/i.test(path) &&
+      !/^recurrences\/[0-9a-f-]+\.json$/i.test(path)
+    ) {
+      throw new AndroidGitAdapterError(
+        `Recovery snapshot contains non-canonical path ${path}`,
+      );
+    }
+  }
+}
+
+async function writeAndroidRecoveryTree(
+  effects: AndroidGitEffects,
+  snapshot: PortableSnapshot,
+): Promise<string> {
+  assertAndroidRecoverySnapshotPaths(snapshot);
+  const encoder = new TextEncoder();
+  const directories = new Map<
+    "tasks" | "recurrences",
+    { readonly path: string; readonly oid: string }[]
+  >([
+    ["tasks", []],
+    ["recurrences", []],
+  ]);
+  const format = snapshot.files.get("format.json");
+  if (format === undefined) {
+    throw new AndroidGitAdapterError(
+      "Recovery snapshot is missing canonical format.json",
+    );
+  }
+  const formatOid = await writeBlob({
+    fs: effects.fs,
+    dir: effects.dir,
+    blob: encoder.encode(format),
+  });
+
+  for (const [path, value] of snapshot.files) {
+    if (path === "format.json") continue;
+    const slash = path.indexOf("/");
+    if (slash <= 0 || slash === path.length - 1) {
+      throw new AndroidGitAdapterError(
+        `Recovery snapshot contains malformed path ${path}`,
+      );
+    }
+    const directory = path.slice(0, slash);
+    const name = path.slice(slash + 1);
+    if (
+      (directory !== "tasks" && directory !== "recurrences") ||
+      name.includes("/") ||
+      name.includes("\n") ||
+      name.includes("\t")
+    ) {
+      throw new AndroidGitAdapterError(
+        `Recovery snapshot contains invalid path ${path}`,
+      );
+    }
+    const oid = await writeBlob({
+      fs: effects.fs,
+      dir: effects.dir,
+      blob: encoder.encode(value),
+    });
+    directories.get(directory)?.push({ path: name, oid });
+  }
+
+  const rootEntries: {
+    readonly mode: string;
+    readonly path: string;
+    readonly oid: string;
+    readonly type: "blob" | "tree";
+  }[] = [
+    {
+      mode: "100644",
+      path: "format.json",
+      oid: formatOid,
+      type: "blob",
+    },
+  ];
+  for (const directory of ["tasks", "recurrences"] as const) {
+    const entries = directories.get(directory) ?? [];
+    if (entries.length === 0) continue;
+    const treeOid = await writeTree({
+      fs: effects.fs,
+      dir: effects.dir,
+      tree: [...entries]
+        .sort((left, right) => left.path.localeCompare(right.path))
+        .map((entry) => ({
+          mode: "100644",
+          path: entry.path,
+          oid: entry.oid,
+          type: "blob" as const,
+        })),
+    });
+    rootEntries.push({
+      mode: "040000",
+      path: directory,
+      oid: treeOid,
+      type: "tree",
+    });
+  }
+  return writeTree({
+    fs: effects.fs,
+    dir: effects.dir,
+    tree: rootEntries,
+  });
+}
+
+export async function writeAndroidRecoveryCandidate(
+  effects: AndroidGitEffects,
+  datasetId: string,
+  snapshot: PortableSnapshot,
+  spec: RecoveryCommitSpec,
+): Promise<string> {
+  if (snapshot.dataset_id !== datasetId) {
+    throw new AndroidGitAdapterError(
+      "Recovery snapshot dataset does not match the configured dataset",
+    );
+  }
+  const [firstParent, secondParent] = spec.parents;
+  validateAndroidObjectId(firstParent, "first recovery parent");
+  validateAndroidObjectId(secondParent, "second recovery parent");
+  const tree = await writeAndroidRecoveryTree(effects, snapshot);
+  const identity = {
+    name: spec.name,
+    email: spec.email,
+    timestamp: spec.timestamp_seconds,
+    timezoneOffset: spec.timezone_offset_minutes,
+  };
+  const candidate = validateAndroidObjectId(
+    await writeCommit({
+      fs: effects.fs,
+      dir: effects.dir,
+      commit: {
+        message: `${spec.message}\n`,
+        tree,
+        parent: [firstParent, secondParent],
+        author: identity,
+        committer: identity,
+      },
+    }),
+    "recovery candidate",
+  );
+  const privateRef = recoveryPrivateRef(datasetId);
+  const current = await optionalAndroidRef(effects, privateRef);
+  if (current === candidate) return candidate;
+  if (current !== null) {
+    throw new AndroidGitAdapterError(
+      "Recovery private ref already points to another candidate",
+    );
+  }
+  await writeRef({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: privateRef,
+    value: candidate,
+    force: true,
+  });
+  return candidate;
+}
+
+export async function androidRecoveryCandidateParents(
+  effects: AndroidGitEffects,
+  candidateHead: string,
+): Promise<readonly [string, string]> {
+  validateAndroidObjectId(candidateHead, "candidateHead");
+  const value = await readCommit({
+    fs: effects.fs,
+    dir: effects.dir,
+    oid: candidateHead,
+  });
+  if (value.commit.parent.length !== 2) {
+    throw new AndroidGitAdapterError(
+      "Recovery candidate must have exactly two parents",
+    );
+  }
+  const first = value.commit.parent[0];
+  const second = value.commit.parent[1];
+  if (first === undefined || second === undefined) {
+    throw new AndroidGitAdapterError(
+      "Recovery candidate parent evidence is incomplete",
+    );
+  }
+  return [
+    validateAndroidObjectId(first, "first recovery parent"),
+    validateAndroidObjectId(second, "second recovery parent"),
+  ];
+}
+
+export async function deleteAndroidRecoveryCandidate(
+  effects: AndroidGitEffects,
+  datasetId: string,
+  expectedCandidate: string,
+): Promise<void> {
+  validateAndroidObjectId(expectedCandidate, "expectedCandidate");
+  const privateRef = recoveryPrivateRef(datasetId);
+  const current = await optionalAndroidRef(effects, privateRef);
+  if (current !== expectedCandidate) {
+    throw new AndroidGitAdapterError(
+      "Recovery private ref changed concurrently",
+    );
+  }
+  await deleteRef({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: privateRef,
+  });
+}
+
+export async function compareAndSetAndroidPortableHead(
+  effects: AndroidGitEffects,
+  expectedLocalHead: string,
+  candidateHead: string,
+): Promise<void> {
+  validateAndroidObjectId(expectedLocalHead, "expectedLocalHead");
+  validateAndroidObjectId(candidateHead, "candidateHead");
+  const current = await androidPortableHead(effects);
+  if (current !== expectedLocalHead) {
+    throw new AndroidGitAdapterError(
+      "Android jig-data head changed concurrently; retry required",
+    );
+  }
+  await writeRef({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: `refs/heads/${ANDROID_DATA_BRANCH}`,
+    value: candidateHead,
+    force: true,
+  });
+  await checkout({
+    fs: effects.fs,
+    dir: effects.dir,
+    ref: ANDROID_DATA_BRANCH,
+    force: true,
+  });
+  if ((await androidPortableHead(effects)) !== candidateHead) {
+    throw new AndroidGitAdapterError(
+      "Android jig-data head does not match recovery target",
+    );
   }
 }
 

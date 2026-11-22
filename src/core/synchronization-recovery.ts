@@ -135,6 +135,11 @@ interface SelectedRecords {
 
 const OBJECT_ID_PATTERN = /^[0-9a-f]{40}$/;
 
+export function recoveryPrivateRef(datasetId: string): string {
+  assertUuid(datasetId, "dataset_id");
+  return `refs/jig/recovery/${datasetId}`;
+}
+
 function exactObject(
   value: unknown,
   expectedKeys: readonly string[],
