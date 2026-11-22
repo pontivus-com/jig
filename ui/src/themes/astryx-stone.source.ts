@@ -6,6 +6,11 @@ export const astryxStoneTheme = defineTheme({
   name: "astryx-stone",
   extends: stoneTheme,
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: "var(--color-background-body)",
+      planner: "var(--color-background-surface)",
+      task:
+        "color-mix(in oklab, var(--color-background-card) 86%, var(--color-text-primary) 14%)",
+    }),
   },
 });
