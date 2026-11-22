@@ -101,14 +101,17 @@ Jig application source/distribution  (separate from personal planning repo)
 
 The application binary and runtime may be installed under normal user application directories; **all task data and recoverable canonical planning records must be inside the configured Git repository**. The local service keeps only its own noncanonical logs and launch configuration outside that repository. Do not install the program into or modify the public source checkout when it is not the selected personal target.
 
-**Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, daily rollover, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser reminder presentation. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
+**Functional core:** Typed pure Task/planning operations plus canonical portable serialization/validation and pure synchronization/recovery policy; no I/O, SQL or presentation dependencies. **Imperative shells:** shared persistence semantics plus narrow Linux and Android effect adapters. Linux owns system-Git/process/filesystem/HTTP effects; Android owns app-private/isomorphic-git/native effects. Shared GitHub provider protocol/orchestration lives under one concrete `src/github/**` boundary and runtime envelopes under `src/protocol/**`. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
 
 ### 3.0.1 Architecture compliance invariants
 
 These invariants are binding on **every** v1.0.4 implementation task; architecture compliance is not a cleanup phase that may be deferred until the end.
 
-- **Functional core:** Task/planning semantics and reusable calendar/order transforms are pure typed functions. `src/core/**` must not import UI, HTTP, SQLite, Git, browser, filesystem or process APIs.
-- **Imperative shell:** SQLite, HTTP, Git, filesystem, process lifecycle and other I/O stay under `src/shell/**`. Shell code invokes the functional core; it does not reimplement Task/planning rules.
+- **Functional core:** Task/planning, portable-format and synchronization/recovery policy are pure typed functions. `src/core/**` must not import UI, HTTP, SQLite, Git/provider clients, browser, filesystem or process APIs.
+- **Shared persistence:** `src/persistence/**` owns asynchronous SQLite semantics and may depend on core only; it does not own Git/provider effects.
+- **Shared GitHub boundary:** `src/github/**` owns GitHub-specific value/protocol/orchestration shared by Linux and Android, with injected Web fetch/credential effects and no local Git/filesystem/SQLite/UI dependency.
+- **Runtime protocol:** `src/protocol/**` owns strict architecture-neutral runtime envelopes only; it is not a second domain model.
+- **Imperative shells:** Linux HTTP/system-Git/filesystem/process effects stay under `src/shell/**`; Android native/isomorphic-git effects stay under `ui/src/native/**`. Both invoke the same core/persistence/provider semantics and do not duplicate them.
 - **Presentation boundary:** `ui/src/**` owns browser/UI presentation state and invokes canonical commands. It must not duplicate canonical Task validation, normalization, insertion, ordering, movement or rollover semantics.
 - **Canonical types:** there is one canonical `Task`, one canonical `TaskCommand`, one Planner temporal state owner, one Task workspace state owner and one editable Task draft shape. Presentation drafts are permitted because unsaved form state is not canonical domain state, but they must not become a second Task/command model.
 - **Strict typing:** repository TypeScript remains `strict` with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and `useUnknownInCatchVariables`. Do not introduce `any`, double casts, non-null assertions, or `as` assertions merely to silence the compiler.
@@ -1479,48 +1482,80 @@ All external input (HTTP, imported JSON, Git configuration, user-selected reposi
 
 The data directory belongs to the user. A Git remote is optional; source/public repository and personal data repository must never be confused. Imported snapshots may carry personally sensitive content and must be handled as user-controlled private data.
 
-## 9. Source module ownership (proposed minimal layout)
+## 9. Source module ownership
+
+v1.1.2 supersedes the earlier single-`git.ts` proposed layout. The architecture now requires source paths to communicate ownership directly.
 
 ~~~text
 src/
   core/
-    task.ts                 canonical Task and operations
-    planning.ts             ordering, date selection, completion rules
+    task.ts
+    planning.ts
+    recurrence.ts
+    recurrence-planning.ts
+    synchronization.ts
+    portable.ts
+    synchronization-recovery.ts
+
+  persistence/
+    sqlite.ts
+    synchronization.ts
+
+  protocol/
+    runtime.ts
+
+  github/
+    model.ts
+    parsing.ts
+    auth.ts
+    device-flow.ts
+    onboarding.ts
+    reconnect.ts
+    registration.ts
+
   shell/
-    http.ts                 same-origin admission and command dispatch
-    sqlite.ts               schema, query, transactional mutation
-    git.ts                  isolated repository adapter, export/synchronization, validated snapshot admission
-    main.ts                 daemon startup, sync loop and static UI serving
-scripts/
-  install.sh                 single non-root installation and configuration
-  jig                       local CLI launcher and service control
+    git/
+      process.ts
+      repository.ts
+      portable-store.ts
+      remote.ts
+      recovery.ts
+
+    sync.ts
+    setup.ts
+    http.ts
+    main.ts
+    github-http.ts
+    github-managed-checkout.ts
+    github-git-auth.ts
+    github-transport.ts
+    secret-service.ts
+    ... other narrow Linux effects
+
 ui/
   src/
-    app.tsx                 AppShell, destination state, one root Theme and selected appearance state
-    appearance.ts           ThemePreset/AppearanceMode types, guards, local persistence and exhaustive registry
-    themes/
-      product-tokens.ts     one palette-independent Jig product semantic alias map
-      *.source.ts           Jig, six Astryx-wrapper and six community theme authoring sources
-      built/                compiler-owned generated theme JS/CSS/declarations
-    jig-logo.tsx            one canonical inline application wordmark geometry using semantic brand tokens
-    planner.tsx             shared Planner state + responsive desktop/narrow composition
-    planner-header.tsx      centered week range + Previous/Today/Next + desktop/mobile header zones
-    week.tsx                desktop seven-date tracks and cross-date drag composition
-    task-editor.tsx         Task workspace form content for create/edit
-    task-workspace.tsx      one existing/create editable workspace state rendered as desktop Drawer or narrow BottomSheet
-    browser-notifications.ts narrow Notification capability/permission adapter
-    reminder.tsx            browser due check + browser Notification delivery
-    theme.css               raw Jig default-theme palette primitives only
-    styles.css              Jig-owned product composition/geometry only
-tests/
-  core/
-  persistence/
-  sync/
-  browser/
-docs/
+    runtime.ts
+    runtime-native.ts
+    native/
+      git.ts
+      sync.ts
+      ... Android/native effects
+    ... presentation owners
 ~~~
 
-Paths are a suggested semantic decomposition, not a mandate to manufacture separate abstractions where a small cohesive module is sufficient. Do not add DTO files, domain-to-transport mapper stacks, repository/service classes, a general component framework, or generic command handler infrastructure. Every module has one present owner, and future decomposition is justified only by a real second responsibility.
+Ownership rules:
+
+- `src/core/portable.ts` is the one portable-format semantic owner; shell/native Git code consumes it and never re-exports or redefines it.
+- `src/core/synchronization.ts` owns ordinary pure synchronization classification/shared pure policy; `src/core/synchronization-recovery.ts` owns bounded automatic/user-assisted recovery policy and strict operational types.
+- `src/protocol/runtime.ts` wraps canonical values for configured runtime transport without copying Task/recurrence/recovery schemas.
+- `src/github/**` is concrete GitHub integration shared across runtimes, not a generic integrations framework.
+- Linux system-Git mechanics are decomposed under `src/shell/git/**`: process, repository, local portable store, remote observation/push, and recovery-only Git effects have separate owners.
+- Linux synchronization scheduling belongs to `src/shell/sync.ts`, not Git process modules.
+- Android remains under `ui/src/native/**` for native/isomorphic-git effects and imports no `src/shell/**`.
+- no compatibility barrel/re-export may recreate removed loose root `src/portable.ts`, `src/protocol.ts`, `src/github*.ts` or `src/shell/git.ts` surfaces.
+- no DTO files, domain-to-transport mapper stacks, service/repository classes, generic integration framework or duplicate platform policy are introduced to perform this decomposition.
+
+JIG-112-SD-17 is the binding v1.1.2 migration/architecture gate for this layout.
 
 ## 10. Requirement-to-design traceability and acceptance
 
