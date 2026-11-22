@@ -7,6 +7,7 @@ export type WeekTransitionDirection = "today";
 export interface PlannerProps {
   readonly focusCurrentDayOnMount: boolean;
   readonly todayScrollRequest: number;
+  readonly onTodayScrollHandled: () => void;
   readonly weekTransitionDirection: WeekTransitionDirection | null;
   readonly tasks: readonly Task[];
   readonly recurrences: readonly RecurrenceSeries[];
@@ -32,6 +33,7 @@ export function Planner(props: PlannerProps): React.ReactElement {
       <WeekView
         focusCurrentDayOnMount={props.focusCurrentDayOnMount}
         todayScrollRequest={props.todayScrollRequest}
+        onTodayScrollHandled={props.onTodayScrollHandled}
         weekTransitionDirection={props.weekTransitionDirection}
         tasks={props.tasks}
         recurrences={props.recurrences}
