@@ -1,6 +1,7 @@
 import { NarrowBottomNavigation } from "./bottom-navigation";
 import { NarrowConfiguredHeader } from "./header";
 import { NarrowFeedbackRegion } from "./feedback-region";
+import { NarrowPlanner } from "./planner";
 import { NarrowTaskWorkspace } from "./task-workspace";
 import {
   ApplicationShell,
@@ -12,11 +13,11 @@ export function NarrowConfiguredApplication(
 ): React.ReactElement {
   const {
     content,
+    planner,
     durableFeedback,
     transientFeedback,
     workspace,
     destinationTransition,
-    todayScrollRequest,
     onContentPointerDown,
     ...componentProps
   } = props;
@@ -37,7 +38,7 @@ export function NarrowConfiguredApplication(
           <div
             className={[
               "jig-content-frame",
-          todayScrollRequest !== null
+          planner !== null && planner.todayScrollRequest !== null
             ? "jig-content-frame-today-smooth"
             : "",
         ]
@@ -60,7 +61,11 @@ export function NarrowConfiguredApplication(
             .join(" ")}
           onPointerDown={onContentPointerDown}
         >
-          {content}
+          {props.destination === "planner" && planner !== null ? (
+            <NarrowPlanner {...planner} />
+          ) : (
+            content
+          )}
         </div>
           </div>
           <NarrowTaskWorkspace
