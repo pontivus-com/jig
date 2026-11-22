@@ -9,14 +9,14 @@ import {
 } from "@astryxdesign/core";
 import { useMemo } from "react";
 
-import type { RecurrenceSeries } from "../../../src/core/recurrence";
-import type { Task } from "../../../src/core/task";
+import type { RecurrenceSeries } from "../../../../src/core/recurrence";
+import type { Task } from "../../../../src/core/task";
 import {
   jigDataConflictKey,
   type JigDataConflict,
   type JigDataConflictFamilySide,
   type ReconciliationSide,
-} from "../../../src/core/synchronization-recovery";
+} from "../../../../src/core/synchronization-recovery";
 import { formatCivilDate } from "../../dates";
 import { recurrenceSummary } from "../../task-editor";
 import {
