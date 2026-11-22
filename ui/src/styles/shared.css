@@ -425,9 +425,7 @@ body {
 }
 
 .jig-task-card-dragging {
-  opacity: 0.4;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-low);
+  opacity: 0;
 }
 
 .jig-task-drag-handle {
@@ -453,38 +451,6 @@ body {
   cursor: grabbing;
   background: var(--jig-state-pressed-bg);
   transform: scale(0.96);
-}
-
-.jig-task-drop-indicator {
-  position: absolute;
-  z-index: 2;
-  inset-inline: var(--spacing-1-5);
-  height: 2px;
-  background: var(--jig-state-drag-border);
-  pointer-events: none;
-}
-
-.jig-task-drop-indicator::before {
-  position: absolute;
-  inset-block-start: -3px;
-  inset-inline-start: -4px;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--jig-state-drag-border);
-  content: "";
-}
-
-.jig-task-drop-indicator-before {
-  inset-block-start: -1px;
-}
-
-.jig-task-drop-indicator-after {
-  inset-block-end: -1px;
-}
-
-.jig-task-drop-indicator-empty {
-  inset-block-start: var(--spacing-2);
 }
 
 .jig-task-card-selected {
@@ -536,12 +502,6 @@ body {
 .jig-task-completion-target {
   display: grid;
   place-items: center;
-}
-
-.jig-task-drag-overlay-row {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
 }
 
 .jig-week-column .jig-task-body {
@@ -647,24 +607,26 @@ body {
   white-space: nowrap;
 }
 
-.jig-drag-clone-shell {
-  width: min(17.5rem, 80vw);
-  pointer-events: none;
-}
-
 .jig-drag-card-overlay {
   width: 100%;
-  padding: var(--spacing-2);
-  box-shadow: var(--shadow-med);
+  pointer-events: none;
   cursor: grabbing;
 }
 
-.jig-task-drag-overlay-row {
-  min-width: 0;
+.jig-drag-card-overlay .jig-task-card {
+  width: 100%;
+  box-shadow: var(--shadow-med);
 }
 
-.jig-task-drag-overlay-checkbox {
-  color: var(--jig-task-text);
+.jig-task-prospective-footprint {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  list-style: none;
+  border: var(--border-width) solid var(--jig-state-drag-border);
+  border-radius: var(--radius-element);
+  background: var(--jig-state-drag-bg);
+  pointer-events: none;
 }
 
 .jig-planner-surface {
@@ -689,33 +651,6 @@ body {
 .jig-planner-empty-state p {
   margin: 0;
   color: var(--color-text-secondary);
-}
-
-.jig-task-insertion-slot {
-  position: relative;
-  min-height: 8px;
-  list-style: none;
-  opacity: 0;
-}
-
-.jig-task-drag-scope[data-jig-drag-active="true"] .jig-task-insertion-slot {
-  min-height: 20px;
-  opacity: 1;
-}
-
-.jig-task-insertion-slot .jig-task-drop-indicator {
-  inset-block-start: 50%;
-  transform: translateY(-50%);
-  opacity: 0;
-}
-
-.jig-task-insertion-slot-active .jig-task-drop-indicator {
-  opacity: 1;
-}
-
-.jig-task-insertion-slot-unavailable-active .jig-task-drop-indicator,
-.jig-task-insertion-slot-unavailable-active .jig-task-drop-indicator::before {
-  background: var(--color-border-warning);
 }
 
 .jig-history-view,
