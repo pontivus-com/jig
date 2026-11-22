@@ -43,7 +43,7 @@ interface WeekTaskProps extends WeekPresentationProps, WeekMutationProps {}
 export interface WeekViewProps extends WeekTaskProps {
   readonly focusCurrentDayOnMount: boolean;
   readonly onInitialTodayFocusHandled: () => void;
-  readonly todayScrollRequest: number;
+  readonly todayScrollRequest: number | null;
   readonly onTodayScrollHandled: () => void;
   readonly weekTransitionDirection: WeekTransitionDirection | null;
   readonly displayedDates: readonly string[];
@@ -223,7 +223,7 @@ export function WeekView(props: WeekViewProps): React.ReactElement {
   const today = todayCivilDate();
   const todaySectionRef = useRef<HTMLDivElement>(null);
   const initialTodayFocusHandledRef = useRef(false);
-  const handledTodayScrollRequestRef = useRef(0);
+  const handledTodayScrollRequestRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (initialTodayFocusHandledRef.current) {
@@ -255,7 +255,7 @@ export function WeekView(props: WeekViewProps): React.ReactElement {
 
   useEffect(() => {
     if (
-      props.todayScrollRequest === 0 ||
+      props.todayScrollRequest === null ||
       handledTodayScrollRequestRef.current === props.todayScrollRequest ||
       !props.displayedDates.includes(today)
     ) {
