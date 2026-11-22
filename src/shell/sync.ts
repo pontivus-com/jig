@@ -50,8 +50,10 @@ import {
   type SynchronizationFacts,
 } from "../core/synchronization";
 import {
+  buildJigDataConflictCase,
   reconcileRelatedPortableSnapshots,
   recoveryCommitSpec,
+  type JigDataConflictCase,
 } from "../core/synchronization-recovery";
 import {
   SnapshotDatasetMismatchError,
@@ -82,6 +84,7 @@ export interface SyncController {
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
   readonly status: () => RepositorySynchronizationStatus;
   readonly diagnostics: () => SynchronizationDiagnostics;
+  readonly readSynchronizationConflict: () => JigDataConflictCase | null;
 }
 
 interface ObservedPortableRemote {
@@ -231,6 +234,7 @@ export function createSyncController(
 
   let remoteIdentity: SynchronizationRemote | null = null;
   let currentDiagnostics = initialSynchronizationDiagnostics();
+  let currentConflictCase: JigDataConflictCase | null = null;
   let recoveryVerificationKind: "accepted" | "resumed" | null = null;
   let attemptStartedAt: string | null = null;
   let diagnosticFailureReason: SynchronizationFailureReason | null = null;
@@ -273,6 +277,7 @@ export function createSyncController(
 
   const completeDiagnostics = (): void => {
     diagnosticFailureReason = null;
+    currentConflictCase = null;
     diagnosticFailureCount = 0;
     const recoveryOutcome = recoveryVerificationKind;
     currentDiagnostics = {
@@ -638,6 +643,7 @@ export function createSyncController(
     observed: ObservedPortableRemote,
     environment: Readonly<Record<string, string>>,
   ): Promise<RepositorySynchronizationStatus | null> => {
+    currentConflictCase = null;
     const observation = observed.observation;
     if (
       observation.state !== "present" ||
@@ -731,8 +737,19 @@ export function createSyncController(
       observation.remote_snapshot,
     );
     if (reconciliation.kind === "semantic-conflict") {
+      currentConflictCase = buildJigDataConflictCase(
+        mergeBase,
+        observation.local_head,
+        observation.remote_head,
+        observed.revision,
+        ancestor,
+        local.snapshot,
+        observation.remote_snapshot,
+      );
       return recoveryIssue(
-        "recover-divergence",
+        currentConflictCase === null
+          ? "recover-divergence"
+          : "resolve-conflict",
         "semantic-conflict",
         false,
         "refused",
@@ -895,6 +912,7 @@ export function createSyncController(
           true,
         );
       }
+      currentConflictCase = null;
       return remoteIssue(
         false,
         "classify",
@@ -1159,6 +1177,10 @@ export function createSyncController(
   };
 
   const trigger = async (): Promise<RepositorySynchronizationStatus> => {
+    if (currentConflictCase !== null) {
+      clearTimer();
+      return currentStatus;
+    }
     if (running !== null) return running;
     clearTimer();
     running = runOnce().finally(() => {
@@ -1209,5 +1231,6 @@ export function createSyncController(
     trigger,
     status: () => currentStatus,
     diagnostics: () => currentDiagnostics,
+    readSynchronizationConflict: () => currentConflictCase,
   };
 }
