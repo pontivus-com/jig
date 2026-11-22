@@ -16,6 +16,11 @@ function activeWeek(page: Page) {
   return page.locator(".jig-planner-surface");
 }
 
+
+function applicationScrollOwner(page: Page) {
+  return page.locator(".jig-app-shell main");
+}
+
 function expectNear(actual: number, expected: number, tolerance = 3): void {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance);
 }
@@ -684,52 +689,51 @@ test("narrow Planner opens with the current day at the top", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await waitForResponsiveHeader(page, 390);
 
-  const frame = page.locator(".jig-content-frame");
+  const scrollOwner = applicationScrollOwner(page);
   const today = activeWeek(page).locator(".jig-week-column-today");
   await expect(today).toBeVisible();
+  await expect(scrollOwner).toHaveCount(1);
 
   const initialGeometry = await page.evaluate(() => {
-    const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+    const owner = document.querySelector<HTMLElement>(".jig-app-shell main");
     const active = document.querySelector<HTMLElement>(
-      '.jig-planner-surface',
+      ".jig-planner-surface",
     );
     const today =
       active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
-    if (frame === null || today === null) {
+    if (owner === null || today === null) {
       throw new Error("Narrow Planner scroll geometry unavailable");
     }
     return {
-      frameTop: frame.getBoundingClientRect().top,
+      ownerTop: owner.getBoundingClientRect().top,
       todayTop: today.getBoundingClientRect().top,
-      scrollTop: frame.scrollTop,
+      scrollTop: owner.scrollTop,
     };
   });
 
-  expectNear(initialGeometry.todayTop, initialGeometry.frameTop, 1);
+  expectNear(initialGeometry.todayTop, initialGeometry.ownerTop, 1);
   expect(initialGeometry.scrollTop).toBeGreaterThanOrEqual(0);
 
-  await frame.evaluate((element) => {
+  await scrollOwner.evaluate((element) => {
     element.scrollTop = 0;
   });
-  await expect
-    .poll(() => today.boundingBox())
-    .not.toBeNull();
+  await expect.poll(() => today.boundingBox()).not.toBeNull();
   const scrolledUpGeometry = await page.evaluate(() => {
-    const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+    const owner = document.querySelector<HTMLElement>(".jig-app-shell main");
     const active = document.querySelector<HTMLElement>(
-      '.jig-planner-surface',
+      ".jig-planner-surface",
     );
     const today =
       active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
-    if (frame === null || today === null) {
+    if (owner === null || today === null) {
       throw new Error("Narrow Planner scroll geometry unavailable");
     }
     return {
-      frameTop: frame.getBoundingClientRect().top,
+      ownerTop: owner.getBoundingClientRect().top,
       todayTop: today.getBoundingClientRect().top,
     };
   });
-  expectNear(scrolledUpGeometry.todayTop, scrolledUpGeometry.frameTop, 1);
+  expectNear(scrolledUpGeometry.todayTop, scrolledUpGeometry.ownerTop, 1);
 });
 
 test("global Add exposes the full form and defaults to today", async ({
@@ -1024,7 +1028,7 @@ test("desktop header stays compact while narrow header uses sticky destination-s
     const topBefore = await page.locator(".jig-app-header-narrow").evaluate(
       (element) => element.getBoundingClientRect().top,
     );
-    await page.locator(".jig-content-frame").evaluate((element) => {
+    await applicationScrollOwner(page).evaluate((element) => {
       element.scrollTop = 500;
     });
     const topAfter = await page.locator(".jig-app-header-narrow").evaluate(
