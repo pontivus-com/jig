@@ -7,7 +7,7 @@ import {
   VStack,
 } from "@astryxdesign/core";
 
-import { JigAttentionBanner } from "./attention-banner";
+import { AttentionFeedbackContent } from "./presentation/shared/feedback-content";
 import { useEffect, useState } from "react";
 import type {
   Diagnostics,
@@ -146,10 +146,10 @@ export function SettingsView({
   return (
     <div className="jig-settings-view">
       {operationError === null ? null : (
-        <JigAttentionBanner
+        <AttentionFeedbackContent
           status="error"
           title="Operation failed"
-          description={operationError}
+          message={operationError}
         />
       )}
 
