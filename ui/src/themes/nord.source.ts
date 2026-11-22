@@ -9,6 +9,10 @@ export const nordTheme = defineTheme({
   extends: neutralTheme,
   tokens: communityColorTokens(nordPalette),
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: nordPalette.body,
+      planner: nordPalette.surface,
+      task: nordPalette.card,
+    }),
   },
 });
