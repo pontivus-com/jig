@@ -7,7 +7,6 @@ import {
   VStack,
 } from "@astryxdesign/core";
 
-import { AttentionFeedbackContent } from "./presentation/shared/feedback-content";
 import { useEffect, useState } from "react";
 import type {
   Diagnostics,
@@ -52,7 +51,6 @@ export interface SettingsViewProps {
   readonly appearanceMode: AppearanceMode;
   readonly status: ServiceStatus | null;
   readonly diagnostics: Diagnostics | null;
-  readonly operationError: string | null;
   readonly isOperating: boolean;
   readonly githubReconnectAvailable: boolean;
   readonly githubReconnect: GitHubReconnectSnapshot | null;
@@ -100,7 +98,6 @@ export function SettingsView({
   appearanceMode,
   status,
   diagnostics,
-  operationError,
   isOperating,
   githubReconnectAvailable,
   githubReconnect,
@@ -145,14 +142,6 @@ export function SettingsView({
 
   return (
     <div className="jig-settings-view">
-      {operationError === null ? null : (
-        <AttentionFeedbackContent
-          status="error"
-          title="Operation failed"
-          message={operationError}
-        />
-      )}
-
       <div className="jig-settings-sections">
         <section
           className="jig-settings-section"
