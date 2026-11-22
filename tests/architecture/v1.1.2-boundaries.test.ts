@@ -389,8 +389,12 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     expect(draftViolations).toEqual([]);
 
     if (existsSync(draftPath)) {
-      expect(source(draftPath)).not.toMatch(
+      const draft = source(draftPath);
+      expect(draft).not.toMatch(
         /from\s+["'][^"']*(?:src\/shell|src\/persistence|\.\/native|\/native\/|isomorphic-git)/,
+      );
+      expect(draft).not.toMatch(
+        /\b(?:localStorage|sessionStorage|indexedDB)\b/,
       );
     }
 
@@ -402,6 +406,51 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     for (const path of recoveryDeclarations) {
       expect(path).toBe(recoveryPath);
     }
+  });
+
+  it("keeps resolver Back cancellation ephemeral and ahead of other shared Back owners", () => {
+    const app = source("ui/src/app.tsx");
+    const handleStart = app.indexOf(
+      "const handleBack = useCallback",
+    );
+    const resolverStart = app.indexOf(
+      "if (syncConflictDraft !== null)",
+      handleStart,
+    );
+    const deleteStart = app.indexOf(
+      "if (deleteTaskId !== null)",
+      handleStart,
+    );
+
+    expect(handleStart).toBeGreaterThanOrEqual(0);
+    expect(resolverStart).toBeGreaterThan(handleStart);
+    expect(deleteStart).toBeGreaterThan(resolverStart);
+
+    const resolverBackBlock = app.slice(
+      resolverStart,
+      deleteStart,
+    );
+    expect(resolverBackBlock).toContain(
+      "setSyncConflictDraft(null)",
+    );
+    expect(resolverBackBlock).toContain(
+      "setSyncConflictError(null)",
+    );
+    expect(resolverBackBlock).toContain("return true");
+    expect(resolverBackBlock).not.toMatch(
+      /resolveSynchronizationConflict|triggerSync|applyTaskCommand/,
+    );
+    expect(app).toContain(
+      "nativeBackHandlerRef.current = handleBack",
+    );
+
+    const nativeLifecycle = source(
+      "ui/src/native/app-lifecycle.ts",
+    );
+    expect(nativeLifecycle).toContain(
+      'App.addListener(\n    "backButton"',
+    );
+    expect(nativeLifecycle).toContain("if (onBack())");
   });
 
   it("freezes the SD-17 source-ownership cutover without compatibility barrels", () => {
