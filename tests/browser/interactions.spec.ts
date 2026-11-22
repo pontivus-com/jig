@@ -3,6 +3,7 @@ import {
   test,
   type Locator,
   type Page,
+  type Request,
 } from "@playwright/test";
 
 test.use({ hasTouch: true });
@@ -428,6 +429,23 @@ test("dedicated-handle desktop drag moves exactly once without runtime errors or
   await createTask(page, "Pointer drag contract", today);
   await page.reload();
 
+  let moveCommands = 0;
+  const observeMove = (request: Request): void => {
+    if (
+      request.method() !== "POST" ||
+      new URL(request.url()).pathname !== "/api/v1/commands"
+    ) {
+      return;
+    }
+    const body = request.postDataJSON() as {
+      readonly command?: { readonly type?: string };
+    };
+    if (body.command?.type === "move") {
+      moveCommands += 1;
+    }
+  };
+  page.on("request", observeMove);
+
   const card = await taskCard(page, "Pointer drag contract");
   const sourceHandle = await dragHandle(page, "Pointer drag contract");
   const destination = dateDropZone(page, destinationDate);
@@ -450,6 +468,8 @@ test("dedicated-handle desktop drag moves exactly once without runtime errors or
   expect(
     (await taskByTitle(page, "Pointer drag contract")).scheduled_date,
   ).toBe(destinationDate);
+  await expect.poll(() => moveCommands).toBe(1);
+  page.off("request", observeMove);
   expect(runtimeErrors).toEqual([]);
 });
 
