@@ -495,16 +495,16 @@ export const solarizedTheme = {
   __onDark: {
     "tokens": {
       "color-scheme": "dark",
-      "--color-text-primary": "var(--color-on-dark)",
-      "--color-icon-primary": "var(--color-on-dark)",
+      "--color-text-primary": "#93a1a1",
+      "--color-icon-primary": "#93a1a1",
       "--color-accent": "var(--color-on-dark)"
     }
   },
   __onLight: {
     "tokens": {
       "color-scheme": "light",
-      "--color-text-primary": "var(--color-on-light)",
-      "--color-icon-primary": "var(--color-on-light)",
+      "--color-text-primary": "color-mix(in srgb, #586e75 96%, #002b36)",
+      "--color-icon-primary": "color-mix(in srgb, #586e75 96%, #002b36)",
       "--color-accent": "var(--color-on-light)"
     }
   },
