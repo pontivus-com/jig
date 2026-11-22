@@ -1240,17 +1240,40 @@ describe("Android Git smart-HTTP feasibility", () => {
       if (conflict === undefined) {
         throw new Error("expected one synchronization conflict");
       }
-      const choices = [{
+      const staleChoices = [{
         conflict_key: jigDataConflictKey(conflict),
         side: "local" as const,
       }];
-      const dateOrders = deriveJigDataDateOrders(
+      const staleDateOrders = deriveJigDataDateOrders(
         conflictCase,
-        choices,
+        staleChoices,
       );
-      if (dateOrders === null) {
+      if (staleDateOrders === null) {
         throw new Error("expected date-order review after conflict choice");
       }
+
+      const desktopAdvancedState =
+        await readCanonicalState(desktopDb);
+      await applyTaskCommand(
+        desktopDb,
+        {
+          type: "edit",
+          task_id: taskId,
+          changes: { title: "Desktop conflict newer" },
+        },
+        desktopAdvancedState.revision,
+        "2026-11-18T06:03:00.000Z",
+      );
+      desktopSync.notifyMutation();
+      await expect(desktopSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
+      const advancedRemoteHead = await runGit(root, [
+        "--git-dir",
+        remote,
+        "rev-parse",
+        "jig-data",
+      ]);
 
       await expect(
         androidSync.resolveSynchronizationConflict({
@@ -1258,6 +1281,51 @@ describe("Android Git smart-HTTP feasibility", () => {
           local_head: conflictCase.local_head,
           remote_head: conflictCase.remote_head,
           expected_revision: conflictCase.expected_revision,
+          choices: staleChoices,
+          date_orders: staleDateOrders,
+        }),
+      ).resolves.toMatchObject({
+        local_git: "committed",
+        remote: { state: "sync-issue" },
+      });
+      expect(
+        (await readCanonicalState(androidDb)).tasks[0],
+      ).toMatchObject({ title: "Android conflict" });
+      expect(
+        await readAndroidRecoveryCandidateHead(
+          androidEffects,
+          DATASET_ID,
+        ),
+      ).toBeNull();
+
+      const freshCase = androidSync.readSynchronizationConflict();
+      if (freshCase === null) {
+        throw new Error("expected refreshed Android synchronization conflict");
+      }
+      expect(freshCase.remote_head).toBe(advancedRemoteHead);
+      expect(freshCase.remote_head).not.toBe(conflictCase.remote_head);
+      const freshConflict = freshCase.conflicts[0];
+      if (freshConflict === undefined) {
+        throw new Error("expected refreshed Android synchronization conflict");
+      }
+      const choices = [{
+        conflict_key: jigDataConflictKey(freshConflict),
+        side: "local" as const,
+      }];
+      const dateOrders = deriveJigDataDateOrders(
+        freshCase,
+        choices,
+      );
+      if (dateOrders === null) {
+        throw new Error("expected refreshed Android date-order review");
+      }
+
+      await expect(
+        androidSync.resolveSynchronizationConflict({
+          ancestor_head: freshCase.ancestor_head,
+          local_head: freshCase.local_head,
+          remote_head: freshCase.remote_head,
+          expected_revision: freshCase.expected_revision,
           choices,
           date_orders: dateOrders,
         }),
