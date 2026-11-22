@@ -241,6 +241,40 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     ).toEqual(["ui/src/planner-list.tsx"]);
   });
 
+  it("keeps Planner semantics shared while desktop and narrow own composition", () => {
+    expect(existsSync("ui/src/planner.tsx")).toBe(false);
+    expect(existsSync("ui/src/week.tsx")).toBe(false);
+
+    const shared = source(
+      "ui/src/presentation/shared/planner-date-section.tsx",
+    );
+    const desktop = source("ui/src/presentation/desktop/planner.tsx");
+    const narrow = source("ui/src/presentation/narrow/planner.tsx");
+    const taskList = source("ui/src/planner-list.tsx");
+
+    expect(shared).toContain("PlannerDateSection");
+    expect(shared).toContain("<PlannerTaskList");
+    expect(shared).toContain("<DateDropZone");
+    expect(shared).toContain("isFutureAddDate");
+    expect(shared).not.toContain("LayoutMode");
+    expect(shared).not.toContain("scrollIntoView");
+
+    expect(desktop).toContain("jig-planner-board-desktop");
+    expect(desktop).toContain("<PlannerDateSection");
+    expect(desktop).not.toContain("scrollIntoView");
+    expect(narrow).toContain("jig-planner-board-narrow");
+    expect(narrow).toContain("<PlannerDateSection");
+    expect(narrow).toContain("scrollIntoView");
+
+    expect(
+      (desktop.match(/props\.displayedDates\.map\(/g) ?? []).length,
+    ).toBe(1);
+    expect(
+      (narrow.match(/props\.displayedDates\.map\(/g) ?? []).length,
+    ).toBe(1);
+    expect(taskList).toContain("function plannerTaskPresentationItems");
+  });
+
   it("keeps Task workspace state shared while host primitives stay presentation-owned", () => {
     const shared = source("ui/src/task-workspace.tsx");
     const desktop = source("ui/src/presentation/desktop/task-workspace.tsx");
