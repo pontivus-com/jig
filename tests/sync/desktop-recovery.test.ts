@@ -17,6 +17,10 @@ import {
   readCanonicalState,
   type JigSqlConnection,
 } from "../../src/persistence/sqlite";
+import {
+  deriveJigDataDateOrders,
+  jigDataConflictKey,
+} from "../../src/core/synchronization-recovery";
 import { exportCanonicalPortableSnapshot } from "../../src/persistence/synchronization";
 import {
   ensurePortableData,
@@ -234,5 +238,199 @@ describe("Desktop related-divergence recovery", () => {
       await readFile(join(repository, "user-content.txt"), "utf8"),
     ).toBe("unrelated user content\n");
     controller.stop();
+  });  it("exposes and resolves an eligible Desktop semantic conflict through the shared policy", async () => {
+    const repository = await mkdtemp(
+      join(tmpdir(), "jig-conflict-repository-"),
+    );
+    const remote = await mkdtemp(
+      join(tmpdir(), "jig-conflict-remote-"),
+    );
+    roots.push(repository, remote);
+
+    await git(repository, ["init"]);
+    await git(repository, ["config", "user.name", "Jig Test"]);
+    await git(repository, ["config", "user.email", "jig-test@local.invalid"]);
+    await writeFile(
+      join(repository, "user-content.txt"),
+      "unrelated user content\n",
+      "utf8",
+    );
+    await git(repository, ["add", "user-content.txt"]);
+    await git(repository, ["commit", "-m", "User branch baseline"]);
+    const userHead = await git(repository, ["rev-parse", "HEAD"]);
+
+    await git(remote, ["init", "--bare"]);
+    await git(repository, ["remote", "add", "origin", remote]);
+
+    const adapter = { repository_path: repository } as const;
+    await ensurePortableData(adapter, DATASET_ID);
+    const initial = await readCurrentPortableSnapshot(
+      adapter,
+      DATASET_ID,
+    );
+    if (initial === null) {
+      throw new Error("expected initialized Jig portable snapshot");
+    }
+
+    await mkdir(join(repository, ".jig", "local"), {
+      recursive: true,
+    });
+    db = await initializeDatabase(
+      join(repository, ".jig", "local", "jig.sqlite"),
+      DATASET_ID,
+    );
+    await markExported(db, 0, initial.head);
+
+    const controller = createSyncController(
+      db,
+      { repository_path: repository },
+    );
+    expect(await controller.trigger()).toMatchObject({
+      remote: { state: "synchronized" },
+    });
+
+    const sharedTaskId =
+      "018f47f0-7b5c-7d4d-8e2b-000000008103";
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Shared base",
+        scheduled_date: "2026-11-22",
+      },
+      0,
+      "2026-11-22",
+      "2026-11-22T13:00:00.000Z",
+      () => sharedTaskId,
+    );
+    await exportCanonicalPortableSnapshot(
+      db,
+      (snapshot, revision) =>
+        writePortableSnapshot(adapter, snapshot, revision),
+    );
+    expect(await controller.trigger()).toMatchObject({
+      remote: { state: "synchronized" },
+    });
+
+    const writer = await mkdtemp(
+      join(tmpdir(), "jig-conflict-writer-"),
+    );
+    roots.push(writer);
+    await git(tmpdir(), [
+      "clone",
+      "--branch",
+      "jig-data",
+      remote,
+      writer,
+    ]);
+    await git(writer, ["config", "user.name", "Jig Test"]);
+    await git(writer, ["config", "user.email", "jig-test@local.invalid"]);
+
+    const baseState = await readCanonicalState(db);
+    await applyTaskCommand(
+      db,
+      {
+        type: "edit",
+        task_id: sharedTaskId,
+        changes: { title: "Local conflict" },
+      },
+      baseState.revision,
+      "2026-11-22",
+      "2026-11-22T13:01:00.000Z",
+    );
+    await exportCanonicalPortableSnapshot(
+      db,
+      (snapshot, revision) =>
+        writePortableSnapshot(adapter, snapshot, revision),
+    );
+
+    const baseTask = baseState.tasks[0];
+    if (baseTask === undefined) {
+      throw new Error("expected shared base Task");
+    }
+    const remoteSnapshot = serializeSnapshot([
+      validateTask({
+        ...baseTask,
+        title: "Remote conflict",
+        updated_at: "2026-11-22T13:02:00.000Z",
+      }),
+    ], DATASET_ID);
+    await writeSnapshotFiles(writer, remoteSnapshot.files);
+    await git(writer, ["add", "-A"]);
+    await git(writer, ["commit", "-m", "Remote conflicting change"]);
+    await git(writer, ["push", "origin", "jig-data"]);
+
+    expect(await controller.trigger()).toMatchObject({
+      local_git: "committed",
+      remote: { state: "sync-issue" },
+    });
+    const conflictCase = controller.readSynchronizationConflict();
+    if (conflictCase === null) {
+      throw new Error("expected eligible Desktop synchronization conflict");
+    }
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "resolve-conflict",
+      reason: "semantic-conflict",
+    });
+    const conflict = conflictCase.conflicts[0];
+    if (conflict === undefined) {
+      throw new Error("expected one Desktop synchronization conflict");
+    }
+    const choices = [{
+      conflict_key: jigDataConflictKey(conflict),
+      side: "local" as const,
+    }];
+    const dateOrders = deriveJigDataDateOrders(
+      conflictCase,
+      choices,
+    );
+    if (dateOrders === null) {
+      throw new Error("expected Desktop conflict date-order review");
+    }
+
+    expect(
+      await controller.resolveSynchronizationConflict({
+        ancestor_head: conflictCase.ancestor_head,
+        local_head: conflictCase.local_head,
+        remote_head: conflictCase.remote_head,
+        expected_revision: conflictCase.expected_revision,
+        choices,
+        date_orders: dateOrders,
+      }),
+    ).toMatchObject({
+      local_git: "committed",
+      remote: { state: "synchronized" },
+    });
+    expect(controller.readSynchronizationConflict()).toBeNull();
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "idle",
+      reason: null,
+      recovery_attempted: true,
+      recovery_outcome: "accepted",
+    });
+    expect((await readCanonicalState(db)).tasks[0]).toMatchObject({
+      id: sharedTaskId,
+      title: "Local conflict",
+    });
+
+    const resolvedRemote = await git(remote, [
+      "show",
+      "-s",
+      "--format=%s%n%P",
+      "jig-data",
+    ]);
+    const [message, parents] = resolvedRemote.trim().split("\n");
+    expect(message).toBe("Resolve Jig sync conflict");
+    expect(parents?.trim().split(/\s+/)).toHaveLength(2);
+    expect(
+      await readRecoveryCandidateHead(adapter, DATASET_ID),
+    ).toBeNull();
+
+    expect(await git(repository, ["rev-parse", "HEAD"])).toBe(userHead);
+    expect(
+      await readFile(join(repository, "user-content.txt"), "utf8"),
+    ).toBe("unrelated user content\n");
+    controller.stop();
   });
+
 });
