@@ -138,6 +138,17 @@ describe("UI ownership architecture", () => {
     expect(css).not.toContain(".jig-mobile-quick-add");
     expect(css).not.toContain(".jig-planner-selected-date-heading");
     expect(css).not.toContain(".jig-task-inspector");
+    expect(shared).not.toContain(
+      "grid-template-columns: repeat(7, minmax(10rem, 1fr))",
+    );
+    expect(desktop).toContain(".jig-planner-board-desktop");
+    expect(desktop).toContain(
+      "grid-template-columns: repeat(7, minmax(10rem, 1fr))",
+    );
+    expect(narrow).toContain(".jig-planner-board-narrow");
+    expect(narrow).toContain(
+      "grid-template-columns: minmax(0, 1fr)",
+    );
   });
 
   it("consumes only Astryx public tokens plus governed Jig product aliases", () => {
