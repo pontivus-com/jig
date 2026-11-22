@@ -109,7 +109,10 @@ function targetPlacement(
       return null;
     }
     destinationIndex = prospectiveIndex;
-  } else if (target.type === "jig-date") {
+  } else if (
+    target.type === "jig-date" ||
+    target.type === "jig-date-tail"
+  ) {
     destinationIndex = available.length;
   } else if (target.type === "jig-task") {
     const targetId = String(target.id);
@@ -384,7 +387,7 @@ export function TaskProspectiveFootprint({
       date,
       destination_index: destinationIndex,
     },
-    collisionPriority: 2,
+    collisionPriority: 3,
   });
 
   return (
@@ -428,6 +431,13 @@ export function DateDropZone({
     data: { date },
     collisionPriority: -1,
   });
+  const { ref: tailRef } = useDroppable({
+    id: `jig-date-tail-${date}`,
+    type: "jig-date-tail",
+    accept: "jig-task",
+    data: { date },
+    collisionPriority: 2,
+  });
 
   return (
     <div
@@ -446,6 +456,7 @@ export function DateDropZone({
     >
       {children}
       <div
+        ref={tailRef}
         className="jig-date-drop-tail"
         data-jig-drop-tail={date}
         aria-hidden="true"
