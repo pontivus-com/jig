@@ -126,6 +126,30 @@ function pointerPlacement(
   const available = outstandingForDate(tasks, date).filter(
     (task) => task.id !== activeTaskId,
   );
+  const tailTarget = registered.find((target) => {
+    if (
+      target.type !== "jig-date-tail-geometry" ||
+      target.data?.date !== date
+    ) {
+      return false;
+    }
+    const bounds = target.shape?.boundingRectangle;
+    return (
+      bounds !== undefined &&
+      pointer.x >= bounds.left &&
+      pointer.x <= bounds.right &&
+      pointer.y >= bounds.top &&
+      pointer.y <= bounds.bottom
+    );
+  });
+  if (tailTarget !== undefined) {
+    return {
+      activeTaskId,
+      destinationDate: date,
+      destinationIndex: available.length,
+    };
+  }
+
   const taskRects = registered
     .filter(
       (target) =>
@@ -566,6 +590,14 @@ export function DateDropZone({
     data: { date },
     collisionPriority: -1,
   });
+  const { ref: tailGeometryRef } = useDroppable({
+    id: `jig-date-tail-geometry-${date}`,
+    type: "jig-date-tail-geometry",
+    accept: "jig-task",
+    data: { date },
+    // Geometry probe only: the date container remains the semantic target.
+    collisionPriority: -2,
+  });
   return (
     <div
       ref={ref}
@@ -583,6 +615,7 @@ export function DateDropZone({
     >
       {children}
       <div
+        ref={tailGeometryRef}
         className="jig-date-drop-tail"
         data-jig-drop-tail={date}
         aria-hidden="true"
