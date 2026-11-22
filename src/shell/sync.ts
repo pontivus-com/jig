@@ -2,6 +2,7 @@ import {
   alignPortableDataRef,
   ensurePortableData,
   readCurrentPortableSnapshot,
+  readSnapshotAtRef,
   writePortableSnapshot,
 } from "./git/portable-store";
 import {
@@ -11,6 +12,15 @@ import {
   type SynchronizationRemote,
 } from "./git/remote";
 import type { GitAdapterConfig } from "./git/repository";
+import {
+  compareAndSetPortableHead,
+  deleteRecoveryCandidate,
+  readRecoveryCandidateHead,
+  recoveryCandidateParents,
+  recoveryCommitterTimestampSeconds,
+  uniqueRecoveryMergeBase,
+  writeRecoveryCandidate,
+} from "./git/recovery";
 import {
   sanitizeSynchronizationErrorSummary,
   synchronizationHeadPrefix,
@@ -39,6 +49,15 @@ import {
   type SynchronizationFailureReason,
   type SynchronizationFacts,
 } from "../core/synchronization";
+import {
+  reconcileRelatedPortableSnapshots,
+  recoveryCommitSpec,
+} from "../core/synchronization-recovery";
+import {
+  SnapshotDatasetMismatchError,
+  SnapshotValidationError,
+  type PortableSnapshot,
+} from "../core/portable";
 
 export const SYNC_HEALTHY_POLL_MS = 60_000;
 export const EXPORT_MAX_FLUSH_MS = 15_000;
@@ -74,10 +93,23 @@ interface ObservedPortableRemote {
 export interface SyncEffects {
   readonly ensurePortableData: typeof ensurePortableData;
   readonly readCurrentSnapshot: typeof readCurrentPortableSnapshot;
+  readonly readSnapshotAtRef: (
+    config: GitAdapterConfig,
+    ref: string,
+    datasetId: string,
+  ) => Promise<PortableSnapshot>;
   readonly writeSnapshot: typeof writePortableSnapshot;
   readonly observeRemote: typeof observePortableRemote;
   readonly alignLocal: typeof alignPortableDataRef;
   readonly push: typeof pushPortableDataRef;
+  readonly readRecoveryCandidateHead: typeof readRecoveryCandidateHead;
+  readonly recoveryCandidateParents: typeof recoveryCandidateParents;
+  readonly recoveryCommitterTimestampSeconds:
+    typeof recoveryCommitterTimestampSeconds;
+  readonly uniqueRecoveryMergeBase: typeof uniqueRecoveryMergeBase;
+  readonly writeRecoveryCandidate: typeof writeRecoveryCandidate;
+  readonly deleteRecoveryCandidate: typeof deleteRecoveryCandidate;
+  readonly compareAndSetPortableHead: typeof compareAndSetPortableHead;
   readonly networkEnvironment: () => Promise<
     Readonly<Record<string, string>> | null
   >;
@@ -86,10 +118,19 @@ export interface SyncEffects {
 const REAL_EFFECTS: SyncEffects = {
   ensurePortableData,
   readCurrentSnapshot: readCurrentPortableSnapshot,
+  readSnapshotAtRef: (config, ref, datasetId) =>
+    readSnapshotAtRef(config.repository_path, ref, datasetId),
   writeSnapshot: writePortableSnapshot,
   observeRemote: observePortableRemote,
   alignLocal: alignPortableDataRef,
   push: pushPortableDataRef,
+  readRecoveryCandidateHead,
+  recoveryCandidateParents,
+  recoveryCommitterTimestampSeconds,
+  uniqueRecoveryMergeBase,
+  writeRecoveryCandidate,
+  deleteRecoveryCandidate,
+  compareAndSetPortableHead,
   networkEnvironment: async () => ({}),
 };
 
@@ -190,6 +231,7 @@ export function createSyncController(
 
   let remoteIdentity: SynchronizationRemote | null = null;
   let currentDiagnostics = initialSynchronizationDiagnostics();
+  let recoveryVerificationKind: "accepted" | "resumed" | null = null;
   let attemptStartedAt: string | null = null;
   let diagnosticFailureReason: SynchronizationFailureReason | null = null;
   let diagnosticFailureCount = 0;
@@ -221,12 +263,18 @@ export function createSyncController(
 
   const beginAttempt = (): void => {
     attemptStartedAt = new Date().toISOString();
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: recoveryVerificationKind !== null,
+      recovery_outcome: null,
+    };
     beginPhase("local-reconcile");
   };
 
   const completeDiagnostics = (): void => {
     diagnosticFailureReason = null;
     diagnosticFailureCount = 0;
+    const recoveryOutcome = recoveryVerificationKind;
     currentDiagnostics = {
       ...currentDiagnostics,
       phase: "idle",
@@ -235,10 +283,11 @@ export function createSyncController(
       attempt_count: 0,
       last_attempt_at: attemptStartedAt,
       next_retry_at: null,
-      recovery_attempted: false,
-      recovery_outcome: null,
+      recovery_attempted: recoveryOutcome !== null,
+      recovery_outcome: recoveryOutcome,
       error_summary: null,
     };
+    recoveryVerificationKind = null;
   };
 
   const recordFailure = (
@@ -266,7 +315,7 @@ export function createSyncController(
         retryDelay === null
           ? null
           : new Date(Date.parse(now) + retryDelay).toISOString(),
-      recovery_attempted: false,
+      recovery_attempted: recoveryVerificationKind !== null,
       recovery_outcome: null,
       error_summary:
         error === undefined
@@ -370,6 +419,27 @@ export function createSyncController(
     return status;
   };
 
+  const recoveryIssue = async (
+    phase: "recover-divergence" | "resolve-conflict",
+    reason: SynchronizationFailureReason,
+    retryable: boolean,
+    outcome: "refused" | "failed",
+    error?: unknown,
+  ): Promise<RepositorySynchronizationStatus> => {
+    const status = await remoteIssue(
+      retryable,
+      phase,
+      reason,
+      error,
+    );
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: outcome,
+    };
+    return status;
+  };
+
   const reconcileLocalSnapshot = (): Promise<void> =>
     reconcilePersistedPortableSnapshot(
       db,
@@ -431,6 +501,361 @@ export function createSyncController(
         effects.alignLocal(adapter, expectedHead, targetHead),
     );
 
+  const resumeInterruptedRecovery = async (): Promise<
+    RepositorySynchronizationStatus | null
+  > => {
+    const metadata = await readMetadata(db);
+    const candidate = await effects.readRecoveryCandidateHead(
+      adapter,
+      metadata.dataset_id,
+    );
+    if (candidate === null) return null;
+
+    if (metadata.last_adopted_head !== candidate) {
+      await effects.deleteRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        candidate,
+      );
+      return null;
+    }
+
+    beginPhase("recover-divergence");
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: null,
+    };
+
+    let candidateSnapshot: PortableSnapshot;
+    let current;
+    let parents: readonly [string, string];
+    try {
+      candidateSnapshot = await effects.readSnapshotAtRef(
+        adapter,
+        candidate,
+        metadata.dataset_id,
+      );
+      current = await effects.readCurrentSnapshot(
+        adapter,
+        metadata.dataset_id,
+      );
+      parents = await effects.recoveryCandidateParents(
+        adapter,
+        candidate,
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "unknown",
+        false,
+        "failed",
+        error,
+      );
+    }
+
+    if (current === null) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        false,
+        "refused",
+      );
+    }
+    const lineage =
+      current.head === candidate
+        ? "equal"
+        : parents.includes(current.head)
+          ? "remote-ahead"
+          : null;
+    if (lineage === null) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        false,
+        "refused",
+      );
+    }
+
+    try {
+      if (current.head === candidate) {
+        await effects.compareAndSetPortableHead(
+          adapter,
+          candidate,
+          candidate,
+        );
+      }
+      const result = await finishInterruptedSynchronizationAdoption(
+        db,
+        {
+          local_head: current.head,
+          remote_head: candidate,
+          lineage,
+          remote_snapshot: candidateSnapshot,
+        },
+        (expectedHead, targetHead) =>
+          effects.compareAndSetPortableHead(
+            adapter,
+            expectedHead,
+            targetHead,
+          ),
+      );
+      if (result !== "finished") {
+        return recoveryIssue(
+          "recover-divergence",
+          "ref-race",
+          false,
+          "refused",
+        );
+      }
+      await effects.deleteRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        candidate,
+      );
+      recoveryVerificationKind = "resumed";
+      currentDiagnostics = {
+        ...currentDiagnostics,
+        recovery_attempted: true,
+        recovery_outcome: null,
+      };
+      return null;
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        false,
+        "failed",
+        error,
+      );
+    }
+  };
+
+  const attemptDivergenceRecovery = async (
+    observed: ObservedPortableRemote,
+    environment: Readonly<Record<string, string>>,
+  ): Promise<RepositorySynchronizationStatus | null> => {
+    const observation = observed.observation;
+    if (
+      observation.state !== "present" ||
+      observation.lineage !== "diverged" ||
+      observation.remote_rewritten ||
+      observation.local_head === null
+    ) {
+      return recoveryIssue(
+        "recover-divergence",
+        "diverged",
+        false,
+        "refused",
+      );
+    }
+
+    beginPhase("recover-divergence");
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: null,
+    };
+    const metadata = await readMetadata(db);
+    const local = await effects.readCurrentSnapshot(
+      adapter,
+      metadata.dataset_id,
+    );
+    if (
+      local === null ||
+      local.head !== observation.local_head ||
+      metadata.revision !== observed.revision
+    ) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        true,
+        "refused",
+      );
+    }
+
+    let mergeBase: string | null;
+    try {
+      mergeBase = await effects.uniqueRecoveryMergeBase(
+        adapter,
+        observation.local_head,
+        observation.remote_head,
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "unknown",
+        false,
+        "failed",
+        error,
+      );
+    }
+    if (mergeBase === null) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ancestry-unknown",
+        false,
+        "refused",
+      );
+    }
+
+    let ancestor: PortableSnapshot;
+    try {
+      ancestor = await effects.readSnapshotAtRef(
+        adapter,
+        mergeBase,
+        metadata.dataset_id,
+      );
+    } catch (error) {
+      const reason =
+        error instanceof SnapshotDatasetMismatchError
+          ? "dataset-mismatch"
+          : error instanceof SnapshotValidationError
+            ? "invalid-snapshot"
+            : "unknown";
+      return recoveryIssue(
+        "recover-divergence",
+        reason,
+        false,
+        reason === "unknown" ? "failed" : "refused",
+        error,
+      );
+    }
+
+    const reconciliation = reconcileRelatedPortableSnapshots(
+      ancestor,
+      local.snapshot,
+      observation.remote_snapshot,
+    );
+    if (reconciliation.kind === "semantic-conflict") {
+      return recoveryIssue(
+        "recover-divergence",
+        "semantic-conflict",
+        false,
+        "refused",
+      );
+    }
+
+    let candidate: string;
+    try {
+      const [localTimestamp, remoteTimestamp] = await Promise.all([
+        effects.recoveryCommitterTimestampSeconds(
+          adapter,
+          observation.local_head,
+        ),
+        effects.recoveryCommitterTimestampSeconds(
+          adapter,
+          observation.remote_head,
+        ),
+      ]);
+      candidate = await effects.writeRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        reconciliation.snapshot,
+        recoveryCommitSpec(
+          "automatic",
+          observation.local_head,
+          localTimestamp,
+          observation.remote_head,
+          remoteTimestamp,
+        ),
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "unknown",
+        false,
+        "failed",
+        error,
+      );
+    }
+
+    const currentMetadata = await readMetadata(db);
+    const currentLocal = await effects.readCurrentSnapshot(
+      adapter,
+      metadata.dataset_id,
+    );
+    let confirmed: ObservedPortableRemote;
+    try {
+      confirmed = await observe(environment, "recover-divergence");
+    } catch (error) {
+      await effects.deleteRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        candidate,
+      );
+      return recoveryIssue(
+        "recover-divergence",
+        "transport",
+        true,
+        "refused",
+        error,
+      );
+    }
+    if (
+      currentMetadata.revision !== observed.revision ||
+      currentLocal === null ||
+      currentLocal.head !== observation.local_head ||
+      confirmed.observation.state !== "present" ||
+      confirmed.observation.local_head !== observation.local_head ||
+      confirmed.observation.remote_head !== observation.remote_head ||
+      confirmed.observation.remote_rewritten ||
+      confirmed.observation.lineage !== "diverged"
+    ) {
+      await effects.deleteRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        candidate,
+      );
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        true,
+        "refused",
+      );
+    }
+
+    try {
+      await adoptObservedSynchronizationRemote(
+        db,
+        {
+          local_head: observation.local_head,
+          remote_head: candidate,
+          lineage: "remote-ahead",
+          remote_snapshot: reconciliation.snapshot,
+        },
+        observed.revision,
+        (expectedHead, targetHead) =>
+          effects.compareAndSetPortableHead(
+            adapter,
+            expectedHead,
+            targetHead,
+          ),
+      );
+      await effects.deleteRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        candidate,
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        false,
+        "failed",
+        error,
+      );
+    }
+
+    recoveryVerificationKind = "accepted";
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: null,
+    };
+    return null;
+  };
+
   const processObservation = async (
     observed: ObservedPortableRemote,
     environment: Readonly<Record<string, string>>,
@@ -445,6 +870,43 @@ export function createSyncController(
     );
 
     if (decision.kind === "attention") {
+      if (decision.reason === "diverged" && mayPush) {
+        if (localPending) {
+          try {
+            beginPhase("export-local");
+            await exportCurrent();
+          } catch (error) {
+            return localIssue(
+              "export-local",
+              "local-export-failed",
+              error,
+            );
+          }
+          const afterExport = await observe(
+            environment,
+            "recover-divergence",
+          );
+          return processObservation(
+            afterExport,
+            environment,
+            true,
+          );
+        }
+        const recovery = await attemptDivergenceRecovery(
+          observed,
+          environment,
+        );
+        if (recovery !== null) return recovery;
+        const afterRecovery = await observe(
+          environment,
+          "verify-remote",
+        );
+        return processObservation(
+          afterRecovery,
+          environment,
+          true,
+        );
+      }
       return remoteIssue(
         false,
         "classify",
@@ -600,6 +1062,9 @@ export function createSyncController(
     } catch (error) {
       return localIssue("local-reconcile", "unknown", error);
     }
+
+    const resumed = await resumeInterruptedRecovery();
+    if (resumed !== null) return resumed;
 
     let environment: Readonly<Record<string, string>> | null;
     try {
