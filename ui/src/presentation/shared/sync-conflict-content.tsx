@@ -11,12 +11,8 @@ import { useMemo } from "react";
 
 import type { RecurrenceSeries } from "../../../../src/core/recurrence";
 import type { Task } from "../../../../src/core/task";
-import {
-  jigDataConflictKey,
-  type JigDataConflict,
-  type JigDataConflictFamilySide,
-  type ReconciliationSide,
-} from "../../../../src/core/synchronization-recovery";
+import { jigDataConflictKey } from "../../../../src/core/synchronization-recovery";
+import type * as Recovery from "../../../../src/core/synchronization-recovery";
 import { formatCivilDate } from "../../dates";
 import { recurrenceSummary } from "../../task-editor";
 import {
@@ -78,7 +74,7 @@ function taskValues(task: Task | null): readonly ComparisonValue[] {
 function changedTaskValues(
   local: Task | null,
   remote: Task | null,
-  side: ReconciliationSide,
+  side: Recovery.ReconciliationSide,
 ): readonly ComparisonValue[] {
   const selected = side === "local" ? taskValues(local) : taskValues(remote);
   const other = side === "local" ? taskValues(remote) : taskValues(local);
@@ -117,7 +113,7 @@ function familyTitles(tasks: readonly Task[]): string {
 }
 
 function familyValues(
-  side: JigDataConflictFamilySide,
+  side: Recovery.Recovery.JigDataConflictFamilySide,
 ): readonly ComparisonValue[] {
   if (side.series.length === 0 && side.tasks.length === 0) {
     return [["State", "Deleted"]];
@@ -133,10 +129,10 @@ function familyValues(
 
 function changedFamilyValues(
   conflict: Extract<
-    JigDataConflict,
+    Recovery.JigDataConflict,
     { readonly kind: "recurrence-family" }
   >,
-  side: ReconciliationSide,
+  side: Recovery.ReconciliationSide,
 ): readonly ComparisonValue[] {
   const selected = familyValues(
     side === "local" ? conflict.local : conflict.remote,
@@ -151,8 +147,8 @@ function changedFamilyValues(
 }
 
 function sideDeleted(
-  conflict: JigDataConflict,
-  side: ReconciliationSide,
+  conflict: Recovery.JigDataConflict,
+  side: Recovery.ReconciliationSide,
 ): boolean {
   if (conflict.kind === "task") {
     return (side === "local" ? conflict.local : conflict.remote) === null;
@@ -162,11 +158,11 @@ function sideDeleted(
 }
 
 function choiceHeading(
-  conflict: JigDataConflict,
-  side: ReconciliationSide,
+  conflict: Recovery.JigDataConflict,
+  side: Recovery.ReconciliationSide,
 ): string {
   if (sideDeleted(conflict, side)) return "Keep deleted";
-  const other: ReconciliationSide =
+  const other: Recovery.ReconciliationSide =
     side === "local" ? "remote" : "local";
   if (sideDeleted(conflict, other)) {
     return conflict.kind === "task"
@@ -177,8 +173,8 @@ function choiceHeading(
 }
 
 function comparisonValues(
-  conflict: JigDataConflict,
-  side: ReconciliationSide,
+  conflict: Recovery.JigDataConflict,
+  side: Recovery.ReconciliationSide,
 ): readonly ComparisonValue[] {
   return conflict.kind === "task"
     ? changedTaskValues(conflict.local, conflict.remote, side)
@@ -189,8 +185,8 @@ function ChoiceSummary({
   conflict,
   side,
 }: Readonly<{
-  conflict: JigDataConflict;
-  side: ReconciliationSide;
+  conflict: Recovery.JigDataConflict;
+  side: Recovery.ReconciliationSide;
 }>): React.ReactElement {
   const values = comparisonValues(conflict, side);
   return (
@@ -214,7 +210,7 @@ function ChoiceSummary({
   );
 }
 
-function conflictTitle(conflict: JigDataConflict): string {
+function conflictTitle(conflict: Recovery.JigDataConflict): string {
   if (conflict.kind === "task") {
     return (
       conflict.local?.title ??
@@ -233,7 +229,7 @@ function conflictTitle(conflict: JigDataConflict): string {
 
 function technicalDetails(
   state: SyncConflictDraftState,
-  conflict: JigDataConflict,
+  conflict: Recovery.JigDataConflict,
 ): string {
   return JSON.stringify(
     {
@@ -255,7 +251,7 @@ function ConflictChoice({
   onCopyTechnicalDetails,
 }: Readonly<{
   state: SyncConflictDraftState;
-  conflict: JigDataConflict;
+  conflict: Recovery.JigDataConflict;
   onAction: (action: SyncConflictDraftAction) => void;
   onCopyTechnicalDetails: (value: string) => void;
 }>): React.ReactElement {
