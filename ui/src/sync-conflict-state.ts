@@ -1,3 +1,4 @@
+import type { PortableSnapshot } from "../../src/core/portable";
 import {
   applyJigDataResolution,
   deriveJigDataDateOrders,
@@ -15,6 +16,7 @@ export type SyncConflictStep =
   | "confirm";
 
 export interface SyncConflictDraftState {
+  readonly conflict_case: JigDataConflictCase;
   readonly step: SyncConflictStep;
   readonly conflict_index: number;
   readonly choices: ReadonlyMap<string, ReconciliationSide>;
@@ -39,9 +41,10 @@ export type SyncConflictDraftAction =
       readonly conflict_key: string;
     }
   | {
-      readonly type: "set-date-order";
+      readonly type: "move-date-task";
       readonly date: string;
-      readonly task_ids: readonly string[];
+      readonly task_id: string;
+      readonly direction: "up" | "down";
     }
   | {
       readonly type: "confirm-date-order";
@@ -97,18 +100,6 @@ function stepFor(
     : "order-review";
 }
 
-function sameTaskSet(
-  left: readonly string[],
-  right: readonly string[],
-): boolean {
-  if (left.length !== right.length) return false;
-  const leftSorted = [...left].sort();
-  const rightSorted = [...right].sort();
-  return leftSorted.every(
-    (taskId, index) => taskId === rightSorted[index],
-  );
-}
-
 function seededDateOrders(
   required: readonly JigDataDateOrder[],
 ): ReadonlyMap<string, readonly string[]> {
@@ -117,10 +108,50 @@ function seededDateOrders(
   );
 }
 
+function resolutionFromDraft(
+  state: SyncConflictDraftState,
+  requireConfirmedOrders: boolean,
+): JigDataResolution | null {
+  const conflictCase = state.conflict_case;
+  const choices = choicesFor(conflictCase, state.choices);
+  const required = deriveJigDataDateOrders(conflictCase, choices);
+  if (
+    required === null ||
+    (
+      requireConfirmedOrders &&
+      required.some(
+        (order) => !state.confirmed_date_orders.has(order.date),
+      )
+    )
+  ) {
+    return null;
+  }
+
+  const dateOrders: JigDataDateOrder[] = [];
+  for (const requiredOrder of required) {
+    const taskIds = state.date_orders.get(requiredOrder.date);
+    if (taskIds === undefined) return null;
+    dateOrders.push({
+      date: requiredOrder.date,
+      task_ids: taskIds,
+    });
+  }
+
+  return {
+    ancestor_head: conflictCase.ancestor_head,
+    local_head: conflictCase.local_head,
+    remote_head: conflictCase.remote_head,
+    expected_revision: conflictCase.expected_revision,
+    choices,
+    date_orders: dateOrders,
+  };
+}
+
 export function createSyncConflictDraft(
   conflictCase: JigDataConflictCase,
 ): SyncConflictDraftState {
   return {
+    conflict_case: conflictCase,
     step: "choices",
     conflict_index: 0,
     choices: new Map(),
@@ -132,10 +163,10 @@ export function createSyncConflictDraft(
 }
 
 export function reduceSyncConflictDraft(
-  conflictCase: JigDataConflictCase,
   state: SyncConflictDraftState,
   action: SyncConflictDraftAction,
 ): SyncConflictDraftState {
+  const conflictCase = state.conflict_case;
   switch (action.type) {
     case "select-side": {
       if (!conflictKeys(conflictCase).has(action.conflict_key)) {
@@ -188,22 +219,23 @@ export function reduceSyncConflictDraft(
       };
     }
 
-    case "set-date-order": {
-      const required = requiredDateOrders(
-        conflictCase,
-        state.choices,
-      );
-      const expected = required?.find(
-        (order) => order.date === action.date,
-      );
-      if (
-        expected === undefined ||
-        !sameTaskSet(expected.task_ids, action.task_ids)
-      ) {
+    case "move-date-task": {
+      const current = state.date_orders.get(action.date);
+      if (current === undefined) return state;
+      const index = current.indexOf(action.task_id);
+      if (index < 0) return state;
+      const nextIndex =
+        action.direction === "up" ? index - 1 : index + 1;
+      if (nextIndex < 0 || nextIndex >= current.length) {
         return state;
       }
+      const nextOrder = [...current];
+      const target = nextOrder[nextIndex];
+      if (target === undefined) return state;
+      nextOrder[nextIndex] = action.task_id;
+      nextOrder[index] = target;
       const dateOrders = new Map(state.date_orders);
-      dateOrders.set(action.date, [...action.task_ids]);
+      dateOrders.set(action.date, nextOrder);
       const confirmedDates = new Set(state.confirmed_date_orders);
       confirmedDates.delete(action.date);
       return {
@@ -231,7 +263,11 @@ export function reduceSyncConflictDraft(
       if (
         expected === undefined ||
         current === undefined ||
-        !sameTaskSet(expected.task_ids, current)
+        expected.task_ids.length !== current.length ||
+        [...expected.task_ids].sort().some(
+          (taskId, index) =>
+            taskId !== [...current].sort()[index],
+        )
       ) {
         return state;
       }
@@ -257,41 +293,27 @@ export function reduceSyncConflictDraft(
   }
 }
 
+export function syncConflictPreview(
+  state: SyncConflictDraftState,
+): PortableSnapshot | null {
+  const resolution = resolutionFromDraft(state, false);
+  if (resolution === null) return null;
+  const result = applyJigDataResolution(
+    state.conflict_case,
+    resolution,
+  );
+  return result.kind === "resolved" ? result.snapshot : null;
+}
+
 export function syncConflictResolution(
-  conflictCase: JigDataConflictCase,
   state: SyncConflictDraftState,
 ): JigDataResolution | null {
-  const choices = choicesFor(conflictCase, state.choices);
-  const required = deriveJigDataDateOrders(conflictCase, choices);
-  if (
-    required === null ||
-    required.some(
-      (order) => !state.confirmed_date_orders.has(order.date),
-    )
-  ) {
-    return null;
-  }
-
-  const dateOrders: JigDataDateOrder[] = [];
-  for (const requiredOrder of required) {
-    const taskIds = state.date_orders.get(requiredOrder.date);
-    if (taskIds === undefined) return null;
-    dateOrders.push({
-      date: requiredOrder.date,
-      task_ids: taskIds,
-    });
-  }
-
-  const resolution: JigDataResolution = {
-    ancestor_head: conflictCase.ancestor_head,
-    local_head: conflictCase.local_head,
-    remote_head: conflictCase.remote_head,
-    expected_revision: conflictCase.expected_revision,
-    choices,
-    date_orders: dateOrders,
-  };
-  return applyJigDataResolution(conflictCase, resolution).kind ===
-    "resolved"
+  const resolution = resolutionFromDraft(state, true);
+  if (resolution === null) return null;
+  return applyJigDataResolution(
+    state.conflict_case,
+    resolution,
+  ).kind === "resolved"
     ? resolution
     : null;
 }
