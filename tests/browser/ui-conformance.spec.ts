@@ -1258,10 +1258,9 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     });
 
     await page
-      .getByRole("button", {
-        name: "Mobile geometry inventory Open reference",
-        exact: true,
-      })
+      .locator(".jig-task-card")
+      .filter({ hasText: "Mobile geometry inventory" })
+      .first()
       .click();
     const workspace = page.getByRole("dialog", {
       name: "Mobile geometry inventory",
