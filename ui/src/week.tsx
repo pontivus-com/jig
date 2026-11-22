@@ -220,9 +220,14 @@ function WeekPage({
 export function WeekView(props: WeekViewProps): React.ReactElement {
   const today = todayCivilDate();
   const todaySectionRef = useRef<HTMLDivElement>(null);
-  const displayedWeekKey = props.displayedDates.join("|");
+  const initialTodayFocusHandledRef = useRef(false);
+  const handledTodayScrollRequestRef = useRef(0);
 
   useEffect(() => {
+    if (initialTodayFocusHandledRef.current) {
+      return;
+    }
+    initialTodayFocusHandledRef.current = true;
     if (
       !props.focusCurrentDayOnMount ||
       !props.displayedDates.includes(today)
@@ -237,24 +242,29 @@ export function WeekView(props: WeekViewProps): React.ReactElement {
       });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [displayedWeekKey, props.focusCurrentDayOnMount, today]);
+  }, [props.displayedDates, props.focusCurrentDayOnMount, today]);
 
   useEffect(() => {
     if (
       props.todayScrollRequest === 0 ||
+      handledTodayScrollRequestRef.current === props.todayScrollRequest ||
       !props.displayedDates.includes(today)
     ) {
       return;
     }
+    handledTodayScrollRequestRef.current = props.todayScrollRequest;
     const frame = window.requestAnimationFrame(() => {
+      const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
       todaySectionRef.current?.scrollIntoView({
         block: "start",
         inline: "nearest",
-        behavior: "auto",
+        behavior: reducedMotion ? "auto" : "smooth",
       });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [displayedWeekKey, props.todayScrollRequest, today]);
+  }, [props.displayedDates, props.todayScrollRequest, today]);
 
   return (
     <WeekPage
