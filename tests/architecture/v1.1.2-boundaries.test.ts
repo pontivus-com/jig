@@ -161,6 +161,27 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     }
     expect((activation.match(/reconcileRuntimeReminders\(/g) ?? [])).toHaveLength(1);
     expect((activation.match(/triggerSync\(\)/g) ?? [])).toHaveLength(1);
+    expect(
+      (activation.match(/readCanonicalTasksAfterActivationRollover\(\)/g) ?? []),
+    ).toHaveLength(2);
+    const triggerIndex = activation.indexOf("triggerSync()");
+    const postSyncCanonicalIndex = activation.indexOf(
+      "readCanonicalTasksAfterActivationRollover()",
+      triggerIndex + "triggerSync()".length,
+    );
+    expect(postSyncCanonicalIndex).toBeGreaterThan(triggerIndex);
+
+    const backStart = app.indexOf("const handleBack = useCallback");
+    const backEnd = app.indexOf("useEffect(() => {", backStart);
+    expect(backStart).toBeGreaterThanOrEqual(0);
+    expect(backEnd).toBeGreaterThan(backStart);
+    const back = app.slice(backStart, backEnd);
+    const deleteIndex = back.indexOf("deleteTaskId !== null");
+    const workspaceIndex = back.indexOf('workspace.mode !== "closed"');
+    const destinationIndex = back.indexOf("previousDestination");
+    expect(deleteIndex).toBeGreaterThanOrEqual(0);
+    expect(workspaceIndex).toBeGreaterThan(deleteIndex);
+    expect(destinationIndex).toBeGreaterThan(workspaceIndex);
 
     expect(lifecycle).toContain('"appStateChange"');
     expect(lifecycle).toContain('"backButton"');
