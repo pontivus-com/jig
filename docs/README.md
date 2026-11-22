@@ -1,6 +1,6 @@
 # Jig documentation
 
-**Status:** Jig v1.1.1 is published and immutable. v1.1.2 corrective work is active under issue #66 and `CHANGELOG.md` `[Unreleased]`; package metadata remains at 1.1.1 until the governed `release/v1.1.2` transition. The v1.1.2 amendment supersedes affected prior drag, synchronization diagnostics/recovery, per-theme surface, configured-height, motion and adaptive presentation/runtime ownership clauses. Adjacent-week Carousel/swipe remains deferred.
+**Status:** Jig v1.1.1 is published and immutable. v1.1.2 corrective work is active under issue #66 and `CHANGELOG.md` `[Unreleased]`; package metadata remains at 1.1.1 until the governed `release/v1.1.2` transition. The v1.1.2 amendment supersedes affected prior drag, synchronization diagnostics/recovery, Git/provider source ownership, per-theme surface, configured-height, motion and adaptive presentation/runtime ownership clauses. Adjacent-week Carousel/swipe remains deferred.
 
 Jig is a small, local-first, just-in-time daily planner. It schedules attention rather than duplicating the underlying project work. All planning data must live under the Jig directory of the user-selected personal Git repository, with a lightweight local desktop service and automatic Git sync.
 
