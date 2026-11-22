@@ -7,6 +7,26 @@ function source(path: string): string {
   return readFileSync(path, "utf8");
 }
 
+
+const STYLE_LAYER_PATHS = [
+  "ui/src/styles/shared.css",
+  "ui/src/styles/desktop.css",
+  "ui/src/styles/narrow.css",
+  "ui/src/styles/motion.css",
+] as const;
+
+function styleSource(): string {
+  return STYLE_LAYER_PATHS.map(source).join("\n");
+}
+
+const JIG_LAYOUT_TOKENS = new Set([
+  "--jig-safe-area-top",
+  "--jig-safe-area-bottom",
+  "--jig-safe-area-right",
+  "--jig-narrow-bottom-content",
+  "--jig-narrow-bottom-total",
+]);
+
 const GENERATED_THEME_FILES = new Set([
   "jig.css",
   "jig.css.d.ts",
@@ -106,7 +126,7 @@ describe("UI ownership architecture", () => {
       }
     }
 
-    const css = source("ui/src/styles.css");
+    const css = styleSource();
     expect(css).not.toMatch(/@layer\s+jig\b/);
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/);
     expect(css).not.toContain(".jig-sidebar");
@@ -121,7 +141,7 @@ describe("UI ownership architecture", () => {
   });
 
   it("consumes only Astryx public tokens plus governed Jig product aliases", () => {
-    const css = source("ui/src/styles.css");
+    const css = styleSource();
     const usedTokens = new Set(
       [...css.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)].flatMap(
         (match) => (match[1] === undefined ? [] : [match[1]]),
@@ -131,7 +151,8 @@ describe("UI ownership architecture", () => {
       .filter(
         (name) =>
           !(name in tokenDefaults) &&
-          !JIG_PRODUCT_TOKENS.has(name),
+          !JIG_PRODUCT_TOKENS.has(name) &&
+          !JIG_LAYOUT_TOKENS.has(name),
       )
       .sort();
 
@@ -161,7 +182,7 @@ describe("UI ownership architecture", () => {
   });
 
   it("keeps ordinary visual values on Astryx scales", () => {
-    const css = source("ui/src/styles.css");
+    const css = styleSource();
 
     expect(css).not.toMatch(/font-size:\s*(?:\d|\.)/);
     expect(css).not.toMatch(/font-weight:\s*\d/);
@@ -183,7 +204,7 @@ describe("UI ownership architecture", () => {
     const app = source("ui/src/app.tsx");
     const appearance = source("ui/src/appearance.ts");
     const manifest = source("scripts/build-themes.ts");
-    const styles = source("ui/src/styles.css");
+    const styles = styleSource();
     const verifyWorkflow = source(".github/workflows/verify.yml");
 
     expect(app).toContain("<Theme theme={themeFor(themePreset)} mode={appearanceMode}>");
@@ -219,8 +240,8 @@ describe("UI ownership architecture", () => {
       expect(source(cssPath)).toContain("data-astryx-theme");
       expect(styles).toContain(
         id === "jig"
-          ? '@import "./jig.css";'
-          : `@import "./themes/${id}.css";`,
+          ? '@import "../jig.css";'
+          : `@import "../themes/${id}.css";`,
       );
     }
 
@@ -320,20 +341,56 @@ describe("UI ownership architecture", () => {
     }
   });
 
-  it("keeps the application frame full-bleed and header geometry governed", () => {
-    const css = source("ui/src/styles.css");
+  it("keeps AppShell as the configured scroll owner and CSS ownership explicit", () => {
+    const entry = source("ui/src/styles.css");
+    const shared = source("ui/src/styles/shared.css");
+    const desktop = source("ui/src/styles/desktop.css");
+    const narrow = source("ui/src/styles/narrow.css");
+    const motion = source("ui/src/styles/motion.css");
+    const css = styleSource();
 
-    expect(css).toContain(".jig-app-shell {");
-    expect(css).toContain("padding: 0;");
-    expect(css).toContain("height: 2.75rem;");
-    expect(css).toContain(".jig-app-header-narrow {");
-    expect(css).toContain("position: sticky;");
-    expect(css).toContain("padding: 0;");
-    expect(css).toContain(".jig-header-mobile-application-row {");
-    expect(css).toContain(".jig-header-mobile-temporal-row {");
-    expect(css).toContain("min-height: 56px;");
+    expect(entry).toBe(
+      [
+        '@import "./styles/shared.css";',
+        '@import "./styles/desktop.css";',
+        '@import "./styles/narrow.css";',
+        '@import "./styles/motion.css";',
+        "",
+      ].join("\n"),
+    );
+
+    expect(shared).toContain(".jig-app-shell {");
+    expect(shared).toContain(".jig-configured-body {");
+    expect(shared).toContain("min-block-size: 100%;");
+    expect(shared).toContain("flex: 1 1 auto;");
+    expect(shared).toMatch(
+      /\.jig-content-frame\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1 1 auto;/s,
+    );
+    expect(shared).not.toMatch(
+      /\.jig-content-frame\s*\{[^}]*(?:overflow|height:\s*100%)/s,
+    );
+
+    expect(desktop).toContain(".jig-configured-desktop .jig-app-header-desktop");
+    expect(narrow).toContain(".jig-configured-narrow .jig-app-header-narrow");
+    expect(narrow).toContain("height: 52px;");
+    expect(narrow).toContain("--jig-narrow-bottom-content: 64px;");
+    expect(narrow).toContain("width: 56px;");
+    expect(narrow).toContain("height: 56px;");
+    expect(narrow).toContain("min-width: 48px;");
+    expect(narrow).toContain("min-height: 48px;");
+    expect(narrow).not.toContain("@media (max-width:");
+    expect(desktop).not.toContain("@media (max-width:");
+
+    expect(motion).toContain("@keyframes jig-destination-content-enter");
+    expect(motion).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(shared).not.toContain("@keyframes ");
+    expect(desktop).not.toContain("@keyframes ");
+    expect(narrow).not.toContain("@keyframes ");
+    expect(shared).not.toMatch(/\btransition\s*:/);
+    expect(desktop).not.toMatch(/\btransition\s*:/);
+    expect(narrow).not.toMatch(/\btransition\s*:/);
+
     expect(css).not.toContain("height: 3.5rem;");
-    expect(css).toContain("@media (max-width: 72.999rem)");
     expect(css).not.toContain("@media (max-width: 75.999rem)");
     expect(css).not.toContain(".jig-planner-narrow");
     expect(css).not.toContain("max-width: 1170px");
@@ -341,7 +398,7 @@ describe("UI ownership architecture", () => {
   });
 
   it("keeps secondary desktop screens constrained without constraining Planner", () => {
-    const css = source("ui/src/styles.css");
+    const css = styleSource();
 
     expect(css).toContain(".jig-history-view,");
     expect(css).toContain(".jig-settings-view {");
@@ -361,7 +418,7 @@ describe("UI ownership architecture", () => {
     const destinations = source("ui/src/destinations.ts");
     const history = source("ui/src/history.tsx");
     const settings = source("ui/src/settings.tsx");
-    const css = source("ui/src/styles.css");
+    const css = styleSource();
 
     expect(header).toContain("function DestinationHeading");
     expect(destinations).toContain("Completed work grouped by actual completion date");
@@ -418,7 +475,7 @@ describe("UI ownership architecture", () => {
     const taskEditor = source("ui/src/task-editor.tsx");
     const setup = source("ui/src/setup.tsx");
     const app = source("ui/src/app.tsx");
-    const styles = source("ui/src/styles.css");
+    const styles = styleSource();
 
     expect(taskEditor).toContain("ToggleButton");
     expect(taskEditor).toContain('className="jig-repeat-weekday"');
