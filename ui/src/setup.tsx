@@ -15,13 +15,11 @@ import {
 } from "react";
 import { GitHubDeviceFlowPanel } from "./github-device-flow";
 import type { LayoutMode } from "./use-layout-mode";
-import { installNativeActiveListener } from "./native/app-lifecycle";
 import {
   configureLocalRepository,
   connectGitHubSetup,
   readGitHubSetupState,
   readSetupStatus,
-  resumeGitHubSetup,
   retryGitHubSetup,
   selectGitHubRepository,
   type GitHubOnboardingSnapshot,
@@ -135,30 +133,6 @@ export function SetupView({
     }, 1_000);
     return () => window.clearInterval(timer);
   }, [github, observeGitHub]);
-
-  useEffect(() => {
-    let disposed = false;
-    let cleanup: (() => Promise<void>) | null = null;
-
-    void installNativeActiveListener(() => {
-      void resumeGitHubSetup()
-        .then(observeGitHub)
-        .catch(() => undefined);
-    }).then((remove) => {
-      if (disposed) {
-        void remove();
-        return;
-      }
-      cleanup = remove;
-    });
-
-    return () => {
-      disposed = true;
-      if (cleanup !== null) {
-        void cleanup();
-      }
-    };
-  }, [observeGitHub]);
 
   useEffect(() => {
     const providerUrl = github?.provider_url ?? null;
