@@ -645,6 +645,64 @@ test("temporal group stays page-centered in one row and navigation has no select
   );
 });
 
+test("narrow Today consumes one governed scroll request and does not replay on reflow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    const calls: string[] = [];
+    Reflect.set(window, "__jigScrollBehaviors", calls);
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function scrollIntoView(
+      options?: boolean | ScrollIntoViewOptions,
+    ): void {
+      if (typeof options === "object" && options !== null) {
+        calls.push(options.behavior ?? "auto");
+      }
+      original.call(this, options);
+    };
+  });
+  await page.reload();
+  await waitForResponsiveHeader(page, 390);
+
+  const scrollBehaviors = async (): Promise<readonly string[]> =>
+    page.evaluate(() => {
+      const value = Reflect.get(window, "__jigScrollBehaviors");
+      return Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === "string")
+        : [];
+    });
+  const clearScrollBehaviors = async (): Promise<void> => {
+    await page.evaluate(() => {
+      const value = Reflect.get(window, "__jigScrollBehaviors");
+      if (Array.isArray(value)) {
+        value.splice(0, value.length);
+      }
+    });
+  };
+
+  await expect.poll(scrollBehaviors).toContain("auto");
+  await clearScrollBehaviors();
+
+  await page.getByRole("button", { name: "Next horizon" }).click();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect.poll(scrollBehaviors).toEqual(["smooth"]);
+
+  await clearScrollBehaviors();
+  await page.setViewportSize({ width: 1168, height: 844 });
+  await waitForResponsiveHeader(page, 1168);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  await page.waitForTimeout(100);
+  expect(await scrollBehaviors()).toEqual([]);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Next horizon" }).click();
+  await clearScrollBehaviors();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect.poll(scrollBehaviors).toEqual(["auto"]);
+});
+
 test("desktop lanes keep equal widths but content-driven independent heights", async ({
   page,
 }) => {
