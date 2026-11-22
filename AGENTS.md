@@ -148,7 +148,7 @@ v1.1 adds one independently installable **Android** application while preserving
 - Implementation must be integrated into this branch. Do not create a competing long-lived `v1.1.2`, `work/v1.1.2-*`, remediation, certification or synchronization product-state branch.
 - Short-lived task/transport branches are permitted only when needed for review or CI; accepted work must be merged back into `docs/v1.1.2-corrective-changelog` immediately, and only the integrated branch is authoritative.
 - PR #67 is the current `docs/v1.1.2-corrective-changelog` -> `master` integration PR. Its head may accumulate the governed implementation; a green task branch is evidence only when its exact executable content is contained in the authoritative integration branch.
-- IMP-15's evidence gate and IMP-16's causal correction block **final promotion to master/release**, not integration of earlier prerequisite work into the authoritative branch.
+- IMP-15's evidence gate and IMP-16's governed disposition block **final promotion to master/release**, not integration of earlier prerequisite work into the authoritative branch. For the current v1.1.2 campaign, the permanent Desktop reproduction completed without a failing ordinary-synchronization boundary, so IMP-16 is closed as **NO DEFECT REPRODUCED / NO CAUSAL FIX REQUIRED** under the 2026-11-23 design-authority amendment. This is not a claim that a historical defect was fixed; it records that no causal production change is authorized or required by the governed evidence.
 - `master` remains the published-release line until the complete v1.1.2 candidate passes IMP-18 and the separate governed release/v1.1.2 metadata transition explicitly advances publication.
 
 ## v1.1 physical-acceptance domain correction
