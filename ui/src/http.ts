@@ -10,11 +10,8 @@ import {
   type Task,
   type TaskCommand,
 } from "../../src/core/task";
-import {
-  validateOptionalJigDataConflictCase,
-  type JigDataConflictCase,
-  type JigDataResolution,
-} from "../../src/core/synchronization-recovery";
+import { validateOptionalJigDataConflictCase } from "../../src/core/synchronization-recovery";
+import type * as Recovery from "../../src/core/synchronization-recovery";
 import type {
   CanonicalState,
   CommandResult,
@@ -628,7 +625,7 @@ export async function submitTaskCommand(
 }
 
 export async function readSynchronizationConflict(): Promise<
-  JigDataConflictCase | null
+  Recovery.JigDataConflictCase | null
 > {
   return validateOptionalJigDataConflictCase(
     await fetchJson("/api/v1/sync/conflict"),
@@ -636,7 +633,7 @@ export async function readSynchronizationConflict(): Promise<
 }
 
 export async function resolveSynchronizationConflict(
-  resolution: JigDataResolution,
+  resolution: Recovery.JigDataResolution,
 ): Promise<RepositorySynchronizationStatus> {
   const payload = objectValue(
     await postJson("/api/v1/sync/conflict/resolve", resolution),
