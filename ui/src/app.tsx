@@ -133,6 +133,10 @@ interface ConfiguredAppProps {
   readonly appearanceMode: AppearanceMode;
   readonly onThemePresetChange: (value: ThemePreset) => void;
   readonly onAppearanceModeChange: (value: AppearanceMode) => void;
+  readonly nativeActiveHandlerRef: React.MutableRefObject<
+    () => Promise<void>
+  >;
+  readonly nativeBackHandlerRef: React.MutableRefObject<() => boolean>;
 }
 
 function ConfiguredApp({
@@ -141,6 +145,8 @@ function ConfiguredApp({
   appearanceMode,
   onThemePresetChange,
   onAppearanceModeChange,
+  nativeActiveHandlerRef,
+  nativeBackHandlerRef,
 }: ConfiguredAppProps): React.ReactElement {
   const [, setReminderDeliveryRevision] = useState(0);
   const onReminderNotified = useCallback(() => {
@@ -305,17 +311,12 @@ function ConfiguredApp({
   }, []);
 
 
-  useEffect(() => {
-    let disposed = false;
-    let cleanup: (() => Promise<void>) | null = null;
-
-    const activateConfiguredRuntime = async (): Promise<void> => {
+  const activateConfiguredRuntime = useCallback(
+    async (): Promise<void> => {
       const nextToday = todayCivilDate();
       if (nextToday !== observedToday) {
         await rollForwardRuntimeLocalDay();
-        if (!disposed) {
-          applyObservedLocalDay(nextToday);
-        }
+        applyObservedLocalDay(nextToday);
       }
 
       await resumeGitHubReconnect();
@@ -340,9 +341,6 @@ function ConfiguredApp({
         readGitHubCapabilityStatus(),
       ]);
 
-      if (disposed) {
-        return;
-      }
       setCanonical(nextCanonical);
       setStatus(nextStatus);
       setDiagnostics(nextDiagnostics);
@@ -350,31 +348,28 @@ function ConfiguredApp({
         githubCapabilities.reconnect_available,
       );
       setInitialSyncSettled(true);
-    };
+    },
+    [applyObservedLocalDay, observedToday],
+  );
 
-    void installNativeActiveListener(() => {
-      void activateConfiguredRuntime().catch((error: unknown) => {
-        if (!disposed) {
-          setOperationError(
-            `Jig could not refresh after Android resumed: ${errorMessage(error)}. Reload the application.`,
-          );
-        }
-      });
-    }).then((remove) => {
-      if (disposed) {
-        void remove();
-        return;
-      }
-      cleanup = remove;
-    });
+  const handleNativeActive = useCallback(async (): Promise<void> => {
+    try {
+      await activateConfiguredRuntime();
+    } catch (error) {
+      setOperationError(
+        `Jig could not refresh after Android resumed: ${errorMessage(error)}. Reload the application.`,
+      );
+    }
+  }, [activateConfiguredRuntime]);
 
+  useEffect(() => {
+    nativeActiveHandlerRef.current = handleNativeActive;
     return () => {
-      disposed = true;
-      if (cleanup !== null) {
-        void cleanup();
+      if (nativeActiveHandlerRef.current === handleNativeActive) {
+        nativeActiveHandlerRef.current = async () => undefined;
       }
     };
-  }, [applyObservedLocalDay, observedToday]);
+  }, [handleNativeActive, nativeActiveHandlerRef]);
 
   useEffect(() => {
     let cancelled = false;
@@ -604,30 +599,14 @@ function ConfiguredApp({
     return true;
   }, [closeWorkspace, destinationNavigation, workspace.mode]);
 
-  const backHandlerRef = useRef<() => boolean>(() => false);
-  backHandlerRef.current = handleBack;
-
   useEffect(() => {
-    let disposed = false;
-    let cleanup: (() => Promise<void>) | null = null;
-
-    void installNativeBackButtonListener(() => backHandlerRef.current()).then(
-      (remove) => {
-        if (disposed) {
-          void remove();
-          return;
-        }
-        cleanup = remove;
-      },
-    );
-
+    nativeBackHandlerRef.current = handleBack;
     return () => {
-      disposed = true;
-      if (cleanup !== null) {
-        void cleanup();
+      if (nativeBackHandlerRef.current === handleBack) {
+        nativeBackHandlerRef.current = () => false;
       }
     };
-  }, []);
+  }, [handleBack, nativeBackHandlerRef]);
 
   const destination = destinationNavigation.current;
 
@@ -1048,6 +1027,11 @@ export function App(): React.ReactElement {
   const [appearanceMode, setAppearanceMode] =
     useState<AppearanceMode>(readAppearanceMode);
 
+  const nativeActiveHandlerRef = useRef<() => Promise<void>>(
+    async () => undefined,
+  );
+  const nativeBackHandlerRef = useRef<() => boolean>(() => false);
+
   const refreshSetup = useCallback(async (): Promise<void> => {
     setSetupError(null);
     try {
@@ -1062,37 +1046,58 @@ export function App(): React.ReactElement {
   }, [refreshSetup]);
 
 
+  const handleBootstrapNativeActive = useCallback(
+    async (): Promise<void> => {
+      try {
+        await resumeGitHubSetup();
+        await refreshSetup();
+      } catch (error) {
+        setSetupError(errorMessage(error));
+      }
+    },
+    [refreshSetup],
+  );
+
   useEffect(() => {
     if (setupStatus?.mode === "configured") {
       return;
     }
+    nativeActiveHandlerRef.current = handleBootstrapNativeActive;
+    nativeBackHandlerRef.current = () => false;
+  }, [handleBootstrapNativeActive, setupStatus?.mode]);
 
+  useEffect(() => {
     let disposed = false;
-    let cleanup: (() => Promise<void>) | null = null;
+    let removeActive: (() => Promise<void>) | null = null;
+    let removeBack: (() => Promise<void>) | null = null;
 
-    void installNativeActiveListener(() => {
-      void resumeGitHubSetup()
-        .then(refreshSetup)
-        .catch((error: unknown) => {
-          if (!disposed) {
-            setSetupError(errorMessage(error));
-          }
-        });
-    }).then((remove) => {
+    void Promise.all([
+      installNativeActiveListener(() => {
+        void nativeActiveHandlerRef.current();
+      }),
+      installNativeBackButtonListener(
+        () => nativeBackHandlerRef.current(),
+      ),
+    ]).then(([nextRemoveActive, nextRemoveBack]) => {
       if (disposed) {
-        void remove();
+        void nextRemoveActive();
+        void nextRemoveBack();
         return;
       }
-      cleanup = remove;
+      removeActive = nextRemoveActive;
+      removeBack = nextRemoveBack;
     });
 
     return () => {
       disposed = true;
-      if (cleanup !== null) {
-        void cleanup();
+      if (removeActive !== null) {
+        void removeActive();
+      }
+      if (removeBack !== null) {
+        void removeBack();
       }
     };
-  }, [refreshSetup, setupStatus?.mode]);
+  }, []);
 
   const changeThemePreset = (value: ThemePreset): void => {
     setThemePreset(value);
@@ -1140,6 +1145,8 @@ export function App(): React.ReactElement {
             appearanceMode={appearanceMode}
             onThemePresetChange={changeThemePreset}
             onAppearanceModeChange={changeAppearanceMode}
+            nativeActiveHandlerRef={nativeActiveHandlerRef}
+            nativeBackHandlerRef={nativeBackHandlerRef}
           />
         ) : (
           <ApplicationShell topNav={<OnboardingHeader />}>
