@@ -29,19 +29,8 @@ jobs:
         run: bun scripts/verify-release.ts --mode pr --base origin/master
       - name: Verify release tooling compiles
         run: bun build scripts/package-release.ts scripts/verify-release.ts --target=bun --outdir "${RUNNER_TEMP}/jig-release-tool-check"
-      - name: Regenerate Astryx theme artifacts for corrective implementation
-        run: |
-          bun run theme:build
-          bun run theme:check
-          git diff -- ui/src/jig.css ui/src/jig.js ui/src/themes > "${RUNNER_TEMP}/theme-generated.diff"
-          cat "${RUNNER_TEMP}/theme-generated.diff"
-      - name: Retain generated theme diff
-        uses: actions/upload-artifact@v4
-        with:
-          name: jig-v1.1.2-theme-generated-diff-${{ github.sha }}
-          path: ${{ runner.temp }}/theme-generated.diff
-          if-no-files-found: error
-          retention-days: 1
+      - name: Verify Astryx theme artifacts are current
+        run: bun run theme:check
       - name: Typecheck
         run: bun run typecheck
       - name: Core and integration tests
