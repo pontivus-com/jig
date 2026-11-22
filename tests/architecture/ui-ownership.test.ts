@@ -322,6 +322,8 @@ describe("UI ownership architecture", () => {
   it("uses the canonical wordmark and governed semantic icon system", () => {
     const header = source("ui/src/planner-header.tsx");
     const destinations = source("ui/src/destinations.ts");
+    const desktopHeader = source("ui/src/presentation/desktop/header.tsx");
+    const narrowNavigation = source("ui/src/presentation/narrow/bottom-navigation.tsx");
     const week = source("ui/src/week.tsx");
     const taskRow = source("ui/src/task-row.tsx");
     const icons = source("ui/src/jig-icons.tsx");
@@ -339,7 +341,8 @@ describe("UI ownership architecture", () => {
     expect(destinations).toContain('icon: "viewColumns"');
     expect(destinations).toContain('icon: "wrench"');
     expect(destinations).toContain("JIG_ICON_KEYS.history");
-    expect(header).toContain('<JigIcon name="add"');
+    expect(desktopHeader).toContain('<JigIcon name="add"');
+    expect(narrowNavigation).toContain('<JigIcon name="add"');
     expect(week).toContain('<JigIcon name="add"');
     expect(taskRow).toContain('<JigIcon name="edit"');
     expect(taskRow).toContain('<JigIcon name="delete"');
