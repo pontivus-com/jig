@@ -1,5 +1,5 @@
 import { List, useAnimatedLayout } from "@astryxdesign/core";
-import { useRef, type Ref } from "react";
+import { Fragment, useRef, type Ref } from "react";
 import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
@@ -161,9 +161,9 @@ function PlannerTaskSequence({
             blockSize={visible.blockSize}
           />
         ) : (
-          <span key={visible.item.task.id} style={{ display: "contents" }}>
+          <Fragment key={visible.item.task.id}>
             {renderTaskRow(visible.item, visible.sortableIndex)}
-          </span>
+          </Fragment>
         ),
       )}
     </List>
