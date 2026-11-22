@@ -41,6 +41,55 @@ async function dragHandle(page: Page, title: string): Promise<Locator> {
   return card.getByLabel(`Move ${title}`, { exact: true });
 }
 
+function dateDropZone(page: Page, date: string): Locator {
+  return page.locator(
+    `[data-jig-drop-date-container="${date}"]`,
+  );
+}
+
+async function taskDropTarget(
+  page: Page,
+  date: string,
+  destinationIndex: number,
+  sourceTitle: string,
+): Promise<{
+  readonly target: Locator;
+  readonly targetYRatio: number;
+}> {
+  const cards = page.locator(
+    `[data-date="${date}"] .jig-task-card`,
+  );
+  const count = await cards.count();
+  const available: number[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const title = (
+      await cards.nth(index).locator(".jig-task-title").innerText()
+    ).trim();
+    if (title !== sourceTitle) {
+      available.push(index);
+    }
+  }
+
+  if (available.length === 0) {
+    return {
+      target: dateDropZone(page, date),
+      targetYRatio: 0.9,
+    };
+  }
+
+  if (destinationIndex >= available.length) {
+    return {
+      target: cards.nth(available[available.length - 1] ?? 0),
+      targetYRatio: 0.75,
+    };
+  }
+
+  return {
+    target: cards.nth(available[destinationIndex] ?? 0),
+    targetYRatio: 0.25,
+  };
+}
+
 async function runTaskAction(
   page: Page,
   title: string,
@@ -118,8 +167,8 @@ async function mouseDrag(
   const dragScope = page.locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
   await expect(
-    page.locator(".jig-task-insertion-slot-active .jig-task-drop-indicator"),
-  ).toBeVisible();
+    page.locator(".jig-task-prospective-footprint"),
+  ).toHaveCount(1);
 
   const intent = await dragScope.evaluate((element) => ({
     date: element.getAttribute("data-jig-drop-date") ?? "",
@@ -164,8 +213,8 @@ async function touchDrag(
     type: "touchMove",
     touchPoints: [
       {
-        x: startPoint.x + 8,
-        y: startPoint.y + 8,
+        x: startPoint.x + 4,
+        y: startPoint.y + 4,
         radiusX: 1,
         radiusY: 1,
         force: 1,
@@ -173,6 +222,8 @@ async function touchDrag(
       },
     ],
   });
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await page.waitForTimeout(275);
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
   const targetBox = await target.boundingBox();
@@ -203,7 +254,7 @@ async function touchDrag(
 
   const dragScope = page.locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
-  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(1);
 
   const intent = await dragScope.evaluate((element) => ({
     date: element.getAttribute("data-jig-drop-date") ?? "",
