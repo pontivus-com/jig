@@ -156,6 +156,11 @@ interface FakeRepository {
   remoteHead: string | null;
   remoteSnapshot: PortableSnapshot | null;
   remoteRewritten: boolean;
+  unsafeReason?:
+    | "invalid-snapshot"
+    | "dataset-mismatch"
+    | "remote-ambiguous"
+    | "unknown";
   lineage:
     | "equal"
     | "remote-ahead"
@@ -204,7 +209,7 @@ function observation(
         state: "unsafe",
         remote: REMOTE,
         local_head: repo.localHead,
-        unsafe_reason: "invalid-snapshot",
+        unsafe_reason: repo.unsafeReason ?? "invalid-snapshot",
       };
     case "present":
       if (
@@ -982,6 +987,21 @@ describe("cross-installation synchronization worker", () => {
     };
   }
 
+  it("performs no further synchronization attempt while an eligible resolver case is open", async () => {
+    const harness = await semanticConflictHarness();
+    const observationsBefore = harness.observations();
+
+    expect(await harness.controller.trigger()).toMatchObject({
+      local_git: "committed",
+      remote: { state: "sync-issue" },
+    });
+    expect(harness.observations()).toBe(observationsBefore);
+    expect(harness.candidateWrites()).toBe(0);
+    expect(
+      harness.controller.readSynchronizationConflict(),
+    ).toStrictEqual(harness.conflictCase);
+  });
+
   it("rejects a resolver draft when SQLite revision changes while it is open", async () => {
     const harness = await semanticConflictHarness();
     const observationsBeforeResolution = harness.observations();
@@ -1478,6 +1498,9 @@ describe("cross-installation synchronization worker", () => {
       });
       expect(writes.count).toBe(0);
       expect(pushes.count).toBe(0);
+      expect(
+        controller.readSynchronizationConflict(),
+      ).toBeNull();
       expect(controller.diagnostics()).toMatchObject({
         phase: "classify",
         reason: expectedReason,
@@ -1486,6 +1509,69 @@ describe("cross-installation synchronization worker", () => {
         local_head: "aaaaaaaaaaaa",
       });
     }
+
+    const datasetMismatch: FakeRepository = {
+      mode: "unsafe",
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: null,
+      remoteSnapshot: null,
+      remoteRewritten: false,
+      unsafeReason: "dataset-mismatch",
+      lineage: "unknown",
+      previouslySynchronized: true,
+    };
+    const datasetMismatchEffects = fakeEffects(datasetMismatch);
+    const datasetMismatchController = createSyncController(
+      db,
+      { repository_path: root },
+      datasetMismatchEffects.effects,
+    );
+
+    expect(await datasetMismatchController.trigger()).toMatchObject({
+      remote: { state: "sync-issue" },
+    });
+    expect(
+      datasetMismatchController.readSynchronizationConflict(),
+    ).toBeNull();
+    expect(datasetMismatchController.diagnostics()).toMatchObject({
+      phase: "classify",
+      reason: "dataset-mismatch",
+      retryable: false,
+    });
+    expect(datasetMismatchEffects.writes.count).toBe(0);
+    expect(datasetMismatchEffects.pushes.count).toBe(0);
+
+    const rewritten: FakeRepository = {
+      mode: "present",
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: "8".repeat(40),
+      remoteSnapshot: base,
+      remoteRewritten: true,
+      lineage: "diverged",
+      previouslySynchronized: true,
+    };
+    const rewrittenEffects = fakeEffects(rewritten);
+    const rewrittenController = createSyncController(
+      db,
+      { repository_path: root },
+      rewrittenEffects.effects,
+    );
+
+    expect(await rewrittenController.trigger()).toMatchObject({
+      remote: { state: "sync-issue" },
+    });
+    expect(
+      rewrittenController.readSynchronizationConflict(),
+    ).toBeNull();
+    expect(rewrittenController.diagnostics()).toMatchObject({
+      phase: "classify",
+      reason: "remote-rewritten",
+      retryable: false,
+    });
+    expect(rewrittenEffects.writes.count).toBe(0);
+    expect(rewrittenEffects.pushes.count).toBe(0);
 
     const divergent: FakeRepository = {
       mode: "present",
@@ -1509,6 +1595,7 @@ describe("cross-installation synchronization worker", () => {
     });
     expect(divergentEffects.writes.count).toBe(0);
     expect(divergentEffects.pushes.count).toBe(0);
+    expect(controller.readSynchronizationConflict()).toBeNull();
     expect(controller.diagnostics()).toMatchObject({
       phase: "recover-divergence",
       reason: "ancestry-unknown",
