@@ -299,6 +299,12 @@ Desktop presents this workflow in a modal Astryx end Drawer with `width="40rem"`
 
 A collapsed **Technical details** disclosure inside the resolver may show the classified reason, abbreviated ancestor/local/remote heads and read-only/copyable canonical JSON for the currently displayed conflict. It never offers editable JSON, Git commands, a shell, credentials or unrelated repository data.
 
+The resolver remains inside the same Astryx/theme system as the rest of Jig. **This device / Remote** is one public Astryx `RadioList` with two `RadioListItem` options; comparison content is the rich option label, not a custom selectable-card primitive. Technical details uses public Astryx `Collapsible`; actions use public `Button`/`IconButton`; affected-date order uses public `List`/`ListItem` composition with Jig's existing reorder semantics. Do not add custom radio/focus/press CSS, private Astryx selectors or a resolver-only interaction system.
+
+Resolver colors are semantic and theme-derived. Local and Remote are neutral alternatives, never green/red success/error identities. Modal surfaces remain Astryx-owned; Jig-owned comparison/order regions consume public background/border/text/status tokens and existing Jig surface aliases only. There are no raw color literals, per-theme selectors or independent Light/Dark resolver branches.
+
+Desktop and narrow host different primitives only: modal 40rem end Drawer versus modal tall BottomSheet. The shared conflict index, choices, order draft, validation state and Technical-details disclosure live above that presentation branch, so crossing the 73rem breakpoint while resolving replaces the host without resetting the user's work.
+
 If synchronization heads or the local revision change while the resolver is open, the current draft is discarded and the user is told that synchronization changed; Jig re-observes and loads the new eligible conflict case.
 
 Rows use a stable label → primary value → optional supporting text hierarchy. Values align consistently; long repository/path text wraps rather than shrinking neighboring controls. Section height is content-driven.
