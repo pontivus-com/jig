@@ -71,14 +71,12 @@ interface DropTarget {
   readonly id: string | number;
   readonly type?: unknown;
   readonly data?: Readonly<Record<string, unknown>>;
-  readonly element?: Element | undefined;
 }
 
 function targetPlacement(
   tasks: readonly Task[],
   activeTaskId: string,
   target: DropTarget | null,
-  pointerY: number | null,
 ): TaskProspectivePlacement | null {
   if (target === null) {
     return null;
@@ -118,17 +116,10 @@ function targetPlacement(
       return null;
     }
 
-    let afterTarget =
+    const afterTarget =
       activeTask.scheduled_date === date &&
       activeTask.position !== null &&
       activeTask.position < canonicalTargetIndex;
-    if (pointerY !== null && target.element !== undefined) {
-      const rect = target.element.getBoundingClientRect();
-      const delta = pointerY - (rect.top + rect.height / 2);
-      if (Math.abs(delta) > 1) {
-        afterTarget = delta > 0;
-      }
-    }
     destinationIndex = targetIndex + (afterTarget ? 1 : 0);
   } else {
     return null;
@@ -253,7 +244,6 @@ export function TaskDragProvider({
           tasks,
           String(source.id),
           event.operation.target,
-          event.operation.position.current.y,
         );
         prospectiveRef.current = prospective;
         setState((current) => ({
@@ -428,6 +418,11 @@ export function DateDropZone({
       data-jig-drop-date-container={date}
     >
       {children}
+      <div
+        className="jig-date-drop-tail"
+        data-jig-drop-tail={date}
+        aria-hidden="true"
+      />
     </div>
   );
 }
