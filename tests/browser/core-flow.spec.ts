@@ -161,6 +161,19 @@ test("configured presenter replacement preserves controller state and appearance
   let workspace = page.getByRole("dialog", { name: "Add task" });
   await workspace.getByLabel("Title").fill("Draft survives presenter replacement");
 
+  let canonicalReadsDuringReflow = 0;
+  let commandsDuringReflow = 0;
+  const observeReflowRequest = (request: Parameters<Parameters<typeof page.on<"request">>[1]>[0]): void => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/v1/tasks" && request.method() === "GET") {
+      canonicalReadsDuringReflow += 1;
+    }
+    if (url.pathname === "/api/v1/commands" && request.method() === "POST") {
+      commandsDuringReflow += 1;
+    }
+  };
+  page.on("request", observeReflowRequest);
+
   await page.setViewportSize({ width: 1167, height: 900 });
   await expect(
     page.locator('[data-jig-configured-presentation="desktop"]'),
@@ -182,6 +195,9 @@ test("configured presenter replacement preserves controller state and appearance
   await expect(workspace.getByLabel("Title")).toHaveValue(
     "Draft survives presenter replacement",
   );
+  page.off("request", observeReflowRequest);
+  expect(canonicalReadsDuringReflow).toBe(0);
+  expect(commandsDuringReflow).toBe(0);
   await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
 
   await navigateTo(page, "Settings");
