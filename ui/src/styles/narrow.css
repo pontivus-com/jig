@@ -416,3 +416,29 @@
   margin: var(--spacing-2) var(--spacing-3) 0;
 }
 
+.jig-configured-narrow .jig-task-workspace-actions-narrow {
+  display: grid;
+  width: 100%;
+  gap: var(--spacing-2);
+}
+
+.jig-configured-narrow .jig-task-workspace-lifecycle-actions,
+.jig-configured-narrow .jig-task-workspace-primary-actions {
+  display: grid;
+  width: 100%;
+  gap: var(--spacing-2);
+}
+
+.jig-configured-narrow .jig-task-workspace-lifecycle-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.jig-configured-narrow .jig-task-workspace-primary-actions {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--spacing-3);
+}
+
+.jig-configured-narrow .jig-task-workspace-actions-narrow button {
+  min-height: 48px;
+}
+
