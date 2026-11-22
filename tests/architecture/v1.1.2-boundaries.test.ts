@@ -342,6 +342,24 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     expect(taskList).toContain("function plannerTaskPresentationItems");
   });
 
+  it("keeps drag projection ephemeral, sortable and React-owned", () => {
+    const drag = source("ui/src/drag.tsx");
+    const list = source("ui/src/planner-list.tsx");
+    const taskRow = source("ui/src/task-row.tsx");
+
+    expect(drag).toContain("TaskProspectivePlacement");
+    expect(drag).toContain("useSortable({");
+    expect(drag).toContain("event.preventDefault()");
+    expect(drag).toContain('type: "jig-date"');
+    expect(drag).toContain("TaskProspectiveFootprint");
+    expect(drag).not.toContain("useDraggable");
+    expect(drag).not.toContain("TaskInsertionSlot");
+    expect(list).toContain("function projectedPlannerItems");
+    expect(list).toContain("<TaskProspectiveFootprint");
+    expect(list).not.toContain("TaskInsertionSlot");
+    expect(taskRow).toContain("<TaskCardPresentation");
+  });
+
   it("keeps Task workspace state shared while host primitives stay presentation-owned", () => {
     const shared = source("ui/src/task-workspace.tsx");
     const desktop = source("ui/src/presentation/desktop/task-workspace.tsx");
