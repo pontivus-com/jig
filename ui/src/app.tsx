@@ -80,11 +80,11 @@ import {
   installNativeBackButtonListener,
 } from "./native/app-lifecycle";
 import { NativeSystemBars } from "./native/system-bars";
+import type { Destination } from "./destinations";
 import {
   initialDestinationNavigation,
   navigateDestination as navigateDestinationState,
   previousDestination,
-  type Destination,
 } from "./navigation";
 import {
   readGitHubCapabilityStatus,
