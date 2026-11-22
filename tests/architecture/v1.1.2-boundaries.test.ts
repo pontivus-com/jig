@@ -241,6 +241,26 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     ).toEqual(["ui/src/planner-list.tsx"]);
   });
 
+  it("keeps Task workspace state shared while host primitives stay presentation-owned", () => {
+    const shared = source("ui/src/task-workspace.tsx");
+    const desktop = source("ui/src/presentation/desktop/task-workspace.tsx");
+    const narrow = source("ui/src/presentation/narrow/task-workspace.tsx");
+
+    expect(shared).not.toContain("<Drawer");
+    expect(shared).not.toContain("<BottomSheet");
+    expect(shared).not.toContain("LayoutFooter");
+    expect(desktop).toContain("<Drawer");
+    expect(desktop).toContain("<TaskWorkspaceContent");
+    expect(desktop).toContain("<TaskWorkspaceActions");
+    expect(desktop).not.toContain("<BottomSheet");
+    expect(narrow).toContain("<BottomSheet");
+    expect(narrow).toContain("<TaskWorkspaceContent");
+    expect(narrow).toContain("<TaskWorkspaceActions");
+    expect(narrow).not.toContain("<Drawer");
+    expect(desktop).not.toMatch(/from\s+["'][^"']*(?:runtime|native|shell|persistence)/);
+    expect(narrow).not.toMatch(/from\s+["'][^"']*(?:runtime|native|shell|persistence)/);
+  });
+
   it("keeps sync-conflict presenters presentation-only when they arrive", () => {
     for (const path of [
       "ui/src/presentation/desktop/sync-conflict-workspace.tsx",
