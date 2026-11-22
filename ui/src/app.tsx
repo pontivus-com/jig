@@ -1063,6 +1063,10 @@ export function App(): React.ReactElement {
   const layoutMode = useLayoutMode();
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [
+    setupProviderContinuationRevision,
+    setSetupProviderContinuationRevision,
+  ] = useState(0);
   const [themePreset, setThemePreset] =
     useState<ThemePreset>(readThemePreset);
   const [appearanceMode, setAppearanceMode] =
@@ -1092,6 +1096,9 @@ export function App(): React.ReactElement {
       try {
         await resumeGitHubSetup();
         await refreshSetup();
+        setSetupProviderContinuationRevision(
+          (revision) => revision + 1,
+        );
       } catch (error) {
         setSetupError(errorMessage(error));
       }
@@ -1151,7 +1158,11 @@ export function App(): React.ReactElement {
 
   const bootstrapBody =
     setupStatus?.mode === "bootstrap" ? (
-      <SetupView status={setupStatus} layoutMode={layoutMode} />
+      <SetupView
+        status={setupStatus}
+        layoutMode={layoutMode}
+        providerContinuationRevision={setupProviderContinuationRevision}
+      />
     ) : (
       <div className="jig-loading">
         {setupError === null ? (
