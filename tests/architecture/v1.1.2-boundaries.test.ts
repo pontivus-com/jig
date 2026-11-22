@@ -122,6 +122,60 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     expect(violations).toEqual([]);
   });
 
+  it("keeps one native lifecycle registration owner and exact activation ordering", () => {
+    const app = source("ui/src/app.tsx");
+    const lifecycle = source("ui/src/native/app-lifecycle.ts");
+    const reminder = source("ui/src/reminder.tsx");
+    const setup = source("ui/src/setup.tsx");
+    const systemBars = source("ui/src/native/system-bars.ts");
+
+    expect((app.match(/installNativeActiveListener\(/g) ?? [])).toHaveLength(1);
+    expect((app.match(/installNativeBackButtonListener\(/g) ?? [])).toHaveLength(1);
+    expect(setup).not.toContain("installNativeActiveListener");
+    expect(reminder).not.toContain("@capacitor/core");
+    expect(reminder).not.toMatch(/from\s+["']\.\/native\//);
+
+    const activationStart = app.indexOf(
+      "const activateConfiguredRuntime = useCallback",
+    );
+    const activationEnd = app.indexOf(
+      "const handleNativeActive = useCallback",
+      activationStart,
+    );
+    expect(activationStart).toBeGreaterThanOrEqual(0);
+    expect(activationEnd).toBeGreaterThan(activationStart);
+    const activation = app.slice(activationStart, activationEnd);
+    const orderedCalls = [
+      "rollForwardRuntimeLocalDay()",
+      "resumeGitHubReconnect()",
+      "readCanonicalTasksAfterActivationRollover()",
+      "reconcileRuntimeReminders(",
+      "triggerSync()",
+      "readStatus()",
+    ];
+    let previousIndex = -1;
+    for (const call of orderedCalls) {
+      const index = activation.indexOf(call);
+      expect(index, call).toBeGreaterThan(previousIndex);
+      previousIndex = index;
+    }
+    expect((activation.match(/reconcileRuntimeReminders\(/g) ?? [])).toHaveLength(1);
+    expect((activation.match(/triggerSync\(\)/g) ?? [])).toHaveLength(1);
+
+    expect(lifecycle).toContain('"appStateChange"');
+    expect(lifecycle).toContain('"backButton"');
+    expect(lifecycle.indexOf("window.history.back()")).toBeLessThan(
+      lifecycle.indexOf("App.exitApp()"),
+    );
+    expect(systemBars).toContain('token("--jig-chrome-surface")');
+    expect(systemBars).not.toContain('token("--color-background-body")');
+
+    const listenerOwners = production.flatMap(([path, sourceText]) =>
+      sourceText.includes("App.addListener(") ? [path] : [],
+    );
+    expect(listenerOwners).toEqual(["ui/src/native/app-lifecycle.ts"]);
+  });
+
   it("keeps LayoutMode out of platform, persistence, Git and transport adapters", () => {
     const adapterPaths = production.filter(([path]) =>
       path.startsWith("src/persistence/") ||
