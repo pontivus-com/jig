@@ -74,6 +74,7 @@ interface DropTarget {
 }
 
 interface DropTargetGeometry extends DropTarget {
+  readonly element?: Element | undefined;
   readonly shape?: {
     readonly boundingRectangle: {
       readonly top: number;
@@ -106,7 +107,12 @@ function pointerPlacement(
     if (target.type !== "jig-date") {
       return false;
     }
-    const bounds = target.shape?.boundingRectangle;
+    const shapeBounds = target.shape?.boundingRectangle;
+    const liveBounds = target.element?.getBoundingClientRect();
+    const bounds =
+      liveBounds !== undefined && liveBounds.height > 0
+        ? liveBounds
+        : shapeBounds;
     return (
       bounds !== undefined &&
       pointer.x >= bounds.left &&
