@@ -941,6 +941,7 @@ function ConfiguredApp({
         transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
         destinationTransition={destinationTransition}
+        todayScrollRequest={todayScrollRequest}
         onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
@@ -973,6 +974,7 @@ function ConfiguredApp({
         transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
         destinationTransition={destinationTransition}
+        todayScrollRequest={todayScrollRequest}
         onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
