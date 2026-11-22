@@ -430,7 +430,7 @@ test("dedicated-handle desktop drag moves exactly once without runtime errors or
 
   const card = await taskCard(page, "Pointer drag contract");
   const sourceHandle = await dragHandle(page, "Pointer drag contract");
-  const destination = page.locator(`[data-date="${destinationDate}"] [data-jig-drop-slot="0"]`);
+  const destination = dateDropZone(page, destinationDate);
   await expect(card).toBeVisible();
   await expect(destination).toBeVisible();
 
@@ -524,9 +524,13 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
   await page.locator(".jig-content").click({ position: { x: 2, y: 2 } });
   await expect(page.getByRole("dialog", { name: "Combined semantic source" })).toBeHidden();
 
-  const target = page.locator(
-    `[data-date="${today}"] [data-jig-drop-slot="2"]`,
+  const combinedTarget = await taskDropTarget(
+    page,
+    today,
+    1,
+    "Combined semantic source",
   );
+  const target = combinedTarget.target;
   const sourceHandle = await dragHandle(page, "Combined semantic source");
   const sourceBox = await sourceHandle.boundingBox();
   const targetBox = await target.boundingBox();
@@ -584,10 +588,13 @@ test("dedicated-handle desktop drag reorders within a date at the exact target i
   await page.reload();
 
   const source = await dragHandle(page, "Desktop reorder first");
-  const target = page.locator(
-    `[data-date="${today}"] [data-jig-drop-slot="3"]`,
+  const { target, targetYRatio } = await taskDropTarget(
+    page,
+    today,
+    2,
+    "Desktop reorder first",
   );
-  const intent = await mouseDrag(page, source, target);
+  const intent = await mouseDrag(page, source, target, targetYRatio);
   expect(intent).toEqual({ date: today, index: 2 });
 
   await expect
@@ -639,14 +646,17 @@ test("narrow touch drag reorders within a date and does not open the workspace",
   await page.reload();
 
   const source = await dragHandle(page, "Touch first");
-  const target = page.locator(
-    `[data-date="${today}"] [data-jig-drop-slot="2"]`,
+  const { target, targetYRatio } = await taskDropTarget(
+    page,
+    today,
+    1,
+    "Touch first",
   );
   const intent = await touchDrag(
     page,
     source,
     target,
-    0.5,
+    targetYRatio,
     async () => {
       await page.screenshot({
         path: testInfo.outputPath("v1.1-drag-active-mobile-390.png"),
@@ -701,10 +711,18 @@ test("narrow touch drag moves to the exact index in a non-empty adjacent date", 
   await page.reload();
 
   const source = await dragHandle(page, "Touch cross source");
-  const target = page.locator(
-    `[data-date="${destinationDate}"] [data-jig-drop-slot="0"]`,
+  const { target, targetYRatio } = await taskDropTarget(
+    page,
+    destinationDate,
+    0,
+    "Touch cross source",
   );
-  const intent = await touchDrag(page, source, target);
+  const intent = await touchDrag(
+    page,
+    source,
+    target,
+    targetYRatio,
+  );
   expect(intent).toEqual({ date: destinationDate, index: 0 });
 
   await expect
@@ -758,8 +776,8 @@ test("narrow touch drag moves into an empty adjacent date and persists", async (
   await page.reload();
 
   const source = await dragHandle(page, "Touch cross-date");
-  const target = page.locator(`[data-date="${destinationDate}"] [data-jig-drop-slot="0"]`);
-  const intent = await touchDrag(page, source, target);
+  const target = dateDropZone(page, destinationDate);
+  const intent = await touchDrag(page, source, target, 0.9);
   expect(intent).toEqual({ date: destinationDate, index: 0 });
 
   await expect
