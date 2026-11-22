@@ -439,7 +439,7 @@ export function DateDropZone({
     type: "jig-date-tail",
     accept: "jig-task",
     data: { date },
-    collisionPriority: 0,
+    collisionPriority: 2,
   });
 
   return (
