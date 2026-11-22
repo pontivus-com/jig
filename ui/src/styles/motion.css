@@ -156,16 +156,6 @@
       color var(--duration-fast-max) var(--ease-standard);
 }
 
-.jig-task-insertion-slot {
-  transition: opacity var(--duration-fast) var(--ease-standard);
-}
-
-.jig-task-insertion-slot .jig-task-drop-indicator {
-  transition:
-      background-color var(--duration-fast) var(--ease-standard),
-      opacity var(--duration-fast) var(--ease-standard);
-}
-
 .jig-history-view,
 .jig-settings-view {
   transition:
@@ -214,9 +204,7 @@
     .jig-date-drop-zone,
     .jig-task-card,
     .jig-task-drag-handle,
-    .jig-reminder-due-indicator,
-    .jig-task-insertion-slot,
-    .jig-task-insertion-slot .jig-task-drop-indicator {
+    .jig-reminder-due-indicator {
       transition: none;
     }
 
