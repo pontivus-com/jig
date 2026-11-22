@@ -71,12 +71,14 @@ interface DropTarget {
   readonly id: string | number;
   readonly type?: unknown;
   readonly data?: Readonly<Record<string, unknown>>;
+  readonly element?: Element | null;
 }
 
 function targetPlacement(
   tasks: readonly Task[],
   activeTaskId: string,
   target: DropTarget | null,
+  pointerY: number | null,
 ): TaskProspectivePlacement | null {
   if (target === null) {
     return null;
@@ -116,10 +118,13 @@ function targetPlacement(
       return null;
     }
 
+    const targetRect = target.element?.getBoundingClientRect();
     const afterTarget =
-      activeTask.scheduled_date === date &&
-      activeTask.position !== null &&
-      activeTask.position < canonicalTargetIndex;
+      pointerY !== null && targetRect !== undefined
+        ? pointerY >= targetRect.top + targetRect.height / 2
+        : activeTask.scheduled_date === date &&
+          activeTask.position !== null &&
+          activeTask.position < canonicalTargetIndex;
     destinationIndex = targetIndex + (afterTarget ? 1 : 0);
   } else {
     return null;
@@ -169,9 +174,11 @@ export function TaskDragProvider({
 }: TaskDragProviderProps): React.ReactElement {
   const [state, setState] = useState<TaskDragState>(EMPTY_DRAG_STATE);
   const prospectiveRef = useRef<TaskProspectivePlacement | null>(null);
+  const pointerYRef = useRef<number | null>(null);
 
   const clearDrag = (): void => {
     prospectiveRef.current = null;
+    pointerYRef.current = null;
     setState(EMPTY_DRAG_STATE);
     onDragActiveChange?.(false);
   };
@@ -207,6 +214,7 @@ export function TaskDragProvider({
         }),
       ]}
       onDragStart={({ operation }) => {
+        pointerYRef.current = null;
         const source = operation.source;
         const taskId = source === null ? null : String(source.id);
         const task =
@@ -228,6 +236,14 @@ export function TaskDragProvider({
         });
         onDragActiveChange?.(true);
       }}
+      onDragMove={(event) => {
+        const { nativeEvent, to } = event;
+        if (nativeEvent instanceof PointerEvent && to !== undefined) {
+          pointerYRef.current = to.y;
+        } else if (nativeEvent instanceof KeyboardEvent) {
+          pointerYRef.current = null;
+        }
+      }}
       onDragOver={(event) => {
         event.preventDefault();
         const source = event.operation.source;
@@ -244,6 +260,7 @@ export function TaskDragProvider({
           tasks,
           String(source.id),
           event.operation.target,
+          pointerYRef.current,
         );
         prospectiveRef.current = prospective;
         setState((current) => ({
