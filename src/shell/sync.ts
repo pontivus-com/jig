@@ -50,10 +50,12 @@ import {
   type SynchronizationFacts,
 } from "../core/synchronization";
 import {
+  applyJigDataResolution,
   buildJigDataConflictCase,
   reconcileRelatedPortableSnapshots,
   recoveryCommitSpec,
   type JigDataConflictCase,
+  type JigDataResolution,
 } from "../core/synchronization-recovery";
 import {
   SnapshotDatasetMismatchError,
@@ -85,6 +87,9 @@ export interface SyncController {
   readonly status: () => RepositorySynchronizationStatus;
   readonly diagnostics: () => SynchronizationDiagnostics;
   readonly readSynchronizationConflict: () => JigDataConflictCase | null;
+  readonly resolveSynchronizationConflict: (
+    resolution: JigDataResolution,
+  ) => Promise<RepositorySynchronizationStatus>;
 }
 
 interface ObservedPortableRemote {
@@ -463,7 +468,8 @@ export function createSyncController(
     phase:
       | "observe-remote"
       | "verify-remote"
-      | "recover-divergence" = "observe-remote",
+      | "recover-divergence"
+      | "resolve-conflict" = "observe-remote",
   ): Promise<ObservedPortableRemote> => {
     beginPhase(phase);
     const metadata = await readMetadata(db);
@@ -1176,6 +1182,272 @@ export function createSyncController(
     }
   };
 
+  const refreshAfterStaleConflict = async (): Promise<
+    RepositorySynchronizationStatus
+  > => {
+    currentConflictCase = null;
+    return runOnce();
+  };
+
+  const resolveCurrentConflict = async (
+    resolution: JigDataResolution,
+  ): Promise<RepositorySynchronizationStatus> => {
+    const conflictCase = currentConflictCase;
+    if (conflictCase === null) {
+      throw new Error("No current synchronization conflict is available");
+    }
+
+    beginPhase("resolve-conflict");
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      reason: "semantic-conflict",
+      retryable: false,
+      recovery_attempted: true,
+      recovery_outcome: null,
+      error_summary: synchronizationFailureSummary("semantic-conflict"),
+    };
+
+    let environment: Readonly<Record<string, string>> | null;
+    try {
+      environment = await effects.networkEnvironment();
+    } catch (error) {
+      currentConflictCase = null;
+      return remoteIssue(
+        true,
+        "resolve-conflict",
+        "transport",
+        error,
+      );
+    }
+    if (environment === null) {
+      currentConflictCase = null;
+      return remoteIssue(
+        false,
+        "resolve-conflict",
+        "authentication",
+      );
+    }
+
+    const metadata = await readMetadata(db);
+    let local;
+    let observed: ObservedPortableRemote;
+    try {
+      local = await effects.readCurrentSnapshot(
+        adapter,
+        metadata.dataset_id,
+      );
+      observed = await observe(environment, "resolve-conflict");
+    } catch {
+      return refreshAfterStaleConflict();
+    }
+
+    if (
+      metadata.revision !== conflictCase.expected_revision ||
+      local === null ||
+      local.head !== conflictCase.local_head ||
+      observed.observation.state !== "present" ||
+      observed.observation.local_head !== conflictCase.local_head ||
+      observed.observation.remote_head !== conflictCase.remote_head ||
+      observed.observation.remote_rewritten ||
+      observed.observation.lineage !== "diverged"
+    ) {
+      return refreshAfterStaleConflict();
+    }
+
+    let mergeBase: string | null;
+    let ancestor: PortableSnapshot;
+    try {
+      mergeBase = await effects.uniqueRecoveryMergeBase(
+        adapter,
+        conflictCase.local_head,
+        conflictCase.remote_head,
+      );
+      if (
+        mergeBase === null ||
+        mergeBase !== conflictCase.ancestor_head
+      ) {
+        return refreshAfterStaleConflict();
+      }
+      ancestor = await effects.readSnapshotAtRef(
+        adapter,
+        mergeBase,
+        metadata.dataset_id,
+      );
+    } catch {
+      return refreshAfterStaleConflict();
+    }
+
+    const freshCase = buildJigDataConflictCase(
+      mergeBase,
+      conflictCase.local_head,
+      conflictCase.remote_head,
+      metadata.revision,
+      ancestor,
+      local.snapshot,
+      observed.observation.remote_snapshot,
+    );
+    if (freshCase === null) {
+      return refreshAfterStaleConflict();
+    }
+    currentConflictCase = freshCase;
+
+    const applied = applyJigDataResolution(freshCase, resolution);
+    if (applied.kind !== "resolved") {
+      return recoveryIssue(
+        "resolve-conflict",
+        "semantic-conflict",
+        false,
+        "refused",
+      );
+    }
+
+    let candidate: string;
+    try {
+      const [localTimestamp, remoteTimestamp] = await Promise.all([
+        effects.recoveryCommitterTimestampSeconds(
+          adapter,
+          freshCase.local_head,
+        ),
+        effects.recoveryCommitterTimestampSeconds(
+          adapter,
+          freshCase.remote_head,
+        ),
+      ]);
+      candidate = await effects.writeRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        applied.snapshot,
+        recoveryCommitSpec(
+          "user-resolved",
+          freshCase.local_head,
+          localTimestamp,
+          freshCase.remote_head,
+          remoteTimestamp,
+        ),
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "resolve-conflict",
+        "unknown",
+        false,
+        "failed",
+        error,
+      );
+    }
+
+    const currentMetadata = await readMetadata(db);
+    const currentLocal = await effects.readCurrentSnapshot(
+      adapter,
+      metadata.dataset_id,
+    );
+    let confirmed: ObservedPortableRemote;
+    let confirmedMergeBase: string | null;
+    try {
+      confirmed = await observe(environment, "resolve-conflict");
+      confirmedMergeBase =
+        confirmed.observation.state === "present" &&
+        confirmed.observation.local_head !== null
+          ? await effects.uniqueRecoveryMergeBase(
+              adapter,
+              confirmed.observation.local_head,
+              confirmed.observation.remote_head,
+            )
+          : null;
+    } catch {
+      await effects.deleteRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        candidate,
+      );
+      return refreshAfterStaleConflict();
+    }
+
+    if (
+      currentMetadata.revision !== freshCase.expected_revision ||
+      currentLocal === null ||
+      currentLocal.head !== freshCase.local_head ||
+      confirmed.observation.state !== "present" ||
+      confirmed.observation.local_head !== freshCase.local_head ||
+      confirmed.observation.remote_head !== freshCase.remote_head ||
+      confirmed.observation.remote_rewritten ||
+      confirmed.observation.lineage !== "diverged" ||
+      confirmedMergeBase !== freshCase.ancestor_head
+    ) {
+      await effects.deleteRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        candidate,
+      );
+      return refreshAfterStaleConflict();
+    }
+
+    try {
+      await adoptObservedSynchronizationRemote(
+        db,
+        {
+          local_head: freshCase.local_head,
+          remote_head: candidate,
+          lineage: "remote-ahead",
+          remote_snapshot: applied.snapshot,
+        },
+        freshCase.expected_revision,
+        (expectedHead, targetHead) =>
+          effects.compareAndSetPortableHead(
+            adapter,
+            expectedHead,
+            targetHead,
+          ),
+      );
+      await effects.deleteRecoveryCandidate(
+        adapter,
+        metadata.dataset_id,
+        candidate,
+      );
+    } catch {
+      currentConflictCase = null;
+      return runOnce();
+    }
+
+    currentConflictCase = null;
+    recoveryVerificationKind = "accepted";
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: null,
+    };
+
+    const afterResolution = await observe(
+      environment,
+      "verify-remote",
+    );
+    return (
+      await processObservation(
+        afterResolution,
+        environment,
+        true,
+      )
+    ) ?? remoteIssue(
+      false,
+      "verify-remote",
+      "unknown",
+      "Resolved synchronization conflict did not settle",
+    );
+  };
+
+  const resolveSynchronizationConflict = async (
+    resolution: JigDataResolution,
+  ): Promise<RepositorySynchronizationStatus> => {
+    if (running !== null) {
+      await running;
+    }
+    clearTimer();
+    const operation = resolveCurrentConflict(resolution).finally(() => {
+      running = null;
+    });
+    running = operation;
+    return operation;
+  };
+
   const trigger = async (): Promise<RepositorySynchronizationStatus> => {
     if (currentConflictCase !== null) {
       clearTimer();
@@ -1232,5 +1504,6 @@ export function createSyncController(
     status: () => currentStatus,
     diagnostics: () => currentDiagnostics,
     readSynchronizationConflict: () => currentConflictCase,
+    resolveSynchronizationConflict,
   };
 }
