@@ -159,19 +159,29 @@ describe("architecture compliance", () => {
 
   it("keeps v1.0.4 Planner and editor semantics single-owner", () => {
     const app = source("ui/src/app.tsx");
-    const planner = source("ui/src/planner.tsx");
-    const week = source("ui/src/week.tsx");
+    const plannerDate = source(
+      "ui/src/presentation/shared/planner-date-section.tsx",
+    );
+    const desktopPlanner = source(
+      "ui/src/presentation/desktop/planner.tsx",
+    );
+    const narrowPlanner = source(
+      "ui/src/presentation/narrow/planner.tsx",
+    );
     const list = source("ui/src/planner-list.tsx");
     const editor = source("ui/src/task-editor.tsx");
 
     expect(app).not.toContain("selectedDate");
-    expect(planner).not.toContain("selectedDate");
-    expect(week).not.toContain("selectedDate");
+    expect(plannerDate).not.toContain("selectedDate");
+    expect(desktopPlanner).not.toContain("selectedDate");
+    expect(narrowPlanner).not.toContain("selectedDate");
     expect(list).not.toContain("selectedDate");
 
-    expect(week).toContain("<PlannerTaskList");
-    expect(week).not.toContain("<TaskRow");
-    expect(week).not.toContain("<SortableTaskRow");
+    expect(plannerDate).toContain("<PlannerTaskList");
+    expect(plannerDate).not.toContain("<TaskRow");
+    expect(plannerDate).not.toContain("<SortableTaskRow");
+    expect(desktopPlanner).toContain("<PlannerDateSection");
+    expect(narrowPlanner).toContain("<PlannerDateSection");
 
     expect(editor).not.toContain("normalizeTitle");
     expect(editor).not.toContain("normalizeOptionalText");
