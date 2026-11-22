@@ -742,17 +742,22 @@ body {
   margin-inline: auto;
 }
 
-.jig-attention-banner {
+.jig-attention-banner,
+.jig-success-confirmation {
   display: flex;
   min-width: 0;
-  flex-wrap: wrap;
   align-items: center;
   column-gap: var(--spacing-2);
   row-gap: var(--spacing-2);
+}
+
+.jig-attention-banner {
+  flex-wrap: wrap;
   padding: var(--spacing-3) var(--spacing-4);
 }
 
-.jig-attention-banner-card {
+.jig-attention-banner-card,
+.jig-success-confirmation {
   border-radius: var(--radius-element);
 }
 
@@ -766,55 +771,9 @@ body {
   background: var(--color-warning-muted);
 }
 
-.jig-attention-banner-icon {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-}
-
-.jig-attention-banner-message {
-  display: grid;
-  min-width: 12rem;
-  flex: 1 1 12rem;
-  gap: var(--spacing-0-5);
-}
-
-.jig-attention-banner-title,
-.jig-attention-banner-description {
-  margin: 0;
-}
-
-.jig-attention-banner-description {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-normal);
-}
-
-.jig-attention-banner-action {
-  display: flex;
-  max-width: 100%;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: flex-end;
-  margin-inline-start: auto;
-}
-
-.jig-attention-banner-dismiss {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .jig-success-confirmation {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--spacing-2);
-  margin: var(--spacing-2) var(--spacing-3) 0;
   padding: var(--spacing-2) var(--spacing-3);
   border: var(--border-width) solid var(--color-border-success);
-  border-radius: var(--radius-element);
   color: var(--color-on-success-muted);
   background: var(--color-success-muted);
 }
@@ -823,14 +782,60 @@ body {
   pointer-events: none;
 }
 
-.jig-success-confirmation > span {
-  min-width: 0;
-  flex: 1 1 auto;
+.jig-feedback-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.jig-feedback-message {
+  display: grid;
+  min-width: 12rem;
+  flex: 1 1 12rem;
+  gap: var(--spacing-0-5);
+}
+
+.jig-feedback-title,
+.jig-feedback-description {
+  margin: 0;
+}
+
+.jig-feedback-description {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+}
+
+.jig-success-confirmation .jig-feedback-description {
   font-weight: var(--font-weight-medium);
 }
 
-.jig-success-confirmation button {
+.jig-feedback-action {
+  display: flex;
+  max-width: 100%;
   flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  margin-inline-start: auto;
+}
+
+.jig-feedback-dismiss {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.jig-feedback-transient-stack {
+  display: grid;
+  width: 100%;
+  gap: var(--spacing-2);
+  pointer-events: none;
+}
+
+.jig-feedback-transient-stack > * {
+  width: 100%;
+  pointer-events: auto;
 }
 
 .jig-task-editor-surface {
