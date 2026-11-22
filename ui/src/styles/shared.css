@@ -1318,7 +1318,7 @@ body {
   border-radius: var(--radius-element);
   background: var(--color-background-muted);
   color: var(--color-text-primary);
-  font-family: var(--font-family-mono);
+  font-family: var(--font-family-code);
   font-size: var(--font-size-sm);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
