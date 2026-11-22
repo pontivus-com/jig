@@ -1,15 +1,21 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Canonical UI solution through v1.1.2. JIG-112-FR-01..12 supersede affected earlier presentation clauses: chrome/canvas/card surfaces remain visibly distinct, configured Planner fills the viewport, drag shows live card placement/reflow, synchronization Diagnostics exposes real sanitized failure/recovery evidence, normal motion is at least 2× slower/more perceptible, and desktop/mobile presentation ownership follows the binding responsive interaction matrix. Unaffected v1.1 hierarchy and references remain binding; adjacent-week Carousel/swipe remains deferred.
+**Status:** Canonical UI solution through v1.1.2. JIG-112-FR-01..14 supersede affected earlier presentation clauses: chrome/canvas/card surfaces remain visibly distinct, configured Planner fills the viewport, drag shows live card placement/reflow, synchronization Diagnostics exposes real sanitized failure/recovery evidence, normal motion is at least 2× slower/more perceptible, and adaptive ownership separates desktop/narrow presentation from Linux/browser versus Android/native capability and actual input modality. Unaffected v1.1 hierarchy and references remain binding; adjacent-week Carousel/swipe remains deferred.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–33.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx ownership, the governed Task-movement proof gate, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop and Android, including v1.1 onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
 
-## v1.1.2 responsive presentation authority
+## v1.1.2 adaptive presentation and runtime authority
 
-The binding [v1.1.2 responsive interaction matrix](v1.1.2-responsive-interaction-matrix.md) classifies every governed surface as desktop-specific, narrow/mobile-specific or shared adaptive. It is the authority for deciding when responsive UI must use a different primitive/composition rather than simply stretching the same markup.
+The binding [v1.1.2 adaptive presentation and platform concern matrix](v1.1.2-responsive-interaction-matrix.md) and [adaptive presentation/runtime architecture](../architecture/v1.1.2-responsive-presentation-architecture.md) classify every governed concern along independent axes:
 
-Short-lived success feedback is the currently confirmed desktop breach: desktop must use a compact bounded top-end toast/notification stack, while narrow/mobile uses an inset safe-area-aware snackbar above persistent bottom navigation. Durable attention remains persistent rather than toast-like, but desktop is bounded for wide-screen reading while narrow/mobile may consume the available inline width.
+- **presentation class:** desktop/expanded versus narrow, selected only from the 73rem width boundary;
+- **runtime capability:** Linux/browser versus Android/native, selected only at the platform adapter boundary;
+- **input/capability facts:** touch/coarse pointer, mouse/pen, keyboard and IME observed only where the interaction requires them.
+
+There is no single `mobile` switch. A narrow Linux window uses narrow presentation but browser/Linux capabilities. Android retains native lifecycle, system bars, notification scheduling, secure storage and Back behavior regardless of presentation width. Layout must never select platform mechanics, and raw platform identity must never select responsive hierarchy.
+
+The matrix is the binding inventory for application frame, header/navigation/Add/status, Planner/Task/drag, Drawer/BottomSheet, form actions/Repeat/IME, feedback, onboarding, Settings/Diagnostics, repository choices/storage/credentials, GitHub provider return, notification/exact-alarm UX, synchronization opportunities, native activation/Back/system bars/safe areas and input-specific behavior. A material difference missing from that registry is a design defect.
 
 Normal application motion is deliberately perceptible. The v1.1.2 public duration-token scale is at least 2× the prior effective tempo; reduced-motion remains immediate/no-motion. Motion is used to clarify destination change, overlay entry/exit, Task movement, feedback and state change rather than decorative looping.
 
@@ -482,7 +488,7 @@ On mobile, the primary action area remains visible and comfortable at the end of
 | Planner temporal state | Jig pure presentation state: displayed week start only |
 | Lists, labels, fields and semantic theme | Astryx published primitives; reminder delivery itself is browser Notification, not Toast |
 | Operational attention banner | one Jig-owned `JigAttentionBanner` composition from public Astryx Icon/Button leaves + semantic tokens because the pinned Banner public API cannot vertically center icon/action with multi-line description content |
-| Task mutation confirmation | one shared `JigSuccessConfirmation` operation-feedback leaf using public Astryx Icon/IconButton leaves and success semantic roles; Add/Edit/complete/reopen outcomes are transient, dismissible and shared by desktop/Android WebView |
+| Task mutation confirmation | one shared semantic/content leaf using public Astryx Icon/IconButton leaves and success roles; desktop and narrow presenters own different placement (bounded top-end versus safe-area-aware snackbar) while Add/Edit/complete/reopen state remains singular |
 | Desktop Task workspace | Astryx non-modal right Drawer |
 | Narrow Task workspace | Astryx BottomSheet rising from the bottom |
 | Task movement mechanics | Jig `ui/src/drag.tsx` adapter over the physically proven current dnd-kit candidate; one owner only, no Pangea/parallel sensors |
@@ -493,9 +499,9 @@ On mobile, the primary action area remains visible and comfortable at the end of
 
 Jig CSS owns only the page-centered header grid, seven Planner tracks, narrow composition, drag state and restrained Task priority accent. It consumes public Astryx tokens/roles and must not target private component internals.
 
-### Shared operational attention banner — bounded fidelity correction
+### Shared operational attention content with viewport-specific placement
 
-The app's operation-error, synchronization-attention, load/setup failure and Settings-error banners are one cross-platform React presentation surface. They are not Android OS notifications and they do not change reminder delivery, notification permission, synchronization or operation-error state ownership.
+The app's operation-error, synchronization-attention, load/setup failure and Settings-error messages have one semantic/content owner but v1.1.2 gives desktop and narrow presentations separate placement owners. Desktop uses a bounded wide-screen attention region; narrow uses inline/inset placement below sticky chrome. They are not Android OS notifications and they do not change reminder delivery, notification permission, synchronization or operation-error state ownership.
 
 The pinned Astryx `Banner` public API is not sufficient for the governed geometry: when `description` is present its header uses top alignment, so the status icon and the complete end-action area sit against the top of a multi-line message. The component exposes no public header/end-area alignment prop or scroller/slot hook. Jig must not correct this by targeting Banner's private DOM, StyleX classes or descendant selectors.
 
@@ -503,7 +509,7 @@ Use one narrow Jig-owned `JigAttentionBanner` for the currently required operati
 
 At ordinary widths, status icon, message block and optional action are vertically centered as peer regions. The message remains left-aligned and may wrap naturally. At narrow widths, the optional action may move to its own row without squeezing the message; its control remains vertically centered within that row and the status icon remains centered against the message block rather than pinned to its first text line. Error/warning semantics, focus order, recovery action labeling and the existing operation-feedback owner remain unchanged. Existing reveal motion remains subordinate and is removed under reduced motion.
 
-All current operational attention call sites must converge on this one component so Android WebView and Linux/Desktop browser cannot drift: durable operation failure, sync-needs-attention, initial load failure, setup failure and Settings operation failure. Separate browser/Android reminder delivery remains outside this component.
+All current operational attention call sites converge on one shared content/anatomy component so message, action and accessibility semantics cannot drift, while the desktop/narrow feedback-region presenters own placement. Separate browser/Android reminder delivery remains outside this component.
 
 Keyboard/touch alternatives Move up and Move down call the same canonical order mutation. Date editing calls the same canonical date-change operation. On desktop and narrow/mobile, **only the dedicated grip is the drag activator**. The Task card body remains normal click/tap/scroll content; completion checkbox, Task action menu, reference and other interactive descendants remain independent. The grip is part of the Task card layout, never an overlay that steals the whole card's pointer surface. The grip/checkbox leading group is vertically centered within the card and does not use first-line alignment as a substitute for control geometry.
 
