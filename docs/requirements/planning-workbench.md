@@ -1,6 +1,6 @@
 # Jig — planning and UX functional design
 
-**Status:** Binding functional design through v1.1, amended 2026-11-21 for the reduced scope. Adjacent-week direct paging/swipe is deferred beyond v1.1; explicit Previous/Next/Today controls remain. The complete v1.1 amendment assessment and IDs JIG-110-FR-34..37 are governed by [the v1.1 functional design](v1.1-mobile-functional-design.md#12-v11-functional-amendment-and-implementation-assessment). v1.0.6 remains historical release provenance; the v1.1 JIG-110 contract supersedes affected onboarding hierarchy, header/touch geometry, Task movement, Task-form Repeat, Settings, synchronization, reminder and Android behavior.
+**Status:** Binding functional design through v1.1.2. The [v1.1.2 corrective functional design](v1.1.2-corrective-functional-design.md) supersedes affected prior clauses for Task drag feedback, synchronization diagnostics/recovery, theme surface separation and configured viewport fill. The v1.1 reduced-scope authority remains binding for unaffected behavior; adjacent-week direct paging/swipe remains deferred and explicit Previous/Next/Today controls remain.
 **Concern:** Observable planning semantics, task interactions, calendar views, feedback and responsive behavior.  
 **Governing intent:** [Jig product definition](../product/product-definition.md).
 
@@ -15,7 +15,7 @@ On narrow/mobile layouts, the same Planner reflows to seven vertically stacked d
 The primary planning interaction is master-detail:
 
 - clicking/tapping a Task **selects it and opens the unified editable Task workspace**; selection never moves the Task and never changes application destination;
-- direct visual movement/reordering is performed from a dedicated visible Task-card drag grip on desktop and narrow/mobile; the exact insertion slot is visible before drop, while the remaining card surface stays dedicated to selection/opening, controls and touch scrolling;
+- direct visual movement/reordering is performed from a dedicated visible Task-card drag grip on desktop and narrow/mobile; while held, the dragged Task remains visible as a card and the surrounding cards reflow to the prospective exact placement in real time. JIG-112-FR-03 supersedes the former insertion-line representation; the remaining card surface stays dedicated to selection/opening, controls and touch scrolling;
 - explicit non-drag rescheduling is performed by editing the Task's scheduled date;
 - existing Task selection and Add Task use the same editable field surface; there is no separate read-only inspection step and no second Edit click;
 - clicking outside both a Task card and the contextual workspace dismisses the workspace without saving; clicking another Task retargets the workspace to that Task;
