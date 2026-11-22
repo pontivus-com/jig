@@ -1278,7 +1278,9 @@ test("Task-body touch scroll never activates drag", async ({ page }) => {
     page.getByRole("dialog", { name: "Body-scroll task 2" }),
   ).toHaveCount(0);
   await expect
-    .poll(async () => frame.evaluate((element) => element.scrollTop))
+    .poll(async () =>
+      scrollOwner.evaluate((element) => element.scrollTop),
+    )
     .toBeGreaterThan(0);
 });
 
