@@ -1,0 +1,42 @@
+.jig-configured-desktop .jig-app-header-desktop {
+  display: grid;
+  height: 2.75rem;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: 0 var(--spacing-1);
+}
+
+.jig-configured-desktop .jig-header-left {
+  justify-self: start;
+  min-width: 0;
+}
+
+.jig-configured-desktop .jig-header-center {
+  justify-self: center;
+  min-width: 0;
+}
+
+.jig-configured-desktop .jig-header-right,
+.jig-configured-desktop .jig-header-destinations {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--spacing-0-5);
+}
+
+.jig-configured-desktop .jig-header-right {
+  justify-self: end;
+}
+
+
+.jig-configured-desktop {
+  --jig-safe-area-top: env(safe-area-inset-top, 0px);
+}
+
+.jig-configured-desktop .jig-app-header-desktop {
+  box-sizing: border-box;
+  height: calc(2.75rem + var(--jig-safe-area-top));
+  padding-block-start: var(--jig-safe-area-top);
+}
