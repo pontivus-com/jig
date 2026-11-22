@@ -9,6 +9,11 @@ export const draculaTheme = defineTheme({
   extends: neutralTheme,
   tokens: communityColorTokens(draculaPalette),
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: draculaPalette.body,
+      planner: draculaPalette.surface,
+      task:
+        "color-mix(in oklab, var(--color-background-card) 97%, var(--color-text-primary) 3%)",
+    }),
   },
 });
