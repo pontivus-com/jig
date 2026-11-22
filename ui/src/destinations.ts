@@ -24,12 +24,13 @@ export const DESTINATIONS = [
     icon: "wrench",
   },
 ] as const satisfies readonly {
-  readonly id: Destination;
+  readonly id: string;
   readonly label: string;
   readonly subtitle: string | null;
   readonly icon: IconName | NamespacedIconName;
 }[];
 
+export type Destination = (typeof DESTINATIONS)[number]["id"];
 export type DestinationDefinition = (typeof DESTINATIONS)[number];
 export type DestinationIconName = DestinationDefinition["icon"];
 
