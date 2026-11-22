@@ -2189,6 +2189,22 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
             ".jig-settings-section:not(.jig-settings-diagnostics) .jig-settings-card",
           ),
         ).toHaveCount(0);
+        const notifications = settings.locator(
+          '.jig-settings-section[aria-labelledby="notifications-heading"]',
+        );
+        await expect(
+          notifications.getByText("Browser notifications", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          notifications.getByText("Android notifications", { exact: true }),
+        ).toHaveCount(0);
+        await expect(
+          notifications.getByRole("button", {
+            name: "Exact timing settings",
+            exact: true,
+          }),
+        ).toHaveCount(0);
+        await expect(notifications).not.toContainText("exact alarms");
       }
     }
 
