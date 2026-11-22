@@ -689,6 +689,10 @@ test("narrow Today consumes one governed scroll request and does not replay on r
   await expect.poll(scrollBehaviors).toEqual(["smooth"]);
 
   await clearScrollBehaviors();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect.poll(scrollBehaviors).toEqual(["smooth"]);
+
+  await clearScrollBehaviors();
   await page.setViewportSize({ width: 1168, height: 844 });
   await waitForResponsiveHeader(page, 1168);
   await page.setViewportSize({ width: 390, height: 844 });
