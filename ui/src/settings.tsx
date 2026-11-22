@@ -57,10 +57,12 @@ export interface SettingsViewProps {
   readonly isOperating: boolean;
   readonly githubReconnectAvailable: boolean;
   readonly githubReconnect: GitHubReconnectSnapshot | null;
+  readonly synchronizationConflictAvailable: boolean;
   readonly onThemePresetChange: (value: ThemePreset) => void;
   readonly onAppearanceModeChange: (value: AppearanceMode) => void;
   readonly onSync: () => Promise<void>;
   readonly onReconnectGitHub: () => Promise<void>;
+  readonly onResolveSynchronizationConflict: () => Promise<void>;
   readonly showDiagnostics: boolean;
   readonly onShowDiagnosticsChange: (value: boolean) => void;
 }
@@ -73,10 +75,12 @@ export function SettingsView({
   isOperating,
   githubReconnectAvailable,
   githubReconnect,
+  synchronizationConflictAvailable,
   onThemePresetChange,
   onAppearanceModeChange,
   onSync,
   onReconnectGitHub,
+  onResolveSynchronizationConflict,
   showDiagnostics,
   onShowDiagnosticsChange,
 }: SettingsViewProps): React.ReactElement {
@@ -145,7 +149,16 @@ export function SettingsView({
                 <p>{repositoryStatus.label}</p>
                 <small>{repositoryStatus.message}</small>
               </div>
-              {synchronizationNeedsAttention &&
+              {synchronizationConflictAvailable ? (
+                <Button
+                  label="Resolve sync conflict"
+                  variant="primary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onResolveSynchronizationConflict();
+                  }}
+                />
+              ) : synchronizationNeedsAttention &&
               githubReconnectAvailable &&
               githubReconnect === null ? (
                 <Button
