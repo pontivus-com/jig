@@ -1161,6 +1161,16 @@ test("adding and editing a Task confirm success and close the workspace", async 
     if (width < 600) {
       await expect(reopenedTitle).toBeFocused();
     }
+    await expect
+      .poll(() =>
+        reopenedAddWorkspace.evaluate(
+          (dialog) =>
+            dialog
+              .getAnimations({ subtree: true })
+              .filter((animation) => animation.playState === "running").length,
+        ),
+      )
+      .toBe(0);
     const titleBox = await reopenedTitle.boundingBox();
     const workspaceBox = await reopenedAddWorkspace.boundingBox();
     expect(titleBox).not.toBeNull();
