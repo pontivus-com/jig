@@ -711,16 +711,20 @@ function ConfiguredApp({
 
   const goToToday = useCallback((): void => {
     const today = todayCivilDate();
+    const horizonChanged =
+      plannerState.displayedHorizonStart !== today;
+
     setWeekTransitionDirection(
-      layoutMode === "narrow" ||
-        plannerState.displayedHorizonStart === today
-        ? null
-        : "today",
+      layoutMode === "desktop" && horizonChanged ? "today" : null,
     );
-    setPlannerState({
-      displayedHorizonStart: today,
-    });
-    setTodayScrollRequest((current) => current + 1);
+    if (horizonChanged) {
+      setPlannerState({
+        displayedHorizonStart: today,
+      });
+    }
+    if (layoutMode === "narrow") {
+      setTodayScrollRequest((current) => current + 1);
+    }
   }, [layoutMode, plannerState.displayedHorizonStart]);
 
   const repositoryStatus = repositoryStatusPresentation(status, {
