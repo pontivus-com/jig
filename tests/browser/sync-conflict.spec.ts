@@ -282,7 +282,8 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     .getByRole("button", { name: "Next conflict", exact: true })
     .click();
   await desktopResolver
-    .getByText("Keep changed Task", { exact: true })
+    .locator(".jig-sync-conflict-choice")
+    .filter({ hasText: "Keep changed Task" })
     .click();
   await expect(
     desktopResolver.getByRole("heading", {
@@ -330,7 +331,8 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     .getByRole("button", { name: "Next conflict", exact: true })
     .click();
   await reopened
-    .getByText("Keep changed Task", { exact: true })
+    .locator(".jig-sync-conflict-choice")
+    .filter({ hasText: "Keep changed Task" })
     .click();
   await reopened
     .getByRole("button", { name: "Confirm order", exact: true })
