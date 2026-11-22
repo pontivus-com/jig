@@ -44,6 +44,12 @@ import {
   serializeSnapshot,
   type PortableSnapshot,
 } from "../../src/core/portable";
+import {
+  deriveJigDataDateOrders,
+  jigDataConflictKey,
+  type JigDataConflictCase,
+  type JigDataResolution,
+} from "../../src/core/synchronization-recovery";
 import type {
   PortableRemoteObservation,
   SynchronizationRemote,
@@ -84,6 +90,40 @@ function task(
     completed_at: null,
     created_at: "2026-11-19T01:00:00.000Z",
     updated_at: "2026-11-19T01:00:00.000Z",
+  };
+}
+
+
+const CONFLICT_ANCESTOR_HEAD = "1".repeat(40);
+const CONFLICT_LOCAL_HEAD = "2".repeat(40);
+const CONFLICT_REMOTE_HEAD = "3".repeat(40);
+const CONFLICT_CANDIDATE_HEAD = "4".repeat(40);
+
+function localConflictResolution(
+  conflictCase: JigDataConflictCase,
+): JigDataResolution {
+  const conflict = conflictCase.conflicts[0];
+  if (conflict === undefined) {
+    throw new Error("expected one synthetic synchronization conflict");
+  }
+  const choices = [{
+    conflict_key: jigDataConflictKey(conflict),
+    side: "local" as const,
+  }];
+  const dateOrders = deriveJigDataDateOrders(
+    conflictCase,
+    choices,
+  );
+  if (dateOrders === null) {
+    throw new Error("expected synthetic conflict date-order review");
+  }
+  return {
+    ancestor_head: conflictCase.ancestor_head,
+    local_head: conflictCase.local_head,
+    remote_head: conflictCase.remote_head,
+    expected_revision: conflictCase.expected_revision,
+    choices,
+    date_orders: dateOrders,
   };
 }
 
@@ -823,6 +863,290 @@ describe("cross-installation synchronization worker", () => {
       error_summary: "synthetic local export failure",
     });
     expect(fake.pushes.count).toBe(0);
+  });
+
+
+  async function semanticConflictHarness(): Promise<{
+    readonly controller: ReturnType<typeof createSyncController>;
+    readonly repo: FakeRepository;
+    readonly conflictCase: JigDataConflictCase;
+    readonly resolution: JigDataResolution;
+    readonly candidateBuildHook: {
+      current: null | (() => Promise<void> | void);
+    };
+    readonly candidateWrites: () => number;
+    readonly candidateDeletes: () => number;
+  }> {
+    const ancestorTask = task("301", "Shared conflict base");
+    const localTask: Task = {
+      ...ancestorTask,
+      title: "Local conflict",
+      updated_at: "2026-11-19T01:01:00.000Z",
+    };
+    const remoteTask: Task = {
+      ...ancestorTask,
+      title: "Remote conflict",
+      updated_at: "2026-11-19T01:02:00.000Z",
+    };
+    const ancestor = serializeSnapshot(
+      [ancestorTask],
+      DATASET_ID,
+    );
+    const local = serializeSnapshot([localTask], DATASET_ID);
+    const remote = serializeSnapshot([remoteTask], DATASET_ID);
+
+    const adopted = await adoptCanonicalSnapshot(
+      db,
+      [localTask],
+      [],
+      CONFLICT_LOCAL_HEAD,
+    );
+    expect(adopted.revision).toBe(1);
+
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: CONFLICT_LOCAL_HEAD,
+      localSnapshot: local,
+      remoteHead: CONFLICT_REMOTE_HEAD,
+      remoteSnapshot: remote,
+      remoteRewritten: false,
+      lineage: "diverged",
+      previouslySynchronized: true,
+    };
+    const fake = fakeEffects(repo);
+    const candidateBuildHook: {
+      current: null | (() => Promise<void> | void);
+    } = { current: null };
+    let writes = 0;
+    let deletes = 0;
+    const effects: SyncEffects = {
+      ...fake.effects,
+      readSnapshotAtRef: async (
+        _config,
+        ref,
+        _datasetId,
+      ) => {
+        if (ref === CONFLICT_ANCESTOR_HEAD) return ancestor;
+        if (ref === repo.localHead) return repo.localSnapshot;
+        if (
+          repo.remoteHead !== null &&
+          repo.remoteSnapshot !== null &&
+          ref === repo.remoteHead
+        ) {
+          return repo.remoteSnapshot;
+        }
+        throw new Error("synthetic conflict snapshot is unavailable");
+      },
+      uniqueRecoveryMergeBase: async () =>
+        CONFLICT_ANCESTOR_HEAD,
+      writeRecoveryCandidate: async () => {
+        writes += 1;
+        await candidateBuildHook.current?.();
+        return CONFLICT_CANDIDATE_HEAD;
+      },
+      deleteRecoveryCandidate: async (
+        _config,
+        _datasetId,
+        expectedHead,
+      ) => {
+        expect(expectedHead).toBe(CONFLICT_CANDIDATE_HEAD);
+        deletes += 1;
+      },
+    };
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      effects,
+    );
+
+    expect(await controller.trigger()).toMatchObject({
+      local_git: "committed",
+      remote: { state: "sync-issue" },
+    });
+    const conflictCase =
+      controller.readSynchronizationConflict();
+    if (conflictCase === null) {
+      throw new Error("expected synthetic synchronization conflict");
+    }
+
+    return {
+      controller,
+      repo,
+      conflictCase,
+      resolution: localConflictResolution(conflictCase),
+      candidateBuildHook,
+      candidateWrites: () => writes,
+      candidateDeletes: () => deletes,
+    };
+  }
+
+  it("rejects a resolver draft when SQLite revision changes while it is open", async () => {
+    const harness = await semanticConflictHarness();
+    const state = await readCanonicalState(db);
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Concurrent local mutation",
+        scheduled_date: "2026-11-19",
+      },
+      state.revision,
+      "2026-11-19T01:03:00.000Z",
+      () =>
+        "018f47f0-7b5c-7d4d-8e2b-000000000302",
+    );
+
+    expect(
+      await harness.controller.resolveSynchronizationConflict(
+        harness.resolution,
+      ),
+    ).toMatchObject({
+      remote: { state: "sync-issue" },
+    });
+    expect(harness.candidateWrites()).toBe(0);
+    expect(
+      (await readCanonicalState(db)).tasks.map(
+        (candidate) => candidate.title,
+      ),
+    ).toContain("Concurrent local mutation");
+    const fresh =
+      harness.controller.readSynchronizationConflict();
+    expect(fresh).not.toBeNull();
+    expect(fresh?.expected_revision).not.toBe(
+      harness.conflictCase.expected_revision,
+    );
+  });
+
+  it("rejects a resolver draft when the local portable head changes while it is open", async () => {
+    const harness = await semanticConflictHarness();
+    const changedLocalHead = "5".repeat(40);
+    harness.repo.localHead = changedLocalHead;
+
+    expect(
+      await harness.controller.resolveSynchronizationConflict(
+        harness.resolution,
+      ),
+    ).toMatchObject({
+      remote: { state: "sync-issue" },
+    });
+    expect(harness.candidateWrites()).toBe(0);
+    const fresh =
+      harness.controller.readSynchronizationConflict();
+    expect(fresh).not.toBeNull();
+    expect(fresh?.local_head).toBe(changedLocalHead);
+    expect(fresh?.local_head).not.toBe(
+      harness.conflictCase.local_head,
+    );
+  });
+
+  it("aborts a user-resolved candidate when SQLite revision changes during candidate construction", async () => {
+    const harness = await semanticConflictHarness();
+    harness.candidateBuildHook.current = async () => {
+      const state = await readCanonicalState(db);
+      await applyTaskCommand(
+        db,
+        {
+          type: "create",
+          title: "Mutation during candidate build",
+          scheduled_date: "2026-11-19",
+        },
+        state.revision,
+        "2026-11-19T01:04:00.000Z",
+        () =>
+          "018f47f0-7b5c-7d4d-8e2b-000000000303",
+      );
+    };
+
+    expect(
+      await harness.controller.resolveSynchronizationConflict(
+        harness.resolution,
+      ),
+    ).toMatchObject({
+      remote: { state: "sync-issue" },
+    });
+    expect(harness.candidateWrites()).toBe(1);
+    expect(harness.candidateDeletes()).toBe(1);
+    expect(
+      (await readCanonicalState(db)).tasks.map(
+        (candidate) => candidate.title,
+      ),
+    ).toContain("Mutation during candidate build");
+  });
+
+  it("aborts a user-resolved candidate when the local ref changes during candidate construction", async () => {
+    const harness = await semanticConflictHarness();
+    const changedLocalHead = "6".repeat(40);
+    harness.candidateBuildHook.current = () => {
+      harness.repo.localHead = changedLocalHead;
+    };
+
+    expect(
+      await harness.controller.resolveSynchronizationConflict(
+        harness.resolution,
+      ),
+    ).toMatchObject({
+      remote: { state: "sync-issue" },
+    });
+    expect(harness.candidateWrites()).toBe(1);
+    expect(harness.candidateDeletes()).toBe(1);
+    expect(
+      (await readCanonicalState(db)).tasks[0],
+    ).toMatchObject({ title: "Local conflict" });
+    expect(
+      harness.controller.readSynchronizationConflict()?.local_head,
+    ).toBe(changedLocalHead);
+  });
+
+  it("pushes an already accepted recovery candidate after restart without creating a duplicate snapshot", async () => {
+    const candidateTask = task(
+      "304",
+      "Accepted recovery before push",
+    );
+    const candidateSnapshot = serializeSnapshot(
+      [candidateTask],
+      DATASET_ID,
+    );
+    const remoteHead = "7".repeat(40);
+    const remoteSnapshot = serializeSnapshot([], DATASET_ID);
+
+    const adopted = await adoptCanonicalSnapshot(
+      db,
+      [candidateTask],
+      [],
+      CONFLICT_CANDIDATE_HEAD,
+    );
+    expect(adopted.revision).toBe(1);
+
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: CONFLICT_CANDIDATE_HEAD,
+      localSnapshot: candidateSnapshot,
+      remoteHead,
+      remoteSnapshot,
+      remoteRewritten: false,
+      lineage: "local-ahead",
+      previouslySynchronized: true,
+    };
+    const fake = fakeEffects(repo);
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      fake.effects,
+    );
+
+    expect(await controller.trigger()).toStrictEqual(
+      configuredStatus("synchronized"),
+    );
+    expect(fake.writes.count).toBe(0);
+    expect(fake.pushes.count).toBe(1);
+    expect(repo.remoteHead).toBe(CONFLICT_CANDIDATE_HEAD);
+    expect(await readMetadata(db)).toMatchObject({
+      revision: 1,
+      last_exported_revision: 1,
+      last_exported_head: CONFLICT_CANDIDATE_HEAD,
+      last_adopted_head: CONFLICT_CANDIDATE_HEAD,
+      pending_sync: false,
+    });
   });
 
   it("discards a private recovery candidate left before SQLite adoption", async () => {
