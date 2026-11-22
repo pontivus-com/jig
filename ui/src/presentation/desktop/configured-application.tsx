@@ -1,5 +1,6 @@
 import { DesktopConfiguredHeader } from "./header";
 import { DesktopFeedbackRegion } from "./feedback-region";
+import { DesktopPlanner } from "./planner";
 import { DesktopTaskWorkspace } from "./task-workspace";
 import {
   ApplicationShell,
@@ -11,11 +12,11 @@ export function DesktopConfiguredApplication(
 ): React.ReactElement {
   const {
     content,
+    planner,
     durableFeedback,
     transientFeedback,
     workspace,
     destinationTransition,
-    todayScrollRequest: _todayScrollRequest,
     onContentPointerDown,
     ...componentProps
   } = props;
@@ -50,7 +51,11 @@ export function DesktopConfiguredApplication(
             .join(" ")}
           onPointerDown={onContentPointerDown}
         >
-          {content}
+          {props.destination === "planner" && planner !== null ? (
+            <DesktopPlanner {...planner} />
+          ) : (
+            content
+          )}
         </div>
           </div>
           <DesktopTaskWorkspace
