@@ -308,7 +308,7 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
       JSON.stringify({
         ...remoteTask,
         title: "Remote conflict choice",
-        updated_at: "2026-11-22T14:30:00.000Z",
+        updated_at: new Date().toISOString(),
       }) + "\n",
       "utf8",
     );
