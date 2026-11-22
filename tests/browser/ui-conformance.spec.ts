@@ -213,6 +213,7 @@ async function themeSnapshot(page: Page): Promise<{
     readonly foreground: string;
     readonly background: string;
   }[];
+  readonly motionDurations: readonly string[];
 }> {
   const active = activeWeek(page);
   await expect(active.locator(".jig-task-card").first()).toBeVisible();
@@ -284,6 +285,21 @@ async function themeSnapshot(page: Page): Promise<{
       logoPrimary: getComputedStyle(logoPrimary).stroke || getComputedStyle(logoPrimary).fill,
       logoAccent: getComputedStyle(logoAccent).fill,
       statusPairs,
+      motionDurations: [
+        "--duration-fast-min",
+        "--duration-fast",
+        "--duration-fast-max",
+        "--duration-medium-min",
+        "--duration-medium",
+        "--duration-medium-max",
+        "--duration-slow-min",
+        "--duration-slow",
+        "--duration-slow-max",
+      ].map((token) =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue(token)
+          .trim(),
+      ),
     };
   });
 }
@@ -2452,6 +2468,17 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
         `${preset}/${mode} Task metadata contrast`,
       ).toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
+      expect(snapshot.motionDurations).toEqual([
+        "190ms",
+        "250ms",
+        "330ms",
+        "450ms",
+        "600ms",
+        "800ms",
+        "1050ms",
+        "1400ms",
+        "1870ms",
+      ]);
       expect(
         contrastRatio(snapshot.logoPrimary, snapshot.chromeBackground),
         `${preset}/${mode} logo primary contrast on chrome`,
