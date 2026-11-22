@@ -6,6 +6,7 @@ export type WeekTransitionDirection = "today";
 
 export interface PlannerProps {
   readonly focusCurrentDayOnMount: boolean;
+  readonly onInitialTodayFocusHandled: () => void;
   readonly todayScrollRequest: number;
   readonly onTodayScrollHandled: () => void;
   readonly weekTransitionDirection: WeekTransitionDirection | null;
@@ -32,6 +33,7 @@ export function Planner(props: PlannerProps): React.ReactElement {
     <div className="jig-planner-surface">
       <WeekView
         focusCurrentDayOnMount={props.focusCurrentDayOnMount}
+        onInitialTodayFocusHandled={props.onInitialTodayFocusHandled}
         todayScrollRequest={props.todayScrollRequest}
         onTodayScrollHandled={props.onTodayScrollHandled}
         weekTransitionDirection={props.weekTransitionDirection}
