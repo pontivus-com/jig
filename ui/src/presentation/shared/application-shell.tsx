@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { Destination } from "../../destinations";
 import type { PlannerHeaderProps } from "../../planner-header";
+import type { PlannerPresenterProps } from "./planner-date-section";
 import type {
   TaskWorkspaceOverlayProps,
   TaskWorkspacePresentation,
@@ -49,11 +50,11 @@ export interface ConfiguredPresentationProps
   extends PlannerHeaderProps,
     Omit<TaskWorkspaceOverlayProps, "workspace"> {
   readonly content: ReactNode;
+  readonly planner: PlannerPresenterProps | null;
   readonly durableFeedback: ReactNode;
   readonly transientFeedback: ReactNode;
   readonly workspace: TaskWorkspacePresentation | null;
   readonly destinationTransition: Destination | null;
-  readonly todayScrollRequest: number | null;
   readonly onContentPointerDown: (
     event: PointerEvent<HTMLDivElement>,
   ) => void;
