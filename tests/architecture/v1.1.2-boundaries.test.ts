@@ -245,6 +245,42 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     }
   });
 
+  it("keeps notification Settings capability-driven and platform branches out of SettingsView", () => {
+    const settings = source("ui/src/settings.tsx");
+    const state = source("ui/src/notification-settings.ts");
+    const content = source("ui/src/notification-settings-content.tsx");
+    const taskRow = source("ui/src/task-row.tsx");
+
+    expect(settings).toContain("<NotificationSettingsContent");
+    expect(settings).not.toMatch(
+      /notificationState(?:\?|)\.platform|exact_alarm|permission-required|Android notifications|Browser notifications/,
+    );
+
+    expect(state).toContain('readonly platform: "browser"');
+    expect(state).toContain('readonly platform: "android"');
+    expect(state).toContain('readonly exact_alarm: null');
+    expect(state).toContain('"permission-required"');
+    expect(state).toContain('"unavailable"');
+
+    for (const copy of [
+      "Not supported by this browser",
+      "Not enabled",
+      "Blocked in browser settings",
+      "Notification permission required",
+      "Blocked in Android settings",
+      "Enabled · exact timing available",
+      "Enabled · exact timing unavailable",
+      "Exact timing settings",
+    ]) {
+      expect(content).toContain(copy);
+    }
+    expect(content).toContain('presentation.action === "enable"');
+    expect(content).toContain('presentation.action === "exact-settings"');
+    expect(taskRow).not.toMatch(
+      /NotificationSettingsState|exact_alarm|requestNotificationPermission/,
+    );
+  });
+
   it("prevents desktop/narrow presenter cross-imports and outward imports from shared leaves", () => {
     for (const [path, content] of sourceFiles("ui/src/presentation/desktop")) {
       expect(content, path).not.toMatch(/from\s+["'][^"']*(?:\/|\.\.)narrow(?:\/|["'])/);
