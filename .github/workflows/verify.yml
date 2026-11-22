@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -25,7 +25,12 @@ jobs:
       - name: Install exact frozen dependency graph
         run: bun install --frozen-lockfile
       - name: Generate v1.1.2 theme artifacts
-        run: bun run theme:build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${GITHUB_HEAD_REF}"
+          git checkout -B "${GITHUB_HEAD_REF}" "origin/${GITHUB_HEAD_REF}"
+          bun run theme:build
       - name: Retain generated v1.1.2 theme artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -40,6 +45,19 @@ jobs:
             ui/src/themes/*.d.ts
           if-no-files-found: error
           retention-days: 1
+      - name: Commit generated v1.1.2 theme artifacts
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- ui/src/jig.css ui/src/jig.js ui/src/jig.d.ts ui/src/jig.variants.d.ts ui/src/themes; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ui/src/jig.css ui/src/jig.js ui/src/jig.d.ts ui/src/jig.variants.d.ts ui/src/themes
+          git commit -m "theme(v1.1.2): regenerate governed theme artifacts"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
       - name: Verify PR release metadata
         if: github.event_name == 'pull_request'
         run: bun scripts/verify-release.ts --mode pr --base origin/master
