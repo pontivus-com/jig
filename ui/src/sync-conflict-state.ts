@@ -1,7 +1,7 @@
 import type { PortableSnapshot } from "../../src/core/portable";
 import {
   applyJigDataResolution,
-  deriveRecovery.JigDataDateOrders,
+  deriveJigDataDateOrders,
   jigDataConflictKey,
 } from "../../src/core/synchronization-recovery";
 import type * as Recovery from "../../src/core/synchronization-recovery";
@@ -84,7 +84,7 @@ function requiredDateOrders(
   conflictCase: Recovery.JigDataConflictCase,
   choices: ReadonlyMap<string, Recovery.ReconciliationSide>,
 ): readonly Recovery.JigDataDateOrder[] | null {
-  return deriveRecovery.JigDataDateOrders(
+  return deriveJigDataDateOrders(
     conflictCase,
     choicesFor(conflictCase, choices),
   );
@@ -116,7 +116,7 @@ function resolutionFromDraft(
 ): Recovery.JigDataResolution | null {
   const conflictCase = state.conflict_case;
   const choices = choicesFor(conflictCase, state.choices);
-  const required = deriveRecovery.JigDataDateOrders(conflictCase, choices);
+  const required = deriveJigDataDateOrders(conflictCase, choices);
   if (
     required === null ||
     (
