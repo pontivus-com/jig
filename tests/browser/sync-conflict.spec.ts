@@ -274,11 +274,21 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     name: "Resolve sync conflict",
   });
   await expect(desktopResolver).toBeVisible();
-  await desktopResolver.getByRole("radio").first().check();
+  await desktopResolver
+    .getByText("This device", { exact: true })
+    .click();
+  await expect(
+    desktopResolver.getByRole("radio").first(),
+  ).toBeChecked();
   await desktopResolver
     .getByRole("button", { name: "Next conflict", exact: true })
     .click();
-  await desktopResolver.getByRole("radio").nth(1).check();
+  await desktopResolver
+    .getByText("Keep changed Task", { exact: true })
+    .click();
+  await expect(
+    desktopResolver.getByRole("radio").nth(1),
+  ).toBeChecked();
   await expect(
     desktopResolver.getByRole("heading", {
       name: "Review Task order",
@@ -317,11 +327,21 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     }),
   ).toHaveCount(0);
 
-  await reopened.getByRole("radio").first().check();
+  await reopened
+    .getByText("This device", { exact: true })
+    .click();
+  await expect(
+    reopened.getByRole("radio").first(),
+  ).toBeChecked();
   await reopened
     .getByRole("button", { name: "Next conflict", exact: true })
     .click();
-  await reopened.getByRole("radio").nth(1).check();
+  await reopened
+    .getByText("Keep changed Task", { exact: true })
+    .click();
+  await expect(
+    reopened.getByRole("radio").nth(1),
+  ).toBeChecked();
   await reopened
     .getByRole("button", { name: "Confirm order", exact: true })
     .click();
@@ -454,7 +474,11 @@ test("resolver states remain theme-safe across every Theme × Light/Dark combina
         '"kind": "task"',
       );
 
-      await radios.first().check();
+      await technicalTrigger.click();
+      await resolver
+        .getByText("This device", { exact: true })
+        .click();
+      await expect(radios.first()).toBeChecked();
       await resolver
         .getByRole("button", {
           name: "Next conflict",
@@ -467,7 +491,12 @@ test("resolver states remain theme-safe across every Theme × Light/Dark combina
       await expect(
         resolver.getByText("Keep changed Task", { exact: true }),
       ).toBeVisible();
-      await resolver.getByRole("radio").nth(1).check();
+      await resolver
+        .getByText("Keep changed Task", { exact: true })
+        .click();
+      await expect(
+        resolver.getByRole("radio").nth(1),
+      ).toBeChecked();
 
       await expect(
         resolver.getByRole("heading", {
