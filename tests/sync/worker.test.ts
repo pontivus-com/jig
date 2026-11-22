@@ -876,6 +876,7 @@ describe("cross-installation synchronization worker", () => {
     };
     readonly candidateWrites: () => number;
     readonly candidateDeletes: () => number;
+    readonly observations: () => number;
   }> {
     const ancestorTask = task("301", "Shared conflict base");
     const localTask: Task = {
@@ -977,11 +978,13 @@ describe("cross-installation synchronization worker", () => {
       candidateBuildHook,
       candidateWrites: () => writes,
       candidateDeletes: () => deletes,
+      observations: () => fake.observes.count,
     };
   }
 
   it("rejects a resolver draft when SQLite revision changes while it is open", async () => {
     const harness = await semanticConflictHarness();
+    const observationsBeforeResolution = harness.observations();
     const state = await readCanonicalState(db);
     await applyTaskCommand(
       db,
@@ -1009,12 +1012,12 @@ describe("cross-installation synchronization worker", () => {
         (candidate) => candidate.title,
       ),
     ).toContain("Concurrent local mutation");
-    const fresh =
-      harness.controller.readSynchronizationConflict();
-    expect(fresh).not.toBeNull();
-    expect(fresh?.expected_revision).not.toBe(
-      harness.conflictCase.expected_revision,
+    expect(harness.observations()).toBeGreaterThan(
+      observationsBeforeResolution,
     );
+    expect(
+      harness.controller.readSynchronizationConflict(),
+    ).toBeNull();
   });
 
   it("rejects a resolver draft when the local portable head changes while it is open", async () => {
