@@ -121,3 +121,50 @@
   min-height: 12rem;
 }
 
+.jig-app-header-onboarding-desktop {
+  min-height: 2.75rem;
+  padding: 0 var(--spacing-1);
+}
+
+.jig-setup-desktop {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  padding: var(--spacing-7) var(--spacing-6);
+}
+
+.jig-setup-layout-desktop {
+  display: grid;
+  width: min(100%, 72rem);
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 30rem);
+  align-items: center;
+  gap: var(--spacing-8);
+  margin-inline: auto;
+}
+
+.jig-setup-desktop .jig-setup-heading h1 {
+  font-size: calc(var(--font-size-2xl) * 1.35);
+  line-height: 1.08;
+}
+
+.jig-setup-desktop .jig-setup-benefits {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-4);
+}
+
+.jig-setup-desktop .jig-setup-benefit {
+  gap: var(--spacing-2);
+}
+
+.jig-setup-desktop .jig-setup-choice {
+  padding: var(--spacing-5);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: calc(var(--radius-element) + var(--border-width));
+  background: var(--color-background-surface);
+  box-shadow: var(--shadow-med);
+}
+
+.jig-setup-desktop .jig-setup-card {
+  box-shadow: var(--shadow-med);
+}
+
