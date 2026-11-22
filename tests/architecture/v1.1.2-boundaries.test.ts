@@ -231,6 +231,9 @@ describe("v1.1.2 corrective architecture boundaries", () => {
       declarationOwners(/\b(?:const|export const)\s+DESTINATIONS\s*=\s*\[/),
     ).toEqual(["ui/src/destinations.ts"]);
     expect(
+      declarationOwners(/export type Destination\s*=/),
+    ).toEqual(["ui/src/destinations.ts"]);
+    expect(
       declarationOwners(/export type TaskWorkspaceState\s*=/),
     ).toEqual(["ui/src/task-workspace.tsx"]);
     expect(
