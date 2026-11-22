@@ -1,6 +1,12 @@
 import type { TokenValue } from "@astryxdesign/core/theme";
 
-export const jigProductLocalTokens = {
+export interface JigSurfaceRoles {
+  readonly chrome: TokenValue;
+  readonly planner: TokenValue;
+  readonly task: TokenValue;
+}
+
+const sharedJigProductLocalTokens = {
   "--jig-state-today-border": "var(--color-border-teal)",
   "--jig-state-today-text": "var(--color-text-teal)",
   "--jig-state-task-selected-bg": "var(--color-info-muted)",
@@ -15,11 +21,6 @@ export const jigProductLocalTokens = {
   "--jig-status-healthy-bg": "var(--color-success-muted)",
   "--jig-status-healthy-border": "var(--color-border-success)",
   "--jig-status-healthy-text": "var(--color-text-success)",
-  "--jig-chrome-surface": "var(--color-background-body)",
-  "--jig-planner-surface":
-    "color-mix(in srgb, var(--color-background-surface) 88%, var(--color-background-muted) 12%)",
-  "--jig-task-surface":
-    "color-mix(in srgb, var(--color-background-card) 50%, var(--color-background-body) 50%)",
   "--jig-state-hover-bg":
     "color-mix(in srgb, var(--jig-task-surface) 95%, var(--color-tint-hover) 5%)",
   "--jig-state-pressed-bg":
@@ -28,3 +29,14 @@ export const jigProductLocalTokens = {
   "--jig-brand-primary": "var(--color-icon-primary)",
   "--jig-brand-accent": "var(--color-icon-accent)",
 } as const satisfies Record<string, TokenValue>;
+
+export function jigProductLocalTokens(
+  surfaceRoles: JigSurfaceRoles,
+): Record<string, TokenValue> {
+  return {
+    ...sharedJigProductLocalTokens,
+    "--jig-chrome-surface": surfaceRoles.chrome,
+    "--jig-planner-surface": surfaceRoles.planner,
+    "--jig-task-surface": surfaceRoles.task,
+  };
+}
