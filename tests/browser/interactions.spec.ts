@@ -62,25 +62,28 @@ async function taskDropTarget(
   );
   const count = await cards.count();
   const available: number[] = [];
+  let sourceIndex = -1;
   for (let index = 0; index < count; index += 1) {
     const title = (
       await cards.nth(index).locator(".jig-task-title").innerText()
     ).trim();
-    if (title !== sourceTitle) {
+    if (title === sourceTitle) {
+      sourceIndex = index;
+    } else {
       available.push(index);
     }
   }
 
-  if (available.length === 0) {
+  if (available.length === 0 || destinationIndex >= available.length) {
     return {
-      target: dateDropZone(page, date),
-      targetYRatio: 0.9,
+      target: page.locator(`[data-jig-drop-tail="${date}"]`),
+      targetYRatio: 0.5,
     };
   }
 
-  if (destinationIndex >= available.length) {
+  if (sourceIndex >= 0 && destinationIndex >= sourceIndex) {
     return {
-      target: cards.nth(available[available.length - 1] ?? 0),
+      target: cards.nth(available[Math.max(0, destinationIndex - 1)] ?? 0),
       targetYRatio: 0.75,
     };
   }
