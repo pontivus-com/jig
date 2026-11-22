@@ -114,9 +114,17 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function OnboardingHeader(): React.ReactElement {
+function OnboardingHeader({
+  layoutMode,
+}: Readonly<{ layoutMode: LayoutMode }>): React.ReactElement {
   return (
-    <header className="jig-app-header jig-app-header-onboarding">
+    <header
+      className={[
+        "jig-app-header",
+        "jig-app-header-onboarding",
+        `jig-app-header-onboarding-${layoutMode}`,
+      ].join(" ")}
+    >
       <span className="jig-header-brand">
         <span className="jig-brand-logo-wrap" aria-hidden="true">
           <JigLogo />
@@ -1201,7 +1209,7 @@ export function App(): React.ReactElement {
             nativeBackHandlerRef={nativeBackHandlerRef}
           />
         ) : (
-          <ApplicationShell topNav={<OnboardingHeader />}>
+          <ApplicationShell topNav={<OnboardingHeader layoutMode={layoutMode} />}>
             <div className="jig-content-frame jig-content-frame-onboarding">
               <div className="jig-content">{bootstrapBody}</div>
             </div>
