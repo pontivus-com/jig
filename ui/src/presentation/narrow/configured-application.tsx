@@ -23,22 +23,26 @@ export function NarrowConfiguredApplication(
   } = props;
 
   return (
-    <ApplicationShell
-      topNav={<PlannerHeader {...componentProps} layoutMode="narrow" />}
+    <div
+      data-jig-configured-presentation="narrow"
+      className="jig-configured-root jig-configured-narrow"
     >
-      {durableFeedback}
-      {transientFeedback}
-      <div
-        data-jig-configured-presentation="narrow"
-        className={[
-          "jig-content-frame",
+      <ApplicationShell
+        topNav={<PlannerHeader {...componentProps} layoutMode="narrow" />}
+      >
+        <div className="jig-configured-body">
+          {durableFeedback}
+          {transientFeedback}
+          <div
+            className={[
+              "jig-content-frame",
           todayScrollRequest > 0
             ? "jig-content-frame-today-smooth"
             : "",
         ]
-          .filter(Boolean)
-          .join(" ")}
-      >
+              .filter(Boolean)
+              .join(" ")}
+          >
         <div
           key={props.destination}
           className={[
@@ -57,26 +61,28 @@ export function NarrowConfiguredApplication(
         >
           {content}
         </div>
-      </div>
-      <TaskWorkspaceBottomSheet
-        workspace={props.destination === "settings" ? null : workspace}
-        externalError={componentProps.externalError}
-        isSaving={componentProps.isSaving}
-        recurrenceSeries={componentProps.recurrenceSeries}
-        onDraftChange={componentProps.onDraftChange}
-        onSave={componentProps.onSave}
-        onDelete={componentProps.onDelete}
-        onToggleComplete={componentProps.onToggleComplete}
-        onClose={componentProps.onClose}
-      />
-      {workspace === null ? (
-        <CompactApplicationNavigation
-          destination={props.destination}
-          showAdd
-          onAdd={componentProps.onAdd}
-          onNavigate={componentProps.onNavigate}
-        />
-      ) : null}
-    </ApplicationShell>
+          </div>
+          <TaskWorkspaceBottomSheet
+            workspace={props.destination === "settings" ? null : workspace}
+            externalError={componentProps.externalError}
+            isSaving={componentProps.isSaving}
+            recurrenceSeries={componentProps.recurrenceSeries}
+            onDraftChange={componentProps.onDraftChange}
+            onSave={componentProps.onSave}
+            onDelete={componentProps.onDelete}
+            onToggleComplete={componentProps.onToggleComplete}
+            onClose={componentProps.onClose}
+          />
+          {workspace === null ? (
+            <CompactApplicationNavigation
+              destination={props.destination}
+              showAdd
+              onAdd={componentProps.onAdd}
+              onNavigate={componentProps.onNavigate}
+            />
+          ) : null}
+        </div>
+      </ApplicationShell>
+    </div>
   );
 }
