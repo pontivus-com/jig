@@ -12,7 +12,7 @@ import { useMemo } from "react";
 import type { RecurrenceSeries } from "../../../../src/core/recurrence";
 import type { Task } from "../../../../src/core/task";
 import { jigDataConflictKey } from "../../../../src/core/synchronization-recovery";
-import type * as Recovery from "../../../../src/core/synchronization-recovery";
+import type * as recoveryTypes from "../../../../src/core/synchronization-recovery";
 import { formatCivilDate } from "../../dates";
 import { recurrenceSummary } from "../../task-editor";
 import {
@@ -74,7 +74,7 @@ function taskValues(task: Task | null): readonly ComparisonValue[] {
 function changedTaskValues(
   local: Task | null,
   remote: Task | null,
-  side: Recovery.ReconciliationSide,
+  side: recoveryTypes.ReconciliationSide,
 ): readonly ComparisonValue[] {
   const selected = side === "local" ? taskValues(local) : taskValues(remote);
   const other = side === "local" ? taskValues(remote) : taskValues(local);
@@ -113,7 +113,7 @@ function familyTitles(tasks: readonly Task[]): string {
 }
 
 function familyValues(
-  side: Recovery.JigDataConflictFamilySide,
+  side: recoveryTypes.JigDataConflictFamilySide,
 ): readonly ComparisonValue[] {
   if (side.series.length === 0 && side.tasks.length === 0) {
     return [["State", "Deleted"]];
@@ -129,10 +129,10 @@ function familyValues(
 
 function changedFamilyValues(
   conflict: Extract<
-    Recovery.JigDataConflict,
+    recoveryTypes.JigDataConflict,
     { readonly kind: "recurrence-family" }
   >,
-  side: Recovery.ReconciliationSide,
+  side: recoveryTypes.ReconciliationSide,
 ): readonly ComparisonValue[] {
   const selected = familyValues(
     side === "local" ? conflict.local : conflict.remote,
@@ -147,8 +147,8 @@ function changedFamilyValues(
 }
 
 function sideDeleted(
-  conflict: Recovery.JigDataConflict,
-  side: Recovery.ReconciliationSide,
+  conflict: recoveryTypes.JigDataConflict,
+  side: recoveryTypes.ReconciliationSide,
 ): boolean {
   if (conflict.kind === "task") {
     return (side === "local" ? conflict.local : conflict.remote) === null;
@@ -158,11 +158,11 @@ function sideDeleted(
 }
 
 function choiceHeading(
-  conflict: Recovery.JigDataConflict,
-  side: Recovery.ReconciliationSide,
+  conflict: recoveryTypes.JigDataConflict,
+  side: recoveryTypes.ReconciliationSide,
 ): string {
   if (sideDeleted(conflict, side)) return "Keep deleted";
-  const other: Recovery.ReconciliationSide =
+  const other: recoveryTypes.ReconciliationSide =
     side === "local" ? "remote" : "local";
   if (sideDeleted(conflict, other)) {
     return conflict.kind === "task"
@@ -173,8 +173,8 @@ function choiceHeading(
 }
 
 function comparisonValues(
-  conflict: Recovery.JigDataConflict,
-  side: Recovery.ReconciliationSide,
+  conflict: recoveryTypes.JigDataConflict,
+  side: recoveryTypes.ReconciliationSide,
 ): readonly ComparisonValue[] {
   return conflict.kind === "task"
     ? changedTaskValues(conflict.local, conflict.remote, side)
@@ -185,8 +185,8 @@ function ChoiceSummary({
   conflict,
   side,
 }: Readonly<{
-  conflict: Recovery.JigDataConflict;
-  side: Recovery.ReconciliationSide;
+  conflict: recoveryTypes.JigDataConflict;
+  side: recoveryTypes.ReconciliationSide;
 }>): React.ReactElement {
   const values = comparisonValues(conflict, side);
   return (
@@ -210,7 +210,7 @@ function ChoiceSummary({
   );
 }
 
-function conflictTitle(conflict: Recovery.JigDataConflict): string {
+function conflictTitle(conflict: recoveryTypes.JigDataConflict): string {
   if (conflict.kind === "task") {
     return (
       conflict.local?.title ??
@@ -229,7 +229,7 @@ function conflictTitle(conflict: Recovery.JigDataConflict): string {
 
 function technicalDetails(
   state: SyncConflictDraftState,
-  conflict: Recovery.JigDataConflict,
+  conflict: recoveryTypes.JigDataConflict,
 ): string {
   return JSON.stringify(
     {
@@ -251,7 +251,7 @@ function ConflictChoice({
   onCopyTechnicalDetails,
 }: Readonly<{
   state: SyncConflictDraftState;
-  conflict: Recovery.JigDataConflict;
+  conflict: recoveryTypes.JigDataConflict;
   onAction: (action: SyncConflictDraftAction) => void;
   onCopyTechnicalDetails: (value: string) => void;
 }>): React.ReactElement {
