@@ -160,7 +160,8 @@ function ConfiguredApp({
     useState<Destination | null>(null);
   const [plannerState, setPlannerState] =
     useState<PlannerState>(initialPlannerState);
-  const [todayScrollRequest, setTodayScrollRequest] = useState(0);
+  const [todayScrollRequest, setTodayScrollRequest] = useState<number | null>(null);
+  const todayScrollSequenceRef = useRef(0);
   const [initialTodayFocusPending, setInitialTodayFocusPending] =
     useState(() => layoutMode === "narrow");
   const [weekTransitionDirection, setWeekTransitionDirection] =
@@ -725,7 +726,8 @@ function ConfiguredApp({
       });
     }
     if (layoutMode === "narrow") {
-      setTodayScrollRequest((current) => current + 1);
+      todayScrollSequenceRef.current += 1;
+      setTodayScrollRequest(todayScrollSequenceRef.current);
     }
   }, [layoutMode, plannerState.displayedHorizonStart]);
   const clearInitialTodayFocus = useCallback((): void => {
@@ -733,7 +735,7 @@ function ConfiguredApp({
   }, []);
 
   const clearTodayScrollRequest = useCallback((): void => {
-    setTodayScrollRequest(0);
+    setTodayScrollRequest(null);
   }, []);
 
   const repositoryStatus = repositoryStatusPresentation(status, {
