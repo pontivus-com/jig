@@ -121,6 +121,7 @@ v1.1 adds one independently installable **Android** application while preserving
 
 - The Android application ID is `com.pontivus.jig`; native release version metadata derives from root `package.json.version`, not a second manually maintained version.
 - Android uses app-owned private repository/SQLite storage; arbitrary device-local worktree selection is outside v1.1.
+- Native certification device-state safety: never clear app data, uninstall/reinstall in a way that removes app-private data, factory-reset, or otherwise wipe the connected Android phone's local state unless the user explicitly orders that exact destructive action. Installing or updating the certified APK must preserve the existing device/app state.
 - Offline Task mutation commits locally before synchronization. Background Git synchronization is an optimization rather than a correctness dependency.
 - Android daily rollover runs through the same canonical persistence transaction on initial activation, resume and foreground local-midnight transition.
 - Development APKs are local certification artifacts. **F-Droid is the first intended public Android distribution target**, but external F-Droid submission/publication is deferred until Jig is stable and the required marketing/store material is ready. F-Droid compatibility/readiness remains an engineering constraint; publication is not a v1.1 implementation or release gate. Google Play is deferred; no core behavior may depend on Play Services/Firebase/proprietary runtime services.

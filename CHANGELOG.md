@@ -15,6 +15,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Fixed
 
+- **Android semantic-conflict entry:** Export a pending local portable snapshot before classifying a remote-ahead state, allowing related divergence to reach the governed native semantic-conflict resolver instead of remaining at generic synchronization attention.
 - **Theme surface separation:** Restored distinct application chrome, Planner/day canvas and Task-card surface roles across all 13 governed themes in Light and Dark, with theme-specific role values authored only in typed theme sources/generated Astryx artifacts.
 - **Planner viewport ownership:** Restored Astryx AppShell main as the sole configured page scroll owner so empty, short and overflowing Planner states fill/scroll through the governed viewport owner without a competing nested scroller.
 - **Task drag-and-drop:** Replaced insertion-line movement with the real shared Task-card DragOverlay plus React-owned card-sized prospective placement. Pointer/touch activation, same-date/cross-date/empty-date placement, cancellation and persisted final position remain on the single pinned dnd-kit path with optimistic DOM sorting disabled.

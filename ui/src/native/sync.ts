@@ -804,6 +804,30 @@ export function createAndroidSyncController(
       if (
         decision.reason === "diverged" &&
         mayPush &&
+        localPending &&
+        observation.state === "present" &&
+        observation.lineage === "remote-ahead"
+      ) {
+        try {
+          beginPhase("export-local");
+          await exportCurrent();
+          return processObservation(
+            await observe("verify-remote"),
+            true,
+          );
+        } catch (error) {
+          recordFailure(
+            "export-local",
+            "local-export-failed",
+            true,
+            error,
+          );
+          return setRemoteState("pending", "issue");
+        }
+      }
+      if (
+        decision.reason === "diverged" &&
+        mayPush &&
         !localPending &&
         observation.state === "present" &&
         observation.lineage === "diverged"
