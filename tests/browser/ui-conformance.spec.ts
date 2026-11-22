@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import {
   apiCommand,
   apiState,
@@ -1025,7 +1025,7 @@ test("adding and editing a Task confirm success and close the workspace", async 
     });
     await editWorkspace.getByLabel("Title").fill(`Edited ${width}`);
     let saveCommandCount = 0;
-    const observeSaveCommand = (request: import("@playwright/test").Request): void => {
+    const observeSaveCommand = (request: Request): void => {
       const url = new URL(request.url());
       if (url.pathname === "/api/v1/commands" && request.method() === "POST") {
         saveCommandCount += 1;
