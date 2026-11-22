@@ -274,6 +274,12 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     name: "Resolve sync conflict",
   });
   await expect(desktopResolver).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath(
+      "v1.1-sync-conflict-desktop-choices.png",
+    ),
+    fullPage: true,
+  });
   await desktopResolver.getByRole("radio").first().click();
   await expect(
     desktopResolver.getByRole("radio").first(),
@@ -291,6 +297,12 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
       exact: true,
     }),
   ).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath(
+      "v1.1-sync-conflict-desktop-order-review.png",
+    ),
+    fullPage: true,
+  });
 
   await page.setViewportSize({ width: 390, height: 844 });
   const narrowResolver = page.getByRole("dialog", {
@@ -303,6 +315,12 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
       exact: true,
     }),
   ).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath(
+      "v1.1-sync-conflict-narrow-order-review.png",
+    ),
+    fullPage: true,
+  });
 
   await narrowResolver
     .getByRole("button", { name: "Cancel", exact: true })
@@ -316,6 +334,12 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     name: "Resolve sync conflict",
   });
   await expect(reopened).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath(
+      "v1.1-sync-conflict-narrow-reopened-choices.png",
+    ),
+    fullPage: true,
+  });
   await expect(
     reopened.getByRole("heading", {
       name: "Review Task order",
@@ -465,6 +489,14 @@ test("resolver states remain theme-safe across every Theme × Light/Dark combina
       await expect(resolver.locator("pre")).toContainText(
         '"kind": "task"',
       );
+      if (theme === "jig") {
+        await page.screenshot({
+          path: test.info().outputPath(
+            `v1.1-sync-conflict-jig-${mode}-technical.png`,
+          ),
+          fullPage: true,
+        });
+      }
 
       await technicalTrigger.click();
       await resolver.getByRole("radio").first().click();
@@ -517,6 +549,12 @@ test("resolver states remain theme-safe across every Theme × Light/Dark combina
         }),
       ).toBeVisible();
       await expect(useResolution).toBeEnabled();
+      await page.screenshot({
+        path: test.info().outputPath(
+          `v1.1-sync-conflict-${theme}-${mode}-final.png`,
+        ),
+        fullPage: true,
+      });
 
       const themeState = await page.evaluate(() => ({
         theme: document.documentElement.getAttribute(
