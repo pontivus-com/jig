@@ -466,6 +466,26 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     expect(portableStore).not.toMatch(/from\s+["']\.\/remote["']/);
     expect(remote).toMatch(/from\s+["']\.\/portable-store["']/);
 
+    const recoveryEffects = "src/shell/git/recovery.ts";
+    expect(existsSync(recoveryEffects)).toBe(true);
+    if (existsSync(recoveryEffects)) {
+      const recovery = source(recoveryEffects);
+      expect(recovery).toContain(
+        'import type { RecoveryCommitSpec } from "../../core/synchronization-recovery"',
+      );
+      for (const policyName of [
+        "reconcileRelatedPortableSnapshots",
+        "buildJigDataConflictCase",
+        "deriveJigDataDateOrders",
+        "applyJigDataResolution",
+      ]) {
+        expect(recovery).not.toContain(policyName);
+      }
+      expect(recovery).not.toMatch(
+        /SYNC_HEALTHY_POLL_MS|SYNC_RETRY_SECONDS|SYNCHRONIZATION_MUTATION_DEBOUNCE_MS/,
+      );
+    }
+
     if (existsSync("src/github")) {
       for (const [path, content] of sourceFiles("src/github")) {
         expect(content, path).not.toMatch(
