@@ -2410,7 +2410,7 @@ test("AppShell main is the sole configured scroller across governed widths", asy
 test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System mode", async ({
   page,
 }, testInfo) => {
-  test.setTimeout(120_000);
+  test.setTimeout(300_000);
   const today = await browserCivilDate(page);
   await createTask(page, "Theme matrix contract", today);
   await page.reload();
@@ -2420,24 +2420,22 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
     for (const mode of ["light", "dark"] as const) {
       await setAppearance(page, preset, mode);
       const snapshot = await themeSnapshot(page);
-      if (preset === "jig") {
-        await page.screenshot({
-          path: testInfo.outputPath(
-            `v1.1-theme-jig-${mode}-desktop.png`,
-          ),
-          fullPage: true,
-        });
-        await page.setViewportSize({ width: 390, height: 844 });
-        await waitForResponsiveHeader(page, 390);
-        await page.screenshot({
-          path: testInfo.outputPath(
-            `v1.1-theme-jig-${mode}-mobile-390.png`,
-          ),
-          fullPage: true,
-        });
-        await page.setViewportSize({ width: 1440, height: 900 });
-        await waitForResponsiveHeader(page, 1440);
-      }
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `v1.1-theme-${preset}-${mode}-desktop.png`,
+        ),
+        fullPage: true,
+      });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await waitForResponsiveHeader(page, 390);
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `v1.1-theme-${preset}-${mode}-mobile-390.png`,
+        ),
+        fullPage: true,
+      });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await waitForResponsiveHeader(page, 1440);
       expect(snapshot.rootTheme).toBe(preset);
       expect(snapshot.explicitMode).toBe(mode);
       expect(snapshot.chromeBackground, `${preset}/${mode} chrome matches body`)
