@@ -20,15 +20,17 @@ export function DesktopConfiguredApplication(
   } = props;
 
   return (
-    <ApplicationShell
-      topNav={<PlannerHeader {...componentProps} layoutMode="desktop" />}
+    <div
+      data-jig-configured-presentation="desktop"
+      className="jig-configured-root jig-configured-desktop"
     >
-      {durableFeedback}
-      {transientFeedback}
-      <div
-        data-jig-configured-presentation="desktop"
-        className="jig-content-frame"
+      <ApplicationShell
+        topNav={<PlannerHeader {...componentProps} layoutMode="desktop" />}
       >
+        <div className="jig-configured-body">
+          {durableFeedback}
+          {transientFeedback}
+          <div className="jig-content-frame">
         <div
           key={props.destination}
           className={[
@@ -47,18 +49,20 @@ export function DesktopConfiguredApplication(
         >
           {content}
         </div>
-      </div>
-      <TaskWorkspaceDrawer
-        workspace={props.destination === "settings" ? null : workspace}
-        externalError={componentProps.externalError}
-        isSaving={componentProps.isSaving}
-        recurrenceSeries={componentProps.recurrenceSeries}
-        onDraftChange={componentProps.onDraftChange}
-        onSave={componentProps.onSave}
-        onDelete={componentProps.onDelete}
-        onToggleComplete={componentProps.onToggleComplete}
-        onClose={componentProps.onClose}
-      />
-    </ApplicationShell>
+          </div>
+          <TaskWorkspaceDrawer
+            workspace={props.destination === "settings" ? null : workspace}
+            externalError={componentProps.externalError}
+            isSaving={componentProps.isSaving}
+            recurrenceSeries={componentProps.recurrenceSeries}
+            onDraftChange={componentProps.onDraftChange}
+            onSave={componentProps.onSave}
+            onDelete={componentProps.onDelete}
+            onToggleComplete={componentProps.onToggleComplete}
+            onClose={componentProps.onClose}
+          />
+        </div>
+      </ApplicationShell>
+    </div>
   );
 }
