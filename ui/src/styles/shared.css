@@ -1344,6 +1344,7 @@ body {
 
 .jig-configured-body {
   display: flex;
+  block-size: 100%;
   min-block-size: 100%;
   min-height: 0;
   flex-direction: column;
