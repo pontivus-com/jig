@@ -4,7 +4,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
-> **Target release: v1.1.2.** Corrective work is tracked in issue #66. These entries describe the active corrective scope and must be reconciled to delivered `Fixed`/`Changed` outcomes before the release metadata transition.
+> **Target release: v1.1.2.** Corrective work is tracked in issue #66. Package metadata remains at v1.1.1 until the governed `release/v1.1.2` transition. These entries describe the active corrective scope and must be reconciled to delivered `Fixed`/`Changed` outcomes before release.
 
 ### In progress
 
