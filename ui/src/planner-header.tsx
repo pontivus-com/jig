@@ -3,44 +3,17 @@ import {
   Icon,
   IconButton,
 } from "@astryxdesign/core";
-import type {
-  IconName,
-  NamespacedIconName,
-} from "@astryxdesign/core/Icon";
 import type { ReactNode } from "react";
 import { JIG_ICON_KEYS, JigIcon } from "./jig-icons";
+import {
+  DESTINATIONS,
+  destinationDefinition,
+  type DestinationIconName,
+} from "./destinations";
 import { JigLogo } from "./jig-logo";
 import type { Destination } from "./navigation";
 import type { LayoutMode } from "./use-layout-mode";
 
-const DESTINATIONS = [
-  {
-    id: "planner",
-    label: "Planner",
-    subtitle: null,
-    icon: "viewColumns",
-  },
-  {
-    id: "history",
-    label: "History",
-    subtitle: "Completed work grouped by actual completion date",
-    icon: JIG_ICON_KEYS.history,
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    subtitle: "Repository, synchronization, appearance and diagnostics",
-    icon: "wrench",
-  },
-] as const satisfies readonly {
-  readonly id: Destination;
-  readonly label: string;
-  readonly subtitle: string | null;
-  readonly icon: IconName | NamespacedIconName;
-}[];
-
-type DestinationDefinition = (typeof DESTINATIONS)[number];
-type DestinationIconName = DestinationDefinition["icon"];
 
 export interface PlannerHeaderProps {
   readonly destination: Destination;
@@ -55,18 +28,6 @@ export interface PlannerHeaderProps {
   readonly onNextWeek: () => void;
   readonly onAdd: () => void;
   readonly onNavigate: (destination: Destination) => void;
-}
-
-function destinationDefinition(
-  destination: Destination,
-): DestinationDefinition {
-  for (const item of DESTINATIONS) {
-    if (item.id === destination) {
-      return item;
-    }
-  }
-
-  throw new Error(`Unknown Jig destination: ${destination}`);
 }
 
 function DestinationIcon({
