@@ -165,7 +165,7 @@ describe("UI ownership architecture", () => {
         [
           'chrome: "var(--color-background-body)"',
           'planner: "var(--color-background-surface)"',
-          '"color-mix(in oklab, var(--color-background-card) 91%, var(--color-text-primary) 9%)"',
+          '"color-mix(in oklab, var(--color-background-card) 94%, var(--color-text-primary) 6%)"',
         ],
       ],
       [
@@ -238,7 +238,7 @@ describe("UI ownership architecture", () => {
           "chrome: solarizedPalette.body",
           "planner: solarizedPalette.surface",
           '"color-mix(in oklab, var(--color-background-card) 88%, var(--color-text-primary) 12%)"',
-          '"color-mix(in oklab, var(--color-background-card) 94%, var(--color-text-primary) 6%)"',
+          '"color-mix(in oklab, var(--color-background-card) 91%, var(--color-text-primary) 9%)"',
         ],
       ],
       [
