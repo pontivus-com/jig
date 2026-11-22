@@ -1938,15 +1938,30 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
   }
 });
 
-test("application frame is full-bleed and switches at the 73rem boundary", async ({
+test("AppShell main is the sole configured scroller across governed widths", async ({
   page,
 }) => {
-  for (const viewport of [
+  const viewports = [
     { width: 1440, height: 900 },
+    { width: 1168, height: 900 },
+    { width: 1167, height: 900 },
     { width: 390, height: 844 },
-  ]) {
+    { width: 320, height: 720 },
+  ] as const;
+
+  for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await waitForResponsiveHeader(page, viewport.width);
+
+    const expectedPresentation =
+      viewport.width >= 1168 ? "desktop" : "narrow";
+    await expect(
+      page.locator(
+        `[data-jig-configured-presentation="${expectedPresentation}"]`,
+      ),
+    ).toHaveCount(1);
+    await expect(applicationScrollOwner(page)).toHaveCount(1);
+
     for (const selector of [
       ".jig-app-shell",
       ".jig-app-header",
@@ -1961,21 +1976,38 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
       }
     }
 
-    const frame = await page.locator(".jig-content-frame").evaluate((element) => {
-      const style = getComputedStyle(element);
+    const geometry = await page.evaluate(() => {
+      const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+      const owner = document.querySelector<HTMLElement>(".jig-app-shell main");
+      const planner = document.querySelector<HTMLElement>(".jig-planner-surface");
+      if (frame === null || owner === null || planner === null) {
+        throw new Error("Configured viewport geometry unavailable");
+      }
+      const frameStyle = getComputedStyle(frame);
       return {
-        margin: style.margin,
-        padding: style.padding,
-        border: style.borderWidth,
-        radius: style.borderRadius,
-        shadow: style.boxShadow,
+        frameOverflowX: frameStyle.overflowX,
+        frameOverflowY: frameStyle.overflowY,
+        ownerOverflowY: getComputedStyle(owner).overflowY,
+        ownerBottom: owner.getBoundingClientRect().bottom,
+        plannerBottom: planner.getBoundingClientRect().bottom,
+        margin: frameStyle.margin,
+        padding: frameStyle.padding,
+        border: frameStyle.borderWidth,
+        radius: frameStyle.borderRadius,
+        shadow: frameStyle.boxShadow,
       };
     });
-    expect(frame.margin).toBe("0px");
-    expect(frame.padding).toBe("0px");
-    expect(frame.border).toBe("0px");
-    expect(frame.radius).toBe("0px");
-    expect(frame.shadow).toBe("none");
+    expect(["visible", "clip"]).toContain(geometry.frameOverflowY);
+    expect(["visible", "clip"]).toContain(geometry.frameOverflowX);
+    expect(["auto", "scroll"]).toContain(geometry.ownerOverflowY);
+    expect(geometry.plannerBottom).toBeGreaterThanOrEqual(
+      geometry.ownerBottom - 1,
+    );
+    expect(geometry.margin).toBe("0px");
+    expect(geometry.padding).toBe("0px");
+    expect(geometry.border).toBe("0px");
+    expect(geometry.radius).toBe("0px");
+    expect(geometry.shadow).toBe("none");
 
     if (viewport.width < 1168) {
       const bottomNavigation = page.getByRole("navigation", {
@@ -1984,6 +2016,14 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
       const navigationBox = await bottomNavigation.boundingBox();
       if (navigationBox === null) {
         throw new Error("Compact bottom-navigation geometry unavailable");
+      }
+      expectNear(navigationBox.height, 64, 1);
+      const fab = page.getByRole("button", { name: "Add task", exact: true });
+      const fabBox = await fab.boundingBox();
+      expect(fabBox).not.toBeNull();
+      if (fabBox !== null) {
+        expectNear(fabBox.width, 56, 1);
+        expectNear(fabBox.height, 56, 1);
       }
       const contentPaddingBottom = await page
         .locator(".jig-content-configured-planner .jig-planner-surface")
@@ -1996,16 +2036,45 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
     }
   }
 
+  const today = await browserCivilDate(page);
+  for (let index = 0; index < 18; index += 1) {
+    await createTask(page, `Viewport overflow ${index + 1}`, today);
+  }
+  await page.reload();
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await waitForResponsiveHeader(page, viewport.width);
+    const overflow = await page.evaluate(() => {
+      const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+      const owner = document.querySelector<HTMLElement>(".jig-app-shell main");
+      if (frame === null || owner === null) {
+        throw new Error("Configured scroll owner unavailable");
+      }
+      owner.scrollTop = 120;
+      return {
+        frameOverflowY: getComputedStyle(frame).overflowY,
+        frameScrollTop: frame.scrollTop,
+        ownerScrollable: owner.scrollHeight > owner.clientHeight,
+        ownerScrollTop: owner.scrollTop,
+      };
+    });
+    expect(["visible", "clip"]).toContain(overflow.frameOverflowY);
+    expect(overflow.frameScrollTop).toBe(0);
+    expect(overflow.ownerScrollable).toBe(true);
+    expect(overflow.ownerScrollTop).toBeGreaterThan(0);
+  }
+
   await page.setViewportSize({ width: 1168, height: 900 });
   await waitForResponsiveHeader(page, 1168);
   const desktopGeometry = await activeWeek(page)
     .locator(".jig-week-column")
-    .evaluateAll(
-    (elements) => elements.slice(0, 2).map((element) => {
-      const box = element.getBoundingClientRect();
-      return { x: box.x, y: box.y, width: box.width };
-    }),
-  );
+    .evaluateAll((elements) =>
+      elements.slice(0, 2).map((element) => {
+        const box = element.getBoundingClientRect();
+        return { x: box.x, y: box.y, width: box.width };
+      }),
+    );
   expect(desktopGeometry).toHaveLength(2);
   expectNear(desktopGeometry[0]?.y ?? 0, desktopGeometry[1]?.y ?? 0, 1);
   expect(desktopGeometry[0]?.width ?? 0).toBeGreaterThanOrEqual(160);
@@ -2014,12 +2083,11 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
   await waitForResponsiveHeader(page, 1167);
   const narrowGeometry = await activeWeek(page)
     .locator(".jig-week-column")
-    .evaluateAll(
-    (elements) => elements.slice(0, 2).map((element) => {
-      const box = element.getBoundingClientRect();
-      return { y: box.y };
-    }),
-  );
+    .evaluateAll((elements) =>
+      elements.slice(0, 2).map((element) => ({
+        y: element.getBoundingClientRect().y,
+      })),
+    );
   expect(narrowGeometry).toHaveLength(2);
   expect(narrowGeometry[1]?.y ?? 0).toBeGreaterThan(narrowGeometry[0]?.y ?? 0);
 });
