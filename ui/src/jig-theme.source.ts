@@ -125,6 +125,11 @@ export const jigTheme = defineTheme({
       "inset 0 0 0 2px light-dark(color-mix(in srgb, var(--jig-amber-700) 55%, transparent), color-mix(in srgb, var(--jig-amber-500) 55%, transparent))",
   },
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: "var(--color-background-body)",
+      planner: "var(--color-background-surface)",
+      task:
+        "color-mix(in oklab, var(--color-background-card) 94%, var(--color-text-primary) 6%)",
+    }),
   },
 });
