@@ -3,7 +3,7 @@
 **Status:** Canonical UI solution through v1.1.2. JIG-112-FR-01..14 supersede affected earlier presentation clauses: chrome/canvas/card surfaces remain visibly distinct, configured Planner fills the viewport, drag shows live card placement/reflow, synchronization Diagnostics exposes real sanitized failure/recovery evidence, normal motion is at least 2× slower/more perceptible, and adaptive ownership separates desktop/narrow presentation from Linux/browser versus Android/native capability and actual input modality. Unaffected v1.1 hierarchy and references remain binding; adjacent-week Carousel/swipe remains deferred.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–33.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx ownership, the governed Task-movement proof gate, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
-**Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop and Android, including v1.1 onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
+**Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop/expanded and narrow presentation classes plus Linux/browser and Android/native runtime capabilities, including onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
 
 ## v1.1.2 adaptive presentation and runtime authority
 
@@ -86,8 +86,8 @@ From the first rendered frame on desktop and Android, onboarding uses the same g
 
 The onboarding body is deliberately distinct from Planner content and intentionally minimal:
 - one concise orientation explaining that Jig needs a planning-data home;
-- on Android, one primary **Connect GitHub repository** action;
-- on desktop, **Connect GitHub repository** plus the secondary genuine choice **Use an existing local repository**;
+- **Connect GitHub repository** when the GitHub onboarding capability is available;
+- **Use an existing local repository** only when `SetupStatus.local_repository_available` is true; this capability is Linux/browser-owned and may appear in either desktop or narrow presentation, while Android/native never exposes arbitrary local-worktree import;
 - one passive connecting/progress presentation while Jig performs automatic work;
 - one repository chooser only when multiple eligible repositories require a real user choice;
 - one bounded needs-attention/error presentation when Jig cannot continue without user involvement.
@@ -173,7 +173,7 @@ Visual rules:
 
 ### 4.0 v1.1 onboarding application state
 
-Onboarding uses the same outer application composition and one shared setup semantic owner on desktop and Android. The governed references deliberately recompose the body by platform; this is not permission to create separate onboarding products or state machines.
+Onboarding uses one shared setup semantic owner. The body recomposes by **presentation class** (desktop/expanded versus narrow), while action availability comes only from **runtime capability**. This is not permission to create separate onboarding products or state machines.
 
 **Header:** render the canonical theme-aware Jig wordmark/identity in the governed application header from the first frame. The header owns safe-area inset on Android. Do not render Planner temporal controls, Add task, Planner/History/Settings destination navigation or synchronization status before a repository is configured. The header remains product chrome, not an onboarding step indicator.
 
@@ -189,9 +189,9 @@ The first screen establishes why Jig needs a planning-data home before asking fo
 
 Semantic icons from the Astryx/Jig icon system may reinforce those reassurance concepts. Decorative hero illustration is not required and must not push the primary setup action below the useful initial mobile viewport.
 
-**Android/narrow:** use the governed bounded single-column composition. **Connect GitHub repository** is the one primary setup action. Do not render the desktop local-worktree choice.
+**Narrow presentation:** use the governed bounded single-column composition. Render the capability-provided actions in this composition. A narrow Linux/browser runtime may therefore show **Use an existing local repository** when `local_repository_available=true`; Android/native never does.
 
-**Desktop:** use the governed two-region composition, not a centered phone-width setup card. The left region is a stable value/context region; the right region is a bounded setup pane. The initial setup pane contains primary **Connect GitHub repository** and secondary **Use an existing local repository**. When setup advances, the right pane changes state while the left value/context region remains visually stable.
+**Desktop/expanded presentation:** use the governed two-region composition, not a centered phone-width setup card. The left region is a stable value/context region; the right region is a bounded setup pane. The setup pane renders **Connect GitHub repository** and/or **Use an existing local repository** strictly from runtime capability; the latter is not implied by desktop width. When setup advances, the right pane changes state while the left value/context region remains visually stable.
 
 Desktop onboarding must not show an idle/persistent page scrollbar when the governed two-region composition fits the available AppShell body. The onboarding content must size against the **remaining application viewport below the 44px header**, rather than creating a second 100%-height scroll surface inside that body. If a genuinely short viewport or a taller onboarding state requires overflow, the existing application content owner may scroll so all controls remain reachable; do not globally disable scrolling or clip setup content merely to hide scroll chrome.
 
@@ -357,7 +357,7 @@ All Task form controls, disclosure rows, weekday choices and footer actions meet
 
 Task movement uses a dedicated visible grip; the Task body itself always remains normal touch-scroll/open content. The grip and completion checkbox are independent leading controls with their own >=48×48px mobile hit areas and are **vertically centered against the Task card content box**, not first-line/top aligned. Move up/Move down and Date editing remain reliable non-drag alternatives.
 
-Past-date destinations are not valid active scheduling targets. A visible past-date insertion region may remain discoverable for spatial continuity, but it must present an unavailable/invalid treatment while dragging. Releasing there preserves the Task and routes the canonical scheduling error into the existing operation-feedback owner; do not silently snap the card back and do not add a drag-specific Toast/error subsystem.
+Past-date destinations are not valid active scheduling targets. The rolling v1.1 Planner horizon begins no earlier than today, so no past-date drag destination is rendered in the active Planner. Any non-drag scheduling attempt to a past date remains rejected by the canonical scheduling rule and existing operation-feedback owner.
 
 ### 4.3.1 Historical v1.0.5 narrow/mobile parity correction — superseded where conflicting
 
@@ -515,14 +515,14 @@ Keyboard/touch alternatives Move up and Move down call the same canonical order 
 
 ### 5.1 Motion ownership and interaction map
 
-Motion is a restrained feedback layer over the existing composition. The event/state meaning is shared across the Linux/Desktop browser and Android application; only the public Astryx surface, input modality or Jig-owned placement changes:
+Motion is a restrained feedback layer over the existing composition. Motion ownership follows **presentation class and actual input**, not operating-system identity. Runtime/platform differences do not select Drawer versus BottomSheet or desktop versus narrow navigation:
 
-| Event | Linux/Desktop browser | Android application | Owner |
+| Event | Desktop/expanded presentation | Narrow presentation | Owner |
 |---|---|---|---|
-| Destination navigation | Header content/active-indicator transition; hover/focus may apply | Bottom-navigation content/indicator transition; touch press/focus may apply | Astryx controls plus Jig destination composition |
+| Destination navigation | Header content/active-indicator transition; fine-pointer hover/focus when present | Bottom-navigation content/indicator transition; touch/coarse-pointer press/focus when present | Astryx controls plus Jig destination composition |
 | Open/close Task or Add workspace | Drawer enter/exit from the right | BottomSheet enter/exit from the bottom | Astryx Drawer/BottomSheet |
 | Save, complete/reopen, delete | Task-card insertion/update/completion/removal feedback | Same card feedback without avoidable layout shift | Jig Task-card/Planner composition |
-| Drag start/slot/drop | Grip/source lift, slot emphasis, invalid feedback and settling | Same through the Android touch grip | Existing drag and operation-feedback owners |
+| Drag start/prospective placement/drop | Grip/source lift, real-card overlay, card-sized prospective placement and settling | Same semantic projection in stacked Planner geometry; touch activation follows 250ms/8px rule | Existing drag and operation-feedback owners |
 | Week navigation/Today | Previous/Next controls select adjacent seven-day horizons and Today directly selects the current horizon | Same explicit controls; no direct horizontal paging is claimed in v1.1 | Existing canonical Planner state; future direct paging is deferred |
 | Sync/reminder/theme/focus state | Subordinate status/metadata/control transition | Same semantic transition in the WebView/native shell | Existing status, Task-row, Theme and Astryx control owners |
 
@@ -543,7 +543,7 @@ Do not animate initial current-day anchoring, healthy-sync loops, protocol phase
 | Full-bleed application frame | desktop and narrow AppShell/header/content begin at viewport edges with zero application-level margin/padding; no outer content-frame panel; desktop/narrow switch at 73rem / 1168px |
 | Secondary screen measure | History and Settings follow `min(available width, 50rem)` continuously at 1440/1168/1167/1024/900/800/600/390px; no discontinuity at 73rem; Planner remains full-width; Settings column reflow is independent |
 | Destination heading | compact/mobile header always keeps Jig identity and owns one centered title for Planner/History/Settings; compact subtitles are omitted. Desktop History/Settings retain the centered title+subtitle composition; body contains no duplicate page title |
-| Onboarding shell | Fresh desktop and Android onboarding render inside the canonical Jig AppShell/header/body; no standalone setup utility or technical stepper; Android shows Connect GitHub repository, desktop adds existing-local-repository choice |
+| Onboarding shell | Both presentation classes render inside the canonical Jig AppShell/header/body; desktop uses two-region and narrow uses one-column composition; setup actions come from runtime capability, so local-repository choice is never inferred from width |
 | GitHub authorization UX | One Connect action enters Connecting; GitHub's required 8-character device code is visible with Copy code and Open GitHub fallback; provider page opens when permitted; polling is automatic; no Refresh authorization/access control exists |
 | GitHub repository-access UX | Provider installation/access selection stays on GitHub; return from GitHub does not falsely imply success; Jig re-checks automatically; repository chooser contains the complete paginated accessible set and appears only when a genuine choice remains |
 | GitHub reconnect UX | Reconnect appears only when automatic credential renewal cannot continue; it reuses the bounded device-code/consent presentation and resumes synchronization automatically without repository selection/re-acquisition |
@@ -559,9 +559,9 @@ Do not animate initial current-day anchoring, healthy-sync loops, protocol phase
 | In-application brand | one canonical inline Jig wordmark geometry on desktop/narrow; foreground and pin resolve through active theme semantic roles with required contrast; no fixed Light/Dark application-logo switching |
 | Reminder delivery | with granted permission an eligible due reminder creates browser Notification whether visible/hidden/focused/unfocused; no reminder Toast; unsupported/default/denied states do not claim delivery and successful keys do not duplicate |
 | Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
-| Task mutation feedback | successful Add/Edit shows `Task added` / `Task saved`, successful completion/reopen shows `Task completed` / `Task reopened`, and all use the shared semantic success confirmation on desktop and Android; no OS notification or toast subsystem is introduced |
-| Operational attention banner geometry | shared desktop/Android banner uses one Jig-owned public-leaf composition; multi-line error/warning message keeps status icon vertically centered to the message block; inline recovery/navigation action is vertically centered, may wrap cleanly below on narrow widths, and no private Astryx Banner selector/anatomy is used |
-| Motion and reduced motion | eligible events use short interruptible Linux/Desktop-browser and Android-WebView-equivalent feedback; Drawer/BottomSheet/control transitions remain Astryx-owned; Task/Planner/status transitions remain Jig-owned; reduced motion removes travel/scaling/smooth scroll/loops while retaining immediate state, focus and accessible status; initial Planner load and forbidden protocol/decorative motion remain still |
+| Task mutation feedback | successful Add/Edit shows `Task added` / `Task saved`, successful completion/reopen shows `Task completed` / `Task reopened`; one semantic confirmation state feeds desktop bounded top-end placement or narrow snackbar placement; no OS notification or second toast state is introduced |
+| Operational attention geometry | one shared content/anatomy leaf feeds separate desktop/narrow placement owners; desktop durable attention uses the governed bounded 50rem flow region and narrow durable attention sits below sticky chrome; no private Astryx Banner selector/anatomy is used |
+| Motion and reduced motion | eligible events use the exact JIG-112-SD-09 token scale in both presentation classes; Drawer/BottomSheet/control transitions remain Astryx-owned; Task/Planner/status transitions remain Jig-owned; reduced motion removes travel/scaling/smooth scroll/loops while retaining immediate state, focus and accessible status; initial Planner load and forbidden protocol/decorative motion remain still |
 
 ### Cross-platform Astryx Carousel adjacent-week presentation
 
@@ -589,9 +589,9 @@ Implementation plans must link to this document, [Planning workbench functional 
 - **Compact primary navigation:** configured Planner/History/Settings use persistent bottom navigation from the shared destination owner. The old hamburger/popover primary-navigation pattern is superseded.
 - **Planner Add:** compact Planner uses one bottom-end Add task FAB above the bottom navigation. Add is absent from compact History/Settings and from onboarding.
 - **Secondary desktop heading:** History/Settings replace the center temporal navigator with the same compact title + subtitle heading; body begins with actual content.
-- **Onboarding:** bootstrap remains inside the canonical Jig shell and conforms to the governed v1.1 mobile/desktop onboarding references: product-value orientation precedes provider mechanics; Android exposes Connect GitHub only; desktop adds the genuine existing-local-repository path; authorization/repository-selection/finishing/attention retain the bounded reference hierarchy while protocol work remains automatic.
+- **Onboarding:** bootstrap remains inside the canonical Jig shell. Desktop/expanded uses the two-region composition; narrow uses the one-column composition. **Connect GitHub repository** and **Use an existing local repository** render only from runtime capability; Android/native never exposes arbitrary local-repository import. Authorization/repository-selection/finishing/attention retain the bounded reference hierarchy while protocol work remains automatic.
 - **Settings:** one vertical reading hierarchy, not a 2×2 dashboard: Data & sync, Appearance, Notifications, then collapsed/subordinate Diagnostics. Data & sync combines repository home, local safety, continuity and recovery; technical mechanics stay under Diagnostics.
 - **Task form / Repeat:** the governed mobile/desktop references define the complete one-form presentation. Repeat is an ordinary field after Date and before Reminder; the entire Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes form remains present/scrollable in every state. Does not repeat shows no detail; Weekly/Monthly reveal only their required fields in place. Mobile weekday controls wrap as needed to preserve ≥48px touch geometry. One Save atomically applies Task draft + recurrence change; there is no separate Repeat editor/save.
-- **Task movement:** Pangea is rejected by physical-device evidence. The replacement uses the dedicated grip only, exposes explicit insertion slots including card gaps/empty dates, keeps Task body scrolling independent, rejects intentional past-date scheduling with concise existing-operation feedback, vertically centers grip/checkbox leading controls, and always clears overlay/drag state on drop/cancel/pointercancel/interruption.
+- **Task movement:** Pangea and insertion-line/slot presentation are rejected. The pinned dnd-kit owner uses the dedicated grip, React-owned real-card prospective placement, card-sized empty-date placement, 6px mouse/pen activation and 250ms+8px touch activation, while keeping Task body scrolling independent and clearing overlay/projection state on every terminal path.
 - **Reminder attention:** due reminder state remains persistent and independent from OS/browser delivery success.
 - **Android:** the same Jig frame/semantics run from onboarding through Planner/History/Settings; physical-device usability is an implementation gate, not optional visual QA.
