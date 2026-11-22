@@ -8,6 +8,18 @@ export const solarizedTheme = defineTheme({
   name: "solarized",
   extends: neutralTheme,
   tokens: communityColorTokens(solarizedPalette),
+  onLight: {
+    tokens: {
+      "--color-text-primary": solarizedPalette.textPrimary[0],
+      "--color-icon-primary": solarizedPalette.textPrimary[0],
+    },
+  },
+  onDark: {
+    tokens: {
+      "--color-text-primary": solarizedPalette.textPrimary[1],
+      "--color-icon-primary": solarizedPalette.textPrimary[1],
+    },
+  },
   localTokens: {
     ...jigProductLocalTokens({
       chrome: solarizedPalette.body,
