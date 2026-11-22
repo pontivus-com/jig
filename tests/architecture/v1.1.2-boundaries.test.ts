@@ -158,7 +158,7 @@ describe("v1.1.2 corrective architecture boundaries", () => {
   it("keeps destination, Task sequence projection and workspace state single-owner", () => {
     expect(
       declarationOwners(/\b(?:const|export const)\s+DESTINATIONS\s*=\s*\[/),
-    ).toEqual(["ui/src/planner-header.tsx"]);
+    ).toEqual(["ui/src/destinations.ts"]);
     expect(
       declarationOwners(/export type TaskWorkspaceState\s*=/),
     ).toEqual(["ui/src/task-workspace.tsx"]);
