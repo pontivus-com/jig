@@ -1,7 +1,7 @@
 import {
+  chmod,
   mkdtemp,
   readFile,
-  rename,
   rm,
   writeFile,
 } from "node:fs/promises";
@@ -9,17 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
-import {
-  readCanonicalState,
-} from "../../src/persistence/sqlite";
-import {
-  exportCanonicalPortableSnapshot,
-} from "../../src/persistence/synchronization";
-import {
-  writePortableSnapshot,
-} from "../../src/shell/git/portable-store";
 import { runGit } from "../../src/shell/git/process";
-import { openDatabase } from "../../src/shell/sqlite-bun";
 import {
   apiCommand,
   apiState,
@@ -30,9 +20,7 @@ import {
 
 const ROOT = "/tmp/jig-playwright-repository";
 const REMOTE = "/tmp/jig-playwright-remote.git";
-const OFFLINE_REMOTE =
-  "/tmp/jig-playwright-remote.conflict-offline.git";
-const SQLITE = join(ROOT, ".jig", "local", "jig.sqlite");
+const REJECT_HOOK = join(REMOTE, "hooks", "pre-receive");
 
 async function git(
   cwd: string,
@@ -109,7 +97,7 @@ async function currentConflict(
 }
 
 test.beforeEach(async ({ page }) => {
-  await rm(OFFLINE_REMOTE, { recursive: true, force: true });
+  await rm(REJECT_HOOK, { force: true });
   await page.goto("/");
   await resetCanonicalTasks(page);
   await syncNow(page);
@@ -142,8 +130,6 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
 
   const shared = await taskByTitle(page, "Shared conflict base");
   const writer = await mkdtemp(join(tmpdir(), "jig-browser-conflict-"));
-  let remoteMoved = false;
-
   try {
     await git(tmpdir(), [
       "clone",
@@ -159,34 +145,28 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
       "conflict-fixture@local.invalid",
     ]);
 
-    await rename(REMOTE, OFFLINE_REMOTE);
-    remoteMoved = true;
+    await writeFile(
+      REJECT_HOOK,
+      "#!/bin/sh\nexit 1\n",
+      "utf8",
+    );
+    await chmod(REJECT_HOOK, 0o755);
 
     await apiCommand(page, {
       type: "edit",
       task_id: shared.id,
       changes: { title: "Local conflict choice" },
     });
+    await syncNow(page);
+    await expect
+      .poll(() => repositoryStatus(page), { timeout: 10_000 })
+      .toMatch(/^committed:(retrying|sync-issue)$/);
+    expect((await apiState(page)).tasks[0]).toMatchObject({
+      id: shared.id,
+      title: "Local conflict choice",
+    });
 
-    const directDb = await openDatabase(SQLITE);
-    try {
-      const state = await readCanonicalState(directDb);
-      await exportCanonicalPortableSnapshot(
-        directDb,
-        (snapshot, revision) =>
-          writePortableSnapshot(
-            { repository_path: ROOT },
-            snapshot,
-            revision,
-          ),
-      );
-      expect(state.tasks[0]).toMatchObject({
-        id: shared.id,
-        title: "Local conflict choice",
-      });
-    } finally {
-      await directDb.close();
-    }
+    await rm(REJECT_HOOK, { force: true });
 
     const taskPath = join(writer, "tasks", shared.id + ".json");
     const remoteTask = JSON.parse(
@@ -205,12 +185,9 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     await git(writer, ["commit", "-m", "Remote browser conflict"]);
     await git(writer, [
       "push",
-      OFFLINE_REMOTE,
+      REMOTE,
       "jig-data:jig-data",
     ]);
-
-    await rename(OFFLINE_REMOTE, REMOTE);
-    remoteMoved = false;
 
     await syncNow(page);
     await expect
@@ -325,10 +302,7 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
       ]),
     ).toContain('"title": "Local conflict choice"');
   } finally {
-    if (remoteMoved) {
-      await rename(OFFLINE_REMOTE, REMOTE).catch(() => undefined);
-    }
+    await rm(REJECT_HOOK, { force: true });
     await rm(writer, { recursive: true, force: true });
-    await rm(OFFLINE_REMOTE, { recursive: true, force: true });
   }
 });
