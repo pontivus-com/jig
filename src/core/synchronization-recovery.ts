@@ -6,6 +6,7 @@ import {
 } from "./recurrence-planning";
 import {
   isWeekday,
+  WEEKDAYS,
   type RecurrencePattern,
   type RecurrenceSeries,
   type Weekday,
@@ -1062,6 +1063,18 @@ function validateRecurrencePatternValue(
       }
       seen.add(entry);
       weekdays.push(entry);
+    }
+    const canonicalWeekdays = WEEKDAYS.filter((weekday) =>
+      seen.has(weekday)
+    );
+    if (
+      canonicalWeekdays.some(
+        (weekday, index) => weekday !== weekdays[index],
+      )
+    ) {
+      throw new TypeError(
+        `${label}.weekdays must use canonical weekday order`,
+      );
     }
     return {
       kind: "weekly",
