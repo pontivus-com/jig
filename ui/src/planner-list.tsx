@@ -57,6 +57,8 @@ type PlannerVisibleItem =
   | {
       readonly kind: "prospective";
       readonly activeTaskId: string;
+      readonly date: string;
+      readonly destinationIndex: number;
       readonly blockSize: number | null;
     };
 
@@ -127,6 +129,8 @@ function projectedPlannerItems(
   visible.splice(destinationIndex, 0, {
     kind: "prospective",
     activeTaskId: drag.prospective.activeTaskId,
+    date,
+    destinationIndex,
     blockSize: drag.activeBlockSize,
   });
 
@@ -158,6 +162,9 @@ function PlannerTaskSequence({
         visible.kind === "prospective" ? (
           <TaskProspectiveFootprint
             key={`prospective-${visible.activeTaskId}`}
+            activeTaskId={visible.activeTaskId}
+            date={visible.date}
+            destinationIndex={visible.destinationIndex}
             blockSize={visible.blockSize}
           />
         ) : (
