@@ -214,6 +214,36 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     }
   });
 
+  it("keeps setup state shared while LayoutMode and runtime capability remain orthogonal", () => {
+    const setup = source("ui/src/setup.tsx");
+    const setupHttp = source("ui/src/setup-http.ts");
+    const desktop = source("ui/src/presentation/desktop/setup.tsx");
+    const narrow = source("ui/src/presentation/narrow/setup.tsx");
+
+    expect((setup.match(/layoutMode === "desktop"/g) ?? [])).toHaveLength(1);
+    expect(setup).not.toContain('layoutMode === "narrow"');
+    expect(setup).toContain("<DesktopSetupPresentation");
+    expect(setup).toContain("<NarrowSetupPresentation");
+
+    expect(setup).toContain("status.github_available ?");
+    expect(setup).toContain("status.local_repository_available ?");
+    expect(setup).toContain("BROWSER_PROVIDER_RETRY_MS");
+    expect(setup).toContain("nativeProviderContinuation");
+    expect(setup).toContain("providerContinuationRevision");
+    expect(setup).not.toMatch(/Capacitor|isNativePlatform/);
+
+    expect(setupHttp).toContain(
+      "usesNativeSetupProviderContinuation(): boolean",
+    );
+    expect(setupHttp).toContain("local_repository_available: false");
+
+    for (const presenter of [desktop, narrow]) {
+      expect(presenter).not.toMatch(
+        /SetupStatus|GitHubOnboarding|setup-http|runtime|native|LayoutMode/,
+      );
+    }
+  });
+
   it("prevents desktop/narrow presenter cross-imports and outward imports from shared leaves", () => {
     for (const [path, content] of sourceFiles("ui/src/presentation/desktop")) {
       expect(content, path).not.toMatch(/from\s+["'][^"']*(?:\/|\.\.)narrow(?:\/|["'])/);
