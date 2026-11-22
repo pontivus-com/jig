@@ -48,6 +48,23 @@ async function runRollover(
   return (await readMetadata(connection)).revision !== before;
 }
 
+
+export async function rollForwardRuntimeLocalDay(): Promise<boolean> {
+  return runRollover(await database());
+}
+
+export async function readCanonicalTasksAfterActivationRollover():
+Promise<CanonicalState> {
+  return readCanonicalState(await database());
+}
+
+export async function reconcileRuntimeReminders(
+  tasks: CanonicalState["tasks"],
+  now: Date,
+): Promise<void> {
+  await reconcileAndroidReminders(tasks, now);
+}
+
 export async function readCanonicalTasks(): Promise<CanonicalState> {
   const connection = await database();
   const changed = await runRollover(connection);
