@@ -921,7 +921,6 @@ function ConfiguredApp({
         appearanceMode={appearanceMode}
         status={status}
         diagnostics={diagnostics}
-        operationError={operationError}
         isOperating={isOperating}
         githubReconnectAvailable={githubReconnectAvailable}
         githubReconnect={githubReconnect}
