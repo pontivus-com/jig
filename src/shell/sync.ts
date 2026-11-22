@@ -55,7 +55,7 @@ import {
   reconcileRelatedPortableSnapshots,
   recoveryCommitSpec,
 } from "../core/synchronization-recovery";
-import type * as Recovery from "../core/synchronization-recovery";
+import type * as recovery from "../core/synchronization-recovery";
 import {
   SnapshotDatasetMismatchError,
   SnapshotValidationError,
@@ -85,9 +85,9 @@ export interface SyncController {
   readonly trigger: () => Promise<RepositorySynchronizationStatus>;
   readonly status: () => RepositorySynchronizationStatus;
   readonly diagnostics: () => SynchronizationDiagnostics;
-  readonly readSynchronizationConflict: () => Recovery.JigDataConflictCase | null;
+  readonly readSynchronizationConflict: () => recovery.JigDataConflictCase | null;
   readonly resolveSynchronizationConflict: (
-    resolution: Recovery.JigDataResolution,
+    resolution: recovery.JigDataResolution,
   ) => Promise<RepositorySynchronizationStatus>;
 }
 
@@ -238,7 +238,7 @@ export function createSyncController(
 
   let remoteIdentity: SynchronizationRemote | null = null;
   let currentDiagnostics = initialSynchronizationDiagnostics();
-  let currentConflictCase: Recovery.JigDataConflictCase | null = null;
+  let currentConflictCase: recovery.JigDataConflictCase | null = null;
   let recoveryVerificationKind: "accepted" | "resumed" | null = null;
   let attemptStartedAt: string | null = null;
   let diagnosticFailureReason: SynchronizationFailureReason | null = null;
@@ -1189,7 +1189,7 @@ export function createSyncController(
   };
 
   const resolveCurrentConflict = async (
-    resolution: Recovery.JigDataResolution,
+    resolution: recovery.JigDataResolution,
   ): Promise<RepositorySynchronizationStatus> => {
     const conflictCase = currentConflictCase;
     if (conflictCase === null) {
@@ -1434,7 +1434,7 @@ export function createSyncController(
   };
 
   const resolveSynchronizationConflict = async (
-    resolution: Recovery.JigDataResolution,
+    resolution: recovery.JigDataResolution,
   ): Promise<RepositorySynchronizationStatus> => {
     if (running !== null) {
       await running;
