@@ -71,14 +71,75 @@ interface DropTarget {
   readonly id: string | number;
   readonly type?: unknown;
   readonly data?: Readonly<Record<string, unknown>>;
-  readonly element?: Element | undefined;
+}
+
+interface PointerPosition {
+  readonly x: number;
+  readonly y: number;
+}
+
+function pointerPlacement(
+  tasks: readonly Task[],
+  activeTaskId: string,
+  pointer: PointerPosition,
+): TaskProspectivePlacement | null {
+  const activeTask = tasks.find((task) => task.id === activeTaskId);
+  if (activeTask === undefined || activeTask.completed_at !== null) {
+    return null;
+  }
+
+  const dateZone = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "[data-jig-drop-date-container]",
+    ),
+  ).find((element) => {
+    const bounds = element.getBoundingClientRect();
+    return (
+      pointer.x >= bounds.left &&
+      pointer.x <= bounds.right &&
+      pointer.y >= bounds.top &&
+      pointer.y <= bounds.bottom
+    );
+  });
+  const date = dateZone?.dataset.jigDropDateContainer;
+  if (
+    dateZone === undefined ||
+    date === undefined ||
+    !isActiveScheduleDate(todayCivilDate(), date)
+  ) {
+    return null;
+  }
+
+  const available = outstandingForDate(tasks, date).filter(
+    (task) => task.id !== activeTaskId,
+  );
+  const taskMidpoints = Array.from(
+    dateZone.querySelectorAll<HTMLElement>(
+      ".jig-task-card:not(.jig-task-card-dragging)",
+    ),
+  )
+    .map((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.top + bounds.height / 2;
+    })
+    .sort((left, right) => left - right);
+
+  const destinationIndex = Math.min(
+    available.length,
+    taskMidpoints.filter((midpoint) => pointer.y >= midpoint).length,
+  );
+
+  return {
+    activeTaskId,
+    destinationDate: date,
+    destinationIndex,
+  };
 }
 
 function targetPlacement(
   tasks: readonly Task[],
   activeTaskId: string,
   target: DropTarget | null,
-  pointerY: number | null,
 ): TaskProspectivePlacement | null {
   if (target === null) {
     return null;
@@ -118,13 +179,10 @@ function targetPlacement(
       return null;
     }
 
-    const targetRect = target.element?.getBoundingClientRect();
     const afterTarget =
-      pointerY !== null && targetRect !== undefined
-        ? pointerY >= targetRect.top + targetRect.height / 2
-        : activeTask.scheduled_date === date &&
-          activeTask.position !== null &&
-          activeTask.position < canonicalTargetIndex;
+      activeTask.scheduled_date === date &&
+      activeTask.position !== null &&
+      activeTask.position < canonicalTargetIndex;
     destinationIndex = targetIndex + (afterTarget ? 1 : 0);
   } else {
     return null;
@@ -174,11 +232,11 @@ export function TaskDragProvider({
 }: TaskDragProviderProps): React.ReactElement {
   const [state, setState] = useState<TaskDragState>(EMPTY_DRAG_STATE);
   const prospectiveRef = useRef<TaskProspectivePlacement | null>(null);
-  const pointerYRef = useRef<number | null>(null);
+  const pointerRef = useRef<PointerPosition | null>(null);
 
   const clearDrag = (): void => {
     prospectiveRef.current = null;
-    pointerYRef.current = null;
+    pointerRef.current = null;
     setState(EMPTY_DRAG_STATE);
     onDragActiveChange?.(false);
   };
@@ -214,7 +272,7 @@ export function TaskDragProvider({
         }),
       ]}
       onDragStart={({ operation }) => {
-        pointerYRef.current = null;
+        pointerRef.current = null;
         const source = operation.source;
         const taskId = source === null ? null : String(source.id);
         const task =
@@ -237,12 +295,33 @@ export function TaskDragProvider({
         onDragActiveChange?.(true);
       }}
       onDragMove={(event) => {
-        const { nativeEvent, to } = event;
-        if (nativeEvent instanceof PointerEvent && to !== undefined) {
-          pointerYRef.current = to.y;
-        } else if (nativeEvent instanceof KeyboardEvent) {
-          pointerYRef.current = null;
+        const source = event.operation.source;
+        const { nativeEvent } = event;
+        if (
+          source === null ||
+          !(nativeEvent instanceof PointerEvent)
+        ) {
+          if (nativeEvent instanceof KeyboardEvent) {
+            pointerRef.current = null;
+          }
+          return;
         }
+
+        const pointer = {
+          x: nativeEvent.clientX,
+          y: nativeEvent.clientY,
+        };
+        pointerRef.current = pointer;
+        const prospective = pointerPlacement(
+          tasks,
+          String(source.id),
+          pointer,
+        );
+        prospectiveRef.current = prospective;
+        setState((current) => ({
+          ...current,
+          prospective,
+        }));
       }}
       onDragOver={(event) => {
         event.preventDefault();
@@ -256,12 +335,19 @@ export function TaskDragProvider({
           return;
         }
 
-        const prospective = targetPlacement(
-          tasks,
-          String(source.id),
-          event.operation.target,
-          pointerYRef.current,
-        );
+        const pointer = pointerRef.current;
+        const prospective =
+          pointer === null
+            ? targetPlacement(
+                tasks,
+                String(source.id),
+                event.operation.target,
+              )
+            : pointerPlacement(
+                tasks,
+                String(source.id),
+                pointer,
+              );
         prospectiveRef.current = prospective;
         setState((current) => ({
           ...current,
