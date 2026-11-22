@@ -119,7 +119,7 @@ function targetPlacement(
     const targetIndex = available.findIndex(
       (task) => task.id === targetId,
     );
-    const canonicalTargetIndex = target.data?.index;
+    const canonicalTargetIndex = target.data?.canonical_index;
     if (
       targetIndex < 0 ||
       typeof canonicalTargetIndex !== "number" ||
@@ -326,12 +326,14 @@ export interface SortableTaskRowProps
     "rowRef" | "dragHandleRef" | "isDragging"
   > {
   readonly index: number;
+  readonly canonicalIndex: number;
   readonly date: string;
 }
 
 export function SortableTaskRow({
   task,
   index,
+  canonicalIndex,
   date,
   ...rowProps
 }: SortableTaskRowProps): React.ReactElement {
@@ -344,6 +346,7 @@ export function SortableTaskRow({
     data: {
       date,
       index,
+      canonical_index: canonicalIndex,
     },
     collisionPriority: 1,
   });
@@ -436,7 +439,7 @@ export function DateDropZone({
     type: "jig-date-tail",
     accept: "jig-task",
     data: { date },
-    collisionPriority: 2,
+    collisionPriority: 0,
   });
 
   return (

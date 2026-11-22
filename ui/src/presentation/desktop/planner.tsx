@@ -1,4 +1,3 @@
-import { TaskDragProvider } from "../../drag";
 import { todayCivilDate } from "../../dates";
 import {
   PlannerDateSection,
@@ -13,12 +12,6 @@ export function DesktopPlanner(
 
   return (
     <div className="jig-planner-surface">
-      <TaskDragProvider
-        tasks={props.tasks}
-        recurrences={props.recurrences}
-        now={props.now}
-        onMove={props.onMove}
-      >
         <PlannerEmptyState
           dates={props.displayedDates}
           tasks={props.tasks}
@@ -56,7 +49,6 @@ export function DesktopPlanner(
             />
           ))}
         </div>
-      </TaskDragProvider>
     </div>
   );
 }

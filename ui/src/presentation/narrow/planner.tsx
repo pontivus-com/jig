@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { TaskDragProvider } from "../../drag";
 import { todayCivilDate } from "../../dates";
 import {
   PlannerDateSection,
@@ -73,12 +72,6 @@ export function NarrowPlanner(
 
   return (
     <div className="jig-planner-surface">
-      <TaskDragProvider
-        tasks={props.tasks}
-        recurrences={props.recurrences}
-        now={props.now}
-        onMove={props.onMove}
-      >
         <PlannerEmptyState
           dates={props.displayedDates}
           tasks={props.tasks}
@@ -109,7 +102,6 @@ export function NarrowPlanner(
             />
           ))}
         </div>
-      </TaskDragProvider>
     </div>
   );
 }

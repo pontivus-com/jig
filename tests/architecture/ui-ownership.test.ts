@@ -165,7 +165,7 @@ describe("UI ownership architecture", () => {
         [
           'chrome: "var(--color-background-body)"',
           'planner: "var(--color-background-surface)"',
-          '"color-mix(in oklab, var(--color-background-card) 94%, var(--color-text-primary) 6%)"',
+          '"color-mix(in oklab, var(--color-background-card) 91%, var(--color-text-primary) 9%)"',
         ],
       ],
       [
@@ -273,6 +273,60 @@ describe("UI ownership architecture", () => {
       for (const expression of expected) {
         expect(themeSource, `${themePath}: ${expression}`).toContain(
           expression,
+        );
+      }
+    }
+  });
+
+  it("applies the governed public motion scale to every authored theme", () => {
+    const motion = source("ui/src/themes/motion-tokens.ts");
+    const expected = [
+      ["--duration-fast-min", "190ms"],
+      ["--duration-fast", "250ms"],
+      ["--duration-fast-max", "330ms"],
+      ["--duration-medium-min", "450ms"],
+      ["--duration-medium", "600ms"],
+      ["--duration-medium-max", "800ms"],
+      ["--duration-slow-min", "1050ms"],
+      ["--duration-slow", "1400ms"],
+      ["--duration-slow-max", "1870ms"],
+    ] as const;
+
+    for (const [token, value] of expected) {
+      expect(motion).toContain(`"${token}": "${value}"`);
+    }
+
+    const authoredThemeSources = [
+      "ui/src/jig-theme.source.ts",
+      "ui/src/themes/astryx-neutral.source.ts",
+      "ui/src/themes/astryx-butter.source.ts",
+      "ui/src/themes/astryx-chocolate.source.ts",
+      "ui/src/themes/astryx-matcha.source.ts",
+      "ui/src/themes/astryx-stone.source.ts",
+      "ui/src/themes/astryx-y2k.source.ts",
+      "ui/src/themes/gruvbox.source.ts",
+      "ui/src/themes/dracula.source.ts",
+      "ui/src/themes/solarized.source.ts",
+      "ui/src/themes/nord.source.ts",
+      "ui/src/themes/catppuccin.source.ts",
+      "ui/src/themes/tokyo-night.source.ts",
+    ] as const;
+
+    for (const themePath of authoredThemeSources) {
+      expect(source(themePath), themePath).toContain("jigMotionTokens");
+    }
+
+    const generatedThemeCss = [
+      "ui/src/jig.css",
+      ...authoredThemeSources.slice(1).map((themePath) =>
+        themePath.replace(/\.source\.ts$/, ".css"),
+      ),
+    ];
+    for (const cssPath of generatedThemeCss) {
+      const css = source(cssPath);
+      for (const [token, value] of expected) {
+        expect(css, `${cssPath}: ${token}`).toContain(
+          `${token}: ${value};`,
         );
       }
     }
@@ -870,10 +924,11 @@ describe("UI ownership architecture", () => {
 
     expect(existsSync("ui/src/planner.tsx")).toBe(false);
     expect(existsSync("ui/src/week.tsx")).toBe(false);
-    expect(desktopPlanner).toContain("<TaskDragProvider");
+    expect(app).toContain("<TaskDragProvider");
+    expect(desktopPlanner).not.toContain("<TaskDragProvider");
     expect(desktopPlanner).toContain("<PlannerDateSection");
     expect(desktopPlanner).toContain("jig-planner-board-desktop");
-    expect(narrowPlanner).toContain("<TaskDragProvider");
+    expect(narrowPlanner).not.toContain("<TaskDragProvider");
     expect(narrowPlanner).toContain("<PlannerDateSection");
     expect(narrowPlanner).toContain("jig-planner-board-narrow");
     expect(narrowPlanner).toContain("scrollIntoView");
@@ -914,6 +969,8 @@ describe("UI ownership architecture", () => {
     expect(drag).toContain("tolerance: 8");
     expect(drag).toContain("activatorElements(source)");
     expect(drag).toContain("source.handle");
+    expect(drag).toContain("canonical_index: canonicalIndex");
+    expect(drag).toContain("target.data?.canonical_index");
     expect(taskRow).toContain("<TaskCardPresentation");
     expect(taskRow).not.toContain("jig-task-drag-overlay-checkbox");
 
@@ -1021,8 +1078,11 @@ describe("UI ownership architecture", () => {
     const sharedCss = source("ui/src/styles/shared.css");
 
     expect(desktopCss).toContain(".jig-feedback-transient-desktop");
-    expect(desktopCss).toContain("position: sticky");
+    expect(desktopCss).toContain(".jig-configured-desktop .jig-configured-body");
+    expect(desktopCss).toContain("position: relative");
+    expect(desktopCss).toContain("position: absolute");
     expect(desktopCss).toContain("inset-block-start: var(--spacing-3)");
+    expect(desktopCss).toContain("inset-inline-end: var(--spacing-3)");
     expect(desktopCss).toContain("max-inline-size: 24rem");
     expect(desktopCss).toContain(
       "inline-size: min(50rem, calc(100% - 2 * var(--spacing-3)))",

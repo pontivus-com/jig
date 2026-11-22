@@ -1,10 +1,12 @@
 import { defineTheme } from "@astryxdesign/core/theme";
 import { stoneTheme } from "@astryxdesign/theme-stone/built";
 import { jigProductLocalTokens } from "./product-tokens";
+import { jigMotionTokens } from "./motion-tokens";
 
 export const astryxStoneTheme = defineTheme({
   name: "astryx-stone",
   extends: stoneTheme,
+  tokens: jigMotionTokens,
   localTokens: {
     ...jigProductLocalTokens({
       chrome: "var(--color-background-body)",

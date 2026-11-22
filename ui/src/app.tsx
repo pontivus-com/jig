@@ -71,6 +71,7 @@ import {
 import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
 import { DesktopConfiguredApplication } from "./presentation/desktop/configured-application";
 import { NarrowConfiguredApplication } from "./presentation/narrow/configured-application";
+import { TaskDragProvider } from "./drag";
 import { ApplicationShell } from "./presentation/shared/application-shell";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
@@ -1019,7 +1020,14 @@ function ConfiguredApp({
 
   return (
     <>
-      {configuredPresentation}
+      <TaskDragProvider
+        tasks={tasks}
+        recurrences={canonical?.recurrences ?? []}
+        now={reminderNow}
+        onMove={moveTaskExact}
+      >
+        {configuredPresentation}
+      </TaskDragProvider>
         <AlertDialog
           isOpen={deleteTask !== null}
           onOpenChange={(open) => {

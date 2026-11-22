@@ -1,6 +1,7 @@
 import { defineTheme } from "@astryxdesign/core/theme";
 import { neutralTheme } from "@astryxdesign/theme-neutral/built";
 import { jigProductLocalTokens } from "./themes/product-tokens";
+import { jigMotionTokens } from "./themes/motion-tokens";
 
 /**
  * Jig's Astryx semantic theme source.
@@ -13,6 +14,7 @@ export const jigTheme = defineTheme({
   name: "jig",
   extends: neutralTheme,
   tokens: {
+    ...jigMotionTokens,
     "--color-background-body": [
       "var(--jig-paper-100)",
       "var(--jig-ink-950)",

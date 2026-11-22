@@ -41,14 +41,17 @@
   padding-block-start: var(--jig-safe-area-top);
 }
 
+.jig-configured-desktop .jig-configured-body {
+  position: relative;
+}
+
 .jig-configured-desktop .jig-feedback-transient-desktop {
-  position: sticky;
+  position: absolute;
   z-index: 5;
   inset-block-start: var(--spacing-3);
-  display: flex;
-  height: 0;
-  justify-content: flex-end;
-  padding-inline-end: var(--spacing-3);
+  inset-inline-end: var(--spacing-3);
+  inline-size: min(24rem, calc(100% - 2 * var(--spacing-3)));
+  max-inline-size: 24rem;
   pointer-events: none;
 }
 

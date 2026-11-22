@@ -45,6 +45,7 @@ interface PlannerTaskPresentationItem {
   readonly task: Task;
   readonly recurrenceSeries: RecurrenceSeries | null;
   readonly index: number;
+  readonly canonicalIndex: number;
   readonly sequenceLength: number;
 }
 
@@ -87,6 +88,7 @@ function plannerTaskPresentationItems(
             (series) => series.id === task.recurrence_series_id,
           ) ?? null,
     index,
+    canonicalIndex: index,
     sequenceLength: outstanding.length,
   }));
 }
@@ -182,6 +184,7 @@ function PlannerSequenceRow({
   recurrenceSeries,
   now,
   index,
+  canonicalIndex,
   sortableIndex,
   date,
   sequenceLength,
@@ -199,6 +202,7 @@ function PlannerSequenceRow({
       recurrenceSeries={recurrenceSeries}
       now={now}
       index={sortableIndex}
+      canonicalIndex={canonicalIndex}
       date={date}
       isSelected={isSelected}
       onSelect={() => onSelectTask(task)}
@@ -256,6 +260,7 @@ export function PlannerTaskList(
           recurrenceSeries={item.recurrenceSeries}
           now={props.now}
           index={item.index}
+          canonicalIndex={item.canonicalIndex}
           sortableIndex={sortableIndex}
           date={props.date}
           sequenceLength={item.sequenceLength}

@@ -3,11 +3,15 @@ import { neutralTheme } from "@astryxdesign/theme-neutral/built";
 import { communityColorTokens } from "./community-theme";
 import { draculaPalette } from "./palettes/dracula";
 import { jigProductLocalTokens } from "./product-tokens";
+import { jigMotionTokens } from "./motion-tokens";
 
 export const draculaTheme = defineTheme({
   name: "dracula",
   extends: neutralTheme,
-  tokens: communityColorTokens(draculaPalette),
+  tokens: {
+    ...communityColorTokens(draculaPalette),
+    ...jigMotionTokens,
+  },
   localTokens: {
     ...jigProductLocalTokens({
       chrome: draculaPalette.body,
