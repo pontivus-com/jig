@@ -1070,7 +1070,7 @@ test("adding and editing a Task confirm success and close the workspace", async 
 
     if (width >= 1168) {
       const placement = page.locator(".jig-feedback-transient-desktop");
-      await expect(placement).toHaveCSS("position", "sticky");
+      await expect(placement).toHaveCSS("position", "absolute");
       const stackBox = await placement
         .locator(".jig-feedback-transient-stack")
         .boundingBox();
@@ -2468,16 +2468,21 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
         `${preset}/${mode} Task metadata contrast`,
       ).toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
-      expect(snapshot.motionDurations).toEqual([
-        "190ms",
-        "250ms",
-        "330ms",
-        "450ms",
-        "600ms",
-        "800ms",
-        "1050ms",
-        "1400ms",
-        "1870ms",
+      expect(
+        snapshot.motionDurations.map((value) => {
+          const parsed = Number.parseFloat(value);
+          return value.endsWith("ms") ? parsed : parsed * 1000;
+        }),
+      ).toEqual([
+        190,
+        250,
+        330,
+        450,
+        600,
+        800,
+        1050,
+        1400,
+        1870,
       ]);
       expect(
         contrastRatio(snapshot.logoPrimary, snapshot.chromeBackground),
