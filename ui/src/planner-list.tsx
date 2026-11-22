@@ -35,6 +35,7 @@ interface PlannerSequenceRowProps
   readonly task: Task;
   readonly recurrenceSeries: RecurrenceSeries | null;
   readonly index: number;
+  readonly canonicalIndex: number;
   readonly sortableIndex: number;
   readonly date: string;
   readonly sequenceLength: number;
