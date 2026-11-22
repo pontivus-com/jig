@@ -10,6 +10,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
+import { serializeSnapshot } from "../../src/core/portable";
+import {
+  buildJigDataConflictCase,
+} from "../../src/core/synchronization-recovery";
+import { validateTask, type Task } from "../../src/core/task";
+
 import {
   apiCommand,
   apiState,
@@ -110,6 +116,115 @@ async function currentConflict(
     }
     return response.json();
   });
+}
+
+const RESOLVER_THEMES = [
+  "jig",
+  "astryx-neutral",
+  "astryx-butter",
+  "astryx-chocolate",
+  "astryx-matcha",
+  "astryx-stone",
+  "astryx-y2k",
+  "gruvbox",
+  "dracula",
+  "solarized",
+  "nord",
+  "catppuccin",
+  "tokyo-night",
+] as const;
+
+function resolverTask(
+  id: string,
+  title: string,
+  position: number,
+  changes: Partial<Task> = {},
+): Task {
+  return validateTask({
+    id,
+    title,
+    scheduled_date: "2026-11-22",
+    position,
+    priority: "NORMAL",
+    context: null,
+    reference: null,
+    note: null,
+    reminder_time: null,
+    recurrence_series_id: null,
+    recurrence_occurrence_date: null,
+    completed_at: null,
+    created_at: "2026-11-22T12:00:00.000Z",
+    updated_at: "2026-11-22T12:00:00.000Z",
+    ...changes,
+  });
+}
+
+function resolverThemeConflictCase() {
+  const datasetId =
+    "018f47f0-7b5c-7d4d-8e2b-00000000a001";
+  const firstId =
+    "018f47f0-7b5c-7d4d-8e2b-00000000a101";
+  const secondId =
+    "018f47f0-7b5c-7d4d-8e2b-00000000a102";
+  const thirdId =
+    "018f47f0-7b5c-7d4d-8e2b-00000000a103";
+  const ancestorFirst = resolverTask(firstId, "Theme conflict A", 0);
+  const ancestorSecond = resolverTask(secondId, "Theme conflict B", 1);
+  const ancestorThird = resolverTask(thirdId, "Theme stable C", 2);
+
+  const conflictCase = buildJigDataConflictCase(
+    "a".repeat(40),
+    "b".repeat(40),
+    "c".repeat(40),
+    12,
+    serializeSnapshot(
+      [ancestorFirst, ancestorSecond, ancestorThird],
+      datasetId,
+    ),
+    serializeSnapshot(
+      [
+        resolverTask(firstId, "Local A", 0, {
+          updated_at: "2026-11-22T12:10:00.000Z",
+        }),
+        resolverTask(thirdId, "Theme stable C", 1),
+      ],
+      datasetId,
+    ),
+    serializeSnapshot(
+      [
+        resolverTask(firstId, "Remote A", 0, {
+          note: "remote A",
+          updated_at: "2026-11-22T12:20:00.000Z",
+        }),
+        resolverTask(secondId, "Remote changed B", 1, {
+          note: "remote B",
+          updated_at: "2026-11-22T12:21:00.000Z",
+        }),
+        ancestorThird,
+      ],
+      datasetId,
+    ),
+  );
+  if (conflictCase === null) {
+    throw new Error("Expected synthetic resolver conflict case");
+  }
+  return conflictCase;
+}
+
+async function setResolverAppearance(
+  page: Page,
+  theme: string,
+  mode: "light" | "dark",
+): Promise<void> {
+  await page.evaluate(
+    ({ themeValue, modeValue }) => {
+      localStorage.setItem("jig-theme-family", themeValue);
+      localStorage.setItem("jig-appearance-mode", modeValue);
+      localStorage.removeItem("jig-theme");
+    },
+    { themeValue: theme, modeValue: mode },
+  );
+  await page.reload();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -320,5 +435,179 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
   } finally {
     await rm(REJECT_HOOK, { force: true });
     await rm(writer, { recursive: true, force: true });
+  }
+});
+
+
+test("resolver states remain theme-safe across every Theme × Light/Dark combination", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const conflictCase = resolverThemeConflictCase();
+
+  await page.route("**/api/v1/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ready: true,
+        repository_path: ROOT,
+        repository_status: {
+          local_git: "committed",
+          remote: {
+            state: "sync-issue",
+            remote_name: "origin",
+            remote_location: REMOTE,
+          },
+        },
+      }),
+    });
+  });
+  await page.route("**/api/v1/sync/conflict", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(conflictCase),
+    });
+  });
+
+  for (const theme of RESOLVER_THEMES) {
+    for (const mode of ["light", "dark"] as const) {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await setResolverAppearance(page, theme, mode);
+      await page
+        .getByRole("button", { name: "Settings", exact: true })
+        .click();
+      const resolveAction = page.getByRole("button", {
+        name: "Resolve sync conflict",
+        exact: true,
+      });
+      await expect(resolveAction, theme + "/" + mode).toBeVisible();
+      await resolveAction.click();
+
+      const resolver = page.getByRole("dialog", {
+        name: "Resolve sync conflict",
+      });
+      await expect(resolver, theme + "/" + mode).toBeVisible();
+      const useResolution = resolver.getByRole("button", {
+        name: "Use this resolution",
+        exact: true,
+      });
+      await expect(useResolution).toBeDisabled();
+
+      const radios = resolver.getByRole("radio");
+      await expect(radios).toHaveCount(2);
+      const neutralStyles = await radios.evaluateAll((elements) =>
+        elements.map((element) => {
+          const container =
+            element.closest("label") ??
+            element.parentElement ??
+            element;
+          const style = getComputedStyle(container);
+          return {
+            color: style.color,
+            background: style.backgroundColor,
+            border: style.borderColor,
+          };
+        }),
+      );
+      expect(
+        neutralStyles[0],
+        theme + "/" + mode + " Local/Remote neutral styling",
+      ).toEqual(neutralStyles[1]);
+
+      const technicalTrigger = resolver.getByRole("button", {
+        name: "Technical details",
+        exact: true,
+      });
+      await technicalTrigger.click();
+      await expect(
+        resolver.getByText("semantic-conflict", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        resolver.getByText("aaaaaaaaaaaa", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        resolver.getByText("bbbbbbbbbbbb", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        resolver.getByText("cccccccccccc", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        resolver.getByRole("button", {
+          name: "Copy conflict JSON",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(resolver.locator("pre")).toContainText(
+        '"kind": "task"',
+      );
+
+      await radios.first().check();
+      await resolver
+        .getByRole("button", {
+          name: "Next conflict",
+          exact: true,
+        })
+        .click();
+      await expect(
+        resolver.getByText("Keep deleted", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        resolver.getByText("Keep changed Task", { exact: true }),
+      ).toBeVisible();
+      await resolver.getByRole("radio").nth(1).check();
+
+      await expect(
+        resolver.getByRole("heading", {
+          name: "Review Task order",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(useResolution).toBeDisabled();
+      await expect(
+        resolver.getByText("Theme stable C", { exact: true }),
+      ).toBeVisible();
+
+      const overflow = await resolver.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      );
+      expect(
+        overflow,
+        theme + "/" + mode + " resolver horizontal overflow",
+      ).toBeLessThanOrEqual(1);
+
+      await resolver
+        .getByRole("button", {
+          name: "Confirm order",
+          exact: true,
+        })
+        .click();
+      await expect(
+        resolver.getByRole("heading", {
+          name: "Resolution ready",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(useResolution).toBeEnabled();
+
+      const themeState = await page.evaluate(() => ({
+        theme: document.documentElement.getAttribute(
+          "data-astryx-theme",
+        ),
+        mode: document.documentElement.getAttribute("data-theme"),
+      }));
+      expect(themeState.theme).toBe(theme);
+      expect(themeState.mode).toBe(mode);
+
+      await resolver
+        .getByRole("button", { name: "Cancel", exact: true })
+        .click();
+      await expect(resolver).toHaveCount(0);
+    }
   }
 });
