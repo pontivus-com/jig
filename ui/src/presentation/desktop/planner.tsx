@@ -13,7 +13,12 @@ export function DesktopPlanner(
 
   return (
     <div className="jig-planner-surface">
-      <TaskDragProvider tasks={props.tasks} onMove={props.onMove}>
+      <TaskDragProvider
+        tasks={props.tasks}
+        recurrences={props.recurrences}
+        now={props.now}
+        onMove={props.onMove}
+      >
         <PlannerEmptyState
           dates={props.displayedDates}
           tasks={props.tasks}
