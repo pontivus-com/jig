@@ -86,13 +86,53 @@ function rgbChannels(value: string): readonly [number, number, number] {
   throw new Error(`Unsupported computed color: ${value}`);
 }
 
+function parsedOklab(
+  value: string,
+): readonly [number, number, number] | null {
+  const match = value.match(
+    /oklab\(\s*([-+\d.]+%?)\s+([-+\d.]+)\s+([-+\d.]+)/,
+  );
+  if (
+    match?.[1] === undefined ||
+    match[2] === undefined ||
+    match[3] === undefined
+  ) {
+    return null;
+  }
+  const lightness = match[1].endsWith("%")
+    ? Number(match[1].slice(0, -1)) / 100
+    : Number(match[1]);
+  return [lightness, Number(match[2]), Number(match[3])];
+}
+
+function linearSrgbFromOklab(
+  value: readonly [number, number, number],
+): readonly [number, number, number] {
+  const [lightness, a, b] = value;
+  const lRoot = lightness + 0.3963377774 * a + 0.2158037573 * b;
+  const mRoot = lightness - 0.1055613458 * a - 0.0638541728 * b;
+  const sRoot = lightness - 0.0894841775 * a - 1.291485548 * b;
+  const l = lRoot ** 3;
+  const m = mRoot ** 3;
+  const s = sRoot ** 3;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+}
+
 function relativeLuminance(value: string): number {
-  const channels = rgbChannels(value).map((channel) => {
-    const normalized = channel / 255;
-    return normalized <= 0.04045
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4;
-  });
+  const directOklab = parsedOklab(value);
+  const channels =
+    directOklab === null
+      ? rgbChannels(value).map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
+        })
+      : linearSrgbFromOklab(directOklab);
   return (
     0.2126 * (channels[0] ?? 0) +
     0.7152 * (channels[1] ?? 0) +
@@ -109,6 +149,11 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 function oklab(value: string): readonly [number, number, number] {
+  const direct = parsedOklab(value);
+  if (direct !== null) {
+    return direct;
+  }
+
   const [red, green, blue] = rgbChannels(value).map((channel) => {
     const normalized = channel / 255;
     return normalized <= 0.04045
