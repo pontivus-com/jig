@@ -62,3 +62,22 @@
   margin-inline: auto;
 }
 
+.jig-configured-desktop .jig-task-workspace-actions-desktop {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+}
+
+.jig-configured-desktop .jig-task-workspace-lifecycle-actions,
+.jig-configured-desktop .jig-task-workspace-primary-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.jig-configured-desktop .jig-task-workspace-lifecycle-actions {
+  margin-inline-end: auto;
+}
+
