@@ -90,6 +90,8 @@ function handler() {
                 error_summary: null,
               },
     }),
+    read_synchronization_conflict: () => null,
+    resolve_synchronization_conflict: async () => LOCAL_ONLY_STATUS,
     trigger_sync: async () => LOCAL_ONLY_STATUS,
     ensure_current_day_rollover: async () => undefined,
     on_task_mutation: () => undefined,
@@ -322,7 +324,9 @@ describe("loopback HTTP admission", () => {
                   error_summary: null,
                 },
       }),
-      trigger_sync: async () => PENDING_STATUS,
+      read_synchronization_conflict: () => null,
+    resolve_synchronization_conflict: async () => LOCAL_ONLY_STATUS,
+    trigger_sync: async () => PENDING_STATUS,
       ensure_current_day_rollover: async () => {
         rolloverCalls += 1;
         await rollForwardOutstandingInDatabase(
@@ -410,7 +414,9 @@ describe("loopback HTTP admission", () => {
                   error_summary: null,
                 },
       }),
-      trigger_sync: async () => LOCAL_ONLY_STATUS,
+      read_synchronization_conflict: () => null,
+    resolve_synchronization_conflict: async () => LOCAL_ONLY_STATUS,
+    trigger_sync: async () => LOCAL_ONLY_STATUS,
       ensure_current_day_rollover: async () => undefined,
       on_task_mutation: () => undefined,
     });
@@ -535,7 +541,9 @@ describe("loopback HTTP admission", () => {
                     error_summary: null,
                   },
       }),
-      trigger_sync: async () => {
+      read_synchronization_conflict: () => null,
+    resolve_synchronization_conflict: async () => LOCAL_ONLY_STATUS,
+    trigger_sync: async () => {
         syncCalls += 1;
         return SYNCHRONIZED_STATUS;
       },
