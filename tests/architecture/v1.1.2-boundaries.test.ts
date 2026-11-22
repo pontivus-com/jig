@@ -34,10 +34,6 @@ const production = [
 ];
 
 const EXPECTED_FAILURES = {
-  rawNativePlatformDetection: {
-    task: "J112-IMP-08",
-    violations: ["ui/src/reminder.tsx"],
-  },
   sourceOwnershipTopology: {
     task: "J112-IMP-14",
     violations: [
@@ -123,7 +119,7 @@ describe("v1.1.2 corrective architecture boundaries", () => {
       }
       return [path];
     });
-    expectGuardViolations("rawNativePlatformDetection", violations);
+    expect(violations).toEqual([]);
   });
 
   it("keeps LayoutMode out of platform, persistence, Git and transport adapters", () => {
