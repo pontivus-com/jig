@@ -1,4 +1,4 @@
-export type Destination = "planner" | "history" | "settings";
+import type { Destination } from "./destinations";
 
 export interface DestinationNavigationState {
   readonly current: Destination;
