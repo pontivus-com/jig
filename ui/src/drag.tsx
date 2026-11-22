@@ -71,14 +71,12 @@ interface DropTarget {
   readonly id: string | number;
   readonly type?: unknown;
   readonly data?: Readonly<Record<string, unknown>>;
-  readonly element?: Element | null;
 }
 
 function targetPlacement(
   tasks: readonly Task[],
   activeTaskId: string,
   target: DropTarget | null,
-  nativeEvent: Event | null,
 ): TaskProspectivePlacement | null {
   if (target === null) {
     return null;
@@ -105,31 +103,14 @@ function targetPlacement(
   if (target.type === "jig-date") {
     destinationIndex = available.length;
   } else if (target.type === "jig-task") {
-    const targetId = String(target.id);
-    const targetIndex = available.findIndex(
-      (task) => task.id === targetId,
-    );
-    if (targetIndex < 0) {
+    const targetIndex = target.data?.index;
+    if (
+      typeof targetIndex !== "number" ||
+      !Number.isInteger(targetIndex)
+    ) {
       return null;
     }
-
-    let afterTarget = false;
-    if (
-      nativeEvent instanceof PointerEvent &&
-      target.element instanceof Element
-    ) {
-      const rect = target.element.getBoundingClientRect();
-      afterTarget = nativeEvent.clientY >= rect.top + rect.height / 2;
-    } else {
-      const targetTask = tasks.find((task) => task.id === targetId);
-      afterTarget =
-        targetTask !== undefined &&
-        activeTask.scheduled_date === date &&
-        activeTask.position !== null &&
-        targetTask.position !== null &&
-        targetTask.position > activeTask.position;
-    }
-    destinationIndex = targetIndex + (afterTarget ? 1 : 0);
+    destinationIndex = Math.min(targetIndex, available.length);
   } else {
     return null;
   }
@@ -253,7 +234,6 @@ export function TaskDragProvider({
           tasks,
           String(source.id),
           event.operation.target,
-          event.nativeEvent ?? null,
         );
         prospectiveRef.current = prospective;
         setState((current) => ({
