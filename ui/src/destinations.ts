@@ -3,7 +3,6 @@ import type {
   NamespacedIconName,
 } from "@astryxdesign/core/Icon";
 import { JIG_ICON_KEYS } from "./jig-icons";
-import type { Destination } from "./navigation";
 
 export const DESTINATIONS = [
   {
