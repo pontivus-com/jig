@@ -47,6 +47,12 @@ export type SyncConflictDraftAction =
       readonly direction: "up" | "down";
     }
   | {
+      readonly type: "reorder-date-task";
+      readonly date: string;
+      readonly task_id: string;
+      readonly to_index: number;
+    }
+  | {
       readonly type: "confirm-date-order";
       readonly date: string;
     }
@@ -234,6 +240,40 @@ export function reduceSyncConflictDraft(
       if (target === undefined) return state;
       nextOrder[nextIndex] = action.task_id;
       nextOrder[index] = target;
+      const dateOrders = new Map(state.date_orders);
+      dateOrders.set(action.date, nextOrder);
+      const confirmedDates = new Set(state.confirmed_date_orders);
+      confirmedDates.delete(action.date);
+      return {
+        ...state,
+        step: stepFor(
+          conflictCase,
+          state.choices,
+          confirmedDates,
+        ),
+        date_orders: dateOrders,
+        confirmed_date_orders: confirmedDates,
+        confirmation_intent: false,
+      };
+    }
+
+    case "reorder-date-task": {
+      const current = state.date_orders.get(action.date);
+      if (
+        current === undefined ||
+        !Number.isInteger(action.to_index) ||
+        action.to_index < 0 ||
+        action.to_index >= current.length
+      ) {
+        return state;
+      }
+      const fromIndex = current.indexOf(action.task_id);
+      if (fromIndex < 0 || fromIndex === action.to_index) {
+        return state;
+      }
+      const nextOrder = [...current];
+      nextOrder.splice(fromIndex, 1);
+      nextOrder.splice(action.to_index, 0, action.task_id);
       const dateOrders = new Map(state.date_orders);
       dateOrders.set(action.date, nextOrder);
       const confirmedDates = new Set(state.confirmed_date_orders);
