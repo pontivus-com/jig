@@ -1,6 +1,6 @@
 import { DesktopConfiguredHeader } from "./header";
 import { DesktopFeedbackRegion } from "./feedback-region";
-import { TaskWorkspaceDrawer } from "../../task-workspace";
+import { DesktopTaskWorkspace } from "./task-workspace";
 import {
   ApplicationShell,
   type ConfiguredPresentationProps,
@@ -53,7 +53,7 @@ export function DesktopConfiguredApplication(
           {content}
         </div>
           </div>
-          <TaskWorkspaceDrawer
+          <DesktopTaskWorkspace
             workspace={props.destination === "settings" ? null : workspace}
             externalError={componentProps.externalError}
             isSaving={componentProps.isSaving}
