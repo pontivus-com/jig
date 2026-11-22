@@ -1030,13 +1030,13 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
       { steps: 4 },
     );
     await page.waitForTimeout(100);
-    const scrollTop = await frame.evaluate((element) => element.scrollTop);
+    const scrollTop = await scrollOwner.evaluate((element) => element.scrollTop);
     if (scrollTop > 0) {
       break;
     }
   }
 
-  const scrollTop = await frame.evaluate((element) => element.scrollTop);
+  const scrollTop = await scrollOwner.evaluate((element) => element.scrollTop);
   expect(scrollTop).toBeGreaterThan(0);
   await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drop-date",
@@ -1213,13 +1213,13 @@ test("Task-body touch scroll never activates drag", async ({ page }) => {
   }
   await page.reload();
 
-  const frame = page.locator(".jig-content-frame");
-  const frameGeometry = await frame.evaluate((element) => ({
+  const scrollOwner = page.locator("#astryx-app-shell-main");
+  const scrollGeometry = await scrollOwner.evaluate((element) => ({
     clientHeight: element.clientHeight,
     scrollHeight: element.scrollHeight,
   }));
-  expect(frameGeometry.scrollHeight).toBeGreaterThan(
-    frameGeometry.clientHeight,
+  expect(scrollGeometry.scrollHeight).toBeGreaterThan(
+    scrollGeometry.clientHeight,
   );
 
   const body = (await taskCard(page, "Body-scroll task 2")).locator(
