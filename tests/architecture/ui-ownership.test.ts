@@ -140,6 +140,141 @@ describe("UI ownership architecture", () => {
     expect(css).not.toContain(".jig-task-inspector");
   });
 
+  it("authors exact v1.1.2 surface roles in every theme source", () => {
+    const productTokens = source("ui/src/themes/product-tokens.ts");
+    expect(productTokens).toContain("export interface JigSurfaceRoles");
+    expect(productTokens).toContain(
+      "export function jigProductLocalTokens(",
+    );
+    expect(productTokens).toContain(
+      '"--jig-chrome-surface": surfaceRoles.chrome',
+    );
+    expect(productTokens).toContain(
+      '"--jig-planner-surface": surfaceRoles.planner',
+    );
+    expect(productTokens).toContain(
+      '"--jig-task-surface": surfaceRoles.task',
+    );
+
+    const expectedRoles = new Map<string, readonly string[]>([
+      [
+        "ui/src/jig-theme.source.ts",
+        [
+          'chrome: "var(--color-background-body)"',
+          'planner: "var(--color-background-surface)"',
+          '"color-mix(in oklab, var(--color-background-card) 94%, var(--color-text-primary) 6%)"',
+        ],
+      ],
+      [
+        "ui/src/themes/astryx-neutral.source.ts",
+        [
+          'chrome: "var(--color-background-body)"',
+          'planner: "var(--color-background-surface)"',
+          '"color-mix(in oklab, var(--color-background-card) 84%, var(--color-text-primary) 16%)"',
+        ],
+      ],
+      [
+        "ui/src/themes/astryx-butter.source.ts",
+        [
+          'chrome: "var(--color-background-body)"',
+          'planner: "var(--color-background-surface)"',
+          '"color-mix(in oklab, var(--color-background-card) 86%, var(--color-text-primary) 14%)"',
+        ],
+      ],
+      [
+        "ui/src/themes/astryx-chocolate.source.ts",
+        [
+          'chrome: "var(--color-background-body)"',
+          '"color-mix(in oklab, var(--color-background-surface) 65%, var(--color-background-muted) 35%)"',
+          'task: "var(--color-background-card)"',
+        ],
+      ],
+      [
+        "ui/src/themes/astryx-matcha.source.ts",
+        [
+          'chrome: "var(--color-background-body)"',
+          'planner: "var(--color-background-surface)"',
+          '"color-mix(in oklab, var(--color-background-card) 86%, var(--color-text-primary) 14%)"',
+        ],
+      ],
+      [
+        "ui/src/themes/astryx-stone.source.ts",
+        [
+          'chrome: "var(--color-background-body)"',
+          'planner: "var(--color-background-surface)"',
+          '"color-mix(in oklab, var(--color-background-card) 86%, var(--color-text-primary) 14%)"',
+        ],
+      ],
+      [
+        "ui/src/themes/astryx-y2k.source.ts",
+        [
+          'chrome: "var(--color-background-body)"',
+          'planner: "var(--color-background-surface)"',
+          '"color-mix(in oklab, var(--color-background-card) 84%, var(--color-text-primary) 16%)"',
+        ],
+      ],
+      [
+        "ui/src/themes/gruvbox.source.ts",
+        [
+          "chrome: gruvboxPalette.body",
+          "planner: gruvboxPalette.surface",
+          "task: gruvboxPalette.card",
+        ],
+      ],
+      [
+        "ui/src/themes/dracula.source.ts",
+        [
+          "chrome: draculaPalette.body",
+          "planner: draculaPalette.surface",
+          '"color-mix(in oklab, var(--color-background-card) 97%, var(--color-text-primary) 3%)"',
+        ],
+      ],
+      [
+        "ui/src/themes/solarized.source.ts",
+        [
+          "chrome: solarizedPalette.body",
+          "planner: solarizedPalette.surface",
+          '"color-mix(in oklab, var(--color-background-card) 88%, var(--color-text-primary) 12%)"',
+          '"color-mix(in oklab, var(--color-background-card) 94%, var(--color-text-primary) 6%)"',
+        ],
+      ],
+      [
+        "ui/src/themes/nord.source.ts",
+        [
+          "chrome: nordPalette.body",
+          "planner: nordPalette.surface",
+          "task: nordPalette.card",
+        ],
+      ],
+      [
+        "ui/src/themes/catppuccin.source.ts",
+        [
+          "chrome: catppuccinPalette.body",
+          "planner: catppuccinPalette.surface",
+          "task: catppuccinPalette.card",
+        ],
+      ],
+      [
+        "ui/src/themes/tokyo-night.source.ts",
+        [
+          "chrome: tokyoNightPalette.body",
+          "planner: tokyoNightPalette.surface",
+          '"color-mix(in oklab, var(--color-background-card) 99%, var(--color-text-primary) 1%)"',
+        ],
+      ],
+    ]);
+
+    for (const [themePath, expected] of expectedRoles) {
+      const themeSource = source(themePath);
+      expect(themeSource, themePath).toContain("jigProductLocalTokens({");
+      for (const expression of expected) {
+        expect(themeSource, `${themePath}: ${expression}`).toContain(
+          expression,
+        );
+      }
+    }
+  });
+
   it("consumes only Astryx public tokens plus governed Jig product aliases", () => {
     const css = styleSource();
     const usedTokens = new Set(
