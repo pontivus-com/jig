@@ -19,6 +19,8 @@ import {
   validateSnapshot,
 } from "../../src/core/portable";
 import {
+  deriveJigDataDateOrders,
+  jigDataConflictKey,
   reconcileRelatedPortableSnapshots,
   recoveryCommitSpec,
 } from "../../src/core/synchronization-recovery";
@@ -1203,16 +1205,85 @@ describe("Android Git smart-HTTP feasibility", () => {
       ]);
 
       await expect(androidSync.trigger()).resolves.toMatchObject({
-        local_git: "pending",
+        local_git: "committed",
         remote: { state: "sync-issue" },
+      });
+      expect(androidSync.readSynchronizationConflict()).toBeNull();
+
+      await expect(androidSync.trigger()).resolves.toMatchObject({
+        local_git: "committed",
+        remote: { state: "sync-issue" },
+      });
+      const conflictCase = androidSync.readSynchronizationConflict();
+      if (conflictCase === null) {
+        throw new Error("expected eligible Android synchronization conflict");
+      }
+      expect(androidSync.diagnostics()).toMatchObject({
+        phase: "resolve-conflict",
+        reason: "semantic-conflict",
+      });
+      expect(conflictCase.conflicts).toHaveLength(1);
+      const conflict = conflictCase.conflicts[0];
+      if (conflict === undefined) {
+        throw new Error("expected one synchronization conflict");
+      }
+      const choices = [{
+        conflict_key: jigDataConflictKey(conflict),
+        side: "local" as const,
+      }];
+      const dateOrders = deriveJigDataDateOrders(
+        conflictCase,
+        choices,
+      );
+      if (dateOrders === null) {
+        throw new Error("expected date-order review after conflict choice");
+      }
+
+      await expect(
+        androidSync.resolveSynchronizationConflict({
+          ancestor_head: conflictCase.ancestor_head,
+          local_head: conflictCase.local_head,
+          remote_head: conflictCase.remote_head,
+          expected_revision: conflictCase.expected_revision,
+          choices,
+          date_orders: dateOrders,
+        }),
+      ).resolves.toMatchObject({
+        local_git: "committed",
+        remote: { state: "synchronized" },
+      });
+      expect(androidSync.readSynchronizationConflict()).toBeNull();
+      expect(androidSync.diagnostics()).toMatchObject({
+        phase: "idle",
+        reason: null,
+        recovery_attempted: true,
+        recovery_outcome: "accepted",
       });
 
       expect(
         (await readCanonicalState(androidDb)).tasks[0],
       ).toMatchObject({ title: "Android conflict" });
+      await expect(desktopSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
       expect(
         (await readCanonicalState(desktopDb)).tasks[0],
-      ).toMatchObject({ title: "Desktop conflict" });
+      ).toMatchObject({ title: "Android conflict" });
+
+      const resolvedRemote = await runGit(root, [
+        "--git-dir",
+        remote,
+        "show",
+        "-s",
+        "--format=%s%n%P",
+        "jig-data",
+      ]);
+      const [resolvedMessage, resolvedParents] =
+        resolvedRemote.split("\n");
+      expect(resolvedMessage).toBe("Resolve Jig sync conflict");
+      expect(
+        resolvedParents?.trim().split(/\s+/),
+      ).toHaveLength(2);
       expect(
         await runGit(root, [
           "--git-dir",
@@ -1220,7 +1291,7 @@ describe("Android Git smart-HTTP feasibility", () => {
           "rev-parse",
           "jig-data",
         ]),
-      ).toBe(remoteHeadBeforeConflict);
+      ).not.toBe(remoteHeadBeforeConflict);
       expect(
         await runGit(root, [
           "--git-dir",
@@ -1228,7 +1299,7 @@ describe("Android Git smart-HTTP feasibility", () => {
           "show",
           `jig-data:tasks/${taskId}.json`,
         ]),
-      ).toContain('"title": "Desktop conflict"');
+      ).toContain('"title": "Android conflict"');
     } finally {
       desktopSync.stop();
       androidSync.stop();
