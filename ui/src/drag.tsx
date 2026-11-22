@@ -73,6 +73,18 @@ interface DropTarget {
   readonly data?: Readonly<Record<string, unknown>>;
 }
 
+interface DropTargetGeometry extends DropTarget {
+  readonly shape?: {
+    readonly boundingRectangle: {
+      readonly top: number;
+      readonly right: number;
+      readonly bottom: number;
+      readonly left: number;
+      readonly height: number;
+    };
+  } | undefined;
+}
+
 interface PointerPosition {
   readonly x: number;
   readonly y: number;
@@ -82,29 +94,30 @@ function pointerPlacement(
   tasks: readonly Task[],
   activeTaskId: string,
   pointer: PointerPosition,
+  droppables: Iterable<DropTargetGeometry>,
 ): TaskProspectivePlacement | null {
   const activeTask = tasks.find((task) => task.id === activeTaskId);
   if (activeTask === undefined || activeTask.completed_at !== null) {
     return null;
   }
 
-  const dateZone = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      "[data-jig-drop-date-container]",
-    ),
-  ).find((element) => {
-    const bounds = element.getBoundingClientRect();
+  const registered = Array.from(droppables);
+  const dateTarget = registered.find((target) => {
+    if (target.type !== "jig-date") {
+      return false;
+    }
+    const bounds = target.shape?.boundingRectangle;
     return (
+      bounds !== undefined &&
       pointer.x >= bounds.left &&
       pointer.x <= bounds.right &&
       pointer.y >= bounds.top &&
       pointer.y <= bounds.bottom
     );
   });
-  const date = dateZone?.dataset.jigDropDateContainer;
+  const date = dateTarget?.data?.date;
   if (
-    dateZone === undefined ||
-    date === undefined ||
+    typeof date !== "string" ||
     !isActiveScheduleDate(todayCivilDate(), date)
   ) {
     return null;
@@ -113,19 +126,34 @@ function pointerPlacement(
   const available = outstandingForDate(tasks, date).filter(
     (task) => task.id !== activeTaskId,
   );
-  const taskRects = Array.from(
-    dateZone.querySelectorAll<HTMLElement>(
-      ".jig-task-card:not(.jig-task-card-dragging)",
-    ),
-  )
-    .map((element) => {
-      const bounds = element.getBoundingClientRect();
+  const taskRects = registered
+    .filter(
+      (target) =>
+        target.type === "jig-task" &&
+        target.data?.date === date &&
+        String(target.id) !== activeTaskId &&
+        target.shape !== undefined,
+    )
+    .map((target) => {
+      const bounds = target.shape?.boundingRectangle;
+      if (bounds === undefined) {
+        return null;
+      }
       return {
         top: bounds.top,
         bottom: bounds.bottom,
         midpoint: bounds.top + bounds.height / 2,
       };
     })
+    .filter(
+      (
+        bounds,
+      ): bounds is {
+        readonly top: number;
+        readonly bottom: number;
+        readonly midpoint: number;
+      } => bounds !== null,
+    )
     .sort((left, right) => left.top - right.top);
 
   const hoveredIndex = taskRects.findIndex(
@@ -317,7 +345,7 @@ export function TaskDragProvider({
         });
         onDragActiveChange?.(true);
       }}
-      onDragMove={(event) => {
+      onDragMove={(event, manager) => {
         const source = event.operation.source;
         const { nativeEvent } = event;
         if (
@@ -339,6 +367,7 @@ export function TaskDragProvider({
           tasks,
           String(source.id),
           pointer,
+          manager.registry.droppables,
         );
         prospectiveRef.current = prospective;
         setState((current) => ({
@@ -346,7 +375,7 @@ export function TaskDragProvider({
           prospective,
         }));
       }}
-      onDragOver={(event) => {
+      onDragOver={(event, manager) => {
         event.preventDefault();
         const source = event.operation.source;
         if (source === null) {
@@ -370,6 +399,7 @@ export function TaskDragProvider({
                 tasks,
                 String(source.id),
                 pointer,
+                manager.registry.droppables,
               );
         prospectiveRef.current = prospective;
         setState((current) => ({
