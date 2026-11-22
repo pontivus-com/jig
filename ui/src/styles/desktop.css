@@ -81,3 +81,43 @@
   margin-inline-end: auto;
 }
 
+.jig-configured-desktop .jig-planner-board-desktop {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(10rem, 1fr));
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+  padding-block-end: 0;
+}
+
+.jig-configured-desktop .jig-planner-board-desktop .jig-week-column {
+  width: auto;
+  min-height: 18rem;
+  padding-inline: var(--spacing-1);
+}
+
+.jig-configured-desktop
+  .jig-planner-board-desktop
+  .jig-week-column
+  + .jig-week-column {
+  border-inline-start: var(--border-width) solid var(--color-border);
+}
+
+.jig-configured-desktop
+  .jig-planner-board-desktop
+  .jig-week-column
+  > section {
+  min-height: 18rem;
+}
+
+.jig-configured-desktop
+  .jig-planner-board-desktop
+  .jig-week-column-header {
+  min-height: 3.25rem;
+  padding: var(--spacing-2);
+}
+
+.jig-configured-desktop .jig-planner-board-desktop .jig-week-task-area {
+  min-height: 12rem;
+}
+
