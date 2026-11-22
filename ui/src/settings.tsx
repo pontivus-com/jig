@@ -26,6 +26,7 @@ import {
   requestNotificationPermission,
   type NotificationSettingsState,
 } from "./notification-settings";
+import { NotificationSettingsContent } from "./notification-settings-content";
 import {
   THEME_DEFINITIONS,
   THEME_GROUPS,
@@ -60,37 +61,6 @@ export interface SettingsViewProps {
   readonly onReconnectGitHub: () => Promise<void>;
   readonly showDiagnostics: boolean;
   readonly onShowDiagnosticsChange: (value: boolean) => void;
-}
-
-function notificationStatusMessage(
-  state: NotificationSettingsState | null,
-): string {
-  if (state === null) {
-    return "Checking notification settings";
-  }
-  if (state.platform === "android") {
-    switch (state.permission) {
-      case "granted":
-        return state.exact_alarm === "granted"
-          ? "Enabled · exact timing available"
-          : "Enabled · exact timing unavailable";
-      case "permission-required":
-        return "Notification permission required";
-      case "denied":
-        return "Blocked in Android settings";
-    }
-  }
-
-  switch (state.permission) {
-    case "unsupported":
-      return "Not supported by this browser";
-    case "default":
-      return "Not enabled";
-    case "granted":
-      return "Enabled";
-    case "denied":
-      return "Blocked in browser settings";
-  }
 }
 
 export function SettingsView({
@@ -275,54 +245,19 @@ export function SettingsView({
         >
           <h2 id="notifications-heading">Notifications</h2>
           <div className="jig-settings-group">
-            <div className="jig-settings-notifications">
-              <div>
-                <strong>
-                  {notificationState?.platform === "android"
-                    ? "Android notifications"
-                    : "Browser notifications"}
-                </strong>
-                <p>{notificationStatusMessage(notificationState)}</p>
-                {notificationState?.platform === "android" &&
-                notificationState.permission === "granted" &&
-                notificationState.exact_alarm === "unavailable" ? (
-                  <small>
-                    Future reminders are scheduled inexactly until exact
-                    alarms are enabled in Android settings.
-                  </small>
-                ) : null}
-              </div>
-
-              <div className="jig-settings-row-actions">
-                {notificationState?.permission === "default" ||
-                (notificationState?.platform === "android" &&
-                  notificationState.permission ===
-                    "permission-required") ? (
-                  <Button
-                    label="Enable"
-                    variant="secondary"
-                    onClick={() => {
-                      void requestNotificationPermission().then(
-                        setNotificationState,
-                      );
-                    }}
-                  />
-                ) : null}
-                {notificationState?.platform === "android" &&
-                notificationState.permission === "granted" &&
-                notificationState.exact_alarm === "unavailable" ? (
-                  <Button
-                    label="Exact timing settings"
-                    variant="secondary"
-                    onClick={() => {
-                      void openExactReminderSettings().then(
-                        setNotificationState,
-                      );
-                    }}
-                  />
-                ) : null}
-              </div>
-            </div>
+            <NotificationSettingsContent
+              state={notificationState}
+              onEnable={() => {
+                void requestNotificationPermission().then(
+                  setNotificationState,
+                );
+              }}
+              onOpenExactTimingSettings={() => {
+                void openExactReminderSettings().then(
+                  setNotificationState,
+                );
+              }}
+            />
           </div>
         </section>
 
