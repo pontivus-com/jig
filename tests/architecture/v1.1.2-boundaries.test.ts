@@ -33,26 +33,6 @@ const production = [
   ...sourceFiles("ui/src"),
 ];
 
-const EXPECTED_FAILURES = {
-  resolverDraftOwner: {
-    task: "J112-IMP-17",
-    violations: ["missing:ui/src/sync-conflict-state.ts"],
-  },
-} as const;
-
-type ExpectedFailureId = keyof typeof EXPECTED_FAILURES;
-
-function expectGuardViolations(
-  id: ExpectedFailureId,
-  actual: readonly string[],
-): void {
-  const expected = [...EXPECTED_FAILURES[id].violations].sort();
-  expect(
-    [...actual].sort(),
-    `${id} is an explicit ${EXPECTED_FAILURES[id].task} expected failure. Remove the registry entry when the owning task closes; do not weaken the guard.`,
-  ).toEqual(expected);
-}
-
 function declarationOwners(pattern: RegExp): readonly string[] {
   return production.flatMap(([path, content]) =>
     pattern.test(content) ? [path] : [],
@@ -406,7 +386,7 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     const draftViolations = existsSync(draftPath)
       ? []
       : [`missing:${draftPath}`];
-    expectGuardViolations("resolverDraftOwner", draftViolations);
+    expect(draftViolations).toEqual([]);
 
     if (existsSync(draftPath)) {
       expect(source(draftPath)).not.toMatch(
