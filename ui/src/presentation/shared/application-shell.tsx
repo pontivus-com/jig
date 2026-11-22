@@ -5,7 +5,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from "react";
-import type { Destination } from "../../navigation";
+import type { Destination } from "../../destinations";
 import type { PlannerHeaderProps } from "../../planner-header";
 import type {
   TaskWorkspaceOverlayProps,
