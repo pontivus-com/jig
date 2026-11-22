@@ -420,7 +420,7 @@ describe("UI ownership architecture", () => {
     expect(shell).toContain("function ApplicationShell");
     expect(shell).toContain("mobileNav={false}");
     expect(shell).not.toContain("<SideNav");
-    expect(app).toContain("<ApplicationShell topNav={<OnboardingHeader />}>");
+    expect(app).toContain("<OnboardingHeader layoutMode={layoutMode} />");
     expect(app).toContain("initialDestinationNavigation");
     expect(app).toContain("installNativeBackButtonListener");
     expect(app).toContain("<DesktopConfiguredApplication");
@@ -627,14 +627,61 @@ describe("UI ownership architecture", () => {
     expect(settings).toContain('label="Sync now"');
   });
 
-  it("keeps onboarding inside Jig and protocol controls out of presentation", () => {
+  it("keeps onboarding orchestration shared and presentation/capability ownership explicit", () => {
     const app = source("ui/src/app.tsx");
     const setup = source("ui/src/setup.tsx");
+    const setupHttp = source("ui/src/setup-http.ts");
     const deviceFlow = source("ui/src/github-device-flow.tsx");
+    const desktopSetup = source("ui/src/presentation/desktop/setup.tsx");
+    const narrowSetup = source("ui/src/presentation/narrow/setup.tsx");
+    const sharedCss = source("ui/src/styles/shared.css");
+    const desktopCss = source("ui/src/styles/desktop.css");
+    const narrowCss = source("ui/src/styles/narrow.css");
 
-    expect(app).toContain("<OnboardingHeader />");
-    expect(app).toContain("<SetupView status={setupStatus} layoutMode={layoutMode} />");
+    expect(app).toContain("<OnboardingHeader layoutMode={layoutMode} />");
+    expect(app).toContain("providerContinuationRevision={setupProviderContinuationRevision}");
     expect(setup).not.toContain("<main");
+    expect((setup.match(/layoutMode === "desktop"/g) ?? [])).toHaveLength(1);
+    expect(setup).not.toContain('layoutMode === "narrow"');
+    expect(setup).toContain("<DesktopSetupPresentation");
+    expect(setup).toContain("<NarrowSetupPresentation");
+
+    expect(setup).toContain("status.github_available ?");
+    expect(setup).toContain("status.local_repository_available ?");
+    expect(setup).toContain("showLocalRepository &&");
+    expect(setup).toContain("status.local_repository_available");
+    expect(setup).not.toContain("Capacitor");
+    expect(setup).not.toContain("isNativePlatform");
+
+    expect(setupHttp).toContain("usesNativeSetupProviderContinuation");
+    expect(setupHttp).toContain("local_repository_available: false");
+    expect(setup).toContain("BROWSER_PROVIDER_RETRY_MS");
+    expect(setup).toContain('window.addEventListener("focus", observeNow)');
+    expect(setup).toContain('document.addEventListener("visibilitychange", onVisible)');
+    expect(setup).toContain("providerContinuationRevision");
+
+    expect(desktopSetup).toContain('data-jig-setup-presentation="desktop"');
+    expect(desktopSetup).toContain("jig-setup-layout-desktop");
+    expect(narrowSetup).toContain('data-jig-setup-presentation="narrow"');
+    expect(narrowSetup).toContain("jig-setup-layout-narrow");
+    for (const presenter of [desktopSetup, narrowSetup]) {
+      expect(presenter).not.toContain("SetupStatus");
+      expect(presenter).not.toContain("setup-http");
+      expect(presenter).not.toContain("LayoutMode");
+    }
+
+    expect(sharedCss).not.toContain("@media (max-width: 72.999rem)");
+    expect(sharedCss).not.toContain(".jig-setup-layout-desktop");
+    expect(sharedCss).not.toContain(".jig-setup-layout-narrow");
+    expect(desktopCss).toContain(".jig-setup-layout-desktop");
+    expect(desktopCss).toContain(
+      "grid-template-columns: minmax(0, 1fr) minmax(22rem, 30rem)",
+    );
+    expect(narrowCss).toContain(".jig-setup-layout-narrow");
+    expect(narrowCss).toContain(
+      "grid-template-columns: minmax(0, 1fr)",
+    );
+
     expect(setup).toContain('label="Connect GitHub repository"');
     expect(setup).toContain('label="Use an existing local repository"');
     expect(setup).not.toContain("Refresh access");
@@ -737,13 +784,14 @@ describe("UI ownership architecture", () => {
     ).not.toContain("position: sticky;");
 
     expect(setup).toContain('readonly layoutMode: LayoutMode;');
-    expect(setup).toContain('layoutMode === "narrow"');
+    expect((setup.match(/layoutMode === "desktop"/g) ?? [])).toHaveLength(1);
+    expect(setup).not.toContain('layoutMode === "narrow"');
     expect(setup).toContain("function SetupBenefits");
     expect(setup).toContain("Plan your week. Keep the data yours.");
     expect(setup).not.toContain("Same plan. Different devices.");
     expect(setup).not.toContain("Choose one repository.");
     expect(app).toContain(
-      "<SetupView status={setupStatus} layoutMode={layoutMode} />",
+      "providerContinuationRevision={setupProviderContinuationRevision}",
     );
 
     for (const section of ["Task", "Schedule", "Details", "Notes"]) {
