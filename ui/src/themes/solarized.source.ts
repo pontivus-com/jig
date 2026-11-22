@@ -9,6 +9,13 @@ export const solarizedTheme = defineTheme({
   extends: neutralTheme,
   tokens: communityColorTokens(solarizedPalette),
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: solarizedPalette.body,
+      planner: solarizedPalette.surface,
+      task: [
+        "color-mix(in oklab, var(--color-background-card) 88%, var(--color-text-primary) 12%)",
+        "color-mix(in oklab, var(--color-background-card) 94%, var(--color-text-primary) 6%)",
+      ],
+    }),
   },
 });
