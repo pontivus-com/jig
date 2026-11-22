@@ -108,6 +108,47 @@ function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function oklab(value: string): readonly [number, number, number] {
+  const [red, green, blue] = rgbChannels(value).map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+
+  const l = Math.cbrt(
+    0.4122214708 * (red ?? 0) +
+      0.5363325363 * (green ?? 0) +
+      0.0514459929 * (blue ?? 0),
+  );
+  const m = Math.cbrt(
+    0.2119034982 * (red ?? 0) +
+      0.6806995451 * (green ?? 0) +
+      0.1073969566 * (blue ?? 0),
+  );
+  const s = Math.cbrt(
+    0.0883024619 * (red ?? 0) +
+      0.2817188376 * (green ?? 0) +
+      0.6299787005 * (blue ?? 0),
+  );
+
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function oklabDistance(first: string, second: string): number {
+  const a = oklab(first);
+  const b = oklab(second);
+  return Math.hypot(
+    (a[0] ?? 0) - (b[0] ?? 0),
+    (a[1] ?? 0) - (b[1] ?? 0),
+    (a[2] ?? 0) - (b[2] ?? 0),
+  );
+}
+
 async function themeSnapshot(page: Page): Promise<{
   readonly rootTheme: string | null;
   readonly explicitMode: string | null;
@@ -2308,12 +2349,28 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       expect(snapshot.explicitMode).toBe(mode);
       expect(snapshot.chromeBackground, `${preset}/${mode} chrome matches body`)
         .toBe(snapshot.bodyBackground);
-      expect(snapshot.plannerBackground, `${preset}/${mode} Planner separates from chrome`)
-        .not.toBe(snapshot.chromeBackground);
+      expect(
+        new Set([
+          snapshot.chromeBackground,
+          snapshot.plannerBackground,
+          snapshot.taskBackground,
+        ]).size,
+        `${preset}/${mode} surface colors must resolve distinctly`,
+      ).toBe(3);
+      expect(
+        oklabDistance(snapshot.chromeBackground, snapshot.plannerBackground),
+        `${preset}/${mode} chrome↔Planner OKLab distance`,
+      ).toBeGreaterThanOrEqual(0.018);
+      expect(
+        oklabDistance(snapshot.chromeBackground, snapshot.taskBackground),
+        `${preset}/${mode} chrome↔Task OKLab distance`,
+      ).toBeGreaterThanOrEqual(0.018);
+      expect(
+        oklabDistance(snapshot.plannerBackground, snapshot.taskBackground),
+        `${preset}/${mode} Planner↔Task OKLab distance`,
+      ).toBeGreaterThanOrEqual(0.025);
       expect(snapshot.laneBackground, `${preset}/${mode} lane remains open`)
         .toBe("rgba(0, 0, 0, 0)");
-      expect(snapshot.taskBackground, `${preset}/${mode} task vs canvas`)
-        .not.toBe(snapshot.plannerBackground);
       expect(snapshot.taskBorder).not.toBe("rgba(0, 0, 0, 0)");
       expect(
         contrastRatio(snapshot.bodyText, snapshot.bodyBackground),
