@@ -892,14 +892,22 @@ test("dedicated-handle drag survives twenty sequential cycles without stranded s
   for (let cycle = 0; cycle < 20; cycle += 1) {
     const moveToEnd = cycle % 2 === 0;
     const source = await dragHandle(page, "Repeated drag source");
-    const targetSlot = moveToEnd ? 2 : 0;
-    const target = page.locator(
-      `[data-date="${today}"] [data-jig-drop-slot="${targetSlot}"]`,
+    const destinationIndex = moveToEnd ? 1 : 0;
+    const { target, targetYRatio } = await taskDropTarget(
+      page,
+      today,
+      destinationIndex,
+      "Repeated drag source",
     );
-    const intent = await mouseDrag(page, source, target);
+    const intent = await mouseDrag(
+      page,
+      source,
+      target,
+      targetYRatio,
+    );
     expect(intent).toEqual({
       date: today,
-      index: moveToEnd ? 1 : 0,
+      index: destinationIndex,
     });
 
     await expect
@@ -911,7 +919,7 @@ test("dedicated-handle drag survives twenty sequential cycles without stranded s
       );
 
     await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-    await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+    await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
     await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
       "data-jig-drag-active",
       "false",
@@ -954,7 +962,7 @@ test("outside drop restores exactly without mutation", async ({
   await page.mouse.up();
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
   await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drag-active",
     "false",
@@ -1003,8 +1011,10 @@ test("pointer cancellation clears touch drag without mutation", async ({
   });
   await client.send("Input.dispatchTouchEvent", {
     type: "touchMove",
-    touchPoints: [point(x + 8, y + 8)],
+    touchPoints: [point(x + 4, y + 4)],
   });
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await page.waitForTimeout(275);
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
   await client.send("Input.dispatchTouchEvent", {
@@ -1014,7 +1024,7 @@ test("pointer cancellation clears touch drag without mutation", async ({
   await client.detach();
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
   await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drag-active",
     "false",
@@ -1127,11 +1137,11 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
     "data-jig-drop-date",
     today,
   );
-  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(1);
   await page.mouse.up();
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
 });
 
 
