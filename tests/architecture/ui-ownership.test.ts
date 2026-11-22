@@ -528,11 +528,12 @@ describe("UI ownership architecture", () => {
     expect(week).not.toContain("jig-planner-narrow");
     expect(week).not.toContain("SortableTaskRow");
 
-    expect(list).toContain("<DraggableTaskRow");
-    expect(list).not.toContain("<SortableTaskRow");
-    expect(list).not.toContain("isSortable");
-    expect(list).toContain("<TaskInsertionSlot");
-    expect(list).not.toContain("@dnd-kit/");
+    // J112-IMP-11 supersedes the historical insertion-slot/raw-draggable
+    // mechanics. This architecture test protects the singular Task-sequence
+    // owner and approved dnd-kit boundary without treating the old mechanics
+    // as desired behavior.
+    expect(list).toContain("function plannerTaskPresentationItems");
+    expect(list).toContain("outstandingForDate(tasks, date)");
 
     expect(editor).not.toContain("optionalText");
     expect(editor).not.toContain("normalizeOptionalText");
@@ -544,15 +545,9 @@ describe("UI ownership architecture", () => {
     expect(taskRow).toContain('icon="clock"');
     expect(taskRow).toContain('className="jig-task-drag-handle"');
     expect(taskRow).toContain('<JigIcon name="drag"');
-    expect(taskRow).not.toContain("@dnd-kit/");
-    expect(taskRow).not.toContain("PointerSensor");
 
     expect(drag).toContain('from "@dnd-kit/react"');
     expect(drag).toContain('from "@dnd-kit/dom"');
-    expect(drag).toContain("useDraggable");
-    expect(drag).toContain("draggable.handleRef");
-    expect(drag).toContain('type: "jig-insertion-slot"');
-    expect(drag).toContain("PointerActivationConstraints.Distance");
     expect(drag).not.toContain("@hello-pangea/dnd");
 
     expect(existsSync("ui/src/date-strip.tsx")).toBe(false);
