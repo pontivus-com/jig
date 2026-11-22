@@ -396,6 +396,18 @@ async function localAncestor(
       : null;
 }
 
+export async function resetPortableDataWorktree(
+  config: GitAdapterConfig,
+): Promise<void> {
+  assertAdapterPaths(config);
+  await requireGit(jigWorktreePath(config), [
+    "reset",
+    "--hard",
+    "HEAD",
+  ]);
+}
+
+
 export async function alignPortableDataRef(
   config: GitAdapterConfig,
   expectedHead: string,
@@ -425,11 +437,7 @@ export async function alignPortableDataRef(
       "Local jig-data ref changed concurrently",
     );
   }
-  await requireGit(jigWorktreePath(config), [
-    "reset",
-    "--hard",
-    "HEAD",
-  ]);
+  await resetPortableDataWorktree(config);
 }
 
 

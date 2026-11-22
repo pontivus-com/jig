@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -13,6 +13,7 @@ import {
   DATA_REF,
 } from "../../src/shell/git/portable-store";
 import { requireGit, runGit } from "../../src/shell/git/process";
+import { jigWorktreePath } from "../../src/shell/git/repository";
 import {
   compareAndSetPortableHead,
   deleteRecoveryCandidate,
@@ -196,6 +197,12 @@ describe("Linux recovery-only Git effects", () => {
     expect(
       await requireGit(root, ["show-ref", "--verify", "--hash", DATA_REF]),
     ).toBe(candidate);
+    expect(
+      await readFile(
+        join(jigWorktreePath(config), "tasks", `${TASK_ID}.json`),
+        "utf8",
+      ),
+    ).toContain('"title": "Recovered"');
     await deleteRecoveryCandidate(config, DATASET_ID, candidate);
     expect(await readRecoveryCandidateHead(config, DATASET_ID)).toBeNull();
   });

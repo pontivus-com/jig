@@ -6,7 +6,10 @@ import {
   assertAdapterPaths,
   type GitAdapterConfig,
 } from "./repository";
-import { DATA_REF } from "./portable-store";
+import {
+  DATA_REF,
+  resetPortableDataWorktree,
+} from "./portable-store";
 
 const OBJECT_ID_PATTERN = /^[0-9a-f]{40}$/;
 const ZERO_OBJECT_ID = "0".repeat(40);
@@ -372,4 +375,5 @@ export async function compareAndSetPortableHead(
       "Jig data ref changed concurrently",
     );
   }
+  await resetPortableDataWorktree(config);
 }
