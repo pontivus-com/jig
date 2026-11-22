@@ -8,7 +8,7 @@ import {
 } from "../core/task";
 import { PlanningError } from "../core/planning";
 import { validateJigDataResolution } from "../core/synchronization-recovery";
-import type * as Recovery from "../core/synchronization-recovery";
+import type * as recovery from "../core/synchronization-recovery";
 import {
   isWeekday,
   validateRecurrencePattern,
@@ -42,9 +42,9 @@ export interface HttpDependencies {
   readonly create_id: () => string;
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
-  readonly read_synchronization_conflict: () => Recovery.JigDataConflictCase | null;
+  readonly read_synchronization_conflict: () => recovery.JigDataConflictCase | null;
   readonly resolve_synchronization_conflict: (
-    resolution: Recovery.JigDataResolution,
+    resolution: recovery.JigDataResolution,
   ) => Promise<RepositorySynchronizationStatus>;
   readonly trigger_sync: () => Promise<RepositorySynchronizationStatus>;
   readonly ensure_current_day_rollover: () => Promise<void>;
@@ -561,7 +561,7 @@ export function createHttpHandler(
         }
 
         if (pathname === "/api/v1/sync/conflict/resolve") {
-          let resolution: Recovery.JigDataResolution;
+          let resolution: recovery.JigDataResolution;
           try {
             resolution = validateJigDataResolution(
               await parseJsonRequest(request),
