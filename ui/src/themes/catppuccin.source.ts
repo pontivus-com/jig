@@ -9,6 +9,10 @@ export const catppuccinTheme = defineTheme({
   extends: neutralTheme,
   tokens: communityColorTokens(catppuccinPalette),
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: catppuccinPalette.body,
+      planner: catppuccinPalette.surface,
+      task: catppuccinPalette.card,
+    }),
   },
 });
