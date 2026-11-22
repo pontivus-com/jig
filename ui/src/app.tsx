@@ -726,6 +726,9 @@ function ConfiguredApp({
       setTodayScrollRequest((current) => current + 1);
     }
   }, [layoutMode, plannerState.displayedHorizonStart]);
+  const clearTodayScrollRequest = useCallback((): void => {
+    setTodayScrollRequest(0);
+  }, []);
 
   const repositoryStatus = repositoryStatusPresentation(status, {
     initialSync: !initialSyncSettled,
@@ -863,6 +866,8 @@ function ConfiguredApp({
     ) : destination === "planner" ? (
       <Planner
         focusCurrentDayOnMount={layoutMode === "narrow"}
+        todayScrollRequest={todayScrollRequest}
+        onTodayScrollHandled={clearTodayScrollRequest}
         weekTransitionDirection={weekTransitionDirection}
         tasks={tasks}
         recurrences={canonical.recurrences}
