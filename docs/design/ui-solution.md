@@ -1,9 +1,17 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Canonical UI solution through v1.1.2. JIG-112-FR-01..05 supersede affected earlier presentation clauses: chrome/canvas/card surfaces remain visibly distinct in every theme, configured Planner fills the viewport, drag shows live card placement/reflow rather than insertion lines, and synchronization Diagnostics exposes real sanitized failure/recovery evidence. Unaffected v1.1 hierarchy and references remain binding; adjacent-week Carousel/swipe remains deferred.
+**Status:** Canonical UI solution through v1.1.2. JIG-112-FR-01..12 supersede affected earlier presentation clauses: chrome/canvas/card surfaces remain visibly distinct, configured Planner fills the viewport, drag shows live card placement/reflow, synchronization Diagnostics exposes real sanitized failure/recovery evidence, normal motion is at least 2× slower/more perceptible, and desktop/mobile presentation ownership follows the binding responsive interaction matrix. Unaffected v1.1 hierarchy and references remain binding; adjacent-week Carousel/swipe remains deferred.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–33.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx ownership, the governed Task-movement proof gate, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop and Android, including v1.1 onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
+
+## v1.1.2 responsive presentation authority
+
+The binding [v1.1.2 responsive interaction matrix](v1.1.2-responsive-interaction-matrix.md) classifies every governed surface as desktop-specific, narrow/mobile-specific or shared adaptive. It is the authority for deciding when responsive UI must use a different primitive/composition rather than simply stretching the same markup.
+
+Short-lived success feedback is the currently confirmed desktop breach: desktop must use a compact bounded top-end toast/notification stack, while narrow/mobile uses an inset safe-area-aware snackbar above persistent bottom navigation. Durable attention remains persistent rather than toast-like, but desktop is bounded for wide-screen reading while narrow/mobile may consume the available inline width.
+
+Normal application motion is deliberately perceptible. The v1.1.2 public duration-token scale is at least 2× the prior effective tempo; reduced-motion remains immediate/no-motion. Motion is used to clarify destination change, overlay entry/exit, Task movement, feedback and state change rather than decorative looping.
 
 ## 1. Source mockups and governed reference assets
 
