@@ -2,6 +2,7 @@ import { DesktopConfiguredHeader } from "./header";
 import { DesktopFeedbackRegion } from "./feedback-region";
 import { DesktopPlanner } from "./planner";
 import { DesktopTaskWorkspace } from "./task-workspace";
+import { DesktopSyncConflictWorkspace } from "./sync-conflict-workspace";
 import {
   ApplicationShell,
   type ConfiguredPresentationProps,
@@ -16,6 +17,7 @@ export function DesktopConfiguredApplication(
     durableFeedback,
     transientFeedback,
     workspace,
+    syncConflictWorkspace,
     destinationTransition,
     onContentPointerDown,
     ...componentProps
@@ -58,6 +60,9 @@ export function DesktopConfiguredApplication(
           )}
         </div>
           </div>
+          <DesktopSyncConflictWorkspace
+            workspace={syncConflictWorkspace}
+          />
           <DesktopTaskWorkspace
             workspace={props.destination === "settings" ? null : workspace}
             externalError={componentProps.externalError}
