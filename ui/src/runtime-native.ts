@@ -1,5 +1,5 @@
 import type { TaskCommand } from "../../src/core/task";
-import type * as Recovery from "../../src/core/synchronization-recovery";
+import type * as recoveryTypes from "../../src/core/synchronization-recovery";
 import {
   PORTABLE_FORMAT_VERSION,
   SQLITE_SCHEMA_VERSION,
@@ -144,7 +144,7 @@ export async function submitTaskCommand(
 }
 
 export async function readSynchronizationConflict(): Promise<
-  Recovery.JigDataConflictCase | null
+  recoveryTypes.JigDataConflictCase | null
 > {
   const connection = await database();
   return (
@@ -153,7 +153,7 @@ export async function readSynchronizationConflict(): Promise<
 }
 
 export async function resolveSynchronizationConflict(
-  resolution: Recovery.JigDataResolution,
+  resolution: recoveryTypes.JigDataResolution,
 ): Promise<RepositorySynchronizationStatus> {
   const connection = await database();
   return (
