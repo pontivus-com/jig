@@ -9,6 +9,11 @@ export const tokyoNightTheme = defineTheme({
   extends: neutralTheme,
   tokens: communityColorTokens(tokyoNightPalette),
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: tokyoNightPalette.body,
+      planner: tokyoNightPalette.surface,
+      task:
+        "color-mix(in oklab, var(--color-background-card) 99%, var(--color-text-primary) 1%)",
+    }),
   },
 });
