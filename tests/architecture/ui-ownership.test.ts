@@ -256,8 +256,17 @@ describe("UI ownership architecture", () => {
     const desktop = source(
       "ui/src/presentation/desktop/configured-application.tsx",
     );
+    const desktopHeader = source(
+      "ui/src/presentation/desktop/header.tsx",
+    );
     const narrow = source(
       "ui/src/presentation/narrow/configured-application.tsx",
+    );
+    const narrowHeader = source(
+      "ui/src/presentation/narrow/header.tsx",
+    );
+    const narrowNavigation = source(
+      "ui/src/presentation/narrow/bottom-navigation.tsx",
     );
     const layoutMode = source("ui/src/use-layout-mode.ts");
 
@@ -286,13 +295,22 @@ describe("UI ownership architecture", () => {
     expect(destinations).toContain("IconName");
     expect(destinations).toContain("NamespacedIconName");
     expect(header).toContain('from "./destinations"');
-    expect(header).toContain("function NarrowHeader");
-    expect(header).toContain("export function CompactApplicationNavigation");
-    expect(header).toContain('className="jig-mobile-bottom-navigation"');
-    expect(header).toContain('className="jig-mobile-add-fab"');
-    expect(header).toContain("DESTINATIONS.map((item)");
-    expect(header).toContain('aria-label="Primary"');
-    expect(header).not.toContain("function NarrowDestinationMenu");
+    expect(header).not.toContain("LayoutMode");
+    expect(header).not.toContain("layoutMode");
+    expect(header).not.toContain("DesktopConfiguredHeader");
+    expect(header).not.toContain("NarrowConfiguredHeader");
+    expect(desktop).toContain("<DesktopConfiguredHeader");
+    expect(narrow).toContain("<NarrowConfiguredHeader");
+    expect(narrow).toContain("<NarrowBottomNavigation");
+    expect(desktopHeader).toContain("export function DesktopConfiguredHeader");
+    expect(desktopHeader).toContain("<DestinationNav");
+    expect(narrowHeader).toContain("export function NarrowConfiguredHeader");
+    expect(narrowHeader).toContain("compactStatusControl");
+    expect(narrowNavigation).toContain("export function NarrowBottomNavigation");
+    expect(narrowNavigation).toContain('className="jig-mobile-bottom-navigation"');
+    expect(narrowNavigation).toContain('className="jig-mobile-add-fab"');
+    expect(narrowNavigation).toContain("DESTINATIONS.map((item)");
+    expect(narrowNavigation).toContain('aria-label="Primary"');
     expect(header).not.toContain("<Popover");
     expect(header).not.toContain("<SideNav");
 
