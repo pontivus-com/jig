@@ -25,13 +25,30 @@ import {
   type SynchronizationFacts,
 } from "../../../src/core/synchronization";
 import {
+  reconcileRelatedPortableSnapshots,
+  recoveryCommitSpec,
+} from "../../../src/core/synchronization-recovery";
+import {
+  SnapshotDatasetMismatchError,
+  SnapshotValidationError,
+  type PortableSnapshot,
+} from "../../../src/core/portable";
+import {
   alignAndroidPortableHead,
   androidPortableHead,
+  androidRecoveryCandidateParents,
+  androidRecoveryCommitterTimestampSeconds,
   androidSynchronizationRemote,
   commitAndroidPortableSnapshot,
+  compareAndSetAndroidPortableHead,
+  deleteAndroidRecoveryCandidate,
   observeAndroidPortableRemote,
   pushAndroidPortableRepository,
+  readAndroidRecoveryCandidateHead,
+  readAndroidSnapshotAtOid,
   reopenAndroidPortableRepository,
+  uniqueAndroidRecoveryMergeBase,
+  writeAndroidRecoveryCandidate,
   type AndroidGitEffects,
   type AndroidPortableRemoteObservation,
   type GitCredentialProvider,
@@ -115,6 +132,7 @@ export function createAndroidSyncController(
   let attemptStartedAt: string | null = null;
   let diagnosticFailureReason: SynchronizationFailureReason | null = null;
   let diagnosticFailureCount = 0;
+  let recoveryVerificationKind: "accepted" | "resumed" | null = null;
   let current: RepositorySynchronizationStatus = {
     local_git: "pending",
     remote: {
@@ -144,12 +162,18 @@ export function createAndroidSyncController(
 
   const beginAttempt = (): void => {
     attemptStartedAt = new Date().toISOString();
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: recoveryVerificationKind !== null,
+      recovery_outcome: null,
+    };
     beginPhase("local-reconcile");
   };
 
   const completeDiagnostics = (): void => {
     diagnosticFailureReason = null;
     diagnosticFailureCount = 0;
+    const recoveryOutcome = recoveryVerificationKind;
     currentDiagnostics = {
       ...currentDiagnostics,
       phase: "idle",
@@ -158,10 +182,11 @@ export function createAndroidSyncController(
       attempt_count: 0,
       last_attempt_at: attemptStartedAt,
       next_retry_at: null,
-      recovery_attempted: false,
-      recovery_outcome: null,
+      recovery_attempted: recoveryOutcome !== null,
+      recovery_outcome: recoveryOutcome,
       error_summary: null,
     };
+    recoveryVerificationKind = null;
   };
 
   const recordFailure = (
@@ -185,7 +210,9 @@ export function createAndroidSyncController(
       last_attempt_at:
         attemptStartedAt ?? new Date().toISOString(),
       next_retry_at: null,
-      recovery_attempted: false,
+      recovery_attempted:
+        recoveryVerificationKind !== null ||
+        currentDiagnostics.recovery_attempted,
       recovery_outcome: null,
       error_summary:
         error === undefined
@@ -290,7 +317,10 @@ export function createAndroidSyncController(
   };
 
   const observe = async (
-    phase: "observe-remote" | "verify-remote" = "observe-remote",
+    phase:
+      | "observe-remote"
+      | "verify-remote"
+      | "recover-divergence" = "observe-remote",
   ): Promise<ObservedAndroidRemote> => {
     beginPhase(phase);
     const metadata = await readMetadata(database);
@@ -336,6 +366,407 @@ export function createAndroidSyncController(
         alignAndroidPortableHead(effects, expectedHead, targetHead),
     );
 
+
+  const recoveryIssue = async (
+    phase: "recover-divergence" | "resolve-conflict",
+    reason: SynchronizationFailureReason,
+    retryable: boolean,
+    outcome: "refused" | "failed",
+    error?: unknown,
+  ): Promise<RepositorySynchronizationStatus> => {
+    recordFailure(phase, reason, retryable, error);
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: outcome,
+    };
+    return setRemoteState("sync-issue");
+  };
+
+  const readCurrentPortableSnapshot = async (
+    datasetId: string,
+  ): Promise<Readonly<{
+    head: string;
+    snapshot: PortableSnapshot;
+  }>> => ({
+    head: await androidPortableHead(effects),
+    snapshot: await reopenAndroidPortableRepository(
+      effects,
+      datasetId,
+    ),
+  });
+
+  const resumeInterruptedRecovery = async (): Promise<
+    RepositorySynchronizationStatus | null
+  > => {
+    const metadata = await readMetadata(database);
+    const candidate = await readAndroidRecoveryCandidateHead(
+      effects,
+      metadata.dataset_id,
+    );
+    if (candidate === null) return null;
+
+    if (metadata.last_adopted_head !== candidate) {
+      await deleteAndroidRecoveryCandidate(
+        effects,
+        metadata.dataset_id,
+        candidate,
+      );
+      return null;
+    }
+
+    beginPhase("recover-divergence");
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: null,
+    };
+
+    let candidateSnapshot: PortableSnapshot;
+    let currentSnapshot: Awaited<
+      ReturnType<typeof readCurrentPortableSnapshot>
+    >;
+    let parents: readonly [string, string];
+    try {
+      candidateSnapshot = await readAndroidSnapshotAtOid(
+        effects,
+        candidate,
+        metadata.dataset_id,
+      );
+      currentSnapshot = await readCurrentPortableSnapshot(
+        metadata.dataset_id,
+      );
+      parents = await androidRecoveryCandidateParents(
+        effects,
+        candidate,
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "unknown",
+        false,
+        "failed",
+        error,
+      );
+    }
+
+    const lineage =
+      currentSnapshot.head === candidate
+        ? "equal"
+        : parents.includes(currentSnapshot.head)
+          ? "remote-ahead"
+          : null;
+    if (lineage === null) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        false,
+        "refused",
+      );
+    }
+
+    try {
+      if (currentSnapshot.head === candidate) {
+        await compareAndSetAndroidPortableHead(
+          effects,
+          candidate,
+          candidate,
+        );
+      }
+      const result = await finishInterruptedSynchronizationAdoption(
+        database,
+        {
+          local_head: currentSnapshot.head,
+          remote_head: candidate,
+          lineage,
+          remote_snapshot: candidateSnapshot,
+        },
+        (expectedHead, targetHead) =>
+          compareAndSetAndroidPortableHead(
+            effects,
+            expectedHead,
+            targetHead,
+          ),
+      );
+      if (result !== "finished") {
+        return recoveryIssue(
+          "recover-divergence",
+          "ref-race",
+          false,
+          "refused",
+        );
+      }
+      await deleteAndroidRecoveryCandidate(
+        effects,
+        metadata.dataset_id,
+        candidate,
+      );
+      recoveryVerificationKind = "resumed";
+      currentDiagnostics = {
+        ...currentDiagnostics,
+        recovery_attempted: true,
+        recovery_outcome: null,
+      };
+      return null;
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        false,
+        "failed",
+        error,
+      );
+    }
+  };
+
+  const attemptDivergenceRecovery = async (
+    observed: ObservedAndroidRemote,
+  ): Promise<RepositorySynchronizationStatus | null> => {
+    const observation = observed.observation;
+    if (
+      observation.state !== "present" ||
+      observation.lineage !== "diverged" ||
+      observation.remote_rewritten ||
+      observation.local_head === null
+    ) {
+      return recoveryIssue(
+        "recover-divergence",
+        "diverged",
+        false,
+        "refused",
+      );
+    }
+
+    beginPhase("recover-divergence");
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: null,
+    };
+
+    const metadata = await readMetadata(database);
+    let local: Awaited<
+      ReturnType<typeof readCurrentPortableSnapshot>
+    >;
+    try {
+      local = await readCurrentPortableSnapshot(metadata.dataset_id);
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "unknown",
+        false,
+        "failed",
+        error,
+      );
+    }
+    if (
+      local.head !== observation.local_head ||
+      metadata.revision !== observed.revision
+    ) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        true,
+        "refused",
+      );
+    }
+
+    let mergeBase: string | null;
+    try {
+      mergeBase = await uniqueAndroidRecoveryMergeBase(
+        effects,
+        observation.local_head,
+        observation.remote_head,
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "unknown",
+        false,
+        "failed",
+        error,
+      );
+    }
+    if (mergeBase === null) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ancestry-unknown",
+        false,
+        "refused",
+      );
+    }
+
+    let ancestor: PortableSnapshot;
+    try {
+      ancestor = await readAndroidSnapshotAtOid(
+        effects,
+        mergeBase,
+        metadata.dataset_id,
+      );
+    } catch (error) {
+      const reason =
+        error instanceof SnapshotDatasetMismatchError
+          ? "dataset-mismatch"
+          : error instanceof SnapshotValidationError
+            ? "invalid-snapshot"
+            : "unknown";
+      return recoveryIssue(
+        "recover-divergence",
+        reason,
+        false,
+        reason === "unknown" ? "failed" : "refused",
+        error,
+      );
+    }
+
+    const reconciliation = reconcileRelatedPortableSnapshots(
+      ancestor,
+      local.snapshot,
+      observation.remote_snapshot,
+    );
+    if (reconciliation.kind === "semantic-conflict") {
+      return recoveryIssue(
+        "recover-divergence",
+        "semantic-conflict",
+        false,
+        "refused",
+      );
+    }
+
+    let candidate: string;
+    try {
+      const [localTimestamp, remoteTimestamp] = await Promise.all([
+        androidRecoveryCommitterTimestampSeconds(
+          effects,
+          observation.local_head,
+        ),
+        androidRecoveryCommitterTimestampSeconds(
+          effects,
+          observation.remote_head,
+        ),
+      ]);
+      candidate = await writeAndroidRecoveryCandidate(
+        effects,
+        metadata.dataset_id,
+        reconciliation.snapshot,
+        recoveryCommitSpec(
+          "automatic",
+          observation.local_head,
+          localTimestamp,
+          observation.remote_head,
+          remoteTimestamp,
+        ),
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "unknown",
+        false,
+        "failed",
+        error,
+      );
+    }
+
+    const currentMetadata = await readMetadata(database);
+    let currentLocalHead: string;
+    try {
+      currentLocalHead = await androidPortableHead(effects);
+    } catch (error) {
+      await deleteAndroidRecoveryCandidate(
+        effects,
+        metadata.dataset_id,
+        candidate,
+      );
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        true,
+        "refused",
+        error,
+      );
+    }
+
+    let confirmed: ObservedAndroidRemote;
+    try {
+      confirmed = await observe("recover-divergence");
+    } catch (error) {
+      await deleteAndroidRecoveryCandidate(
+        effects,
+        metadata.dataset_id,
+        candidate,
+      );
+      return recoveryIssue(
+        "recover-divergence",
+        androidAdapterFailureReason(error),
+        true,
+        "refused",
+        error,
+      );
+    }
+
+    if (
+      currentMetadata.revision !== observed.revision ||
+      currentLocalHead !== observation.local_head ||
+      confirmed.observation.state !== "present" ||
+      confirmed.observation.local_head !== observation.local_head ||
+      confirmed.observation.remote_head !== observation.remote_head ||
+      confirmed.observation.remote_rewritten ||
+      confirmed.observation.lineage !== "diverged"
+    ) {
+      await deleteAndroidRecoveryCandidate(
+        effects,
+        metadata.dataset_id,
+        candidate,
+      );
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        true,
+        "refused",
+      );
+    }
+
+    try {
+      await adoptObservedSynchronizationRemote(
+        database,
+        {
+          local_head: observation.local_head,
+          remote_head: candidate,
+          lineage: "remote-ahead",
+          remote_snapshot: reconciliation.snapshot,
+        },
+        observed.revision,
+        (expectedHead, targetHead) =>
+          compareAndSetAndroidPortableHead(
+            effects,
+            expectedHead,
+            targetHead,
+          ),
+      );
+      await deleteAndroidRecoveryCandidate(
+        effects,
+        metadata.dataset_id,
+        candidate,
+      );
+    } catch (error) {
+      return recoveryIssue(
+        "recover-divergence",
+        "ref-race",
+        false,
+        "failed",
+        error,
+      );
+    }
+
+    recoveryVerificationKind = "accepted";
+    currentDiagnostics = {
+      ...currentDiagnostics,
+      recovery_attempted: true,
+      recovery_outcome: null,
+    };
+    return null;
+  };
+
   const processObservation = async (
     observed: ObservedAndroidRemote,
     mayPush: boolean,
@@ -348,6 +779,20 @@ export function createAndroidSyncController(
     );
 
     if (decision.kind === "attention") {
+      if (
+        decision.reason === "diverged" &&
+        mayPush &&
+        !localPending &&
+        observation.state === "present" &&
+        observation.lineage === "diverged"
+      ) {
+        const recovery = await attemptDivergenceRecovery(observed);
+        if (recovery !== null) return recovery;
+        return processObservation(
+          await observe("verify-remote"),
+          true,
+        );
+      }
       recordFailure(
         "classify",
         decision.reason,
@@ -469,6 +914,9 @@ export function createAndroidSyncController(
       recordFailure("local-reconcile", "unknown", true, error);
       return setRemoteState("pending", "issue");
     }
+
+    const resumed = await resumeInterruptedRecovery();
+    if (resumed !== null) return resumed;
 
     let observed: ObservedAndroidRemote;
     try {
