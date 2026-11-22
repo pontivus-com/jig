@@ -43,7 +43,7 @@ async function openGlobalAdd(page: Page): Promise<void> {
 
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
   await openGlobalAdd(page);
-  const workspace = page.locator('section[aria-label="Add task"]');
+  const workspace = page.getByRole("dialog", { name: "Add task" });
   await expect(workspace).toBeVisible();
   await workspace.getByLabel("Title").fill(title);
   await workspace.getByRole("button", { name: "Add task", exact: true }).click();
