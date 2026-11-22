@@ -372,9 +372,7 @@ test("dedicated-handle desktop drag moves exactly once without runtime errors or
   });
 
   const today = await browserCivilDate(page);
-  const dayOfWeek = await page.evaluate(() => new Date().getDay());
-  const offset = dayOfWeek === 0 ? -1 : 1;
-  const destinationDate = await browserCivilDate(page, offset);
+  const destinationDate = await browserCivilDate(page, 1);
 
   await createTask(page, "Pointer drag contract", today);
   await page.reload();
@@ -1057,11 +1055,7 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
-  const dayOfWeek = await page.evaluate(() => new Date().getDay());
-  const destinationDate = await browserCivilDate(
-    page,
-    dayOfWeek === 0 ? -1 : 1,
-  );
+  const destinationDate = await browserCivilDate(page, 1);
 
   await createTask(page, "Gap-matrix source", today);
   await createTask(page, "Gap-matrix destination 1", destinationDate);
@@ -1128,11 +1122,7 @@ test("drag persists first middle and last positions within and across dates", as
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
-  const dayOfWeek = await page.evaluate(() => new Date().getDay());
-  const destinationDate = await browserCivilDate(
-    page,
-    dayOfWeek === 0 ? -1 : 1,
-  );
+  const destinationDate = await browserCivilDate(page, 1);
 
   const orderedTitles = async (date: string): Promise<readonly string[]> =>
     (await apiState(page)).tasks
