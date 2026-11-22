@@ -238,7 +238,9 @@ describe("Desktop related-divergence recovery", () => {
       await readFile(join(repository, "user-content.txt"), "utf8"),
     ).toBe("unrelated user content\n");
     controller.stop();
-  });  it("exposes and resolves an eligible Desktop semantic conflict through the shared policy", async () => {
+  });
+
+  it("exposes and resolves an eligible Desktop semantic conflict through the shared policy", async () => {
     const repository = await mkdtemp(
       join(tmpdir(), "jig-conflict-repository-"),
     );
@@ -376,17 +378,32 @@ describe("Desktop related-divergence recovery", () => {
     if (conflict === undefined) {
       throw new Error("expected one Desktop synchronization conflict");
     }
-    const choices = [{
+    const staleChoices = [{
       conflict_key: jigDataConflictKey(conflict),
       side: "local" as const,
     }];
-    const dateOrders = deriveJigDataDateOrders(
+    const staleDateOrders = deriveJigDataDateOrders(
       conflictCase,
-      choices,
+      staleChoices,
     );
-    if (dateOrders === null) {
+    if (staleDateOrders === null) {
       throw new Error("expected Desktop conflict date-order review");
     }
+
+    const newerRemoteSnapshot = serializeSnapshot([
+      validateTask({
+        ...baseTask,
+        title: "Remote conflict newer",
+        updated_at: "2026-11-22T13:03:00.000Z",
+      }),
+    ], DATASET_ID);
+    await writeSnapshotFiles(writer, newerRemoteSnapshot.files);
+    await git(writer, ["add", "-A"]);
+    await git(writer, ["commit", "-m", "Remote conflict advanced"]);
+    await git(writer, ["push", "origin", "jig-data"]);
+    const advancedRemoteHead = (
+      await git(writer, ["rev-parse", "HEAD"])
+    ).trim();
 
     expect(
       await controller.resolveSynchronizationConflict({
@@ -394,6 +411,59 @@ describe("Desktop related-divergence recovery", () => {
         local_head: conflictCase.local_head,
         remote_head: conflictCase.remote_head,
         expected_revision: conflictCase.expected_revision,
+        choices: staleChoices,
+        date_orders: staleDateOrders,
+      }),
+    ).toMatchObject({
+      local_git: "committed",
+      remote: { state: "sync-issue" },
+    });
+    expect((await readCanonicalState(db)).tasks[0]).toMatchObject({
+      id: sharedTaskId,
+      title: "Local conflict",
+    });
+    expect(
+      (
+        await git(remote, [
+          "show-ref",
+          "--verify",
+          "--hash",
+          "refs/heads/jig-data",
+        ])
+      ).trim(),
+    ).toBe(advancedRemoteHead);
+    expect(
+      await readRecoveryCandidateHead(adapter, DATASET_ID),
+    ).toBeNull();
+
+    const freshCase = controller.readSynchronizationConflict();
+    if (freshCase === null) {
+      throw new Error("expected refreshed Desktop synchronization conflict");
+    }
+    expect(freshCase.remote_head).toBe(advancedRemoteHead);
+    expect(freshCase.remote_head).not.toBe(conflictCase.remote_head);
+    const freshConflict = freshCase.conflicts[0];
+    if (freshConflict === undefined) {
+      throw new Error("expected refreshed Desktop conflict");
+    }
+    const choices = [{
+      conflict_key: jigDataConflictKey(freshConflict),
+      side: "local" as const,
+    }];
+    const dateOrders = deriveJigDataDateOrders(
+      freshCase,
+      choices,
+    );
+    if (dateOrders === null) {
+      throw new Error("expected refreshed Desktop date-order review");
+    }
+
+    expect(
+      await controller.resolveSynchronizationConflict({
+        ancestor_head: freshCase.ancestor_head,
+        local_head: freshCase.local_head,
+        remote_head: freshCase.remote_head,
+        expected_revision: freshCase.expected_revision,
         choices,
         date_orders: dateOrders,
       }),
@@ -432,5 +502,4 @@ describe("Desktop related-divergence recovery", () => {
     ).toBe("unrelated user content\n");
     controller.stop();
   });
-
 });
