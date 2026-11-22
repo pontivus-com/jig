@@ -1,6 +1,6 @@
 # Jig — UI solution design and visual reference contract
 
-**Status:** Canonical UI solution through v1.1.2. JIG-112-FR-01..14 supersede affected earlier presentation clauses: chrome/canvas/card surfaces remain visibly distinct, configured Planner fills the viewport, drag shows live card placement/reflow, synchronization Diagnostics exposes real sanitized failure/recovery evidence, normal motion is at least 2× slower/more perceptible, and adaptive ownership separates desktop/narrow presentation from Linux/browser versus Android/native capability and actual input modality. Unaffected v1.1 hierarchy and references remain binding; adjacent-week Carousel/swipe remains deferred.
+**Status:** Canonical UI solution through v1.1.2. JIG-112-FR-01..15 supersede affected earlier presentation clauses: chrome/canvas/card surfaces remain visibly distinct, configured Planner fills the viewport, drag shows live card placement/reflow, synchronization Diagnostics exposes real sanitized failure/recovery evidence, normal motion is at least 2× slower/more perceptible, and adaptive ownership separates desktop/narrow presentation from Linux/browser versus Android/native capability and actual input modality. Unaffected v1.1 hierarchy and references remain binding; adjacent-week Carousel/swipe remains deferred.
 **Governing behavior:** [Planning workbench functional design](../requirements/planning-workbench.md), including JIG-103-FR-01–17, JIG-104-FR-01–16, JIG-105-FR-01–11, JIG-106-FR-01–07, JIG-FR-01–23 and JIG-110-FR-01–33.
 **Technical foundation:** [Technical solution](../architecture/technical-solution.md), especially Astryx ownership, the governed Task-movement proof gate, service feedback and Git status. **Brand/theme authority:** [Brand and theme system](brand-and-theme.md).
 **Purpose:** Govern Jig's minimal, purpose-built interaction and visual composition across desktop/expanded and narrow presentation classes plus Linux/browser and Android/native runtime capabilities, including onboarding, while preserving useful earlier visual evidence without allowing superseded Day/Week/sidebar or technical-process UI structures to remain authoritative.
@@ -277,7 +277,7 @@ The canonical order is:
 - **Planning data** — human-readable repository identity or **Local only**, with short supporting copy;
 - **Saved on this device** — explicit local durability/safety state;
 - **Synchronization** — **Local only / Syncing / Up to date / Needs attention**, with concise supporting copy;
-- an action row only when a genuine user recovery is required: **Reconnect GitHub**, **Try again**, or equivalent. No standing primary **Sync now**.
+- an action row only when a genuine user recovery is required: **Reconnect GitHub**, **Try again**, or **Resolve sync conflict** when the bounded same-dataset semantic-conflict case is available. No standing primary **Sync now**.
 
 The local-first promise is supporting text inside this group when it clarifies safety; it is not another decorative panel.
 
@@ -286,6 +286,20 @@ The local-first promise is supporting text inside this group when it clarifies s
 **Notifications** is its own semantic group, not a child of Appearance. It presents permission/scheduling state, concise consequences and only the action currently available (Enable, Android settings, exact-timing settings as applicable).
 
 **Diagnostics / technical details** is visually subordinate and **collapsed by default**. Its summary communicates whether technical details are healthy/available without forcing them into the default scan. Expanding it reveals repository path, Jig service, local database, portable-data adapter state, Local Git, Remote Git, sanitized remote identity and the expert **Sync now** trigger. It must not expose credentials or provider internals.
+
+#### Sync conflict recovery workspace
+
+**Resolve sync conflict** is not a Git terminal. It opens only for a proven related, same-dataset semantic conflict after automatic recovery has exhausted the safe deterministic merge. The product copy says that both installations changed the same planning data and that this device's work remains saved.
+
+The normal resolver shows one conflict at a time in planning language. For a Task, show the Task identity/date and only fields that differ between **This device** and **Remote**. For a recurrence conflict, treat the recurrence definition and its linked occurrences as one family. A delete-versus-change conflict labels the two concrete outcomes **Keep deleted** and **Keep changed Task/series** rather than presenting null/raw JSON as a user choice. The user chooses one complete side; there is no per-field merge editor.
+
+After record/family choices, affected dates enter **Review order**. Render the surviving Tasks as the normal Jig ordered list, reuse the ordinary ordering interaction plus Move up/down, and require explicit confirmation for each affected date before final resolution. Then show one summary and primary **Use this resolution** + secondary **Cancel**.
+
+Desktop presents this workflow in the governed 40rem end Drawer. Narrow/mobile presents it in an available-height BottomSheet with >=48px actions and primary confirmation reachable above the IME/safe area. Android Back is equivalent to Cancel before confirmation and changes no authoritative state.
+
+A collapsed **Technical details** disclosure inside the resolver may show the classified reason, abbreviated ancestor/local/remote heads and read-only/copyable canonical JSON for the currently displayed conflict. It never offers editable JSON, Git commands, a shell, credentials or unrelated repository data.
+
+If synchronization heads or the local revision change while the resolver is open, the current draft is discarded and the user is told that synchronization changed; Jig re-observes and loads the new eligible conflict case.
 
 Rows use a stable label → primary value → optional supporting text hierarchy. Values align consistently; long repository/path text wraps rather than shrinking neighboring controls. Section height is content-driven.
 
@@ -547,7 +561,7 @@ Do not animate initial current-day anchoring, healthy-sync loops, protocol phase
 | GitHub authorization UX | One Connect action enters Connecting; GitHub's required 8-character device code is visible with Copy code and Open GitHub fallback; provider page opens when permitted; polling is automatic; no Refresh authorization/access control exists |
 | GitHub repository-access UX | Provider installation/access selection stays on GitHub; return from GitHub does not falsely imply success; Jig re-checks automatically; repository chooser contains the complete paginated accessible set and appears only when a genuine choice remains |
 | GitHub reconnect UX | Reconnect appears only when automatic credential renewal cannot continue; it reuses the bounded device-code/consent presentation and resumes synchronization automatically without repository selection/re-acquisition |
-| Settings information design | One content-sized vertical hierarchy: Data & sync combines planning-data home/local safety/continuity/action; Appearance contains only theme/mode; Notifications is separate; Diagnostics is subordinate/collapsed and contains Git/service/database/path/manual sync. No equal dashboard cards/min-height whitespace. |
+| Settings information design | One content-sized vertical hierarchy: Data & sync combines planning-data home/local safety/continuity/action and exposes Resolve sync conflict only for the governed eligible case; Appearance contains only theme/mode; Notifications is separate; Diagnostics is subordinate/collapsed and contains Git/service/database/path/manual sync. No equal dashboard cards/min-height whitespace. |
 | Copy discipline | no obsolete Day/Week labels or explanatory/meta copy |
 | Same/cross-day drag | failed Pangea owner is absent; replacement passes desktop + physical Android proof; dedicated grip targets explicit before/between/after slots and empty date index 0 for current/future dates; past-date targets are visibly unavailable and rejection leaves canonical Task state unchanged with user-visible feedback; no floating overlay residue |
 | Narrow drag/order | 48×48 grip initiates touch drag while Task body scrolls normally; grip and completion checkbox are vertically centered in the card; pointercancel/outside/app interruption restores; auto-scroll works; Move up/down and Date edit remain non-drag alternatives and share the same past-date scheduling rule |
@@ -558,7 +572,7 @@ Do not animate initial current-day anchoring, healthy-sync loops, protocol phase
 | Appearance placement | Theme selector + System/Light/Dark segmented control exist only in Settings → Appearance; selection applies immediately and preserves destination, displayed week, Task/workspace draft and canonical data |
 | In-application brand | one canonical inline Jig wordmark geometry on desktop/narrow; foreground and pin resolve through active theme semantic roles with required contrast; no fixed Light/Dark application-logo switching |
 | Reminder delivery | with granted permission an eligible due reminder creates browser Notification whether visible/hidden/focused/unfocused; no reminder Toast; unsupported/default/denied states do not claim delivery and successful keys do not duplicate |
-| Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral |
+| Save/sync feedback | local failure is explicit; `Local only` is a restrained healthy/success cue with explicit label; `Synced` remains distinct; pending/retrying warning, sync issue error, unknown neutral; eligible semantic conflict exposes Resolve sync conflict and completes fully in-app on narrow Android |
 | Task mutation feedback | successful Add/Edit shows `Task added` / `Task saved`, successful completion/reopen shows `Task completed` / `Task reopened`; one semantic confirmation state feeds desktop bounded top-end placement or narrow snackbar placement; no OS notification or second toast state is introduced |
 | Operational attention geometry | one shared content/anatomy leaf feeds separate desktop/narrow placement owners; desktop durable attention uses the governed bounded 50rem flow region and narrow durable attention sits below sticky chrome; no private Astryx Banner selector/anatomy is used |
 | Motion and reduced motion | eligible events use the exact JIG-112-SD-09 token scale in both presentation classes; Drawer/BottomSheet/control transitions remain Astryx-owned; Task/Planner/status transitions remain Jig-owned; reduced motion removes travel/scaling/smooth scroll/loops while retaining immediate state, focus and accessible status; initial Planner load and forbidden protocol/decorative motion remain still |
