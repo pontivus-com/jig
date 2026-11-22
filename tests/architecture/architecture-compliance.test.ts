@@ -372,6 +372,10 @@ describe("architecture compliance", () => {
     expect(policy).toContain("export function decideSynchronization");
     expect(policy).toContain("export type SynchronizationFacts");
     expect(policy).toContain("export type SynchronizationDecision");
+    expect(policy).toContain("export type SynchronizationFailureReason");
+    expect(policy).toContain("readonly reason: SynchronizationFailureReason");
+    expect(desktopSync).not.toContain("observationFailureReason");
+    expect(androidSync).not.toContain("androidObservationFailureReason");
     expect(policy).not.toMatch(
       /node:|bun:|Bun\.|@capacitor|isomorphic-git|github|setTimeout|Promise\.race/i,
     );

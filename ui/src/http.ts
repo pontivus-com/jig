@@ -330,6 +330,52 @@ export async function readStatus(): Promise<ServiceStatus> {
   };
 }
 
+function synchronizationDiagnosticString(
+  value: unknown,
+  payload: unknown,
+): string | null {
+  if (value === null) return null;
+  if (typeof value === "string") return value;
+  throw new JigHttpError(
+    500,
+    payload,
+    "Jig service returned invalid synchronization diagnostics",
+  );
+}
+
+function synchronizationDiagnosticInstant(
+  value: unknown,
+  payload: unknown,
+): string | null {
+  const instant = synchronizationDiagnosticString(value, payload);
+  if (
+    instant !== null &&
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(instant)
+  ) {
+    throw new JigHttpError(
+      500,
+      payload,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  return instant;
+}
+
+function synchronizationDiagnosticHead(
+  value: unknown,
+  payload: unknown,
+): string | null {
+  const head = synchronizationDiagnosticString(value, payload);
+  if (head !== null && !/^[0-9a-f]{12}$/.test(head)) {
+    throw new JigHttpError(
+      500,
+      payload,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+  return head;
+}
+
 function parseSynchronizationDiagnostics(
   value: unknown,
 ): SynchronizationDiagnostics {
@@ -338,17 +384,32 @@ function parseSynchronizationDiagnostics(
   const reason = payload.reason;
   const retryable = payload.retryable;
   const attemptCount = payload.attempt_count;
-  const lastAttemptAt = payload.last_attempt_at;
-  const nextRetryAt = payload.next_retry_at;
-  const localHead = payload.local_head;
-  const remoteHead = payload.remote_head;
-  const lastAdoptedHead = payload.last_adopted_head;
+  const lastAttemptAt = synchronizationDiagnosticInstant(
+    payload.last_attempt_at,
+    value,
+  );
+  const nextRetryAt = synchronizationDiagnosticInstant(
+    payload.next_retry_at,
+    value,
+  );
+  const localHead = synchronizationDiagnosticHead(payload.local_head, value);
+  const remoteHead = synchronizationDiagnosticHead(payload.remote_head, value);
+  const lastAdoptedHead = synchronizationDiagnosticHead(
+    payload.last_adopted_head,
+    value,
+  );
   const lineage = payload.lineage;
-  const remoteName = payload.remote_name;
-  const remoteLocation = payload.remote_location;
+  const remoteName = synchronizationDiagnosticString(payload.remote_name, value);
+  const remoteLocation = synchronizationDiagnosticString(
+    payload.remote_location,
+    value,
+  );
   const recoveryAttempted = payload.recovery_attempted;
   const recoveryOutcome = payload.recovery_outcome;
-  const errorSummary = payload.error_summary;
+  const errorSummary = synchronizationDiagnosticString(
+    payload.error_summary,
+    value,
+  );
 
   if (
     phase !== "idle" &&
@@ -411,39 +472,6 @@ function parseSynchronizationDiagnostics(
       "Jig service returned invalid synchronization diagnostics",
     );
   }
-  const nullableStrings = [
-    lastAttemptAt,
-    nextRetryAt,
-    remoteName,
-    remoteLocation,
-    errorSummary,
-  ];
-  if (
-    nullableStrings.some(
-      (candidate) =>
-        candidate !== null &&
-        typeof candidate !== "string",
-    )
-  ) {
-    throw new JigHttpError(
-      500,
-      value,
-      "Jig service returned invalid synchronization diagnostics",
-    );
-  }
-  for (const head of [localHead, remoteHead, lastAdoptedHead]) {
-    if (
-      head !== null &&
-      (typeof head !== "string" ||
-        !/^[0-9a-f]{12}$/.test(head))
-    ) {
-      throw new JigHttpError(
-        500,
-        value,
-        "Jig service returned invalid synchronization diagnostics",
-      );
-    }
-  }
   if (
     lineage !== null &&
     lineage !== "equal" &&
@@ -489,22 +517,30 @@ function parseSynchronizationDiagnostics(
     );
   }
 
+  if (reason === null && errorSummary !== null) {
+    throw new JigHttpError(
+      500,
+      value,
+      "Jig service returned invalid synchronization diagnostics",
+    );
+  }
+
   return {
     phase,
     reason,
     retryable,
     attempt_count: attemptCount,
-    last_attempt_at: lastAttemptAt as string | null,
-    next_retry_at: nextRetryAt as string | null,
-    local_head: localHead as string | null,
-    remote_head: remoteHead as string | null,
-    last_adopted_head: lastAdoptedHead as string | null,
+    last_attempt_at: lastAttemptAt,
+    next_retry_at: nextRetryAt,
+    local_head: localHead,
+    remote_head: remoteHead,
+    last_adopted_head: lastAdoptedHead,
     lineage,
-    remote_name: remoteName as string | null,
-    remote_location: remoteLocation as string | null,
+    remote_name: remoteName,
+    remote_location: remoteLocation,
     recovery_attempted: recoveryAttempted,
     recovery_outcome: recoveryOutcome,
-    error_summary: errorSummary as string | null,
+    error_summary: errorSummary,
   };
 }
 

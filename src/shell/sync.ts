@@ -19,7 +19,6 @@ import {
   type RepositorySynchronizationStatus,
   type SynchronizationDiagnosticPhase,
   type SynchronizationDiagnostics,
-  type SynchronizationFailureReason,
 } from "../protocol/runtime";
 import {
   markAdoptedHead,
@@ -35,7 +34,9 @@ import {
 } from "../persistence/synchronization";
 import {
   decideSynchronization,
+  synchronizationFailureSummary,
   SYNCHRONIZATION_MUTATION_DEBOUNCE_MS,
+  type SynchronizationFailureReason,
   type SynchronizationFacts,
 } from "../core/synchronization";
 
@@ -136,8 +137,12 @@ function observationFacts(
     case "none":
       return { kind: "no-remote" };
     case "ambiguous":
+      return { kind: "remote-ambiguous" };
     case "unsafe":
-      return { kind: "unsafe-remote" };
+      return {
+        kind: "unsafe-remote",
+        reason: observation.unsafe_reason,
+      };
     case "absent":
       return {
         kind: "remote-absent",
@@ -150,32 +155,6 @@ function observationFacts(
         remote_rewritten: observation.remote_rewritten,
         lineage: observation.lineage,
       };
-  }
-}
-
-function observationFailureReason(
-  observation: PortableRemoteObservation,
-  localPending: boolean,
-): SynchronizationFailureReason | null {
-  switch (observation.state) {
-    case "ambiguous":
-      return "remote-ambiguous";
-    case "unsafe":
-      return observation.unsafe_reason;
-    case "absent":
-      return observation.previously_synchronized
-        ? "remote-absent-after-sync"
-        : null;
-    case "present":
-      if (observation.remote_rewritten) return "remote-rewritten";
-      if (observation.lineage === "diverged") return "diverged";
-      if (observation.lineage === "unknown") return "ancestry-unknown";
-      if (observation.lineage === "remote-ahead" && localPending) {
-        return "diverged";
-      }
-      return null;
-    case "none":
-      return null;
   }
 }
 
@@ -233,7 +212,7 @@ export function createSyncController(
       phase,
       reason: null,
       retryable: null,
-      attempt_count: 0,
+      attempt_count: diagnosticFailureCount,
       last_attempt_at: attemptStartedAt,
       next_retry_at: null,
       error_summary: null,
@@ -291,7 +270,7 @@ export function createSyncController(
       recovery_outcome: null,
       error_summary:
         error === undefined
-          ? null
+          ? synchronizationFailureSummary(reason)
           : sanitizeSynchronizationErrorSummary(error),
     };
   };
@@ -469,7 +448,7 @@ export function createSyncController(
       return remoteIssue(
         false,
         "classify",
-        observationFailureReason(observation, localPending) ?? "unknown",
+        decision.reason,
       );
     }
 
@@ -640,7 +619,6 @@ export function createSyncController(
         false,
         "observe-remote",
         "authentication",
-        "GitHub authorization is unavailable",
       );
     }
 

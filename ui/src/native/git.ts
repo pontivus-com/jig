@@ -649,16 +649,28 @@ export type AndroidPortableRemoteObservation =
   | {
       readonly state: "absent";
       readonly local_head: string;
+      readonly remote: {
+        readonly name: "origin";
+        readonly location: string;
+      };
       readonly previously_synchronized: boolean;
     }
   | {
       readonly state: "unsafe";
       readonly local_head: string;
+      readonly remote?: {
+        readonly name: "origin";
+        readonly location: string;
+      };
       readonly unsafe_reason: SynchronizationUnsafeReason;
     }
   | {
       readonly state: "present";
       readonly local_head: string;
+      readonly remote: {
+        readonly name: "origin";
+        readonly location: string;
+      };
       readonly remote_head: string;
       readonly remote_rewritten: boolean;
       readonly lineage: SynchronizationLineage;
@@ -687,10 +699,17 @@ export async function observeAndroidPortableRemote(
     return {
       state: "unsafe",
       local_head: localHead,
-      unsafe_reason: "unknown",
+      unsafe_reason: "remote-ambiguous",
     };
   }
 
+  const diagnosticLocation = new URL(location);
+  diagnosticLocation.search = "";
+  diagnosticLocation.hash = "";
+  const remote = {
+    name: ANDROID_REMOTE,
+    location: diagnosticLocation.toString(),
+  } as const;
   const headers = await authenticatedHeaders(credential);
   const refs = await listServerRefs({
     http: effects.http,
@@ -708,6 +727,7 @@ export async function observeAndroidPortableRemote(
     return {
       state: "absent",
       local_head: localHead,
+      remote,
       previously_synchronized:
         previousRemoteHead !== null ||
         lastAdoptedHead !== null,
@@ -717,6 +737,7 @@ export async function observeAndroidPortableRemote(
     return {
       state: "unsafe",
       local_head: localHead,
+      remote,
       unsafe_reason: "unknown",
     };
   }
@@ -763,6 +784,7 @@ export async function observeAndroidPortableRemote(
     return {
       state: "unsafe",
       local_head: localHead,
+      remote,
       unsafe_reason:
         error instanceof SnapshotDatasetMismatchError
           ? "dataset-mismatch"
@@ -838,6 +860,7 @@ export async function observeAndroidPortableRemote(
   return {
     state: "present",
     local_head: localHead,
+    remote,
     remote_head: remoteHead,
     remote_rewritten: remoteRewritten,
     lineage,

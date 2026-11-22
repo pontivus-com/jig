@@ -6,6 +6,10 @@ import {
   synchronizationHeadPrefix,
   type SynchronizationDiagnostics,
 } from "../../src/protocol/runtime";
+import {
+  synchronizationFailureSummary,
+  type SynchronizationFailureReason,
+} from "../../src/core/synchronization";
 
 describe("synchronization diagnostics contract", () => {
   it("projects the exact stable support text in contract order", () => {
@@ -92,4 +96,29 @@ describe("synchronization diagnostics contract", () => {
     expect(summary).toContain("https://example.invalid/team/jig.git");
     expect(summary).toContain("[redacted]");
   });
+  it("provides a credential-free fallback summary for every declared failure reason", () => {
+    const reasons: readonly SynchronizationFailureReason[] = [
+      "local-export-failed",
+      "transport",
+      "authentication",
+      "remote-ambiguous",
+      "remote-absent-after-sync",
+      "remote-rewritten",
+      "diverged",
+      "ancestry-unknown",
+      "invalid-snapshot",
+      "dataset-mismatch",
+      "semantic-conflict",
+      "ref-race",
+      "unknown",
+    ];
+    for (const reason of reasons) {
+      const summary = synchronizationFailureSummary(reason);
+      expect(summary.length).toBeGreaterThan(0);
+      expect(summary).not.toMatch(
+        /access[_-]?token|refresh[_-]?token|client[_-]?secret|password|authorization/i,
+      );
+    }
+  });
+
 });

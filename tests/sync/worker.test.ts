@@ -128,6 +128,7 @@ interface FakeRepository {
 interface FakeOptions {
   readonly alignFailure?: boolean;
   readonly observeFailure?: boolean;
+  readonly writeFailure?: boolean;
   readonly pushRace?: {
     readonly head: string;
     readonly snapshot: PortableSnapshot;
@@ -217,6 +218,9 @@ function fakeEffects(
         revision,
       ) => {
         writes.count += 1;
+        if (options.writeFailure === true) {
+          throw new Error("synthetic local export failure");
+        }
         if (!filesEqual(repo.localSnapshot, snapshot)) {
           repo.localHead =
             revision.toString(16).padStart(40, "0");
@@ -739,6 +743,53 @@ describe("cross-installation synchronization worker", () => {
     });
   });
 
+  it("diagnoses a local portable export failure at the export boundary", async () => {
+    const base = serializeSnapshot([], DATASET_ID);
+    await markExported(db, 0, BASE_HEAD);
+    await applyTaskCommand(
+      db,
+      {
+        type: "create",
+        title: "Pending export",
+        scheduled_date: "2026-11-19",
+      },
+      0,
+      "2026-11-19T02:10:00.000Z",
+      () =>
+        "018f47f0-7b5c-7d4d-8e2b-000000000210",
+    );
+    const repo: FakeRepository = {
+      mode: "present",
+      localHead: BASE_HEAD,
+      localSnapshot: base,
+      remoteHead: BASE_HEAD,
+      remoteSnapshot: base,
+      remoteRewritten: false,
+      lineage: "equal",
+      previouslySynchronized: true,
+    };
+    const fake = fakeEffects(repo, { writeFailure: true });
+    const controller = createSyncController(
+      db,
+      { repository_path: root },
+      fake.effects,
+    );
+
+    expect(await controller.trigger()).toMatchObject({
+      local_git: "issue",
+    });
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "export-local",
+      reason: "local-export-failed",
+      retryable: true,
+      attempt_count: 1,
+      last_attempt_at: "2026-11-19T00:00:00.000Z",
+      next_retry_at: "2026-11-19T00:00:05.000Z",
+      error_summary: "synthetic local export failure",
+    });
+    expect(fake.pushes.count).toBe(0);
+  });
+
   it("SYNC-E5 finishes SQLite-adopted remote state without creating another snapshot", async () => {
     const base = serializeSnapshot([], DATASET_ID);
     const remoteTask = task("208", "Adopted before restart");
@@ -837,6 +888,12 @@ describe("cross-installation synchronization worker", () => {
     expect(
       (await readCanonicalState(db)).tasks[0]?.title,
     ).toBe("Adopted but not aligned");
+    expect(controller.diagnostics()).toMatchObject({
+      phase: "adopt-remote",
+      reason: "ref-race",
+      retryable: false,
+      attempt_count: 2,
+    });
   });
 
   it("SYNC-E5 repairs commit-before-metadata lag without creating a duplicate commit", async () => {

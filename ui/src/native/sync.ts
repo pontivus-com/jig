@@ -16,11 +16,12 @@ import {
   type RepositorySynchronizationStatus,
   type SynchronizationDiagnosticPhase,
   type SynchronizationDiagnostics,
-  type SynchronizationFailureReason,
 } from "../../../src/protocol/runtime";
 import {
   decideSynchronization,
+  synchronizationFailureSummary,
   SYNCHRONIZATION_MUTATION_DEBOUNCE_MS,
+  type SynchronizationFailureReason,
   type SynchronizationFacts,
 } from "../../../src/core/synchronization";
 import {
@@ -62,7 +63,10 @@ function observationFacts(
         previously_synchronized: observation.previously_synchronized,
       };
     case "unsafe":
-      return { kind: "unsafe-remote" };
+      return {
+        kind: "unsafe-remote",
+        reason: observation.unsafe_reason,
+      };
     case "present":
       return {
         kind: "remote-present",
@@ -70,28 +74,6 @@ function observationFacts(
         remote_rewritten: observation.remote_rewritten,
         lineage: observation.lineage,
       };
-  }
-}
-
-function androidObservationFailureReason(
-  observation: AndroidPortableRemoteObservation,
-  localPending: boolean,
-): SynchronizationFailureReason | null {
-  switch (observation.state) {
-    case "unsafe":
-      return observation.unsafe_reason;
-    case "absent":
-      return observation.previously_synchronized
-        ? "remote-absent-after-sync"
-        : null;
-    case "present":
-      if (observation.remote_rewritten) return "remote-rewritten";
-      if (observation.lineage === "diverged") return "diverged";
-      if (observation.lineage === "unknown") return "ancestry-unknown";
-      if (observation.lineage === "remote-ahead" && localPending) {
-        return "diverged";
-      }
-      return null;
   }
 }
 
@@ -116,8 +98,8 @@ function initialAndroidSynchronizationDiagnostics(): SynchronizationDiagnostics 
     remote_head: null,
     last_adopted_head: null,
     lineage: null,
-    remote_name: "origin",
-    remote_location: "Android managed Git repository",
+    remote_name: null,
+    remote_location: null,
     recovery_attempted: false,
     recovery_outcome: null,
     error_summary: null,
@@ -153,7 +135,7 @@ export function createAndroidSyncController(
       phase,
       reason: null,
       retryable: null,
-      attempt_count: 0,
+      attempt_count: diagnosticFailureCount,
       last_attempt_at: attemptStartedAt,
       next_retry_at: null,
       error_summary: null,
@@ -207,7 +189,7 @@ export function createAndroidSyncController(
       recovery_outcome: null,
       error_summary:
         error === undefined
-          ? null
+          ? synchronizationFailureSummary(reason)
           : sanitizeSynchronizationErrorSummary(error),
     };
   };
@@ -216,6 +198,10 @@ export function createAndroidSyncController(
     observed: ObservedAndroidRemote,
   ): void => {
     const observation = observed.observation;
+    const remote =
+      observation.state === "unsafe"
+        ? observation.remote ?? null
+        : observation.remote;
     currentDiagnostics = {
       ...currentDiagnostics,
       local_head: synchronizationHeadPrefix(observation.local_head),
@@ -229,6 +215,8 @@ export function createAndroidSyncController(
         observation.state === "present"
           ? observation.lineage
           : null,
+      remote_name: remote?.name ?? null,
+      remote_location: remote?.location ?? null,
     };
   };
 
@@ -362,10 +350,7 @@ export function createAndroidSyncController(
     if (decision.kind === "attention") {
       recordFailure(
         "classify",
-        androidObservationFailureReason(
-          observation,
-          localPending,
-        ) ?? "unknown",
+        decision.reason,
         false,
       );
       return setRemoteState("sync-issue");
@@ -398,7 +383,7 @@ export function createAndroidSyncController(
       return null;
     }
     if (decision.kind === "local-only") {
-      recordFailure("classify", "unknown", false);
+      recordFailure("classify", "remote-ambiguous", false);
       return setRemoteState("sync-issue");
     }
     if (!mayPush) {

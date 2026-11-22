@@ -1,6 +1,10 @@
 import type { RecurrenceSeries } from "../core/recurrence";
 import type { Task } from "../core/task";
-import type { SynchronizationLineage } from "../core/synchronization";
+import type {
+  SynchronizationFailureReason,
+  SynchronizationLineage,
+} from "../core/synchronization";
+export type { SynchronizationFailureReason } from "../core/synchronization";
 
 /**
  * Architecture-neutral API/envelope contracts shared by the imperative shell
@@ -18,21 +22,6 @@ export type SynchronizationDiagnosticPhase =
   | "verify-remote"
   | "recover-divergence"
   | "resolve-conflict";
-
-export type SynchronizationFailureReason =
-  | "local-export-failed"
-  | "transport"
-  | "authentication"
-  | "remote-ambiguous"
-  | "remote-absent-after-sync"
-  | "remote-rewritten"
-  | "diverged"
-  | "ancestry-unknown"
-  | "invalid-snapshot"
-  | "dataset-mismatch"
-  | "semantic-conflict"
-  | "ref-race"
-  | "unknown";
 
 export type SynchronizationRecoveryOutcome =
   | "accepted"
