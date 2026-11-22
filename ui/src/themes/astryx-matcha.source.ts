@@ -6,6 +6,11 @@ export const astryxMatchaTheme = defineTheme({
   name: "astryx-matcha",
   extends: matchaTheme,
   localTokens: {
-    ...jigProductLocalTokens,
+    ...jigProductLocalTokens({
+      chrome: "var(--color-background-body)",
+      planner: "var(--color-background-surface)",
+      task:
+        "color-mix(in oklab, var(--color-background-card) 86%, var(--color-text-primary) 14%)",
+    }),
   },
 });
