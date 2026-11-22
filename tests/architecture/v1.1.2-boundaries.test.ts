@@ -238,6 +238,25 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     ).toEqual(["ui/src/planner-list.tsx"]);
   });
 
+  it("keeps sync-conflict presenters presentation-only when they arrive", () => {
+    for (const path of [
+      "ui/src/presentation/desktop/sync-conflict-workspace.tsx",
+      "ui/src/presentation/narrow/sync-conflict-workspace.tsx",
+      "ui/src/presentation/shared/sync-conflict-content.tsx",
+    ]) {
+      if (!existsSync(path)) {
+        continue;
+      }
+      const content = source(path);
+      expect(content, path).not.toMatch(
+        /from\s+["'][^"']*(?:src\/shell|src\/persistence|\.\.\/\.\.\/runtime|\/native\/|\.\.\/\.\.\/native)/,
+      );
+      expect(content, path).not.toMatch(
+        /\b(?:interface|type)\s+JigData(?:Conflict|Resolution)\w*/,
+      );
+    }
+  });
+
   it("reserves one pure recovery-policy owner and one UI-only resolver-draft owner", () => {
     const recoveryPath = "src/core/synchronization-recovery.ts";
     const recoveryViolations = existsSync(recoveryPath)
