@@ -737,6 +737,30 @@ describe("UI ownership architecture", () => {
 
     expect(desktop).toContain("DesktopFeedbackRegion");
     expect(narrow).toContain("NarrowFeedbackRegion");
+    const desktopCss = source("ui/src/styles/desktop.css");
+    const narrowCss = source("ui/src/styles/narrow.css");
+    const sharedCss = source("ui/src/styles/shared.css");
+
+    expect(desktopCss).toContain(".jig-feedback-transient-desktop");
+    expect(desktopCss).toContain("position: sticky");
+    expect(desktopCss).toContain("inset-block-start: var(--spacing-3)");
+    expect(desktopCss).toContain("max-inline-size: 24rem");
+    expect(desktopCss).toContain(
+      "inline-size: min(50rem, calc(100% - 2 * var(--spacing-3)))",
+    );
+    expect(narrowCss).toContain(".jig-feedback-transient-narrow");
+    expect(narrowCss).toContain("position: fixed");
+    expect(narrowCss).toContain(
+      "64px + env(safe-area-inset-bottom, 0px) + var(--spacing-3)",
+    );
+    expect(narrowCss).toContain("max-inline-size: 32rem");
+    expect(narrowCss).toContain(
+      "margin: var(--spacing-2) var(--spacing-3) 0",
+    );
+    expect(sharedCss).not.toMatch(
+      /\.jig-feedback-transient-(?:desktop|narrow)/,
+    );
+
     expect(desktop).not.toContain("AttentionFeedbackContent");
     expect(narrow).not.toContain("AttentionFeedbackContent");
     expect(app).toContain("<AttentionFeedbackContent");
