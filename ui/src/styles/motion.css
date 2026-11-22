@@ -188,16 +188,7 @@
       var(--ease-standard) both;
 }
 
-.jig-configured-narrow .jig-content-frame-today-smooth {
-  scroll-behavior: smooth;
-}
-
-
 @media (prefers-reduced-motion: reduce) {
-    .jig-content-frame {
-      scroll-behavior: auto;
-    }
-
     .jig-content-configured-transition,
     .jig-week-board-today,
     .jig-attention-banner,
