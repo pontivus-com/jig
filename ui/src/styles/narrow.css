@@ -445,3 +445,47 @@
   min-height: 48px;
 }
 
+.jig-app-header-onboarding-narrow {
+  min-height: 56px;
+  padding: 0 var(--spacing-2);
+}
+
+.jig-setup-narrow {
+  min-height: 100%;
+  padding: var(--spacing-4) var(--spacing-3);
+}
+
+.jig-setup-layout-narrow {
+  display: grid;
+  width: min(100%, 42rem);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--spacing-5);
+  margin-inline: auto;
+}
+
+.jig-setup-narrow .jig-setup-benefits {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-3);
+}
+
+.jig-setup-narrow .jig-setup-benefit {
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--spacing-3);
+}
+
+.jig-setup-narrow .jig-setup-heading h1 {
+  font-size: var(--font-size-2xl);
+  line-height: 1.12;
+}
+
+.jig-setup-narrow .jig-setup-pane {
+  width: 100%;
+}
+
+.jig-setup-narrow button {
+  min-width: 48px;
+  min-height: 48px;
+}
+
