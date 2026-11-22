@@ -42,6 +42,7 @@ interface WeekTaskProps extends WeekPresentationProps, WeekMutationProps {}
 
 export interface WeekViewProps extends WeekTaskProps {
   readonly focusCurrentDayOnMount: boolean;
+  readonly onInitialTodayFocusHandled: () => void;
   readonly todayScrollRequest: number;
   readonly onTodayScrollHandled: () => void;
   readonly weekTransitionDirection: WeekTransitionDirection | null;
@@ -233,6 +234,7 @@ export function WeekView(props: WeekViewProps): React.ReactElement {
       !props.focusCurrentDayOnMount ||
       !props.displayedDates.includes(today)
     ) {
+      props.onInitialTodayFocusHandled();
       return;
     }
     const frame = window.requestAnimationFrame(() => {
@@ -241,9 +243,15 @@ export function WeekView(props: WeekViewProps): React.ReactElement {
         inline: "nearest",
         behavior: "auto",
       });
+      props.onInitialTodayFocusHandled();
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [props.displayedDates, props.focusCurrentDayOnMount, today]);
+  }, [
+    props.displayedDates,
+    props.focusCurrentDayOnMount,
+    props.onInitialTodayFocusHandled,
+    today,
+  ]);
 
   useEffect(() => {
     if (
