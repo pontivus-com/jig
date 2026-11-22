@@ -164,7 +164,7 @@ const TaskPointerSensor = PointerSensor.configure({
         ];
   },
   activatorElements(source) {
-    return source.handle === null ? [] : [source.handle];
+    return source.handle === undefined ? [] : [source.handle];
   },
 });
 
@@ -343,6 +343,7 @@ export function SortableTaskRow({
       date,
       index,
     },
+    collisionPriority: 1,
   });
 
   const rowRef = (element: HTMLLIElement | null): void => {
@@ -408,6 +409,7 @@ export function DateDropZone({
     type: "jig-date",
     accept: "jig-task",
     data: { date },
+    collisionPriority: -1,
   });
 
   return (
