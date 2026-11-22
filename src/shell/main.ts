@@ -181,6 +181,10 @@ async function runConfigured(config: JigConfig): Promise<void> {
         sync.status(),
         sync.diagnostics(),
       ),
+    read_synchronization_conflict:
+      sync.readSynchronizationConflict,
+    resolve_synchronization_conflict:
+      sync.resolveSynchronizationConflict,
     trigger_sync: sync.trigger,
     ensure_current_day_rollover: ensureCurrentDayRollover,
     on_task_mutation: sync.notifyMutation,
