@@ -13,6 +13,7 @@ import {
   useState,
 } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
+import type { JigDataConflictCase } from "../../src/core/synchronization-recovery";
 import {
   clampPlannerHorizonStart,
   movePlannerHorizon,
@@ -35,7 +36,9 @@ import {
   readCanonicalTasksAfterActivationRollover,
   readDiagnostics,
   readStatus,
+  readSynchronizationConflict,
   reconcileRuntimeReminders,
+  resolveSynchronizationConflict,
   rollForwardRuntimeLocalDay,
   submitTaskCommand,
   triggerSync,
@@ -79,6 +82,14 @@ import {
   AttentionFeedbackContent,
   SuccessFeedbackContent,
 } from "./presentation/shared/feedback-content";
+import type { SyncConflictWorkspaceProps } from "./presentation/shared/sync-conflict-content";
+import {
+  createSyncConflictDraft,
+  reduceSyncConflictDraft,
+  syncConflictResolution,
+  type SyncConflictDraftAction,
+  type SyncConflictDraftState,
+} from "./sync-conflict-state";
 import {
   installNativeActiveListener,
   installNativeBackButtonListener,
@@ -182,6 +193,14 @@ function ConfiguredApp({
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
+  const [
+    synchronizationConflict,
+    setSynchronizationConflict,
+  ] = useState<JigDataConflictCase | null>(null);
+  const [syncConflictDraft, setSyncConflictDraft] =
+    useState<SyncConflictDraftState | null>(null);
+  const [syncConflictError, setSyncConflictError] =
+    useState<string | null>(null);
   const [githubReconnectAvailable, setGitHubReconnectAvailable] =
     useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -231,21 +250,25 @@ function ConfiguredApp({
   }, []);
 
   const refreshOperationalState = useCallback(
-    async (): Promise<void> => {
+    async (): Promise<JigDataConflictCase | null> => {
       const [
         nextStatus,
         nextDiagnostics,
         githubCapabilities,
+        nextConflict,
       ] = await Promise.all([
         readStatus(),
         readDiagnostics(),
         readGitHubCapabilityStatus(),
+        readSynchronizationConflict(),
       ]);
       setStatus(nextStatus);
       setDiagnostics(nextDiagnostics);
+      setSynchronizationConflict(nextConflict);
       setGitHubReconnectAvailable(
         githubCapabilities.reconnect_available,
       );
+      return nextConflict;
     },
     [],
   );
@@ -353,16 +376,19 @@ function ConfiguredApp({
         nextStatus,
         nextDiagnostics,
         githubCapabilities,
+        nextConflict,
       ] = await Promise.all([
         readCanonicalTasksAfterActivationRollover(),
         readStatus(),
         readDiagnostics(),
         readGitHubCapabilityStatus(),
+        readSynchronizationConflict(),
       ]);
 
       setCanonical(nextCanonical);
       setStatus(nextStatus);
       setDiagnostics(nextDiagnostics);
+      setSynchronizationConflict(nextConflict);
       setGitHubReconnectAvailable(
         githubCapabilities.reconnect_available,
       );
@@ -603,6 +629,14 @@ function ConfiguredApp({
   }, [destinationNavigation]);
 
   const handleBack = useCallback((): boolean => {
+    if (syncConflictDraft !== null) {
+      if (!isOperating) {
+        setSyncConflictDraft(null);
+        setSyncConflictError(null);
+      }
+      return true;
+    }
+
     if (deleteTaskId !== null) {
       if (!isOperating) {
         setDeleteTaskId(null);
@@ -628,6 +662,7 @@ function ConfiguredApp({
     deleteTaskId,
     destinationNavigation,
     isOperating,
+    syncConflictDraft,
     workspace.mode,
   ]);
 
@@ -657,6 +692,108 @@ function ConfiguredApp({
       setIsOperating(false);
     }
   }, [isOperating, refreshOperationalState]);
+
+  const openSynchronizationConflict = useCallback(
+    async (): Promise<void> => {
+      if (isOperating) return;
+      setIsOperating(true);
+      setOperationError(null);
+      setSyncConflictError(null);
+      try {
+        const current = await readSynchronizationConflict();
+        setSynchronizationConflict(current);
+        if (current === null) {
+          setOperationError(
+            "No current semantic synchronization conflict is available.",
+          );
+          return;
+        }
+        setWorkspace({ mode: "closed" });
+        setSyncConflictDraft(createSyncConflictDraft(current));
+      } catch (error) {
+        setOperationError(errorMessage(error));
+      } finally {
+        setIsOperating(false);
+      }
+    },
+    [isOperating],
+  );
+
+  const cancelSynchronizationConflict = useCallback((): void => {
+    if (isOperating) return;
+    setSyncConflictDraft(null);
+    setSyncConflictError(null);
+  }, [isOperating]);
+
+  const updateSynchronizationConflictDraft = useCallback(
+    (action: SyncConflictDraftAction): void => {
+      setSyncConflictDraft((current) =>
+        current === null
+          ? current
+          : reduceSyncConflictDraft(current, action),
+      );
+    },
+    [],
+  );
+
+  const copySynchronizationConflictDetails = useCallback(
+    (value: string): void => {
+      void navigator.clipboard.writeText(value).catch((error) => {
+        setSyncConflictError(
+          "Jig could not copy the technical details: " +
+            errorMessage(error),
+        );
+      });
+    },
+    [],
+  );
+
+  const useSynchronizationConflictResolution = useCallback(
+    async (): Promise<void> => {
+      if (syncConflictDraft === null || isOperating) return;
+      const resolution = syncConflictResolution(syncConflictDraft);
+      if (resolution === null) {
+        setSyncConflictError(
+          "Complete every conflict choice and required Task-order review before continuing.",
+        );
+        return;
+      }
+
+      setIsOperating(true);
+      setSyncConflictError(null);
+      setOperationError(null);
+      try {
+        const repositoryStatus =
+          await resolveSynchronizationConflict(resolution);
+        updateRepositoryStatus(repositoryStatus);
+        await refreshCanonical();
+        const nextConflict = await refreshOperationalState();
+        if (nextConflict === null) {
+          setSyncConflictDraft(null);
+          setSynchronizationConflict(null);
+          setOperationConfirmation("Sync conflict resolved");
+          return;
+        }
+
+        setSyncConflictDraft(createSyncConflictDraft(nextConflict));
+        setSyncConflictError(
+          "Synchronization changed while you were resolving it. Review the refreshed conflict before confirming.",
+        );
+      } catch (error) {
+        setSyncConflictError(errorMessage(error));
+        await refreshOperationalState().catch(() => null);
+      } finally {
+        setIsOperating(false);
+      }
+    },
+    [
+      isOperating,
+      refreshCanonical,
+      refreshOperationalState,
+      syncConflictDraft,
+      updateRepositoryStatus,
+    ],
+  );
 
   const reconnectGitHub = useCallback(async (): Promise<void> => {
     if (isOperating) {
@@ -939,15 +1076,36 @@ function ConfiguredApp({
         isOperating={isOperating}
         githubReconnectAvailable={githubReconnectAvailable}
         githubReconnect={githubReconnect}
+        synchronizationConflictAvailable={
+          synchronizationConflict !== null
+        }
         onThemePresetChange={onThemePresetChange}
         onAppearanceModeChange={onAppearanceModeChange}
         onSync={syncNow}
         onReconnectGitHub={reconnectGitHub}
+        onResolveSynchronizationConflict={
+          openSynchronizationConflict
+        }
         showDiagnostics={showSettingsDiagnostics}
         onShowDiagnosticsChange={setShowSettingsDiagnostics}
       />
     );
 
+
+  const syncConflictWorkspace: SyncConflictWorkspaceProps | null =
+    syncConflictDraft === null
+      ? null
+      : {
+          isOpen: true,
+          state: syncConflictDraft,
+          error: syncConflictError,
+          isResolving: isOperating,
+          onAction: updateSynchronizationConflictDraft,
+          onCopyTechnicalDetails:
+            copySynchronizationConflictDetails,
+          onCancel: cancelSynchronizationConflict,
+          onResolve: useSynchronizationConflictResolution,
+        };
 
   const configuredPresentation =
     layoutMode === "desktop" ? (
@@ -972,6 +1130,7 @@ function ConfiguredApp({
         durableFeedback={durableBanner}
         transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
+        syncConflictWorkspace={syncConflictWorkspace}
         destinationTransition={destinationTransition}
         onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
@@ -1005,6 +1164,7 @@ function ConfiguredApp({
         durableFeedback={durableBanner}
         transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
+        syncConflictWorkspace={syncConflictWorkspace}
         destinationTransition={destinationTransition}
         onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
