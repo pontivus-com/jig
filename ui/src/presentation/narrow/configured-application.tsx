@@ -3,6 +3,7 @@ import { NarrowConfiguredHeader } from "./header";
 import { NarrowFeedbackRegion } from "./feedback-region";
 import { NarrowPlanner } from "./planner";
 import { NarrowTaskWorkspace } from "./task-workspace";
+import { NarrowSyncConflictWorkspace } from "./sync-conflict-workspace";
 import {
   ApplicationShell,
   type ConfiguredPresentationProps,
@@ -17,6 +18,7 @@ export function NarrowConfiguredApplication(
     durableFeedback,
     transientFeedback,
     workspace,
+    syncConflictWorkspace,
     destinationTransition,
     onContentPointerDown,
     ...componentProps
@@ -68,6 +70,9 @@ export function NarrowConfiguredApplication(
           )}
         </div>
           </div>
+          <NarrowSyncConflictWorkspace
+            workspace={syncConflictWorkspace}
+          />
           <NarrowTaskWorkspace
             workspace={props.destination === "settings" ? null : workspace}
             externalError={componentProps.externalError}
