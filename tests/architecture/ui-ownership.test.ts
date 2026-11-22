@@ -554,6 +554,21 @@ describe("UI ownership architecture", () => {
     expect(narrowWorkspace).toContain("<TaskWorkspaceActions");
     expect(desktopWorkspace).not.toContain("<BottomSheet");
     expect(narrowWorkspace).not.toContain("<Drawer");
+    const desktopWorkspaceCss = source("ui/src/styles/desktop.css");
+    const narrowWorkspaceCss = source("ui/src/styles/narrow.css");
+    expect(desktopWorkspaceCss).toContain(
+      ".jig-task-workspace-actions-desktop",
+    );
+    expect(desktopWorkspaceCss).toContain(
+      ".jig-task-workspace-lifecycle-actions",
+    );
+    expect(narrowWorkspaceCss).toContain(
+      ".jig-task-workspace-actions-narrow",
+    );
+    expect(narrowWorkspaceCss).toContain(
+      "grid-template-columns: minmax(0, 2fr) minmax(0, 3fr)",
+    );
+    expect(narrowWorkspaceCss).toContain("min-height: 48px");
     const editorActionsStart = styles.indexOf(".jig-editor-actions {");
     const editorActionsEnd = styles.indexOf("}", editorActionsStart);
     expect(editorActionsStart).toBeGreaterThanOrEqual(0);
