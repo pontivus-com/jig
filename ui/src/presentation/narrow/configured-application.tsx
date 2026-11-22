@@ -1,7 +1,5 @@
-import {
-  CompactApplicationNavigation,
-  PlannerHeader,
-} from "../../planner-header";
+import { NarrowBottomNavigation } from "./bottom-navigation";
+import { NarrowConfiguredHeader } from "./header";
 import { TaskWorkspaceBottomSheet } from "../../task-workspace";
 import {
   ApplicationShell,
@@ -17,7 +15,6 @@ export function NarrowConfiguredApplication(
     transientFeedback,
     workspace,
     destinationTransition,
-    todayScrollRequest,
     onContentPointerDown,
     ...componentProps
   } = props;
@@ -28,7 +25,7 @@ export function NarrowConfiguredApplication(
       className="jig-configured-root jig-configured-narrow"
     >
       <ApplicationShell
-        topNav={<PlannerHeader {...componentProps} layoutMode="narrow" />}
+        topNav={<NarrowConfiguredHeader {...componentProps} />}
       >
         <div className="jig-configured-body">
           {durableFeedback}
@@ -74,7 +71,7 @@ export function NarrowConfiguredApplication(
             onClose={componentProps.onClose}
           />
           {workspace === null ? (
-            <CompactApplicationNavigation
+            <NarrowBottomNavigation
               destination={props.destination}
               showAdd
               onAdd={componentProps.onAdd}
