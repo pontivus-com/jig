@@ -20,6 +20,7 @@ import {
 } from "../../src/core/portable";
 import {
   applyTaskCommand as applyTaskCommandAtLocalDate,
+  markExported,
   readCanonicalState,
   readMetadata,
 } from "../../src/persistence/sqlite";
@@ -714,6 +715,149 @@ describe("Android Git smart-HTTP feasibility", () => {
           .map((candidate) => candidate.title)
           .sort(),
       ).toEqual(["Android second", "Desktop first"]);
+    } finally {
+      desktopSync.stop();
+      androidSync.stop();
+      await desktopDb.close();
+      await androidDb.close();
+    }
+  });
+
+  it("automatically reconciles related Android/Desktop divergence through the shared recovery policy", async () => {
+    const { remote, remoteUrl } = await fixture();
+    const port = server?.port;
+    if (port === undefined || root === null) {
+      throw new Error("Fixture HTTP server did not start");
+    }
+
+    const desktop = join(root, "recovery-desktop");
+    await runGit(root, ["clone", remote, desktop]);
+    const installed = await initializeRepositoryInstallation({
+      repository_path: desktop,
+      http_port: 47831,
+      config_path: join(root, "recovery-desktop-config.json"),
+    });
+    const desktopDb = await openDatabase(installed.sqlite_path);
+    const desktopSync = createSyncController(
+      desktopDb,
+      { repository_path: desktop },
+    );
+
+    const { port: filesystemPort } = fakeFilesystem();
+    const androidEffects: AndroidGitEffects = {
+      fs: createAndroidGitFilesystem(filesystemPort),
+      http: createAndroidGitHttpClient(nativeHttpFor(port)),
+      dir: ANDROID_GIT_WORKTREE,
+    };
+    const credential = async (): Promise<string> => PASSWORD;
+    await cloneAndroidPortableRepository(
+      androidEffects,
+      remoteUrl,
+      credential,
+    );
+    const androidDb = await initializeDatabase(
+      join(root, "recovery-android.sqlite"),
+      DATASET_ID,
+    );
+    const androidSync = createAndroidSyncController(
+      androidDb,
+      androidEffects,
+      credential,
+    );
+
+    try {
+      await desktopSync.start();
+      await androidSync.start();
+      await desktopSync.trigger();
+      await androidSync.trigger();
+
+      await applyTaskCommand(
+        androidDb,
+        {
+          type: "create",
+          title: "Android independent",
+          scheduled_date: "2026-11-18",
+        },
+        (await readCanonicalState(androidDb)).revision,
+        "2026-11-18T05:30:00.000Z",
+        () =>
+          "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4040",
+      );
+      const androidState = await readCanonicalState(androidDb);
+      const androidHead = await commitAndroidPortableSnapshot(
+        androidEffects,
+        serializeSnapshot(
+          androidState.tasks,
+          DATASET_ID,
+          androidState.recurrences,
+        ),
+        androidState.revision,
+      );
+      await markExported(
+        androidDb,
+        androidState.revision,
+        androidHead,
+      );
+
+      await applyTaskCommand(
+        desktopDb,
+        {
+          type: "create",
+          title: "Desktop independent",
+          scheduled_date: "2026-11-18",
+        },
+        (await readCanonicalState(desktopDb)).revision,
+        "2026-11-18T05:31:00.000Z",
+        () =>
+          "018f47f0-7b5c-7d4d-8e2b-9c3aa11f4041",
+      );
+      desktopSync.notifyMutation();
+      await expect(desktopSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
+
+      await expect(androidSync.trigger()).resolves.toMatchObject({
+        local_git: "committed",
+        remote: { state: "synchronized" },
+      });
+      expect(androidSync.diagnostics()).toMatchObject({
+        phase: "idle",
+        reason: null,
+        recovery_attempted: true,
+        recovery_outcome: "accepted",
+      });
+      expect(
+        (await readCanonicalState(androidDb)).tasks
+          .map((candidate) => candidate.title)
+          .sort(),
+      ).toEqual([
+        "Android independent",
+        "Desktop independent",
+      ]);
+
+      const remoteCommit = await runGit(root, [
+        "--git-dir",
+        remote,
+        "show",
+        "-s",
+        "--format=%s%n%P",
+        "jig-data",
+      ]);
+      const [message, parents] = remoteCommit.split("\n");
+      expect(message).toBe("Reconcile Jig data");
+      expect(parents?.trim().split(/\s+/)).toHaveLength(2);
+
+      await expect(desktopSync.trigger()).resolves.toMatchObject({
+        remote: { state: "synchronized" },
+      });
+      expect(
+        (await readCanonicalState(desktopDb)).tasks
+          .map((candidate) => candidate.title)
+          .sort(),
+      ).toEqual([
+        "Android independent",
+        "Desktop independent",
+      ]);
     } finally {
       desktopSync.stop();
       androidSync.stop();
