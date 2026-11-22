@@ -299,7 +299,13 @@ describe("UI ownership architecture", () => {
     }
     expect(common).not.toContain('"--jig-lane-surface"');
     expect(common).toContain(
-      '"--jig-chrome-surface": "var(--color-background-body)"',
+      '"--jig-chrome-surface": surfaceRoles.chrome',
+    );
+    expect(common).toContain(
+      '"--jig-planner-surface": surfaceRoles.planner',
+    );
+    expect(common).toContain(
+      '"--jig-task-surface": surfaceRoles.task',
     );
 
     expect(css).toMatch(
