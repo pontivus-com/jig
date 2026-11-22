@@ -843,7 +843,6 @@ body {
 }
 
 .jig-workspace-delete {
-  margin-inline-start: auto;
   color: var(--color-text-error);
 }
 
