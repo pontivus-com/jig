@@ -40,3 +40,25 @@
   height: calc(2.75rem + var(--jig-safe-area-top));
   padding-block-start: var(--jig-safe-area-top);
 }
+
+.jig-configured-desktop .jig-feedback-transient-desktop {
+  position: sticky;
+  z-index: 5;
+  inset-block-start: var(--spacing-3);
+  display: flex;
+  height: 0;
+  justify-content: flex-end;
+  padding-inline-end: var(--spacing-3);
+  pointer-events: none;
+}
+
+.jig-configured-desktop .jig-feedback-transient-desktop .jig-feedback-transient-stack {
+  max-inline-size: 24rem;
+}
+
+.jig-configured-desktop .jig-feedback-durable-desktop {
+  inline-size: min(50rem, calc(100% - 2 * var(--spacing-3)));
+  margin-block-start: var(--spacing-2);
+  margin-inline: auto;
+}
+
