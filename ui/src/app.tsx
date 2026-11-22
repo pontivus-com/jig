@@ -72,9 +72,9 @@ import { ApplicationShell } from "./presentation/shared/application-shell";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
 import {
-  JigAttentionBanner,
-  JigSuccessConfirmation,
-} from "./attention-banner";
+  AttentionFeedbackContent,
+  SuccessFeedbackContent,
+} from "./presentation/shared/feedback-content";
 import {
   installNativeActiveListener,
   installNativeBackButtonListener,
@@ -794,23 +794,23 @@ function ConfiguredApp({
 
   const durableBanner =
     operationError !== null && workspace.mode === "closed" ? (
-    <JigAttentionBanner
+    <AttentionFeedbackContent
       status="error"
       title="Jig could not complete the operation"
-      description={operationError}
+      message={operationError}
       container="section"
       onDismiss={() => setOperationError(null)}
     />
   ) : repositoryStatus.key === "sync-issue" &&
     destination !== "settings" &&
     dismissedSyncAttention !== repositoryStatus.message ? (
-    <JigAttentionBanner
+    <AttentionFeedbackContent
       status="warning"
       title="Sync needs attention"
-      description={repositoryStatus.message}
+      message={repositoryStatus.message}
       container="section"
       onDismiss={() => setDismissedSyncAttention(repositoryStatus.message)}
-      endContent={
+      action={
         <Button
           label="Open Settings"
           variant="secondary"
@@ -823,7 +823,7 @@ function ConfiguredApp({
 
   const operationConfirmationView =
     operationConfirmation === null ? null : (
-      <JigSuccessConfirmation
+      <SuccessFeedbackContent
         message={operationConfirmation}
         onDismiss={dismissOperationConfirmation}
       />
@@ -871,10 +871,10 @@ function ConfiguredApp({
           <p>Loading local planning data…</p>
         ) : (
           <>
-            <JigAttentionBanner
+            <AttentionFeedbackContent
               status="error"
               title="Jig could not load local planning data"
-              description={loadError}
+              message={loadError}
                             />
             <Button
               label="Retry"
@@ -1153,10 +1153,10 @@ export function App(): React.ReactElement {
           <p>Opening Jig…</p>
         ) : (
           <>
-            <JigAttentionBanner
+            <AttentionFeedbackContent
               status="error"
               title="Jig could not open"
-              description={setupError}
+              message={setupError}
                     />
             <Button
               label="Retry"
