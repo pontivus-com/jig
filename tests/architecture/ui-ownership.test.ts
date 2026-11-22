@@ -227,31 +227,44 @@ describe("UI ownership architecture", () => {
     expect(verifyWorkflow).toContain("bun run theme:check");
   });
 
-  it("uses one AppShell and one typed destination definition across layouts", () => {
+  it("uses one AppShell owner and one typed destination definition across layouts", () => {
     const app = source("ui/src/app.tsx");
+    const shell = source("ui/src/presentation/shared/application-shell.tsx");
     const header = source("ui/src/planner-header.tsx");
+    const destinations = source("ui/src/destinations.ts");
+    const desktop = source(
+      "ui/src/presentation/desktop/configured-application.tsx",
+    );
+    const narrow = source(
+      "ui/src/presentation/narrow/configured-application.tsx",
+    );
     const layoutMode = source("ui/src/use-layout-mode.ts");
 
-    expect(app).toContain("<AppShell");
-    expect((app.match(/<AppShell\b/g) ?? [])).toHaveLength(1);
-    expect(app).toContain("function ApplicationShell");
+    expect(shell).toContain("<AppShell");
+    expect((shell.match(/<AppShell\b/g) ?? [])).toHaveLength(1);
+    expect(shell).toContain("function ApplicationShell");
+    expect(shell).toContain("mobileNav={false}");
+    expect(shell).not.toContain("<SideNav");
     expect(app).toContain("<ApplicationShell topNav={<OnboardingHeader />}>");
-    expect(app).toContain("mobileNav={false}");
-    expect(app).not.toContain("<SideNav");
     expect(app).toContain("initialDestinationNavigation");
     expect(app).toContain("installNativeBackButtonListener");
+    expect(app).toContain("<DesktopConfiguredApplication");
+    expect(app).toContain("<NarrowConfiguredApplication");
+    expect(desktop).toContain('data-jig-configured-presentation="desktop"');
+    expect(narrow).toContain('data-jig-configured-presentation="narrow"');
 
-    expect(header).toContain("const DESTINATIONS = [");
-    expect(header).toContain('id: "planner"');
-    expect(header).toContain('label: "Planner"');
-    expect(header).toContain('id: "history"');
-    expect(header).toContain('label: "History"');
-    expect(header).toContain('id: "settings"');
-    expect(header).toContain('label: "Settings"');
-    expect(header).toContain('import type { Destination } from "./navigation"');
-    expect(header).not.toContain("export type Destination =");
-    expect(header).toContain("IconName");
-    expect(header).toContain("NamespacedIconName");
+    expect(destinations).toContain("export const DESTINATIONS = [");
+    expect(destinations).toContain('id: "planner"');
+    expect(destinations).toContain('label: "Planner"');
+    expect(destinations).toContain('id: "history"');
+    expect(destinations).toContain('label: "History"');
+    expect(destinations).toContain('id: "settings"');
+    expect(destinations).toContain('label: "Settings"');
+    expect(destinations).toContain('import type { Destination } from "./navigation"');
+    expect(destinations).not.toContain("export type Destination =");
+    expect(destinations).toContain("IconName");
+    expect(destinations).toContain("NamespacedIconName");
+    expect(header).toContain('from "./destinations"');
     expect(header).toContain("function NarrowHeader");
     expect(header).toContain("export function CompactApplicationNavigation");
     expect(header).toContain('className="jig-mobile-bottom-navigation"');
