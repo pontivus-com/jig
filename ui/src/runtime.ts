@@ -39,6 +39,24 @@ export const submitTaskCommand: typeof webRuntime.submitTaskCommand =
         )
       : webRuntime.submitTaskCommand(...args);
 
+export const readSynchronizationConflict:
+typeof webRuntime.readSynchronizationConflict =
+  (...args) =>
+    Capacitor.isNativePlatform()
+      ? androidRuntime().then((runtime) =>
+          runtime.readSynchronizationConflict(...args),
+        )
+      : webRuntime.readSynchronizationConflict(...args);
+
+export const resolveSynchronizationConflict:
+typeof webRuntime.resolveSynchronizationConflict =
+  (...args) =>
+    Capacitor.isNativePlatform()
+      ? androidRuntime().then((runtime) =>
+          runtime.resolveSynchronizationConflict(...args),
+        )
+      : webRuntime.resolveSynchronizationConflict(...args);
+
 export const triggerSync: typeof webRuntime.triggerSync =
   (...args) =>
     Capacitor.isNativePlatform()
