@@ -364,7 +364,13 @@ describe("UI ownership architecture", () => {
     expect(shared).toContain("min-block-size: 100%;");
     expect(shared).toContain("flex: 1 1 auto;");
     expect(shared).toMatch(
-      /\.jig-content-frame\s*\{[^}]*min-height:\s*0;[^}]*flex:\s*1 1 auto;/s,
+      /\.jig-content-frame\s*\{[^}]*display:\s*flex;[^}]*min-height:\s*0;[^}]*flex:\s*1 1 auto;[^}]*flex-direction:\s*column;/s,
+    );
+    expect(shared).toMatch(
+      /\.jig-content-configured-planner\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s,
+    );
+    expect(shared).toMatch(
+      /\.jig-content-configured-planner \.jig-planner-surface\s*\{[^}]*flex:\s*1 0 auto;/s,
     );
     expect(shared).not.toMatch(
       /\.jig-content-frame\s*\{[^}]*(?:overflow|height:\s*100%)/s,
