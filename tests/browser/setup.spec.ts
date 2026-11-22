@@ -55,6 +55,43 @@ function diagnostics(remoteHealthy = true) {
       "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
     portable_format_version: 2,
     repository_adapter_healthy: remoteHealthy,
+    synchronization: remoteHealthy
+      ? {
+          phase: "idle",
+          reason: null,
+          retryable: null,
+          attempt_count: 0,
+          last_attempt_at: null,
+          next_retry_at: null,
+          local_head: null,
+          remote_head: null,
+          last_adopted_head: null,
+          lineage: null,
+          remote_name: "origin",
+          remote_location:
+            "https://github.com/pontivus-com/planning.git",
+          recovery_attempted: false,
+          recovery_outcome: null,
+          error_summary: null,
+        }
+      : {
+          phase: "observe-remote",
+          reason: "authentication",
+          retryable: false,
+          attempt_count: 1,
+          last_attempt_at: "2026-11-22T00:00:00.000Z",
+          next_retry_at: null,
+          local_head: null,
+          remote_head: null,
+          last_adopted_head: null,
+          lineage: null,
+          remote_name: "origin",
+          remote_location:
+            "https://github.com/pontivus-com/planning.git",
+          recovery_attempted: false,
+          recovery_outcome: null,
+          error_summary: "Git authentication is unavailable",
+        },
   };
 }
 
