@@ -24,6 +24,22 @@ jobs:
           bun-version: 1.4.4
       - name: Install exact frozen dependency graph
         run: bun install --frozen-lockfile
+      - name: Generate v1.1.2 theme artifacts
+        run: bun run theme:build
+      - name: Retain generated v1.1.2 theme artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jig-v1.1.2-theme-artifacts-${{ github.sha }}
+          path: |
+            ui/src/jig.css
+            ui/src/jig.js
+            ui/src/jig.d.ts
+            ui/src/jig.variants.d.ts
+            ui/src/themes/*.css
+            ui/src/themes/*.js
+            ui/src/themes/*.d.ts
+          if-no-files-found: error
+          retention-days: 1
       - name: Verify PR release metadata
         if: github.event_name == 'pull_request'
         run: bun scripts/verify-release.ts --mode pr --base origin/master
