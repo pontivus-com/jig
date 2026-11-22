@@ -1,12 +1,12 @@
 import { Button, IconButton } from "@astryxdesign/core";
 import type { Ref } from "react";
-import type { RecurrenceSeries } from "../../../src/core/recurrence";
-import type { Priority, Task } from "../../../src/core/task";
+import type { RecurrenceSeries } from "../../../../src/core/recurrence";
+import type { Priority, Task } from "../../../../src/core/task";
 import {
   defaultAddDate,
   isFutureAddDate,
   outstandingForDate,
-} from "../../../src/core/planning";
+} from "../../../../src/core/planning";
 import { DateDropZone } from "../../drag";
 import {
   formatCivilDate,
