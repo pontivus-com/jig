@@ -18,6 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
@@ -49,7 +50,7 @@ jobs:
       - name: Retain governed v1.1.2 browser evidence
         uses: actions/upload-artifact@v4
         with:
-          name: jig-v1.1.2-browser-evidence-${{ github.sha }}
+          name: jig-v1.1.2-browser-evidence-${{ github.event.pull_request.head.sha || github.sha }}
           path: test-results/**/v1.1*.png
           if-no-files-found: error
           retention-days: 7
@@ -63,6 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -180,7 +182,7 @@ jobs:
       - name: Retain development APK for certification inspection
         uses: actions/upload-artifact@v4
         with:
-          name: jig-android-debug-${{ github.sha }}
+          name: jig-android-debug-${{ github.event.pull_request.head.sha || github.sha }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
@@ -192,6 +194,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22.23.5"
