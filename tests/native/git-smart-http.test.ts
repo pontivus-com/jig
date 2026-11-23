@@ -31,6 +31,9 @@ import {
   readCanonicalState,
   readMetadata,
 } from "../../src/persistence/sqlite";
+import {
+  synchronizationPending,
+} from "../../src/persistence/synchronization";
 
 function applyTaskCommand(
   connection: Parameters<typeof applyTaskCommandAtLocalDate>[0],
