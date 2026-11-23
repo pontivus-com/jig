@@ -60,8 +60,6 @@ jobs:
 
   android-build-certification:
     runs-on: ubuntu-latest
-    env:
-      JIG_ANDROID_CI_KEYSTORE: ${{ runner.temp }}/jig-ci-debug.p12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -88,7 +86,12 @@ jobs:
         with:
           packages: platform-tools
       - name: Prepare stable Android certification signing identity
-        run: bash scripts/prepare-android-ci-signing.sh "$JIG_ANDROID_CI_KEYSTORE"
+        shell: bash
+        run: |
+          set -euo pipefail
+          JIG_ANDROID_CI_KEYSTORE="$RUNNER_TEMP/jig-ci-debug.p12"
+          bash scripts/prepare-android-ci-signing.sh "$JIG_ANDROID_CI_KEYSTORE"
+          printf 'JIG_ANDROID_CI_KEYSTORE=%s\n' "$JIG_ANDROID_CI_KEYSTORE" >> "$GITHUB_ENV"
       - name: Ensure Android SDK 36
         run: |
           yes | sdkmanager --licenses >/dev/null || true
@@ -187,8 +190,6 @@ jobs:
     needs: android-build-certification
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      JIG_ANDROID_CI_KEYSTORE: ${{ runner.temp }}/jig-ci-debug.p12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -205,7 +206,12 @@ jobs:
           distribution: temurin
           java-version: "21"
       - name: Prepare stable Android certification signing identity
-        run: bash scripts/prepare-android-ci-signing.sh "$JIG_ANDROID_CI_KEYSTORE"
+        shell: bash
+        run: |
+          set -euo pipefail
+          JIG_ANDROID_CI_KEYSTORE="$RUNNER_TEMP/jig-ci-debug.p12"
+          bash scripts/prepare-android-ci-signing.sh "$JIG_ANDROID_CI_KEYSTORE"
+          printf 'JIG_ANDROID_CI_KEYSTORE=%s\n' "$JIG_ANDROID_CI_KEYSTORE" >> "$GITHUB_ENV"
       - name: Prepare Android web/native project
         run: bun run android:sync
       - name: Run Android instrumentation on minSdk runtime
