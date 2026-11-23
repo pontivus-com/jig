@@ -121,13 +121,26 @@ async function assertPresentation(
   page: Page,
   presentation: "desktop" | "narrow",
 ): Promise<void> {
-  if (presentation === "desktop") {
-    await expect(page.locator(".jig-app-header-desktop")).toBeVisible();
-    await expect(page.locator(".jig-app-header-narrow")).toHaveCount(0);
-    return;
-  }
-  await expect(page.locator(".jig-app-header-narrow")).toBeVisible();
-  await expect(page.locator(".jig-app-header-desktop")).toHaveCount(0);
+  const expected =
+    presentation === "desktop"
+      ? page.locator(
+          ".jig-app-header-desktop, [data-jig-setup-presentation='desktop']",
+        )
+      : page.locator(
+          ".jig-app-header-narrow, [data-jig-setup-presentation='narrow']",
+        );
+  const opposite =
+    presentation === "desktop"
+      ? page.locator(
+          ".jig-app-header-narrow, [data-jig-setup-presentation='narrow']",
+        )
+      : page.locator(
+          ".jig-app-header-desktop, [data-jig-setup-presentation='desktop']",
+        );
+
+  await expect(expected).toHaveCount(1);
+  await expect(expected).toBeVisible();
+  await expect(opposite).toHaveCount(0);
 }
 
 async function capture(
@@ -328,7 +341,7 @@ function resolverConflictCase() {
         resolverTask(firstId, "Local A", 0, {
           updated_at: "2026-11-22T12:10:00.000Z",
         }),
-        stable,
+        resolverTask(thirdId, "Stable Task", 1),
       ],
       datasetId,
     ),
