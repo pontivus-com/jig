@@ -16,7 +16,7 @@ A Jig release `X.Y.Z` is valid only when **all** of these statements are true:
 6. The release PR contains only the release-metadata files allowed by `scripts/verify-release.ts` and passes the `release/vX.Y.Z` PR metadata gate.
 7. The release PR is merged to `master`; that exact merged commit is the release candidate.
 8. The permanent `Release` workflow detects that commit as a release transition/finalization and runs the release path. A workflow that exits with `should_release=false` is a successful **no-op**, not a release.
-9. The complete permanent release certification succeeds, including native arm64 certification, Android source/build certification, production APK signing/identity verification and packaged-bundle smoke verification.
+9. The complete permanent release certification succeeds, including native arm64 certification, Android source/build certification, GitHub Actions APK signing/identity verification and packaged-bundle smoke verification.
 10. Immutable tag `vX.Y.Z` points to the exact certified release commit.
 11. A non-draft GitHub Release for `vX.Y.Z` is published.
 12. The GitHub Release contains every asset in the exact asset matrix below, and `SHA256SUMS` verifies the complete normal published release payload, including `jig-android.apk`.
@@ -99,12 +99,12 @@ The release workflow must run, not skip:
 
 - release metadata verification;
 - native Linux arm64 verification;
-- Android source/build certification for the exact release commit, including application/version identity and dependency gates, followed by production signing and signed-APK identity/certificate verification;
+- Android source/build certification for the exact release commit, including application/version identity and dependency gates, followed by GitHub Actions signing and signed-APK identity/certificate verification;
 - typecheck and core/integration tests;
 - production UI build;
 - browser acceptance where defined by the workflow;
 - installer/shell lifecycle gates;
-- packaging for Linux x64 and arm64 plus the production-signed Android APK;
+- packaging for Linux x64 and arm64 plus the GitHub-Actions-signed Android APK;
 - package checksum verification across the complete normal release payload;
 - packaged x64/arm64 installation smoke tests covering both configured `--repo` automation and fresh no-repository bootstrap mode.
 
@@ -120,7 +120,7 @@ Only after certification succeeds may the workflow:
 
 Published tags are never moved or rebuilt. A correction after publication requires a new version.
 
-**Bounded v1.1.2 Android distribution-completion exception:** v1.1.2 was published before the direct Android APK requirement was corrected. The permanent Release workflow may therefore append only `jig-android.apk` and `jig-android.apk.sha256` to the existing v1.1.2 GitHub Release. That APK must be rebuilt from the unchanged immutable `v1.1.2` tag/commit `ef9aa1847209d651cb8d01fefd23506b0afdd807`, signed by the governed stable production Android signer and fully identity/signature verified. The tag, release commit, existing Linux assets and existing `SHA256SUMS` must not be moved, replaced or rewritten. If either completion asset already exists, a retry may reuse it only when byte-identical. This exception does not authorize general post-publication asset mutation and does not create a second v1.1.2 source release.
+**Bounded v1.1.2 Android distribution-completion exception:** v1.1.2 was published before the direct Android APK requirement was corrected. The permanent Release workflow may therefore append only `jig-android.apk` and `jig-android.apk.sha256` to the existing v1.1.2 GitHub Release. That APK must be rebuilt from the unchanged immutable `v1.1.2` tag/commit `ef9aa1847209d651cb8d01fefd23506b0afdd807`, signed by the governed stable GitHub Actions Android signer and fully identity/signature verified. The tag, release commit, existing Linux assets and existing `SHA256SUMS` must not be moved, replaced or rewritten. If either completion asset already exists, a retry may reuse it only when byte-identical. This exception does not authorize general post-publication asset mutation and does not create a second v1.1.2 source release.
 
 ### v1.1.2 Android APK completion pipeline
 
@@ -139,7 +139,7 @@ That dispatch has one fixed path:
 2. verify that commit remains an ancestor of `master` and that the immutable tag has not moved;
 3. run Android source/version/dependency certification for that exact source;
 4. build the release APK with `:app:assembleRelease`;
-5. sign it with the protected stable Jig Android release key;
+5. prepare the pinned stable Android signing identity inside the Actions runner, sign the release APK there, and verify its certificate;
 6. verify `com.pontivus.jig`, `versionName=1.1.2`, `versionCode=1001002` and the governed signing-certificate fingerprint;
 7. retain `jig-android.apk` as the workflow artifact;
 8. verify the existing published GitHub Release still targets the same v1.1.2 commit and still contains the original Linux assets;
@@ -157,7 +157,7 @@ Before stating that `X.Y.Z` is released, verify all of the following directly:
 - [ ] `master:package.json` reports `X.Y.Z`;
 - [ ] `CHANGELOG.md` has the dated `[X.Y.Z]` section and empty `[Unreleased]`;
 - [ ] `docs/releases/vX.Y.Z.md` exists;
-- [ ] permanent Release workflow completed successfully **with the release jobs executed rather than skipped**, including Android certification and production APK signing/verification;
+- [ ] permanent Release workflow completed successfully **with the release jobs executed rather than skipped**, including Android certification and GitHub Actions APK signing/verification;
 - [ ] tag `vX.Y.Z` exists and targets the certified release commit;
 - [ ] GitHub Release `vX.Y.Z` is published and not draft;
 - [ ] `jig-linux-x64.tar.gz` exists;
@@ -174,7 +174,7 @@ Jig v1 public release artifacts support:
 
 - Linux x86_64 / amd64;
 - Linux aarch64 / arm64;
-- Android through the production-signed `com.pontivus.jig` APK.
+- Android through the GitHub-Actions-signed `com.pontivus.jig` APK.
 
 The Linux release bundles carry the pinned Bun runtime for the selected architecture plus the certified production UI and Jig runtime sources. No ambient Bun installation is required for the supported Linux release path.
 
@@ -184,13 +184,13 @@ The Linux release bundles carry the pinned Bun runtime for the selected architec
 | --- | --- |
 | `jig-linux-x64.tar.gz` | Certified Linux x86_64/amd64 application bundle with pinned Bun runtime. |
 | `jig-linux-arm64.tar.gz` | Certified Linux aarch64/arm64 application bundle with pinned Bun runtime. |
-| `jig-android.apk` | Production-signed Android application built from the exact release commit. |
+| `jig-android.apk` | GitHub-Actions-signed Android application built from the exact release commit. |
 | `SHA256SUMS` | SHA-256 digest of both Linux release bundles, the production Android APK and the bootstrap installer. |
 | `jig-install.sh` | Architecture-selecting bootstrap that downloads, verifies and delegates to the canonical bundled `scripts/install.sh`. |
 
 GitHub-generated source archives remain provenance artifacts; they are not the primary supported installation channel.
 
-The production-signed Android APK is part of the GitHub Release asset matrix from v1.1.2 onward and is the supported Android release artifact. Development/debug/certification APKs are never release assets. No F-Droid, Google Play or other app-store/repository publication is part of this release contract or Release workflow.
+The GitHub-Actions-signed Android APK is part of the GitHub Release asset matrix from v1.1.2 onward and is the supported Android release artifact. Development/debug/certification APKs are never release assets. No F-Droid, Google Play or other app-store/repository publication is part of this release contract or Release workflow.
 
 ## Bundle contents
 
