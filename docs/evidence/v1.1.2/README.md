@@ -1,10 +1,10 @@
 # Jig v1.1.2 IMP-18 exact-candidate closure ledger
 
-**Status:** HOSTED / BROWSER / REPOSITORY EVIDENCE PASS; NATIVE INTERACTION EVIDENCE PARTIAL. NA-01..07 pass on the baseline artifact; NA-08 failed and is pending rerun on the corrected candidate.
+**Status:** HOSTED / BROWSER / REPOSITORY / CROSS-RUNTIME GIT / ANDROID UPDATE-PRESERVATION EVIDENCE PASS; NATIVE HOST INTERACTION PARTIAL (NA-08 host interaction only).
 **Governing plan:** `docs/implementation/v1.1.2-corrective-implementation-plan.md` J112-IMP-18.  
 **Baseline native candidate:** `17db841889ee2d25dbe5801daf4334259a15d8b3`.
-**Corrected executable candidate:** `d28bc8a7e07a460c2f1178cb6bdea27cca92b4bc` (contains the NA-08 causal correction from `63bc11a` plus the configured History/Settings surface correction).
-**Permanent Verify:** run `2200` / `45087086162` — `PASS`.
+**Corrected executable candidate:** `4343738b2b08901c1c57d16f276a1d0b31ab09fa`.
+**Permanent Verify:** run `2213` / `45094008515` — `PASS`.
 **Package version:** `1.1.1` (intentionally unchanged pending the separate `release/v1.1.2` transition).
 
 ## 1. Evidence identities
@@ -20,11 +20,13 @@
 | XPLAT | `tests/native/git-smart-http.test.ts`; Desktop→Android→Desktop, Android→Desktop→Android, related divergence, semantic conflict and Android recovery restart evidence. |
 | NUNIT | `tests/native/{app-lifecycle,notifications,reminder-reconciliation,jig-sqlite,secure-credentials}.test.ts`; native adapter/lifecycle semantics. |
 | API24 | Exact-head `Android API 24 runtime` instrumentation: `5 tests started / 5 tests finished; BUILD SUCCESSFUL`. |
-| VIS | Browser evidence artifact `14779589181`, `jig-v1.1.2-browser-evidence-9905619e816b56ff9f362eebeb90c751f4952f29` (run source head `a9eba9495b7f29dcf33d8deee6426640b6927133`; executable product content is the corrected candidate above), ZIP SHA-256 `67da2c4eb29dd543cd6c54bcf0fd70478e119139958787db9480b94b65ce67a6`; reviewed application, onboarding, drag, attention, form and resolver screenshots. The permanent 13 Theme × Light/Dark matrix now also asserts the configured destination body resolves to the Planner surface. |
-| APK | Baseline Android artifact `14775033983`, extracted `app-debug.apk` size `9,831,971 bytes`, SHA-256 `0237d5c018a545d92757233d200c03baa3e7f553d350661aca69193aa3b22259`; current corrected Android artifact `14779832160` from Verify run `45087086162`, ZIP SHA-256 `6e3a3ad24b9ecf82c43d90422f1050b6bdb93dd20ea8f933ff10f9683eeb59b0`, extracted APK size `9,832,023 bytes`, SHA-256 `91334ee7d5101883054ae66564d89dd543120720b2d1c2bb52f44bc002cd36a0`. The prior intermediate corrected artifact `14778684433` is superseded by the configured-surface product correction. |
-| NA | `tests/certification/v1.1.2-native-acceptance.md` records NA-01..07 PASS and NA-08 FAIL on the baseline artifact; corrected-candidate NA-08 rerun remains open. |
+| VIS | Browser evidence artifact `14783030515`, ZIP digest SHA-256 `66deadd97b6cd7e84bc14d9a85ed08d9d9facc0c62a1b29804fea13575c7cd17`; run source head `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; 91/91 real-browser tests plus bootstrap smoke PASS. |
+| APK | Corrected Android artifact `14782503658`; extracted `app-debug.apk` size `9,832,023 bytes`, SHA-256 `21e443084a3e1768fd076cb05e37dbbecc4be4209143f40e6eda413f4b389444`; stable non-production certification certificate SHA-256 `a40da80a59d170caa950cf15c18c454d47a39b26989d8b640ecd745ba71bf5dc`. |
+| GITCI | Dedicated permanent Git synchronization/recovery gate in Verify `45094008515`: `tests/native/git-smart-http.test.ts` + `tests/sync/recovery-git.test.ts` + `tests/sync/desktop-recovery.test.ts`, 3/3 files and 17/17 tests PASS. Includes the exact pending-Android-local + remote-advance topology, stale-case rejection, refreshed resolution and accepted non-force synchronization. |
+| UPDATE | Stable-signature Android certification plus API-24 in-place reinstall proof: two successful update installs preserve app-private `.jig/local` and Git repository sentinels before 5/5 instrumentation tests; uninstall/package-clear is not used. |
+| NA | `tests/certification/v1.1.2-native-acceptance.md` records NA-01..07 physical PASS, baseline NA-08 causal FAIL, and corrected-candidate NA-08 Git/recovery semantics PASS in permanent CI. Only native resolver-host/Back interaction remains open if retained. |
 
-Hosted exact-head summary: `51/51 test files and 348/348 tests PASS`; Chromium `91/91 real-browser tests PASS (plus 1/1 browser bootstrap smoke)`; Android build/static/FLOSS/version/F-Droid certification PASS; API-24 instrumentation `5 tests started / 5 tests finished; BUILD SUCCESSFUL`.
+Hosted exact-head summary: dedicated Git recovery gate `3/3 files, 17/17 tests PASS`; full suite `51/51 test files and 348/348 tests PASS`; Chromium `91/91 real-browser tests PASS (plus 1/1 browser bootstrap smoke)`; Android build/static/FLOSS/version/F-Droid + stable-signature certification PASS; API-24 in-place reinstall preservation PASS; instrumentation `5 tests started / 5 tests finished; BUILD SUCCESSFUL`.
 
 ## 2. IMP-16 disposition
 
@@ -39,8 +41,8 @@ J112-IMP-16 is **CLOSED — NO DEFECT REPRODUCED / NO CAUSAL FIX REQUIRED**. The
 
 The exact candidate passes the permanent type/architecture, theme artifact, unit/integration, build, browser bootstrap/real-browser, shell/installer, Android build/static/FLOSS/version/F-Droid and API-24 instrumentation gates. The browser visual evidence was reviewed rather than inferred from geometry assertions.
 
-The certification is **not yet final** because NA-08 reproduced an Android synchronization-entry defect on the baseline artifact. The causal synchronization correction is contained in the current corrected candidate, which also includes the subsequent configured History/Settings surface correction. Hosted verification is green on that product state. Do not start the `release/v1.1.2` metadata transition until NA-08 is rerun against the current corrected APK lineage.
+The synchronization/recovery defect that blocked NA-08 is corrected and permanently certified in GitHub Actions; a physical device is no longer a Git-correctness gate. IMP-18 remains non-final only to the extent the governing native hook still requires direct resolver-host/Back interaction evidence. Android update certification is now non-destructive: a signing mismatch must stop rather than trigger uninstall/package-clear.
 
-## 11. Required final native execution
+## 11. Remaining native-host execution
 
-Use corrected artifact `14779832160` (APK SHA-256 `91334ee7d5101883054ae66564d89dd543120720b2d1c2bb52f44bc002cd36a0`) and record the NA-08 rerun in `tests/certification/v1.1.2-native-acceptance.md` with device/model, Android API, date, PASS/FAIL and retained evidence reference. A FAIL reopens the owning implementation task; a complete PASS closes the only remaining IMP-18 gate. No new product code is authorized merely to make the ledger green without a reproduced native failure.
+Do not rerun Git synchronization/recovery semantics on a physical device as a substitute for the permanent CI gate. If the J112-NA-08 native hook is retained, its remaining scope is only direct Android resolver-host/Back interaction. Use corrected artifact `14782503658` (APK SHA-256 `21e443084a3e1768fd076cb05e37dbbecc4be4209143f40e6eda413f4b389444`) or a later artifact from the same stable certification-signing lineage. Install by in-place update only; never uninstall or clear `com.pontivus.jig` to make a candidate fit.
