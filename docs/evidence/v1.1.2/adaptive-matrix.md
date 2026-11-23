@@ -1,6 +1,8 @@
 # Jig v1.1.2 IMP-18 adaptive-matrix ledger
 
-Exact executable candidate: `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; product-content baseline Verify run `2213` / `45094008515` PASS. Final exact PR-head/evidence-head verification is recorded on issue #66. Evidence keys are defined in [`README.md`](README.md).\n\n**Visual re-certification notice:** any disposition below that cites `VIS` retains its automated/behavioral evidence but its qualitative visual portion is **OPEN** until replacement settled-state evidence is generated and reviewed under `docs/design/ux-ui-visual-audit-standard.md`. This does not reopen non-visual architecture, behavior, Git or native-host evidence.
+Exact executable candidate: `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; product-content baseline Verify run `2213` / `45094008515` PASS. Final exact PR-head/evidence-head verification is recorded on issue #66. Evidence keys are defined in [`README.md`](README.md).
+
+**Visual certification:** PASS under `docs/design/ux-ui-visual-audit-standard.md`; exact visual candidate `b1bcb0ab59947635b591c1fc7c6c4582e3f52606`, run `45104775435`, artifact `14787371122`, with criterion-level disposition in `visual-audit.md`. The older VIS artifact is superseded for qualitative judgment.
 
 ## 3. Adaptive matrix §A — presentation class
 

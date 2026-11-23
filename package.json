@@ -46,6 +46,7 @@
     "android:sync": "bun run build && node node_modules/@capacitor/cli/bin/capacitor sync android",
     "android:version:check": "bun run android:sync && cd android && ./gradlew :app:verifyJigVersion",
     "android:build:debug": "bun run android:sync && cd android && ./gradlew :app:assembleDebug",
-    "android:device:preflight": "bash scripts/verify-android-device-prerequisites.sh"
+    "android:device:preflight": "bash scripts/verify-android-device-prerequisites.sh",
+    "test:visual-audit": "JIG_VISUAL_AUDIT=1 playwright test tests/browser/visual-audit.spec.ts --workers=1 --grep-invert Dark"
   }
 }

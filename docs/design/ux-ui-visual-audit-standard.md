@@ -460,7 +460,7 @@ Desktop and narrow evidence must be generated in the **same browser job from the
 
 The dedicated visual-audit suite is **opt-in**. Ordinary `test:browser` / `playwright test` verification must skip `tests/browser/visual-audit.spec.ts`; lightweight permanent visual regressions belong in the ordinary conformance suite instead.
 
-The governed release/remediation audit is executed explicitly with `JIG_VISUAL_AUDIT=1` and the constrained acceptance selection. Optional diagnostic corpora may exist for investigation, but they are not acceptance requirements and must not be added to the governed run merely because they are available. In particular, a complete duplicate Dark corpus is not required: §7 owns the bounded appearance/theme evidence.
+The governed release/remediation audit is executed explicitly with `bun run test:visual-audit`, which sets `JIG_VISUAL_AUDIT=1`, uses one worker and excludes optional non-governing duplicate Dark-corpus tests. The constrained acceptance selection remains the authority. Optional diagnostic corpora may exist for investigation, but they are not acceptance requirements and must not be added to the governed run merely because they are available. In particular, a complete duplicate Dark corpus is not required: §7 owns the bounded appearance/theme evidence.
 
 ## 13. Release acceptance
 
