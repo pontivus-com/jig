@@ -34,7 +34,7 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
       - name: Git synchronization and recovery gate
-        run: bunx vitest run tests/native/git-smart-http.test.ts tests/sync/recovery-git.test.ts tests/sync/desktop-recovery.test.ts
+        run: bunx --bun vitest run tests/native/git-smart-http.test.ts tests/sync/recovery-git.test.ts tests/sync/desktop-recovery.test.ts
       - name: Core and integration tests
         run: bun run test
       - name: Build
