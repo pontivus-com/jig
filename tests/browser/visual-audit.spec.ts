@@ -217,8 +217,8 @@ async function writeManifest(
     JSON.stringify(
       {
         commit:
-          process.env.GITHUB_SHA ??
           process.env.GITHUB_HEAD_SHA ??
+          process.env.GITHUB_SHA ??
           "local",
         run_id: process.env.GITHUB_RUN_ID ?? null,
         standard: "docs/design/ux-ui-visual-audit-standard.md",
