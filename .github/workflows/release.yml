@@ -42,14 +42,17 @@ jobs:
       - name: Checkout exact candidate
         shell: bash
         env:
-          REQUESTED_TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.commit || github.sha }}
+          REQUESTED_TARGET_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.android_v1_1_2_completion && 'ef9aa1847209d651cb8d01fefd23506b0afdd807' || (github.event_name == 'workflow_dispatch' && inputs.commit || github.sha) }}
         run: |
           set -euo pipefail
           git init .
           git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
           git fetch --tags --force origin "+refs/heads/master:refs/remotes/origin/master"
           target_sha="${REQUESTED_TARGET_SHA}"
-          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]]
+          [[ "${target_sha}" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "::error::A 40-character commit SHA is required for a manual release retry."
+            exit 1
+          }
           git checkout --detach "${target_sha}"
           test "$(git rev-parse HEAD)" = "${target_sha}"
           git merge-base --is-ancestor "${target_sha}" refs/remotes/origin/master
@@ -72,7 +75,16 @@ jobs:
             echo "target_sha=${expected_sha}" >> "${GITHUB_OUTPUT}"
             echo "parent_sha=${parent_sha}" >> "${GITHUB_OUTPUT}"
             echo "version=1.1.2" >> "${GITHUB_OUTPUT}"
-            echo "Bounded Android distribution completion selected for immutable v1.1.2."
+            {
+              echo "## v1.1.2 Android APK completion"
+              echo ""
+              echo "- Source tag: `v1.1.2`"
+              echo "- Source commit: `${expected_sha}`"
+              echo "- Output: production-signed `jig-android.apk`"
+              echo "- Destination: existing GitHub Release `v1.1.2`"
+              echo "- Store publication: none"
+            } >> "${GITHUB_STEP_SUMMARY}"
+            echo "Bounded Android APK completion selected for immutable v1.1.2."
             exit 0
           fi
 
