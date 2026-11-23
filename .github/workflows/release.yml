@@ -11,9 +11,15 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: Exact master commit to release or retry
-        required: true
+        description: Exact master commit to release or retry; optional for the bounded v1.1.2 Android completion
+        required: false
+        default: ""
         type: string
+      android_v1_1_2_completion:
+        description: Append the governed signed Android APK to the existing immutable v1.1.2 release
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -28,6 +34,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       should_release: ${{ steps.detect.outputs.should_release }}
+      android_completion: ${{ steps.detect.outputs.android_completion }}
       target_sha: ${{ steps.detect.outputs.target_sha }}
       parent_sha: ${{ steps.detect.outputs.parent_sha }}
       version: ${{ steps.detect.outputs.version }}
@@ -52,6 +59,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.android_v1_1_2_completion }}" == "true" ]]; then
+            expected_sha="ef9aa1847209d651cb8d01fefd23506b0afdd807"
+            tag="v1.1.2"
+            tag_sha="$(git rev-list -n1 "refs/tags/${tag}")"
+            test "${tag_sha}" = "${expected_sha}"
+            git merge-base --is-ancestor "${expected_sha}" refs/remotes/origin/master
+            parent_sha="$(git rev-parse "${expected_sha}^")"
+            echo "should_release=false" >> "${GITHUB_OUTPUT}"
+            echo "android_completion=true" >> "${GITHUB_OUTPUT}"
+            echo "target_sha=${expected_sha}" >> "${GITHUB_OUTPUT}"
+            echo "parent_sha=${parent_sha}" >> "${GITHUB_OUTPUT}"
+            echo "version=1.1.2" >> "${GITHUB_OUTPUT}"
+            echo "Bounded Android distribution completion selected for immutable v1.1.2."
+            exit 0
+          fi
+
+          echo "android_completion=false" >> "${GITHUB_OUTPUT}"
           trigger_sha="$(git rev-parse HEAD)"
           trigger_parent="$(git rev-parse HEAD^)"
           current="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
@@ -132,7 +157,7 @@ jobs:
           echo "version=${current}" >> "${GITHUB_OUTPUT}"
 
       - name: Checkout prepared release target
-        if: steps.detect.outputs.should_release == 'true'
+        if: steps.detect.outputs.should_release == 'true' || steps.detect.outputs.android_completion == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -141,7 +166,7 @@ jobs:
           git merge-base --is-ancestor "${{ steps.detect.outputs.target_sha }}" refs/remotes/origin/master
 
       - name: Install pinned Bun
-        if: steps.detect.outputs.should_release == 'true'
+        if: steps.detect.outputs.should_release == 'true' || steps.detect.outputs.android_completion == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -154,12 +179,12 @@ jobs:
           echo "${RUNNER_TEMP}/bun-bin" >> "${GITHUB_PATH}"
 
       - name: Verify release metadata before certification
-        if: steps.detect.outputs.should_release == 'true'
+        if: steps.detect.outputs.should_release == 'true' || steps.detect.outputs.android_completion == 'true'
         run: bun scripts/verify-release.ts --mode release-commit --base "${{ steps.detect.outputs.parent_sha }}"
 
   android-certification:
     needs: prepare
-    if: needs.prepare.outputs.should_release == 'true'
+    if: needs.prepare.outputs.should_release == 'true' || needs.prepare.outputs.android_completion == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -253,6 +278,67 @@ jobs:
 
       - name: Build Android release-source candidate
         run: cd android && ./gradlew :app:assembleRelease
+
+      - name: Sign and verify production Android release APK
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          JIG_ANDROID_RELEASE_KEYSTORE_B64: ${{ secrets.JIG_ANDROID_RELEASE_KEYSTORE_B64 }}
+          JIG_ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.JIG_ANDROID_RELEASE_STORE_PASSWORD }}
+          JIG_ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.JIG_ANDROID_RELEASE_KEY_ALIAS }}
+          JIG_ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.JIG_ANDROID_RELEASE_KEY_PASSWORD }}
+          JIG_ANDROID_RELEASE_CERT_SHA256: ${{ secrets.JIG_ANDROID_RELEASE_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          for name in JIG_ANDROID_RELEASE_KEYSTORE_B64 JIG_ANDROID_RELEASE_STORE_PASSWORD JIG_ANDROID_RELEASE_KEY_ALIAS JIG_ANDROID_RELEASE_KEY_PASSWORD JIG_ANDROID_RELEASE_CERT_SHA256; do
+            test -n "${!name:-}" || { echo "::error::Missing protected Android release credential: ${name}"; exit 1; }
+          done
+
+          keystore="${RUNNER_TEMP}/jig-android-release.keystore"
+          printf '%s' "${JIG_ANDROID_RELEASE_KEYSTORE_B64}" | base64 --decode > "${keystore}"
+          chmod 0600 "${keystore}"
+          test -s "${keystore}"
+
+          mapfile -t candidates < <(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print | sort)
+          (( ${#candidates[@]} == 1 )) || { echo "::error::Expected exactly one release APK candidate; found ${#candidates[@]}"; exit 1; }
+          unsigned_apk="${candidates[0]}"
+          signed_apk="${RUNNER_TEMP}/jig-android.apk"
+          apksigner="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
+          aapt="${ANDROID_HOME}/build-tools/36.0.0/aapt"
+          test -x "${apksigner}"
+          test -x "${aapt}"
+
+          "${apksigner}" sign \
+            --ks "${keystore}" \
+            --ks-key-alias "${JIG_ANDROID_RELEASE_KEY_ALIAS}" \
+            --ks-pass env:JIG_ANDROID_RELEASE_STORE_PASSWORD \
+            --key-pass env:JIG_ANDROID_RELEASE_KEY_PASSWORD \
+            --out "${signed_apk}" \
+            "${unsigned_apk}"
+
+          "${apksigner}" verify --verbose --print-certs "${signed_apk}" > "${RUNNER_TEMP}/jig-android-signature.txt"
+          actual_cert="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "${RUNNER_TEMP}/jig-android-signature.txt" | head -1 | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
+          expected_cert="$(printf '%s' "${JIG_ANDROID_RELEASE_CERT_SHA256}" | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
+          certification_cert="a40da80a59d170caa950cf15c18c454d47a39b26989d8b640ecd745ba71bf5dc"
+          test -n "${actual_cert}"
+          test "${actual_cert}" = "${expected_cert}"
+          test "${actual_cert}" != "${certification_cert}" || { echo "::error::Production APK is signed by the non-production certification identity"; exit 1; }
+
+          IFS=. read -r major minor patch <<<"${RELEASE_VERSION}"
+          expected_code=$((major * 1000000 + minor * 1000 + patch))
+          badging="$("${aapt}" dump badging "${signed_apk}" | head -1)"
+          grep -Fq "name='com.pontivus.jig'" <<<"${badging}"
+          grep -Fq "versionName='${RELEASE_VERSION}'" <<<"${badging}"
+          grep -Fq "versionCode='${expected_code}'" <<<"${badging}"
+          sha256sum "${signed_apk}"
+
+      - name: Retain production Android release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jig-android-release-${{ needs.prepare.outputs.version }}
+          path: ${{ runner.temp }}/jig-android.apk
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Lint candidate F-Droid metadata
         shell: bash
@@ -405,8 +491,16 @@ jobs:
           bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/release-bundle-smoke.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh
           bash tests/install/installer-smoke.sh
 
+      - name: Download signed Android release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: jig-android-release-${{ needs.prepare.outputs.version }}
+          path: ${{ runner.temp }}/jig-android-release
+
       - name: Build release assets
         shell: bash
+        env:
+          JIG_ANDROID_RELEASE_APK: ${{ runner.temp }}/jig-android-release/jig-android.apk
         run: |
           set -euo pipefail
           # Release candidates created through the contents API may not carry
@@ -414,8 +508,10 @@ jobs:
           # packaging; package-release.ts also owns this permanently for future
           # release commits.
           chmod +x scripts/install.sh scripts/jig scripts/install-release.sh
+          test -s "${JIG_ANDROID_RELEASE_APK}"
           bun scripts/package-release.ts
           (cd release && sha256sum -c SHA256SUMS)
+          grep -Fq '  jig-android.apk' release/SHA256SUMS
           test -s release/release-notes.md
 
       - name: Smoke certified x64 bundle
@@ -472,7 +568,7 @@ jobs:
             exit 0
           fi
 
-          for asset in jig-linux-x64.tar.gz jig-linux-arm64.tar.gz SHA256SUMS jig-install.sh; do
+          for asset in jig-linux-x64.tar.gz jig-linux-arm64.tar.gz jig-android.apk SHA256SUMS jig-install.sh; do
             existing_url="$(RELEASE_JSON="${RUNNER_TEMP}/release.json" ASSET_NAME="${asset}" bun -e 'const r=JSON.parse(await Bun.file(process.env.RELEASE_JSON).text()); const a=(r.assets??[]).find(x=>x.name===process.env.ASSET_NAME); process.stdout.write(a?.url??"");')"
             if [[ -n "${existing_url}" ]]; then
               existing_asset="${RUNNER_TEMP}/existing-${asset}"
@@ -481,8 +577,83 @@ jobs:
               continue
             fi
             content_type="application/octet-stream"
+            [[ "${asset}" == "jig-android.apk" ]] && content_type="application/vnd.android.package-archive"
             [[ "${asset}" == "SHA256SUMS" || "${asset}" == *.sh ]] && content_type="text/plain"
             curl -fsS -H "${auth_header}" -H "X-GitHub-Api-Version: 2022-11-28"               -H "Content-Type: ${content_type}" --data-binary @"release/${asset}"               "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?name=${asset}" >/dev/null
           done
 
           curl -fsS -X PATCH -H "${auth_header}" -H "X-GitHub-Api-Version: 2022-11-28"             -H "Content-Type: application/vnd.github+json"             -d '{"draft":false}' "${api}/releases/${release_id}" >/dev/null
+
+  android-v1-1-2-completion:
+    needs: [prepare, android-certification]
+    if: needs.prepare.outputs.android_completion == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download governed signed Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: jig-android-release-1.1.2
+          path: ${{ runner.temp }}/jig-android-completion
+
+      - name: Append only the bounded v1.1.2 Android completion assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_sha="ef9aa1847209d651cb8d01fefd23506b0afdd807"
+          tag="v1.1.2"
+          apk_dir="${RUNNER_TEMP}/jig-android-completion"
+          apk="${apk_dir}/jig-android.apk"
+          test -s "${apk}"
+
+          git init "${RUNNER_TEMP}/jig-v1.1.2-source"
+          cd "${RUNNER_TEMP}/jig-v1.1.2-source"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --tags --force origin "+refs/tags/${tag}:refs/tags/${tag}"
+          test "$(git rev-list -n1 "refs/tags/${tag}")" = "${expected_sha}"
+
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          auth_header="Authorization: Bearer ${GH_TOKEN}"
+          release_json="${RUNNER_TEMP}/jig-v1.1.2-release.json"
+          curl -fsS -H "${auth_header}" -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${api}/releases/tags/${tag}" > "${release_json}"
+
+          RELEASE_JSON="${release_json}" EXPECTED_SHA="${expected_sha}" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          release = json.loads(Path(os.environ['RELEASE_JSON']).read_text())
+          assert release['tag_name'] == 'v1.1.2'
+          assert release['target_commitish'] == os.environ['EXPECTED_SHA']
+          assert release['draft'] is False
+          assert release['prerelease'] is False
+          names = {asset['name'] for asset in release.get('assets', [])}
+          required = {'jig-linux-x64.tar.gz', 'jig-linux-arm64.tar.gz', 'SHA256SUMS', 'jig-install.sh'}
+          missing = sorted(required - names)
+          if missing:
+              raise SystemExit(f'v1.1.2 legacy release is missing required existing assets: {missing}')
+          PY
+
+          cd "${apk_dir}"
+          sha256sum jig-android.apk > jig-android.apk.sha256
+          release_id="$(RELEASE_JSON="${release_json}" python3 -c 'import json,os; print(json.load(open(os.environ["RELEASE_JSON"]))["id"])')"
+
+          for asset in jig-android.apk jig-android.apk.sha256; do
+            existing_url="$(RELEASE_JSON="${release_json}" ASSET_NAME="${asset}" python3 -c 'import json,os; r=json.load(open(os.environ["RELEASE_JSON"])); print(next((a["url"] for a in r.get("assets",[]) if a["name"]==os.environ["ASSET_NAME"]), ""))')"
+            if [[ -n "${existing_url}" ]]; then
+              existing_asset="${RUNNER_TEMP}/existing-${asset}"
+              curl -fsS -L -H "${auth_header}" -H "X-GitHub-Api-Version: 2022-11-28" \
+                -H "Accept: application/octet-stream" "${existing_url}" -o "${existing_asset}"
+              cmp -s "${apk_dir}/${asset}" "${existing_asset}" || { echo "::error::Existing ${asset} is not byte-identical; refusing published-release mutation"; exit 1; }
+              continue
+            fi
+
+            content_type="text/plain"
+            [[ "${asset}" == "jig-android.apk" ]] && content_type="application/vnd.android.package-archive"
+            curl -fsS -H "${auth_header}" -H "X-GitHub-Api-Version: 2022-11-28" \
+              -H "Content-Type: ${content_type}" --data-binary @"${apk_dir}/${asset}" \
+              "https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets?name=${asset}" >/dev/null
+          done
