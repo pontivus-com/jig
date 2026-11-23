@@ -99,7 +99,7 @@ The release workflow must run, not skip:
 
 - release metadata verification;
 - native Linux arm64 verification;
-- Android source/build certification for the exact release commit, including application/version identity, FLOSS dependency gates and F-Droid candidate lint, followed by production signing and signed-APK identity/certificate verification;
+- Android source/build certification for the exact release commit, including application/version identity and dependency gates, followed by production signing and signed-APK identity/certificate verification;
 - typecheck and core/integration tests;
 - production UI build;
 - browser acceptance where defined by the workflow;
@@ -164,7 +164,7 @@ The Linux release bundles carry the pinned Bun runtime for the selected architec
 
 GitHub-generated source archives remain provenance artifacts; they are not the primary supported installation channel.
 
-The production-signed Android APK is part of the GitHub Release asset matrix from v1.1.2 onward and is a supported direct Android distribution channel. Development/debug/certification APKs are never release assets. F-Droid remains the intended public Android application-repository channel, but external F-Droid submission/publication is a separate deferred distribution activity: it may begin only after an immutable source tag exists **and** Jig is considered stable with the required marketing/store material ready. Later F-Droid publication must preserve package/signing update compatibility for existing `com.pontivus.jig` installations established by the GitHub-release signer. F-Droid availability must not be claimed until F-Droid actually publishes the package.
+The production-signed Android APK is part of the GitHub Release asset matrix from v1.1.2 onward and is the supported Android release artifact. Development/debug/certification APKs are never release assets. No F-Droid, Google Play or other app-store/repository publication is part of this release contract or Release workflow.
 
 ## Bundle contents
 
