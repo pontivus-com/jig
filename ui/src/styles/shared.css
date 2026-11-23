@@ -1206,6 +1206,10 @@ body {
   min-height: 0;
 }
 
+.jig-content-configured {
+  background: var(--jig-planner-surface);
+}
+
 .jig-content-configured-planner {
   display: flex;
   min-height: 100%;
