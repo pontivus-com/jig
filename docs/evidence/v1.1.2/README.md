@@ -4,7 +4,7 @@
 **Governing plan:** `docs/implementation/v1.1.2-corrective-implementation-plan.md` J112-IMP-18.  
 **Baseline native candidate:** `17db841889ee2d25dbe5801daf4334259a15d8b3`.
 **Corrected executable candidate:** `4343738b2b08901c1c57d16f276a1d0b31ab09fa`.
-**Permanent Verify:** run `2213` / `45094008515` — `PASS`.
+**Product-content baseline Verify:** run `2213` / `45094008515` — `PASS`. Final exact PR-head/evidence-head verification is recorded on issue #66 after ledger reconciliation.
 **Package version:** `1.1.1` (intentionally unchanged pending the separate `release/v1.1.2` transition).
 
 ## 1. Evidence identities
@@ -41,7 +41,7 @@ J112-IMP-16 is **CLOSED — NO DEFECT REPRODUCED / NO CAUSAL FIX REQUIRED**. The
 
 The exact candidate passes the permanent type/architecture, theme artifact, unit/integration, build, browser bootstrap/real-browser, shell/installer, Android build/static/FLOSS/version/F-Droid and API-24 instrumentation gates. The browser visual evidence was reviewed rather than inferred from geometry assertions.
 
-The synchronization/recovery defect that blocked NA-08 is corrected and permanently certified in GitHub Actions; a physical device is not a Git-correctness gate. No residual NA-08 host-only gap remains: native Back delegates to the shared Jig Back owner, that owner closes an open synchronization resolver before destination/WebView/exit handling, NA-02 physically certified Android Back precedence, and the permanent resolver browser suite certifies resolver hosting/cancellation without canonical mutation. Android update certification is non-destructive: a signing mismatch must stop rather than trigger uninstall/package-clear.
+Native evidence carry-forward is scoped, not assumed: compare `17db841889ee2d25dbe5801daf4334259a15d8b3..4343738b2b08901c1c57d16f276a1d0b31ab09fa` changes runtime product behavior only in `ui/src/native/sync.ts` plus the configured-content surface rule in `ui/src/styles/shared.css`; Android build configuration changes only certification signing. The native lifecycle/Back adapter, system-bar owner, safe-area/IME owners, GitHub return/setup path and notification capability owners are unchanged. Changed synchronization semantics are recertified by GITCI; the surface correction has permanent browser/theme evidence. Therefore NA-01..07 retained host observations remain valid for their unchanged host-owned boundaries. The synchronization/recovery defect that blocked NA-08 is corrected and permanently certified in GitHub Actions; a physical device is not a Git-correctness gate. No residual NA-08 host-only gap remains: native Back delegates to the shared Jig Back owner, that owner closes an open synchronization resolver before destination/WebView/exit handling, NA-02 physically certified Android Back precedence, and the permanent resolver browser suite certifies resolver hosting/cancellation without canonical mutation. Android update certification is non-destructive: a signing mismatch must stop rather than trigger uninstall/package-clear.
 
 ## 11. Remaining native-host execution
 
