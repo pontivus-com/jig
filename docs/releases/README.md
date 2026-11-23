@@ -57,8 +57,11 @@ Ordinary PRs:
 
 - must leave `package.json.version` unchanged;
 - declare SemVer impact and target release in the PR body;
+- declare exactly one machine-checked release handoff: `Release handoff: **continue-development**` while more ordinary work remains, or `Release handoff: **create-release-pr-after-merge**` when that PR completes the intended implementation candidate;
 - keep `[Unreleased]` non-empty when they add release-visible work;
 - pass the permanent implementation verification suite.
+
+The handoff is not a second release authority. It records whether the existing canonical release sequence must begin immediately after that PR merges.
 
 ### 2. Create the dedicated release branch
 
@@ -68,7 +71,7 @@ After the intended candidate is on `master`:
 release/vX.Y.Z
 ```
 
-must be created from that candidate.
+must be created from that candidate. When the final ordinary PR declared `Release handoff: **create-release-pr-after-merge**`, this branch/PR is the immediate next required work; implementation completion is not an endpoint in the release process.
 
 The release branch is metadata-only. Its required work is:
 
@@ -117,7 +120,9 @@ Only after certification succeeds may the workflow:
 
 Published tags are never moved or rebuilt. A correction after publication requires a new version.
 
-## Release completion checklist
+## Release completion and status checklist
+
+For any version-specific question about whether a release is complete, why it is not released, or what remains, walk this checklist from top to bottom and report the first false item(s). Do not stop at implementation/certification evidence, and inspect the Release workflow's jobs rather than treating an overall green no-op as publication.
 
 Before stating that `X.Y.Z` is released, verify all of the following directly:
 

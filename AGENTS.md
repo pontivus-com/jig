@@ -168,18 +168,22 @@ v1.1 adds one independently installable **Android** application while preserving
 
 A merged implementation PR is **not** a release. Release publication is a separate governed transition.
 
-The canonical release contract is `docs/releases/README.md`. Agents preparing or evaluating a release must enforce all of the following:
+### Mandatory release-status evaluation
 
-1. Ordinary implementation/documentation PRs accumulate release notes under `CHANGELOG.md` `[Unreleased]` and **must not** change `package.json.version`.
-2. After the intended implementation candidate is on `master`, create a dedicated branch named exactly `release/vX.Y.Z`.
-3. The release branch **must explicitly set `package.json.version` to `X.Y.Z`**. This is mandatory release metadata, not an optional cleanup step. The branch version, changelog release heading, release-note filename/target tag and intended Git tag must all agree.
-4. The release PR moves the complete accumulated `[Unreleased]` contents into `## [X.Y.Z] - YYYY-MM-DD`, recreates an empty `[Unreleased]`, and contains only the release-metadata files permitted by `scripts/verify-release.ts`.
-5. Do not describe, approve or merge a release PR as complete unless its release-metadata verification passes.
-6. After the release PR merges to `master`, the permanent Release workflow must actually enter the release path. A green workflow that reports `should_release=false`, “already tagged”, or “No release transition/finalization detected” is a **no-op**, not a successful release.
-7. A release is valid only when the permanent release workflow succeeds for the exact merged release commit, the immutable `vX.Y.Z` tag points at that commit, a non-draft GitHub Release is published, and every required asset in the canonical release asset matrix is present with verified checksums.
-8. Never compensate for a missed version transition by moving an existing tag, rebuilding a published version, or publishing assets from an implementation branch. Correct the release metadata through the governed release branch/process.
+Any request that names a version and asks whether it is released, why it is not released, whether it is release-ready, what remains before release, whether finalization/ceremonial work is complete, or asks to finish/review release work is a **release-status task**.
 
-When asked whether a version is “released”, verify the published tag/release/assets, not merely that implementation code merged or that a workflow completed.
+For such a task, read the canonical release authority at `docs/releases/README.md` before drawing a conclusion. Do **not** invent or maintain a parallel release state model in AGENTS, implementation plans or evidence documents. Evaluate the canonical release sequence and completion/status checklist in that document from implementation promotion through release branch/PR, metadata transition, actual Release-workflow jobs, tag, published release and assets. A green Release workflow whose publication jobs were skipped is not release success.
+
+Ordinary PR bodies must declare exactly one machine-checked handoff:
+
+- `Release handoff: **continue-development**` — more ordinary work is expected before the target release ceremony.
+- `Release handoff: **create-release-pr-after-merge**` — this PR completes the intended implementation candidate; after it merges, the next required work is the dedicated `release/vX.Y.Z` metadata PR.
+
+When a merged final implementation PR carries `create-release-pr-after-merge`, do not stop at “implementation complete” or “release-ready.” Verify whether the required release PR exists and identify its absence as the current unfinished release work. Omitting this check when the user asks about end-release/ceremonial work is an incomplete evaluation.
+
+The canonical release contract is `docs/releases/README.md`. It is the sole owner of the release validity contract, sequence, metadata rules, certification/publication requirements and completion/status checklist. Do not copy those rules into another implementation/evidence/governance document. Agents must read and apply that canonical contract for release work; `scripts/verify-release.ts` and the Release workflow provide the executable enforcement surfaces.
+
+
 
 ## v1.0.1 correction context
 
