@@ -662,7 +662,42 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     expect(workflow).toContain("android-build-certification:");
     expect(workflow).toContain("android-api-24:");
     expect(workflow).toContain(":app:testDebugUnitTest :app:lintDebug");
-    expect(workflow).toContain(":app:connectedDebugAndroidTest");
+    expect(workflow).toContain("Git synchronization and recovery gate");
+    expect(workflow).toContain(
+      "scripts/verify-android-reinstall-preservation.sh",
+    );
+    expect(workflow).toContain("Verify stable certification APK signature");
+
+    const reinstallProof = source(
+      "scripts/verify-android-reinstall-preservation.sh",
+    );
+    expect(reinstallProof).toContain(":app:connectedDebugAndroidTest");
+    expect(
+      reinstallProof.match(/adb install -r/g)?.length ?? 0,
+    ).toBeGreaterThanOrEqual(2);
+    expect(reinstallProof).toContain(
+      "files/repository/.jig/local/reinstall-sentinel",
+    );
+    expect(reinstallProof).toContain(
+      "files/repository/.jig/git/reinstall-sentinel",
+    );
+    expect(reinstallProof).not.toMatch(
+      /\badb\s+uninstall\b|\bpm\s+clear\b/,
+    );
+
+    const ciSigning = source("scripts/prepare-android-ci-signing.sh");
+    expect(ciSigning).toContain(
+      "045a3d6a3e359633a14853a5a5e1e4f2a11cbdae",
+    );
+    expect(ciSigning).toContain(
+      "586c1bd5cf96f9358f36b37ea98fef93f4d0a8e3",
+    );
+    expect(ciSigning).toContain(
+      "e242d83e2bf72169ab0abd5280d4d455caef71eb",
+    );
+    const androidGradle = source("android/app/build.gradle");
+    expect(androidGradle).toContain("JIG_ANDROID_CI_KEYSTORE");
+    expect(androidGradle).toContain("jigCiDebug");
 
     const nativeHooks = source(
       "tests/certification/v1.1.2-native-acceptance.md",
