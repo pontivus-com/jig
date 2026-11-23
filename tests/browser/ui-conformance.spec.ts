@@ -200,6 +200,7 @@ async function themeSnapshot(page: Page): Promise<{
   readonly bodyBackground: string;
   readonly bodyText: string;
   readonly chromeBackground: string;
+  readonly contentBackground: string;
   readonly plannerBackground: string;
   readonly laneBackground: string;
   readonly taskBackground: string;
@@ -227,6 +228,7 @@ async function themeSnapshot(page: Page): Promise<{
       '.jig-planner-surface',
     );
     const header = document.querySelector<HTMLElement>(".jig-app-header");
+    const content = document.querySelector<HTMLElement>(".jig-content-configured");
     const lane = active?.querySelector<HTMLElement>(".jig-week-column") ?? null;
     const task = active?.querySelector<HTMLElement>(".jig-task-card") ?? null;
     const today =
@@ -237,6 +239,7 @@ async function themeSnapshot(page: Page): Promise<{
     const logoAccent = document.querySelector<SVGElement>(".jig-logo circle");
     if (
       header === null ||
+      content === null ||
       lane === null ||
       task === null ||
       today === null ||
@@ -275,6 +278,7 @@ async function themeSnapshot(page: Page): Promise<{
       bodyBackground: bodyStyle.backgroundColor,
       bodyText: bodyStyle.color,
       chromeBackground: getComputedStyle(header).backgroundColor,
+      contentBackground: getComputedStyle(content).backgroundColor,
       plannerBackground: getComputedStyle(active ?? document.body).backgroundColor,
       laneBackground: getComputedStyle(lane).backgroundColor,
       taskBackground: taskStyle.backgroundColor,
@@ -2407,6 +2411,74 @@ test("AppShell main is the sole configured scroller across governed widths", asy
   expect(narrowGeometry[1]?.y ?? 0).toBeGreaterThan(narrowGeometry[0]?.y ?? 0);
 });
 
+test("configured Planner History and Settings share the Planner surface while chrome remains distinct", async ({
+  page,
+}) => {
+  const readSurfaces = async (): Promise<{
+    readonly content: string;
+    readonly header: string;
+    readonly planner: string | null;
+    readonly bottomNavigation: string | null;
+  }> =>
+    page.evaluate(() => {
+      const content = document.querySelector<HTMLElement>(
+        ".jig-content-configured",
+      );
+      const header = document.querySelector<HTMLElement>(".jig-app-header");
+      const planner = document.querySelector<HTMLElement>(
+        ".jig-planner-surface",
+      );
+      const bottomNavigation = document.querySelector<HTMLElement>(
+        ".jig-mobile-bottom-navigation",
+      );
+      if (content === null || header === null) {
+        throw new Error("Configured surface fixture is unavailable");
+      }
+      return {
+        content: getComputedStyle(content).backgroundColor,
+        header: getComputedStyle(header).backgroundColor,
+        planner:
+          planner === null ? null : getComputedStyle(planner).backgroundColor,
+        bottomNavigation:
+          bottomNavigation === null
+            ? null
+            : getComputedStyle(bottomNavigation).backgroundColor,
+      };
+    });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await waitForResponsiveHeader(page, 1440);
+
+  const plannerDesktop = await readSurfaces();
+  expect(plannerDesktop.planner).not.toBeNull();
+  expect(plannerDesktop.content).toBe(plannerDesktop.planner);
+  expect(plannerDesktop.content).not.toBe(plannerDesktop.header);
+
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  const historyDesktop = await readSurfaces();
+  expect(historyDesktop.content).toBe(plannerDesktop.content);
+  expect(historyDesktop.content).not.toBe(historyDesktop.header);
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const settingsDesktop = await readSurfaces();
+  expect(settingsDesktop.content).toBe(plannerDesktop.content);
+  expect(settingsDesktop.content).not.toBe(settingsDesktop.header);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  const primaryNavigation = page.getByRole("navigation", { name: "Primary" });
+
+  for (const destination of ["Settings", "History", "Planner"] as const) {
+    await primaryNavigation
+      .getByRole("button", { name: destination, exact: true })
+      .click();
+    const surfaces = await readSurfaces();
+    expect(surfaces.content, destination).toBe(plannerDesktop.content);
+    expect(surfaces.content, destination).not.toBe(surfaces.header);
+    expect(surfaces.bottomNavigation, destination).toBe(surfaces.header);
+  }
+});
+
 test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System mode", async ({
   page,
 }, testInfo) => {
@@ -2440,6 +2512,10 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
       expect(snapshot.explicitMode).toBe(mode);
       expect(snapshot.chromeBackground, `${preset}/${mode} chrome matches body`)
         .toBe(snapshot.bodyBackground);
+      expect(
+        snapshot.contentBackground,
+        `${preset}/${mode} configured content uses Planner surface`,
+      ).toBe(snapshot.plannerBackground);
       expect(
         new Set([
           snapshot.chromeBackground,
@@ -2528,6 +2604,7 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
     expect(systemDark.rootTheme).toBe(preset);
     expect(systemDark.explicitMode).toBeNull();
     expect(systemDark.chromeBackground).toBe(systemDark.bodyBackground);
+    expect(systemDark.contentBackground).toBe(systemDark.plannerBackground);
     expect(systemDark.plannerBackground).not.toBe(systemDark.chromeBackground);
     expect(systemDark.laneBackground).toBe("rgba(0, 0, 0, 0)");
     expect(systemDark.taskBackground).not.toBe(systemDark.plannerBackground);
