@@ -1105,7 +1105,7 @@ describe("Android Git smart-HTTP feasibility", () => {
     }
   });
 
-  it("preserves both sides and stops safely on a real cross-runtime semantic conflict", async () => {
+  it("exports pending Android state before remote-ahead classification and resolves the resulting real cross-runtime semantic conflict", async () => {
     const { remote, remoteUrl } = await fixture();
     const port = server?.port;
     if (port === undefined || root === null) {
@@ -1195,23 +1195,7 @@ describe("Android Git smart-HTTP feasibility", () => {
         androidBaseRevision,
         "2026-11-18T06:02:00.000Z",
       );
-      const androidConflictState =
-        await readCanonicalState(androidDb);
-      const androidConflictHead =
-        await commitAndroidPortableSnapshot(
-          androidEffects,
-          serializeSnapshot(
-            androidConflictState.tasks,
-            DATASET_ID,
-            androidConflictState.recurrences,
-          ),
-          androidConflictState.revision,
-        );
-      await markExported(
-        androidDb,
-        androidConflictState.revision,
-        androidConflictHead,
-      );
+      expect(await synchronizationPending(androidDb)).toBe(true);
 
       await expect(desktopSync.trigger()).resolves.toMatchObject({
         remote: { state: "synchronized" },
@@ -1222,11 +1206,21 @@ describe("Android Git smart-HTTP feasibility", () => {
         "rev-parse",
         "jig-data",
       ]);
+      const androidHeadBeforeTrigger = await androidPortableHead(
+        androidEffects,
+      );
 
       await expect(androidSync.trigger()).resolves.toMatchObject({
         local_git: "committed",
         remote: { state: "sync-issue" },
       });
+      expect(await synchronizationPending(androidDb)).toBe(false);
+      const androidHeadAfterTrigger = await androidPortableHead(
+        androidEffects,
+      );
+      expect(androidHeadAfterTrigger).not.toBe(androidHeadBeforeTrigger);
+      expect(androidHeadAfterTrigger).not.toBe(remoteHeadBeforeConflict);
+
       const conflictCase = androidSync.readSynchronizationConflict();
       if (conflictCase === null) {
         throw new Error("expected eligible Android synchronization conflict");
