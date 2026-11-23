@@ -714,6 +714,13 @@ describe("v1.1.2 corrective architecture boundaries", () => {
     ]) {
       expect(nativeHooks).toContain(hook);
     }
-    expect(nativeHooks).toContain("HOOK_ONLY");
+    expect(nativeHooks).toContain("FINAL / CERTIFIED");
+    expect(nativeHooks).not.toContain("HOOK_ONLY");
+    expect(nativeHooks).toContain(
+      "J112-NA-08 (Git/recovery semantics)",
+    );
+    expect(nativeHooks).toContain(
+      "J112-NA-08 (resolver host / Back closure)",
+    );
   });
 });
