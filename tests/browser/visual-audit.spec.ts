@@ -318,6 +318,47 @@ function resolverTask(
   });
 }
 
+async function beginVisualMouseDrag(
+  page: Page,
+  sourceTitle: string,
+  targetTitle: string,
+): Promise<void> {
+  const source = page.getByRole("button", {
+    name: `Move ${sourceTitle}`,
+  });
+  const target = page
+    .locator(".jig-task-card")
+    .filter({ hasText: targetTitle })
+    .first();
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (sourceBox === null || targetBox === null) {
+    throw new Error("Visual drag geometry unavailable");
+  }
+
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2,
+    sourceBox.y + sourceBox.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sourceBox.x + sourceBox.width / 2 + 10,
+    sourceBox.y + sourceBox.height / 2 + 10,
+    { steps: 3 },
+  );
+  await expect(
+    page.locator(".jig-drag-card-overlay .jig-task-card"),
+  ).toBeVisible();
+  await page.mouse.move(
+    targetBox.x + targetBox.width / 2,
+    targetBox.y + targetBox.height * 0.75,
+    { steps: 8 },
+  );
+  await expect(
+    page.locator(".jig-task-prospective-footprint"),
+  ).toHaveCount(1);
+}
+
 function resolverConflictCase() {
   const datasetId = "018f47f0-7b5c-7d4d-8e2b-00000000b001";
   const firstId = "018f47f0-7b5c-7d4d-8e2b-00000000b101";
@@ -372,6 +413,7 @@ test("canonical configured surfaces and constrained stress states", async ({
   test.setTimeout(120_000);
   const entries: AuditEntry[] = [];
   await page.goto("/");
+  await setAppearance(page, "jig", "light");
   await resetCanonicalTasks(page);
 
   const today = await browserCivilDate(page);
@@ -592,6 +634,129 @@ test("canonical configured surfaces and constrained stress states", async ({
   await writeManifest(testInfo, entries);
 });
 
+test("synchronization attention is paired canonical evidence", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(60_000);
+  const entries: AuditEntry[] = [];
+
+  await page.route("**/api/v1/status", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ready: true,
+        repository_path: "/tmp/private/jig-repository",
+        repository_status: {
+          local_git: "pending",
+          remote: {
+            state: "sync-issue",
+            remote_name: "origin",
+            remote_location: "https://github.com/example/planning.git",
+          },
+        },
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await setAppearance(page, "jig", "light");
+  await expect(
+    page.getByText("Sync needs attention", { exact: true }),
+  ).toBeVisible();
+  await capturePair(page, testInfo, entries, "sync-attention");
+  await writeManifest(testInfo, entries);
+});
+
+test("transient success is paired canonical evidence", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(60_000);
+  const entries: AuditEntry[] = [];
+
+  const captureSuccess = async (
+    presentation: "desktop" | "narrow",
+    viewport: { width: number; height: number },
+  ): Promise<void> => {
+    await resetCanonicalTasks(page);
+    await page.reload();
+    await page.setViewportSize(viewport);
+    await assertPresentation(page, presentation);
+    const add =
+      presentation === "desktop"
+        ? page
+            .locator(".jig-header-right")
+            .getByRole("button", { name: "Add task", exact: true })
+        : page.locator(".jig-mobile-add-fab");
+    await add.click();
+    const workspace = page.getByRole("dialog", { name: "Add task" });
+    await workspace.getByLabel("Title").fill("Visual success evidence");
+    await workspace.getByRole("button", {
+      name: "Add task",
+      exact: true,
+    }).click();
+    await expect(workspace).toBeHidden();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Task added" }),
+    ).toBeVisible();
+    await capture(
+      page,
+      testInfo,
+      entries,
+      "transient-success",
+      presentation,
+      viewport,
+    );
+  };
+
+  await page.goto("/");
+  await setAppearance(page, "jig", "light");
+  await captureSuccess("desktop", VIEWPORTS.desktop);
+  await captureSuccess("narrow", VIEWPORTS.narrow);
+  await writeManifest(testInfo, entries);
+});
+
+test("active drag and insertion are paired canonical evidence", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(60_000);
+  const entries: AuditEntry[] = [];
+
+  const captureDrag = async (
+    presentation: "desktop" | "narrow",
+    viewport: { width: number; height: number },
+  ): Promise<void> => {
+    await resetCanonicalTasks(page);
+    const today = await browserCivilDate(page);
+    await createTask(page, "Visual drag source", today, "HIGH");
+    await createTask(page, "Visual drag target", today, "NORMAL");
+    await page.reload();
+    await page.setViewportSize(viewport);
+    await assertPresentation(page, presentation);
+    await settleVisualState(page);
+    await beginVisualMouseDrag(
+      page,
+      "Visual drag source",
+      "Visual drag target",
+    );
+    await capture(
+      page,
+      testInfo,
+      entries,
+      "drag-active-insertion",
+      presentation,
+      viewport,
+    );
+    await page.mouse.up();
+  };
+
+  await page.goto("/");
+  await setAppearance(page, "jig", "light");
+  await captureDrag("desktop", VIEWPORTS.desktop);
+  await captureDrag("narrow", VIEWPORTS.narrow);
+  await writeManifest(testInfo, entries);
+});
+
 test("onboarding is reviewed as paired presentation evidence", async ({
   page,
 }, testInfo) => {
@@ -669,6 +834,7 @@ test("onboarding is reviewed as paired presentation evidence", async ({
 
   await page.setViewportSize(VIEWPORTS.desktop);
   await page.goto("/");
+  await setAppearance(page, "jig", "light");
   await expect(
     page.locator('[data-jig-setup-presentation="desktop"]'),
   ).toBeVisible();
@@ -704,6 +870,7 @@ test("sync resolver choices order and final confirmation are settled pairs", asy
   const conflict = resolverConflictCase();
 
   await page.goto("/");
+  await setAppearance(page, "jig", "light");
   await resetCanonicalTasks(page);
   await syncNow(page);
 

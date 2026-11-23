@@ -345,7 +345,9 @@ Do not multiply every product state by every theme and viewport.
 
 ### 7.1 Deep surface review
 
-All required product surfaces are deeply reviewed in the canonical Jig theme in Light and Dark at the canonical desktop/narrow viewports.
+The complete required product-surface corpus is deeply reviewed in the canonical **Jig / Light** appearance at the canonical desktop/narrow viewports. This keeps the qualitative workload bounded and makes the principal evidence deterministic.
+
+Do **not** duplicate every product surface in Dark mode. Dark-mode and cross-theme surface semantics are covered by the constrained theme review below plus permanent automated theme/state tests. Add a surface-specific Dark capture only when the release changes that surface's dark rendering or the theme review exposes a concrete risk requiring targeted evidence.
 
 ### 7.2 Full theme-family review
 
@@ -379,7 +381,7 @@ Stress judgment is limited to composition validity, clipping/overflow, hierarchy
 
 ## 9. Required canonical evidence corpus
 
-At 1440×900 and 390×844 retain, where applicable:
+At 1440×900 and 390×844, using canonical **Jig / Light** unless the scenario is explicitly a theme/appearance audit, retain where applicable:
 
 - Planner populated;
 - Planner empty;
