@@ -54,7 +54,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Shell syntax
-        run: bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/installer-smoke.sh tests/install/release-bundle-smoke.sh tests/certification/resource-gate.sh tests/certification/installed-readiness-gate.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh
+        run: bash -n scripts/install.sh scripts/jig scripts/install-release.sh tests/install/installer-smoke.sh tests/install/release-bundle-smoke.sh tests/certification/resource-gate.sh tests/certification/installed-readiness-gate.sh scripts/verify-android-dependencies.sh scripts/verify-android-device-prerequisites.sh scripts/prepare-android-ci-signing.sh scripts/install-android-certification-apk.sh scripts/verify-android-reinstall-preservation.sh
       - name: Installer and lifecycle smoke
         run: bash tests/install/installer-smoke.sh
 
@@ -225,22 +225,5 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          script: |
-            set -euo pipefail
-            cd android
-            ./gradlew :app:assembleDebug
-            APK="app/build/outputs/apk/debug/app-debug.apk"
-
-            adb install -r "$APK"
-            adb shell run-as com.pontivus.jig mkdir -p files/repository/.jig/local
-            adb shell run-as com.pontivus.jig mkdir -p files/repository/.jig/git
-            adb shell run-as com.pontivus.jig sh -c 'printf sqlite-state > files/repository/.jig/local/reinstall-sentinel'
-            adb shell run-as com.pontivus.jig sh -c 'printf git-state > files/repository/.jig/git/reinstall-sentinel'
-
-            adb install -r "$APK"
-
-            test "$(adb shell run-as com.pontivus.jig cat files/repository/.jig/local/reinstall-sentinel | tr -d '\r')" = "sqlite-state"
-            test "$(adb shell run-as com.pontivus.jig cat files/repository/.jig/git/reinstall-sentinel | tr -d '\r')" = "git-state"
-
-            ./gradlew :app:connectedDebugAndroidTest
+          script: bash scripts/verify-android-reinstall-preservation.sh
 
