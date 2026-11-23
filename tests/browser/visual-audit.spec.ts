@@ -429,6 +429,30 @@ test("canonical configured surfaces and constrained stress states", async ({
     .getByRole("button", { name: "Show diagnostics", exact: true })
     .click();
   await capturePair(page, testInfo, entries, "settings-diagnostics");
+
+  await page.setViewportSize(VIEWPORTS.desktop);
+  await page.locator(".jig-diagnostics").scrollIntoViewIfNeeded();
+  await capture(
+    page,
+    testInfo,
+    entries,
+    "settings-diagnostics-lower",
+    "desktop",
+    VIEWPORTS.desktop,
+  );
+  await page.setViewportSize(VIEWPORTS.narrow);
+  await page.locator(".jig-diagnostics").scrollIntoViewIfNeeded();
+  await capture(
+    page,
+    testInfo,
+    entries,
+    "settings-diagnostics-lower",
+    "narrow",
+    VIEWPORTS.narrow,
+  );
+
+  await page.setViewportSize(VIEWPORTS.desktopStress);
+  await page.locator(".jig-diagnostics").scrollIntoViewIfNeeded();
   await capture(
     page,
     testInfo,
@@ -437,6 +461,8 @@ test("canonical configured surfaces and constrained stress states", async ({
     "desktop",
     VIEWPORTS.desktopStress,
   );
+  await page.setViewportSize(VIEWPORTS.narrowStress);
+  await page.locator(".jig-diagnostics").scrollIntoViewIfNeeded();
   await capture(
     page,
     testInfo,
@@ -464,6 +490,28 @@ test("canonical configured surfaces and constrained stress states", async ({
   await repeat.click();
   await page.getByRole("option", { name: "Weekly", exact: true }).click();
   await capturePair(page, testInfo, entries, "task-edit-weekly");
+
+  await page.setViewportSize(VIEWPORTS.desktop);
+  await page.getByRole("dialog").getByLabel("Notes").scrollIntoViewIfNeeded();
+  await capture(
+    page,
+    testInfo,
+    entries,
+    "task-edit-weekly-lower",
+    "desktop",
+    VIEWPORTS.desktop,
+  );
+  await page.setViewportSize(VIEWPORTS.narrow);
+  await page.getByRole("dialog").getByLabel("Notes").scrollIntoViewIfNeeded();
+  await capture(
+    page,
+    testInfo,
+    entries,
+    "task-edit-weekly-lower",
+    "narrow",
+    VIEWPORTS.narrow,
+  );
+
   await capture(
     page,
     testInfo,
@@ -482,10 +530,37 @@ test("canonical configured surfaces and constrained stress states", async ({
   );
 
   await page.setViewportSize(VIEWPORTS.narrow);
-  await page.getByRole("dialog").getByRole("button", {
+  const close = page.getByRole("dialog").getByRole("button", {
     name: "Close",
     exact: true,
-  }).click();
+  });
+  await expect(close).toBeVisible();
+  const closeTextFits = await close.evaluate((button) => {
+    const walker = document.createTreeWalker(
+      button,
+      NodeFilter.SHOW_TEXT,
+    );
+    let textNode: Node | null = walker.nextNode();
+    while (
+      textNode !== null &&
+      textNode.textContent?.trim() !== "Close"
+    ) {
+      textNode = walker.nextNode();
+    }
+    if (textNode === null) {
+      return false;
+    }
+    const range = document.createRange();
+    range.selectNode(textNode);
+    const text = range.getBoundingClientRect();
+    const control = button.getBoundingClientRect();
+    return (
+      text.left >= control.left - 1 &&
+      text.right <= control.right + 1
+    );
+  });
+  expect(closeTextFits, "narrow Task Close label must not clip").toBe(true);
+  await close.click();
   await page.setViewportSize(VIEWPORTS.desktop);
   await settleVisualState(page);
 

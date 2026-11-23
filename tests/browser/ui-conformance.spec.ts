@@ -1332,6 +1332,59 @@ test("desktop header stays compact while narrow header uses sticky destination-s
   }
 });
 
+test("narrow Task workspace keeps the Close action readable under a long valid title", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  const title =
+    "High priority quarterly planning review with deliberately long but valid title";
+  await createTask(page, title, today, "HIGH");
+  await page.reload();
+  await page.setViewportSize({ width: 320, height: 844 });
+
+  await page.getByText(title, { exact: true }).click();
+  const workspace = page.getByRole("dialog", { name: title });
+  const close = workspace.getByRole("button", {
+    name: "Close",
+    exact: true,
+  });
+  await expect(close).toBeVisible();
+
+  const geometry = await close.evaluate((button) => {
+    const walker = document.createTreeWalker(
+      button,
+      NodeFilter.SHOW_TEXT,
+    );
+    let textNode: Node | null = walker.nextNode();
+    while (
+      textNode !== null &&
+      textNode.textContent?.trim() !== "Close"
+    ) {
+      textNode = walker.nextNode();
+    }
+    if (textNode === null) {
+      throw new Error("Close label text node unavailable");
+    }
+    const range = document.createRange();
+    range.selectNode(textNode);
+    const text = range.getBoundingClientRect();
+    const control = button.getBoundingClientRect();
+    return {
+      controlLeft: control.left,
+      controlRight: control.right,
+      textLeft: text.left,
+      textRight: text.right,
+    };
+  });
+
+  expect(geometry.textLeft).toBeGreaterThanOrEqual(
+    geometry.controlLeft - 1,
+  );
+  expect(geometry.textRight).toBeLessThanOrEqual(
+    geometry.controlRight + 1,
+  );
+});
+
 test("mobile interaction inventory meets the governed geometry and expanded-form contract", async ({
   page,
 }, testInfo) => {

@@ -168,6 +168,10 @@
   min-width: 0;
 }
 
+.jig-configured-narrow .jig-task-sheet-header > button {
+  flex: 0 0 auto;
+}
+
 .jig-configured-narrow .jig-task-sheet-header span {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
