@@ -94,11 +94,15 @@ bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port "$DATA_PORT" >
 "$HOME/.local/bin/jig" status | grep -q '^repository: '
 "$HOME/.local/bin/jig" doctor | grep -q '^service_healthy: false$'
 
-# Reinstallation is idempotent and must preserve the same dataset.
+# Reinstallation is idempotent and must preserve the same dataset and local state.
+printf 'preserve local state\n' > "$DATA_REPO/.jig/local/reinstall-sentinel"
+CONFIG_BEFORE_REINSTALL="$(cat "$HOME/.config/jig/config.json")"
 FIRST_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e   "const c=JSON.parse(await Bun.file('$HOME/.config/jig/config.json').text()); const db=new (await import('bun:sqlite')).Database(c.repository_path+'/.jig/local/jig.sqlite'); console.log(db.query('select dataset_id from app_metadata where singleton=1').get().dataset_id); db.close();")"
 bash "$SOURCE_ROOT/scripts/install.sh" --repo "$DATA_REPO" --port "$DATA_PORT" >/dev/null
 SECOND_DATASET="$("$HOME/.local/share/jig/runtime/bun" -e   "const c=JSON.parse(await Bun.file('$HOME/.config/jig/config.json').text()); const db=new (await import('bun:sqlite')).Database(c.repository_path+'/.jig/local/jig.sqlite'); console.log(db.query('select dataset_id from app_metadata where singleton=1').get().dataset_id); db.close();")"
 [[ "$FIRST_DATASET" == "$SECOND_DATASET" ]]
+[[ "$(cat "$DATA_REPO/.jig/local/reinstall-sentinel")" == "preserve local state" ]]
+[[ "$(cat "$HOME/.config/jig/config.json")" == "$CONFIG_BEFORE_REINSTALL" ]]
 
 # A configured but unavailable remote must not prevent local installation.
 OFFLINE_REPO="$TMP_ROOT/offline"
