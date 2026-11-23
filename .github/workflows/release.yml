@@ -82,7 +82,7 @@ jobs:
               echo ""
               echo "- Source tag: `v1.1.2`"
               echo "- Source commit: `${expected_sha}`"
-              echo "- Output: production-signed `jig-android.apk`"
+              echo "- Output: GitHub-Actions-signed `jig-android.apk`"
               echo "- Destination: existing GitHub Release `v1.1.2`"
               echo "- Store publication: none"
             } >> "${GITHUB_STEP_SUMMARY}"
