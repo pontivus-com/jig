@@ -10,22 +10,23 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Task } from "../../src/core/task";
+import { serializeSnapshot } from "../../src/core/portable";
+import { GitAdapterError, runGit } from "../../src/shell/git/process";
+import { ensureJigLocalExclude } from "../../src/shell/git/repository";
 import {
   alignPortableDataRef,
-  ensureJigLocalExclude,
   ensurePortableData,
-  GitAdapterError,
+  readCurrentPortableSnapshot,
+  writePortableSnapshot,
+} from "../../src/shell/git/portable-store";
+import {
   inspectSynchronizationAuthority,
   inspectSynchronizationRemote,
   observePortableRemote,
   pushPortableDataRef,
-  readCurrentPortableSnapshot,
   repositorySynchronizationMode,
-  runGit,
   sanitizeSynchronizationRemoteLocation,
-  serializeSnapshot,
-  writePortableSnapshot,
-} from "../../src/shell/git";
+} from "../../src/shell/git/remote";
 const DATA_REF = "refs/heads/jig-data";
 
 const DATASET_ID = "018f47f0-7b5c-7d4d-8e2b-9c3aa11f0001";
@@ -545,7 +546,10 @@ describe("isolated jig-data adapter", () => {
         DATASET_ID,
         null,
       ),
-    ).resolves.toMatchObject({ state: "unsafe" });
+    ).resolves.toMatchObject({
+      state: "unsafe",
+      unsafe_reason: "dataset-mismatch",
+    });
 
     expect(
       (await readCurrentPortableSnapshot(config, DATASET_ID))
@@ -579,7 +583,10 @@ describe("isolated jig-data adapter", () => {
         DATASET_ID,
         null,
       ),
-    ).resolves.toMatchObject({ state: "unsafe" });
+    ).resolves.toMatchObject({
+      state: "unsafe",
+      unsafe_reason: "invalid-snapshot",
+    });
   });
 
   it("rejects symlink entries on jig-data before adoption", async () => {
@@ -607,7 +614,10 @@ describe("isolated jig-data adapter", () => {
         DATASET_ID,
         null,
       ),
-    ).resolves.toMatchObject({ state: "unsafe" });
+    ).resolves.toMatchObject({
+      state: "unsafe",
+      unsafe_reason: "invalid-snapshot",
+    });
   });
 
   it("rejects submodule entries on jig-data before adoption", async () => {
@@ -639,7 +649,10 @@ describe("isolated jig-data adapter", () => {
         DATASET_ID,
         null,
       ),
-    ).resolves.toMatchObject({ state: "unsafe" });
+    ).resolves.toMatchObject({
+      state: "unsafe",
+      unsafe_reason: "invalid-snapshot",
+    });
   });
 
   it("publishes a missing remote jig-data branch using an ordinary push", async () => {

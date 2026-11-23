@@ -1,11 +1,11 @@
 # Jig — technical solution design
 
-**Status:** Canonical technical solution through v1.1, amended 2026-11-20 for physical-acceptance findings: recurrence-aware rollover non-accumulation, one canonical past-date scheduling guard, compact-header/Task-card presentation corrections and the cross-platform motion contract. v1.0.6 remains historical release provenance; JIG-110-SD-01..43 in the release-specific v1.1 solution govern v1.1 implementation.
+**Status:** Canonical technical solution through v1.1.2. The [v1.1.2 corrective technical design](v1.1.2-corrective-technical-design.md) supersedes affected earlier drag, synchronization-recovery/diagnostics, theme-surface, configured-height, motion and adaptive presentation/runtime clauses. The [adaptive presentation/runtime architecture](v1.1.2-responsive-presentation-architecture.md) and adaptive concern matrix are binding ownership authority for the desktop/narrow presentation split, Linux/browser versus Android/native capability split, and input-specific interaction behavior. Unaffected v1.1 JIG-110 contracts remain binding.
 **Concern owner:** Jig architecture, canonical task representation, persistence, repository integration boundary, UI realization, operation admission, and verification.
 **Governing documents:** [Product definition](../product/product-definition.md) and [Planning workbench functional design](../requirements/planning-workbench.md), especially JIG-103-FR-01 through JIG-103-FR-17, JIG-104-FR-01 through JIG-104-FR-16, JIG-105-FR-01 through JIG-105-FR-11, JIG-106-FR-01 through JIG-106-FR-07 and JIG-FR-01 through JIG-FR-22.
 **Historical v1.0.6-and-earlier scope:** One-script Linux user installation, user-selected personal Git repository as the entire planning-data home, always-available local service, background Git commit/synchronization, responsive desktop UI, no hosted Jig service. **Current v1.1 scope is defined by `## v1.1 binding architecture` and JIG-110-SD-01..43 below; those contracts add the governed Android runtime, bootstrap/onboarding, native reminder path, cross-installation continuity and restrained cross-platform motion while preserving the no-hosted-Jig-service boundary.**
 
-**Foundational authority rule:** For every external integration, identify the authoritative owner first. Jig implements only the minimum interface needed for Jig's product job and must not absorb that external system's configuration, topology, provisioning, migration, reconciliation or policy. For Git specifically, Jig owns deterministic Jig records, automatic synchronization intent and coarse sync outcome; Git owns repository acquisition, branches/refs/worktrees, signing/identity, credentials, remotes, history and reconciliation. A Git isolation technique may exist inside the adapter, but it is not Jig domain, user workflow or configuration.
+**Foundational authority rule:** For every external integration, identify the authoritative owner first. Jig implements only the minimum interface needed for Jig's product job and must not absorb external configuration, topology, provisioning or policy. For Git specifically, Jig owns deterministic Jig records, automatic continuity of its isolated `jig-data` portable history, bounded automatic recovery of provably related Jig-owned divergence, bounded user-assisted resolution of eligible same-dataset Jig-data semantic conflicts, and concise + diagnostic synchronization outcomes. Git owns repository acquisition, general branches/refs/worktrees, signing/identity, credentials, remotes and unrelated repository history/reconciliation. Jig's recovery mechanics remain private to the adapter and never become user repository configuration or a general Git workflow.
 
 ## 1. v1.0.x decisions, baseline and user experience — historical where v1.1 supersedes
 
@@ -22,10 +22,10 @@ The normal experience is: run one installer; assign repository; installer config
 | Runtime and service | One Bun 1.4.4 process on Linux, `systemd --user` service, loopback HTTP, no external database or remote service |
 | Command and installer | `jig` launcher in ~/.local/bin; `scripts/install.sh --repo /absolute/existing/repo` or `--repo-url URL --checkout /new/empty/path`. URL mode delegates acquisition to Git and then converges on the same selected-checkout installation path. |
 | UI | React 19.3.1, TypeScript 7.0.2, Vite 8.3.5; pinned Astryx 0.7.13 with one root Theme owner, one typed 13-preset theme registry and one independent System/Light/Dark mode; one Planner destination, Jig-owned responsive top-header composition inside AppShell, desktop right Drawer and narrow BottomSheet for the one Task workspace |
-| Cross-day drag | `@dnd-kit/react@0.5.3` + public sensor primitives from direct-pinned `@dnd-kit/dom@0.5.3`; one React-owned drag model across desktop and narrow/mobile; optimistic DOM sorting suppressed; Astryx handles visual primitives |
+| Cross-day drag | `@dnd-kit/react@0.5.3` + direct-pinned `@dnd-kit/dom@0.5.3`; dnd-kit optimistic DOM sorting is disabled. React owns one ephemeral prospective Task/date/index placement, renders the real shared Task card in one DragOverlay and reflows around a card-sized footprint; canonical persistence occurs exactly once on successful drop. Mouse/pen threshold is 6px; touch activation is 250ms + 8px tolerance. |
 | Live data | One Bun SQLite database at `<selected-repo>/.jig/local/jig.sqlite`; immediate transactional writes |
 | Versioned data | Deterministic Task JSON and manifest synchronized through Git inside the selected repository. The adapter may use an isolated Git namespace internally, but branch/ref/worktree lifecycle is an implementation detail confined to that adapter rather than Jig application state or user configuration. |
-| Repository sync boundary | Daemon automatically debounces Jig-record export and invokes a thin Git adapter. The adapter is responsible only for synchronizing Jig-owned portable data without touching unrelated repository content and returns coarse synchronization outcomes plus validated Jig snapshots; Git topology, policy, credentials and reconciliation remain external. |
+| Repository sync boundary | Daemon automatically debounces Jig-record export and invokes a thin Git adapter. The adapter synchronizes only Jig-owned portable data, returns user-level status plus structured sanitized diagnostics, performs one bounded isolated three-way recovery for provably related `jig-data` divergence, and exposes the JIG-112-SD-16 semantic resolver when that proven-safe domain stops on a record/order conflict. Every automatic or user-resolved candidate is fully validated before authoritative refs move; unrelated repository content, arbitrary shell execution and force-push remain forbidden. |
 | Notifications | One browser-side reminder monitor and one delivery channel: browser/OS Notification while Jig is open and permission is granted, independent of page visibility/focus; no in-app reminder toast and no closed-app/service-worker/push guarantee |
 | Mobile | Narrow mobile-first layout and touch accessibility in desktop web UI; standalone phone installation deferred |
 
@@ -101,14 +101,17 @@ Jig application source/distribution  (separate from personal planning repo)
 
 The application binary and runtime may be installed under normal user application directories; **all task data and recoverable canonical planning records must be inside the configured Git repository**. The local service keeps only its own noncanonical logs and launch configuration outside that repository. Do not install the program into or modify the public source checkout when it is not the selected personal target.
 
-**Functional core:** Typed pure operations for task creation, edit/date and ordering rules, move, daily rollover, completion, reopening and deletion; no I/O, SQL or presentation dependencies. **Imperative shell:** one SQLite owner, one repository synchronization adapter, one HTTP admission boundary, startup/installer orchestration and browser reminder presentation. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
+**Functional core:** Typed pure Task/planning operations plus canonical portable serialization/validation and pure synchronization/recovery policy; no I/O, SQL or presentation dependencies. **Imperative shells:** shared persistence semantics plus narrow Linux and Android effect adapters. Linux owns system-Git/process/filesystem/HTTP effects; Android owns app-private/isomorphic-git/native effects. Shared GitHub provider protocol/orchestration lives under one concrete `src/github/**` boundary and runtime envelopes under `src/protocol/**`. No DTO layer, services/repositories hierarchy, event bus, workflow framework, second task authority or browser persistent task cache.
 
 ### 3.0.1 Architecture compliance invariants
 
 These invariants are binding on **every** v1.0.4 implementation task; architecture compliance is not a cleanup phase that may be deferred until the end.
 
-- **Functional core:** Task/planning semantics and reusable calendar/order transforms are pure typed functions. `src/core/**` must not import UI, HTTP, SQLite, Git, browser, filesystem or process APIs.
-- **Imperative shell:** SQLite, HTTP, Git, filesystem, process lifecycle and other I/O stay under `src/shell/**`. Shell code invokes the functional core; it does not reimplement Task/planning rules.
+- **Functional core:** Task/planning, portable-format and synchronization/recovery policy are pure typed functions. `src/core/**` must not import UI, HTTP, SQLite, Git/provider clients, browser, filesystem or process APIs.
+- **Shared persistence:** `src/persistence/**` owns asynchronous SQLite semantics and may depend on core only; it does not own Git/provider effects.
+- **Shared GitHub boundary:** `src/github/**` owns GitHub-specific value/protocol/orchestration shared by Linux and Android, with injected Web fetch/credential effects and no local Git/filesystem/SQLite/UI dependency.
+- **Runtime protocol:** `src/protocol/**` owns strict architecture-neutral runtime envelopes only; it is not a second domain model.
+- **Imperative shells:** Linux HTTP/system-Git/filesystem/process effects stay under `src/shell/**`; Android native/isomorphic-git effects stay under `ui/src/native/**`. Both invoke the same core/persistence/provider semantics and do not duplicate them.
 - **Presentation boundary:** `ui/src/**` owns browser/UI presentation state and invokes canonical commands. It must not duplicate canonical Task validation, normalization, insertion, ordering, movement or rollover semantics.
 - **Canonical types:** there is one canonical `Task`, one canonical `TaskCommand`, one Planner temporal state owner, one Task workspace state owner and one editable Task draft shape. Presentation drafts are permitted because unsaved form state is not canonical domain state, but they must not become a second Task/command model.
 - **Strict typing:** repository TypeScript remains `strict` with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and `useUnknownInCatchVariables`. Do not introduce `any`, double casts, non-null assertions, or `as` assertions merely to silence the compiler.
@@ -465,7 +468,7 @@ Use the canonical Jig theme from [Brand and theme system](../design/brand-and-th
 
 ### 5.1 Application shell and destination state
 
-The pinned Astryx 0.7.13 `AppShell` remains the one outer application frame. **Do not provide a `sideNav`.** Set/omit `sideNav` so AppShell renders no sidebar and disable AppShell's automatic mobile-nav drawer (`mobileNav={false}`) because v1.0.3 requires a compact hamburger popover rather than a drawer.
+The pinned Astryx 0.7.13 `AppShell` remains the one outer application frame. **Do not provide a `sideNav`.** Disable AppShell's automatic mobile-nav drawer (`mobileNav={false}`). The current v1.1.2 narrow presentation uses persistent bottom navigation for Planner/History/Settings; no hamburger/popover is a primary destination owner.
 
 Use the AppShell `topNav` slot for one Jig-owned header composition built from public Astryx leaves. Do not mount a second shell or second `<main>`.
 
@@ -475,7 +478,7 @@ Destination state is one discriminated value:
 type Destination = 'planner' | 'history' | 'settings'
 ```
 
-Planner is startup/default. The Jig mark and the explicit desktop Planner navigation item both set `destination='planner'`; returning from History/Settings preserves the current in-session displayed-week state. The desktop navigation group is Planner/History/Settings; narrow/mobile renders the same Planner/History/Settings destination set through the compact hamburger popover; only presentation differs.
+Planner is startup/default. The Jig mark and the desktop Planner navigation item both set `destination='planner'`; returning from History/Settings preserves the current in-session displayed-horizon state. One typed `DESTINATIONS` owner supplies Planner/History/Settings to desktop inline navigation and narrow persistent bottom navigation.
 
 ### 5.2 Planner temporal state and operations
 
@@ -1479,48 +1482,80 @@ All external input (HTTP, imported JSON, Git configuration, user-selected reposi
 
 The data directory belongs to the user. A Git remote is optional; source/public repository and personal data repository must never be confused. Imported snapshots may carry personally sensitive content and must be handled as user-controlled private data.
 
-## 9. Source module ownership (proposed minimal layout)
+## 9. Source module ownership
+
+v1.1.2 supersedes the earlier single-`git.ts` proposed layout. The architecture now requires source paths to communicate ownership directly.
 
 ~~~text
 src/
   core/
-    task.ts                 canonical Task and operations
-    planning.ts             ordering, date selection, completion rules
+    task.ts
+    planning.ts
+    recurrence.ts
+    recurrence-planning.ts
+    synchronization.ts
+    portable.ts
+    synchronization-recovery.ts
+
+  persistence/
+    sqlite.ts
+    synchronization.ts
+
+  protocol/
+    runtime.ts
+
+  github/
+    model.ts
+    parsing.ts
+    auth.ts
+    device-flow.ts
+    onboarding.ts
+    reconnect.ts
+    registration.ts
+
   shell/
-    http.ts                 same-origin admission and command dispatch
-    sqlite.ts               schema, query, transactional mutation
-    git.ts                  isolated repository adapter, export/synchronization, validated snapshot admission
-    main.ts                 daemon startup, sync loop and static UI serving
-scripts/
-  install.sh                 single non-root installation and configuration
-  jig                       local CLI launcher and service control
+    git/
+      process.ts
+      repository.ts
+      portable-store.ts
+      remote.ts
+      recovery.ts
+
+    sync.ts
+    setup.ts
+    http.ts
+    main.ts
+    github-http.ts
+    github-managed-checkout.ts
+    github-git-auth.ts
+    github-transport.ts
+    secret-service.ts
+    ... other narrow Linux effects
+
 ui/
   src/
-    app.tsx                 AppShell, destination state, one root Theme and selected appearance state
-    appearance.ts           ThemePreset/AppearanceMode types, guards, local persistence and exhaustive registry
-    themes/
-      product-tokens.ts     one palette-independent Jig product semantic alias map
-      *.source.ts           Jig, six Astryx-wrapper and six community theme authoring sources
-      built/                compiler-owned generated theme JS/CSS/declarations
-    jig-logo.tsx            one canonical inline application wordmark geometry using semantic brand tokens
-    planner.tsx             shared Planner state + responsive desktop/narrow composition
-    planner-header.tsx      centered week range + Previous/Today/Next + desktop/mobile header zones
-    week.tsx                desktop seven-date tracks and cross-date drag composition
-    task-editor.tsx         Task workspace form content for create/edit
-    task-workspace.tsx      one existing/create editable workspace state rendered as desktop Drawer or narrow BottomSheet
-    browser-notifications.ts narrow Notification capability/permission adapter
-    reminder.tsx            browser due check + browser Notification delivery
-    theme.css               raw Jig default-theme palette primitives only
-    styles.css              Jig-owned product composition/geometry only
-tests/
-  core/
-  persistence/
-  sync/
-  browser/
-docs/
+    runtime.ts
+    runtime-native.ts
+    native/
+      git.ts
+      sync.ts
+      ... Android/native effects
+    ... presentation owners
 ~~~
 
-Paths are a suggested semantic decomposition, not a mandate to manufacture separate abstractions where a small cohesive module is sufficient. Do not add DTO files, domain-to-transport mapper stacks, repository/service classes, a general component framework, or generic command handler infrastructure. Every module has one present owner, and future decomposition is justified only by a real second responsibility.
+Ownership rules:
+
+- `src/core/portable.ts` is the one portable-format semantic owner; shell/native Git code consumes it and never re-exports or redefines it.
+- `src/core/synchronization.ts` owns ordinary pure synchronization classification/shared pure policy; `src/core/synchronization-recovery.ts` owns bounded automatic/user-assisted recovery policy and strict operational types.
+- `src/protocol/runtime.ts` wraps canonical values for configured runtime transport without copying Task/recurrence/recovery schemas.
+- `src/github/**` is concrete GitHub integration shared across runtimes, not a generic integrations framework.
+- Linux system-Git mechanics are decomposed under `src/shell/git/**`: process, repository, local portable store, remote observation/push, and recovery-only Git effects have separate owners.
+- Linux synchronization scheduling belongs to `src/shell/sync.ts`, not Git process modules.
+- Android remains under `ui/src/native/**` for native/isomorphic-git effects and imports no `src/shell/**`.
+- no compatibility barrel/re-export may recreate removed loose root `src/portable.ts`, `src/protocol.ts`, `src/github*.ts` or `src/shell/git.ts` surfaces.
+- no DTO files, domain-to-transport mapper stacks, service/repository classes, generic integration framework or duplicate platform policy are introduced to perform this decomposition.
+
+JIG-112-SD-17 is the binding v1.1.2 migration/architecture gate for this layout.
 
 ## 10. Requirement-to-design traceability and acceptance
 
@@ -1598,7 +1633,7 @@ If the Astryx ListItem/dnd-kit integration fails in the browser, fix the smalles
 
 ## 11. Explicitly deferred capabilities
 
-Independent phone installation, native mobile Git/process/filesystem integration, application-level trash/soft-delete/undo/restore, background/push notifications, Order WorkItem creation, automatic project-task synchronization, metrics/dashboard, team collaboration, subtasks, duration estimation and general workflow constraints are excluded. Git history, branch, merge and conflict reconciliation are explicitly **outside Jig's domain**, not deferred Jig features. The canonical Task format and repository record identity intentionally leave room for later extension, but none of these capabilities is represented as implemented by this design.
+Independent generic native shell/terminal/filesystem access, application-level trash/soft-delete/undo/restore, background/push notifications, Order WorkItem creation, automatic project-task synchronization, metrics/dashboard, team collaboration, subtasks, duration estimation and general workflow constraints are excluded. General Git history/branch/merge/rebase/conflict tooling remains **outside Jig's domain**. The sole exception is the bounded JIG-112-SD-16 semantic resolver for conflicts inside already-proven related, valid, same-dataset Jig-owned portable history. The canonical Task format and repository record identity intentionally leave room for later extension, but none of these capabilities is represented as implemented by this design.
 
 ## 12. Decision history and minimality rationale
 
@@ -1608,7 +1643,7 @@ Independent phone installation, native mobile Git/process/filesystem integration
 - **Automatic bounded Git sync instead of manual export:** Local SQLite saves trigger background commit/fetch/push with safe retries even when the browser is closed; network status is separately visible.
 - **Repository boundary instead of a Jig Git state machine:** Jig exports/validates portable snapshots and receives only operational synchronization outcomes. Git acquisition, topology, policy, credentials, history and reconciliation stay with Git tooling and never become Jig domain/configuration/state.
 - **Astryx directly instead of copying Order:** Reuses published UI semantics without coupling Jig to software-factory workflows.
-- **One proof-gated drag adapter instead of framework layering:** the failed Pangea implementation is removed. Current dnd-kit is the candidate sensor/drop engine behind Jig-owned explicit insertion-slot semantics; it may ship only after desktop and physical-Android proof, and canonical movement remains one move command.
+- **One dnd-kit mechanics owner with React-owned placement instead of framework layering:** Pangea and insertion-slot/line presentation are rejected. Pinned dnd-kit supplies sensor/collision/sortable mechanics with optimistic DOM sorting prevented; React owns the one prospective placement and real-card overlay, and canonical movement remains one move command on successful drop.
 - **Browser-side reminder monitor instead of background infrastructure:** one browser Notification channel while Jig is open and permission is granted, independent of visibility/focus, with no Toast fallback and no closed-app delivery guarantee.
 - **One Task and derived views instead of multiple planning objects:** Satisfies all Task semantics without building a project manager.
 - **One Planner state instead of Day/Week destinations:** `displayedWeekStart` alone drives both the desktop seven-column board and narrow seven-section stack; responsive composition never creates another planning authority or selected-day subview.
@@ -1622,21 +1657,21 @@ Independent phone installation, native mobile Git/process/filesystem integration
 
 The detailed normative solution contracts are [JIG-110-SD-01..43](v1.1-mobile-technical-solution.md). They are canonical for v1.1 and supersede affected v1.0.x implementation choices. In particular:
 
-- runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error; both modes render inside the same canonical Jig application frame, with onboarding as a distinct body state rather than a standalone technical setup page; the governed v1.1 references own the user-visible composition: Android/narrow uses the bounded single-column flow, desktop uses the stable value/context region plus bounded setup pane, and successful setup transitions directly to Planner without persisted onboarding progress; Astryx remains reusable component authority;
-- Linux and Android share one governed **Jig Desktop & Mobile** public GitHub App registration and the same intent-level onboarding contract. One Connect GitHub repository action starts automatic authorization/access/acquisition/adoption orchestration; provider-owned consent and repository selection when genuinely required are the only normal user interruptions. Linux additionally supports the genuine choice of an existing local repository;
+- runtime has explicit bootstrap/configured modes; missing config is bootstrap, malformed config remains an error; both modes render inside the same canonical Jig application frame. v1.1.2 selects onboarding composition by width only: desktop/expanded uses the two-region body and narrow uses the one-column body. Setup actions come from runtime capability: `Use an existing local repository` renders only when `local_repository_available=true`, and Android/native never exposes arbitrary local-worktree import. Successful setup transitions directly to Planner without persisted onboarding progress; Astryx remains reusable component authority;
+- Linux/browser and Android/native share one governed **Jig Desktop & Mobile** public GitHub App registration and the same intent-level onboarding contract. One Connect GitHub repository action starts automatic authorization/access/acquisition/adoption orchestration; provider-owned consent and repository selection when genuinely required are the only normal user interruptions. Existing-local-repository availability is a Linux/browser runtime capability projected through `SetupStatus`, not a desktop-layout rule;
 - Android is a committed Capacitor 8 shell using the same React UI/core/protocol contracts, package ID `com.pontivus.jig`, private app-owned repository storage and F-Droid-compatible FLOSS dependencies;
 - root `package.json.version` is the sole release-version authority; Android `versionName` equals it and `versionCode = major*1_000_000 + minor*1_000 + patch`;
 - canonical SQLite semantics move to one asynchronous TypeScript persistence owner with a Bun driver on Linux and a narrow AndroidX bundled-SQLite native driver on Android;
 - Android Git uses the selected isomorphic-git/native-filesystem/native-HTTP adapter only after the mandatory automated/emulator feasibility gate; the same transport is physically confirmed in the final device-certification wave, and failure at either gate returns to design review rather than silently adding another transport;
 - reminders use one pure due predicate, one UI clock, browser service-worker delivery and Android local scheduling with exact typed outcomes; notification side-effect state is non-canonical;
 - narrow header is one sticky configured application region: every destination keeps Jig identity left + centered destination title + restrained sync right; Planner alone adds the temporal row. Compact rows target 52px and stay <=56px at normal text sizing, ordinary touch targets remain >=48×48px with deliberate separation, and persistent bottom navigation—not a hamburger/popover—owns Planner/History/Settings;
-- physical Android use rejected the Pangea owner under the v1.1 hard gate. The replacement uses one proof-gated current dnd-kit adapter only if it passes desktop + physical Android validation; a dedicated grip targets N+1 explicit before/between/after insertion slots per date, Task body remains normal scroll/open content, and every terminal path clears drag/overlay state;
+- physical Android use rejected the Pangea owner under the v1.1 hard gate. v1.1.2 retains pinned dnd-kit only for mechanics: dedicated grip, 6px mouse/pen threshold, 250ms + 8px touch activation, React-owned card-sized prospective placement, real shared Task-card overlay, and terminal cleanup. N+1 insertion slots/lines are superseded and must be removed;
 - bounded recurrence remains one pure series/occurrence owner, while the UI integrates Repeat into the one complete Title → Date → Repeat → Reminder → Priority → Context → Reference → Notes form with progressive disclosure governed by the v1.1 mobile/desktop references. On mobile the same BottomSheet remains normally scrollable under expanded Repeat controls, weekday targets wrap rather than compress, persistent actions do not cover fields/validation/Notes and IME resize does not make later fields or Save/Cancel unreachable. Existing-Task edit carries an optional recurrence change so ordinary occurrence edits and series reconciliation commit atomically in one transaction/revision; the separate public set_recurrence command is removed after migration;
 - History/Settings destination title + subtitle have one application-header owner; their content surfaces contain no duplicate page-heading block;
-- repository synchronization follows v1.1 SD-41's bounded audit: one pure FC/IS classifier yields Local only / Synchronized / Adopt remote / Push local / Attention from already-observed facts; Desktop/system-Git and Android/isomorphic-git keep their imperative mechanics separate and do not duplicate policy. SYNC-E1..SYNC-E6 are the complete v1.1 exception set. Existing persistence metadata is reused for crash-safe revision/export truth; no synchronization table, DTO hierarchy, service/repository class stack, Task merge engine or Git merge/rebase/force workflow is introduced. Settings still uses one content-sized sequence: Data & sync → Appearance → Notifications → subordinate/collapsed Diagnostics;
+- repository synchronization keeps the v1.1 pure classifier/imperative-shell split but is amended by JIG-112-SD-05..08 and SD-16: structured phase/reason diagnostics are mandatory, the reported Desktop defect is fixed only from reproduced evidence, related `jig-data` divergence uses the exact bounded canonical-record three-way recovery, and eligible same-dataset semantic conflicts can be resolved in-app by choosing complete local/remote Task or recurrence-family records plus explicit affected-date ordering. Existing persistence metadata plus `refs/jig/recovery/<dataset-id>` encode crash-safe acceptance; no synchronization table, DTO/service/repository class stack, field-level/LWW Task merge, unrelated-history merge/rebase or force push is introduced. Settings remains Data & sync → Appearance → Notifications → subordinate/collapsed Diagnostics;
 - motion follows v1.1 SD-42's one cross-platform event/owner map: Astryx owns supported surface/control transitions, Jig owns only product-specific card/Planner/status feedback, reduced motion removes travel/scaling/smooth scrolling/loops, and no operation depends on animation;
-- operational attention feedback uses one shared Jig-owned error/warning composition across desktop and Android because the pinned Astryx Banner public API top-aligns icon/end-action regions for multi-line descriptions and exposes no public alignment hook. The fallback is limited to the existing operational-attention shape, uses only public Astryx Icon/Button leaves plus public semantic tokens, preserves existing operation/sync/setup state ownership and does not alter browser/Android reminder notification delivery;
-- adjacent-week navigation is governed exclusively by JIG-110-SD-43 in the release-specific v1.1 technical solution. This cross-release document adds no second paging architecture; all implementation and verification must conform to that single SD-43 owner;
+- operational attention has one shared content/anatomy owner but separate desktop/narrow placement owners. Desktop durable attention uses the governed bounded flow region and transient success the bounded top-end overlay; narrow durable attention sits below sticky chrome and transient success is the safe-area-aware snackbar above bottom navigation. This remains independent from browser/Android reminder notification delivery;
+- adjacent-week direct Carousel/swipe under historical JIG-110-SD-43 remains deferred beyond v1.1. Current temporal authority is JIG-110-SD-44 / the rolling seven-day Previous/Next/Today contract; v1.1.2 does not implement or certify Carousel/swipe;
 - development APKs are local certification artifacts; F-Droid is the first public Android distribution target; no Google Play/iOS release work is part of v1.1.
 
 The complete FR→SD traceability remains owned by the versioned v1.1 functional/technical documents and the complete v1.1 implementation plan.

@@ -16,7 +16,7 @@ import {
   acquireManagedGitHubRepository,
   managedGitHubRepositoryPath,
 } from "../../src/shell/github-managed-checkout";
-import { runGit } from "../../src/shell/git";
+import { runGit } from "../../src/shell/git/process";
 
 const roots: string[] = [];
 

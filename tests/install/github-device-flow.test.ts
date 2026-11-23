@@ -5,8 +5,8 @@ import {
   startGitHubDeviceSession,
   type GitHubAppRegistration,
   type GitHubCredential,
-} from "../../src/github";
-import { GitHubDeviceFlowSession } from "../../src/github-device-flow";
+} from "../../src/github/model";
+import { GitHubDeviceFlowSession } from "../../src/github/device-flow";
 
 const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-mobile-test",

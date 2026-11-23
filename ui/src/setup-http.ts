@@ -3,12 +3,12 @@ import type {
   GitHubCapabilityStatus,
   GitHubOnboardingSnapshot,
   GitHubReconnectSnapshot,
-} from "../../src/github";
+} from "../../src/github/model";
 import {
   parseGitHubCapabilityStatus,
   parseGitHubOnboardingSnapshot,
   parseGitHubReconnectSnapshot,
-} from "../../src/github";
+} from "../../src/github/parsing";
 import {
   fetchJson,
   postJson,
@@ -40,6 +40,10 @@ function asObject(value: unknown): Record<string, unknown> {
 
 async function androidGitHubSetup() {
   return import("./native/github-setup");
+}
+
+export function usesNativeSetupProviderContinuation(): boolean {
+  return Capacitor.isNativePlatform();
 }
 
 function nativeSetupUnavailable(operation: string): never {

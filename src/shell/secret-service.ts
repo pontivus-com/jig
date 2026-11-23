@@ -1,5 +1,5 @@
-import type { GitHubCredential } from "../github";
-export type { GitHubCredential } from "../github";
+import type { GitHubCredential } from "../github/model";
+export type { GitHubCredential } from "../github/model";
 
 export class SecretServiceError extends Error {
   constructor(message: string) {

@@ -1,5 +1,5 @@
-import type { GitHubOnboardingController } from "../github-onboarding";
-import type { GitHubReconnectController } from "../github-reconnect";
+import type { GitHubOnboardingController } from "../github/onboarding";
+import type { GitHubReconnectController } from "../github/reconnect";
 import type { JigConfig } from "./config";
 import { InstallationError } from "./setup";
 import {

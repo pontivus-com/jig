@@ -2,7 +2,7 @@ import { rm, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { initializeRepositoryInstallation } from "../../src/shell/setup";
 import { main } from "../../src/shell/main";
-import { runGit } from "../../src/shell/git";
+import { runGit } from "../../src/shell/git/process";
 
 const root = resolve("/tmp", "jig-playwright-repository");
 const remote = resolve("/tmp", "jig-playwright-remote.git");

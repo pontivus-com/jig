@@ -1,0 +1,215 @@
+@keyframes jig-destination-content-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jig-week-content-enter-today {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jig-attention-reveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jig-success-confirmation-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+
+.jig-app-shell-motion-ready {
+  transition:
+    background-color var(--duration-fast-max) var(--ease-standard),
+    color var(--duration-fast-max) var(--ease-standard);
+}
+
+.jig-content-frame {
+  transition:
+    background-color var(--duration-fast-max) var(--ease-standard),
+    color var(--duration-fast-max) var(--ease-standard);
+}
+
+.jig-content-configured-transition {
+  animation: jig-destination-content-enter var(--duration-fast-max)
+    var(--ease-standard) both;
+}
+
+.jig-app-header {
+  transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      border-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
+}
+
+.jig-temporal-control {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+}
+
+.jig-header-nav-item {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+}
+
+.jig-status-control {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+}
+
+.jig-status-indicator {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
+}
+
+.jig-configured-narrow .jig-mobile-nav-item {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+}
+
+.jig-configured-narrow .jig-mobile-nav-icon {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+}
+
+.jig-week-board-today {
+  animation: jig-week-content-enter-today var(--duration-fast-max)
+      var(--ease-standard) both;
+}
+
+.jig-week-column-header {
+  transition: border-color var(--duration-fast) var(--ease-standard);
+}
+
+.jig-week-date-signifier strong {
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.jig-date-drop-zone {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.jig-task-card {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-standard);
+}
+
+.jig-task-drag-handle {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard),
+      transform var(--duration-fast) var(--ease-standard);
+}
+
+.jig-task-card-reminder-due {
+  transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.jig-reminder-due-indicator {
+  transition:
+      color var(--duration-fast) var(--ease-standard),
+      opacity var(--duration-fast) var(--ease-standard);
+}
+
+.jig-planner-surface {
+  transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
+}
+
+.jig-history-view,
+.jig-settings-view {
+  transition:
+      background-color var(--duration-fast-max) var(--ease-standard),
+      color var(--duration-fast-max) var(--ease-standard);
+}
+
+.jig-attention-banner {
+  animation: jig-attention-reveal var(--duration-fast-max)
+      var(--ease-standard) both;
+}
+
+.jig-success-confirmation {
+  animation: jig-attention-reveal var(--duration-fast-max)
+      var(--ease-standard) both;
+}
+
+.jig-success-confirmation-exiting {
+  animation: jig-success-confirmation-exit var(--duration-fast)
+      var(--ease-standard) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jig-content-configured-transition,
+    .jig-week-board-today,
+    .jig-attention-banner,
+    .jig-success-confirmation {
+      animation: none;
+    }
+
+    .jig-app-shell,
+    .jig-content-frame,
+    .jig-planner-surface,
+    .jig-history-view,
+    .jig-settings-view {
+      transition: none;
+    }
+
+    .jig-header-nav-item,
+    .jig-status-control,
+    .jig-status-indicator,
+    .jig-mobile-nav-item,
+    .jig-mobile-nav-icon,
+    .jig-week-column-header,
+    .jig-week-date-signifier strong,
+    .jig-date-drop-zone,
+    .jig-task-card,
+    .jig-task-drag-handle,
+    .jig-reminder-due-indicator {
+      transition: none;
+    }
+
+    .jig-task-card-dragging,
+    .jig-task-drag-handle:active {
+      transform: none;
+    }
+  }

@@ -19,11 +19,11 @@ import {
 import type {
   CanonicalState,
   CommandResult,
-} from "../protocol";
+} from "../protocol/runtime";
 export type {
   CanonicalState,
   CommandResult,
-} from "../protocol";
+} from "../protocol/runtime";
 import {
   assertActiveScheduleDate,
   assertTaskSet,
@@ -61,7 +61,7 @@ export interface JigSqlConnection {
 }
 
 export const SQLITE_SCHEMA_VERSION = 3;
-export { PORTABLE_FORMAT_VERSION } from "../portable";
+export { PORTABLE_FORMAT_VERSION } from "../core/portable";
 
 export interface PersistenceMetadata {
   readonly schema_version: number;

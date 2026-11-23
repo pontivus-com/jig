@@ -1,0 +1,179 @@
+.jig-configured-desktop .jig-app-header-desktop {
+  display: grid;
+  height: 2.75rem;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: 0 var(--spacing-1);
+}
+
+.jig-configured-desktop .jig-header-left {
+  justify-self: start;
+  min-width: 0;
+}
+
+.jig-configured-desktop .jig-header-center {
+  justify-self: center;
+  min-width: 0;
+}
+
+.jig-configured-desktop .jig-header-right,
+.jig-configured-desktop .jig-header-destinations {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--spacing-0-5);
+}
+
+.jig-configured-desktop .jig-header-right {
+  justify-self: end;
+}
+
+
+.jig-configured-desktop {
+  --jig-safe-area-top: env(safe-area-inset-top, 0px);
+}
+
+.jig-configured-desktop .jig-app-header-desktop {
+  box-sizing: border-box;
+  height: calc(2.75rem + var(--jig-safe-area-top));
+  padding-block-start: var(--jig-safe-area-top);
+}
+
+.jig-configured-desktop .jig-configured-body {
+  position: relative;
+}
+
+.jig-configured-desktop .jig-feedback-transient-desktop {
+  position: absolute;
+  z-index: 5;
+  inset-block-start: var(--spacing-3);
+  inset-inline-end: var(--spacing-3);
+  inline-size: min(24rem, calc(100% - 2 * var(--spacing-3)));
+  max-inline-size: 24rem;
+  pointer-events: none;
+}
+
+.jig-configured-desktop .jig-feedback-transient-desktop .jig-feedback-transient-stack {
+  max-inline-size: 24rem;
+}
+
+.jig-configured-desktop .jig-feedback-durable-desktop {
+  inline-size: min(50rem, calc(100% - 2 * var(--spacing-3)));
+  margin-block-start: var(--spacing-2);
+  margin-inline: auto;
+}
+
+.jig-configured-desktop .jig-task-workspace-actions-desktop {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+}
+
+.jig-configured-desktop .jig-task-workspace-lifecycle-actions,
+.jig-configured-desktop .jig-task-workspace-primary-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.jig-configured-desktop .jig-task-workspace-lifecycle-actions {
+  margin-inline-end: auto;
+}
+
+.jig-configured-desktop .jig-planner-board-desktop {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(10rem, 1fr));
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+  padding-block-end: 0;
+}
+
+.jig-configured-desktop .jig-planner-board-desktop .jig-week-column {
+  width: auto;
+  min-height: 18rem;
+  padding-inline: var(--spacing-1);
+}
+
+.jig-configured-desktop
+  .jig-planner-board-desktop
+  .jig-week-column
+  + .jig-week-column {
+  border-inline-start: var(--border-width) solid var(--color-border);
+}
+
+.jig-configured-desktop
+  .jig-planner-board-desktop
+  .jig-week-column
+  > section {
+  min-height: 18rem;
+}
+
+.jig-configured-desktop
+  .jig-planner-board-desktop
+  .jig-week-column-header {
+  min-height: 3.25rem;
+  padding: var(--spacing-2);
+}
+
+.jig-configured-desktop .jig-planner-board-desktop .jig-week-task-area {
+  min-height: 12rem;
+}
+
+.jig-app-header-onboarding-desktop {
+  min-height: 2.75rem;
+  padding: 0 var(--spacing-1);
+}
+
+.jig-setup-desktop {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  padding: var(--spacing-7) var(--spacing-6);
+}
+
+.jig-setup-layout-desktop {
+  display: grid;
+  width: min(100%, 72rem);
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 30rem);
+  align-items: center;
+  gap: var(--spacing-8);
+  margin-inline: auto;
+}
+
+.jig-setup-desktop .jig-setup-heading h1 {
+  font-size: calc(var(--font-size-2xl) * 1.35);
+  line-height: 1.08;
+}
+
+.jig-setup-desktop .jig-setup-benefits {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-4);
+}
+
+.jig-setup-desktop .jig-setup-benefit {
+  gap: var(--spacing-2);
+}
+
+.jig-setup-desktop .jig-setup-choice {
+  padding: var(--spacing-5);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: calc(var(--radius-element) + var(--border-width));
+  background: var(--color-background-surface);
+  box-shadow: var(--shadow-med);
+}
+
+.jig-setup-desktop .jig-setup-card {
+  box-shadow: var(--shadow-med);
+}
+
+
+
+.jig-configured-desktop .jig-sync-conflict-actions {
+  width: 100%;
+  justify-content: flex-end;
+}

@@ -1,4 +1,5 @@
 import type { TaskCommand } from "../../src/core/task";
+import type * as recoveryTypes from "../../src/core/synchronization-recovery";
 import {
   PORTABLE_FORMAT_VERSION,
   SQLITE_SCHEMA_VERSION,
@@ -14,7 +15,7 @@ import type {
   Diagnostics,
   RepositorySynchronizationStatus,
   ServiceStatus,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 import { todayCivilDate } from "./dates";
 import { configuredNativeSynchronization } from "./native/configured-sync";
 import { openNativeDatabase } from "./native/jig-sqlite";
@@ -46,6 +47,23 @@ async function runRollover(
     new Date().toISOString(),
   );
   return (await readMetadata(connection)).revision !== before;
+}
+
+
+export async function rollForwardRuntimeLocalDay(): Promise<boolean> {
+  return runRollover(await database());
+}
+
+export async function readCanonicalTasksAfterActivationRollover():
+Promise<CanonicalState> {
+  return readCanonicalState(await database());
+}
+
+export async function reconcileRuntimeReminders(
+  tasks: CanonicalState["tasks"],
+  now: Date,
+): Promise<void> {
+  await reconcileAndroidReminders(tasks, now);
 }
 
 export async function readCanonicalTasks(): Promise<CanonicalState> {
@@ -93,6 +111,7 @@ export async function readDiagnostics(): Promise<Diagnostics> {
     repository_adapter_healthy:
       status.local_git !== "issue" &&
       status.remote.state !== "sync-issue",
+    synchronization: synchronization.diagnostics(),
   };
 }
 
@@ -122,6 +141,24 @@ export async function submitTaskCommand(
     await configuredNativeSynchronization(connection)
   ).notifyMutation();
   return result;
+}
+
+export async function readSynchronizationConflict(): Promise<
+  recoveryTypes.JigDataConflictCase | null
+> {
+  const connection = await database();
+  return (
+    await configuredNativeSynchronization(connection)
+  ).readSynchronizationConflict();
+}
+
+export async function resolveSynchronizationConflict(
+  resolution: recoveryTypes.JigDataResolution,
+): Promise<RepositorySynchronizationStatus> {
+  const connection = await database();
+  return (
+    await configuredNativeSynchronization(connection)
+  ).resolveSynchronizationConflict(resolution);
 }
 
 export async function triggerSync(): Promise<RepositorySynchronizationStatus> {

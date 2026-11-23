@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Browser, BrowserContextOptions, Page } from "@playwright/test";
 import type {
   Task,
   TaskCommand,
@@ -6,7 +6,7 @@ import type {
 import type {
   CanonicalState,
   CommandResult,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 
 export async function apiState(
   page: Page,
@@ -133,4 +133,53 @@ export async function taskByTitle(
     throw new Error(`Task not found: ${title}`);
   }
   return task;
+}
+
+
+export type BrowserAcceptanceProfile =
+  | "expanded-fine"
+  | "narrow-fine"
+  | "narrow-coarse"
+  | "expanded-reduced-motion"
+  | "narrow-reduced-motion";
+
+const BROWSER_ACCEPTANCE_PROFILES = {
+  "expanded-fine": {
+    viewport: { width: 1440, height: 900 },
+    hasTouch: false,
+  },
+  "narrow-fine": {
+    viewport: { width: 390, height: 844 },
+    hasTouch: false,
+  },
+  "narrow-coarse": {
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+  },
+  "expanded-reduced-motion": {
+    viewport: { width: 1440, height: 900 },
+    hasTouch: false,
+    reducedMotion: "reduce",
+  },
+  "narrow-reduced-motion": {
+    viewport: { width: 390, height: 844 },
+    hasTouch: false,
+    reducedMotion: "reduce",
+  },
+} satisfies Record<BrowserAcceptanceProfile, BrowserContextOptions>;
+
+export async function withBrowserAcceptanceProfile<T>(
+  browser: Browser,
+  profile: BrowserAcceptanceProfile,
+  exercise: (page: Page) => Promise<T>,
+): Promise<T> {
+  const context = await browser.newContext(
+    BROWSER_ACCEPTANCE_PROFILES[profile],
+  );
+  try {
+    const page = await context.newPage();
+    return await exercise(page);
+  } finally {
+    await context.close();
+  }
 }

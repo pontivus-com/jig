@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { GitHubAppRegistration } from "../../src/github";
+import type { GitHubAppRegistration } from "../../src/github/model";
 import {
   pollGitHubDeviceAuthorization,
   startGitHubDeviceAuthorization,
-} from "../../src/github-auth";
+} from "../../src/github/auth";
 import {
   createAndroidGitHubFetch,
 } from "../../ui/src/native/github-fetch";

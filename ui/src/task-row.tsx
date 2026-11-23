@@ -299,24 +299,6 @@ export function TaskActionMenu(
   );
 }
 
-export function TaskDragOverlayCard({
-  task,
-}: Readonly<{ task: Task }>): React.ReactElement {
-  return (
-    <div
-      className={`jig-task-card jig-task-priority-${task.priority.toLowerCase()} jig-drag-card-overlay`}
-      aria-hidden="true"
-    >
-      <div className="jig-task-drag-overlay-row">
-        <span className="jig-task-drag-overlay-checkbox">□</span>
-        <span className="jig-task-title">{task.title}</span>
-        <Icon icon="moreHorizontal" color="secondary" />
-      </div>
-      <TaskMetadata task={task} isInteractive={false} />
-    </div>
-  );
-}
-
 interface TaskCardPresentationProps {
   readonly task: Task;
   readonly recurrenceSeries: RecurrenceSeries | null;
@@ -443,6 +425,33 @@ function TaskCardPresentation(
         />
       }
     />
+  );
+}
+
+export function TaskDragOverlayCard({
+  task,
+  recurrenceSeries,
+  now,
+}: Readonly<{
+  readonly task: Task;
+  readonly recurrenceSeries: RecurrenceSeries | null;
+  readonly now: Date;
+}>): React.ReactElement {
+  return (
+    <div className="jig-drag-card-overlay" aria-hidden="true">
+      <TaskCardPresentation
+        task={task}
+        recurrenceSeries={recurrenceSeries}
+        now={now}
+        showDragHandle
+        isSelected={false}
+        isDragging={false}
+        onToggleComplete={() => undefined}
+        onEdit={() => undefined}
+        onSetPriority={() => undefined}
+        onDelete={() => undefined}
+      />
+    </div>
   );
 }
 

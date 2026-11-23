@@ -4,6 +4,30 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ## [Unreleased]
 
+> **Target release: v1.1.2.** Corrective work is tracked in issue #66. Package metadata remains at v1.1.1 until the governed `release/v1.1.2` transition. These entries describe the active corrective scope and must be reconciled to delivered `Fixed`/`Changed` outcomes before release.
+
+### Changed
+
+- **Synchronization diagnostics and continuity:** Added credential-free phase/reason/lineage/head/retry/recovery diagnostics with copyable support output; bounded automatic reconciliation for provably related Jig-owned `jig-data` divergence; deterministic crash-safe recovery commits; and an in-app whole-record semantic-conflict resolver shared by Linux/Desktop and Android. Unsafe ancestry, incompatible datasets/snapshots, ambiguous remotes and remote rewrites remain non-destructive `Needs attention`; no force push or general Git conflict UI was introduced.
+- **Adaptive presentation/runtime ownership:** Separated width-only desktop/narrow presentation from Linux/browser versus Android/native capabilities and from pointer/keyboard/IME facts. Desktop/narrow now own the governed header/navigation, Planner composition, feedback placement, Drawer/BottomSheet workspace and onboarding geometry over shared semantic state.
+- **Application motion:** Moved Jig to the governed shared Astryx duration-token scale across themes, overlays, destination changes, feedback, Task movement and surface transitions while preserving immediate reduced-motion semantics.
+- **Git/provider source ownership:** Moved portable semantics into `src/core`, runtime envelopes into `src/protocol`, shared GitHub provider code under `src/github`, and Linux system-Git mechanics under focused `src/shell/git/**` effect owners. Recovery policy remains singular in `src/core/synchronization-recovery.ts`; no DTO/service/repository hierarchy was added.
+
+### Fixed
+
+- **Android semantic-conflict entry:** Export a pending local portable snapshot before classifying a remote-ahead state, allowing related divergence to reach the governed native semantic-conflict resolver instead of remaining at generic synchronization attention.
+- **Synchronization recovery certification:** Added a permanent real-Git GitHub Actions gate that reproduces the exact Android failure topology with canonical SQLite pending while the remote advances, then proves controller-owned export, true divergence/conflict entry, stale-case refusal, refreshed resolution, deterministic candidate acceptance and ordinary non-force synchronization.
+- **Non-destructive Android updates:** Stabilized the non-production certification APK signing identity, verify its certificate in CI, prohibit uninstall/package-clear as a certification workaround, and prove on API 24 that two in-place installs preserve Jig's app-private repository/local state before the native instrumentation suite. Linux reinstall smoke now also proves local-state/config preservation.
+- **Theme surface separation:** Restored distinct application chrome, configured content/Planner-day canvas and Task-card surface roles across all 13 governed themes in Light and Dark. History and Settings now consume the same full-width configured content surface as Planner while desktop header and narrow header/bottom navigation retain the chrome surface; theme-specific role values remain authored only in typed theme sources/generated Astryx artifacts.
+- **Planner viewport ownership:** Restored Astryx AppShell main as the sole configured page scroll owner so empty, short and overflowing Planner states fill/scroll through the governed viewport owner without a competing nested scroller.
+- **Task drag-and-drop:** Replaced insertion-line movement with the real shared Task-card DragOverlay plus React-owned card-sized prospective placement. Pointer/touch activation, same-date/cross-date/empty-date placement, cancellation and persisted final position remain on the single pinned dnd-kit path with optimistic DOM sorting disabled.
+- **Responsive operational feedback:** Desktop transient/durable feedback and narrow snackbar/inline attention now use viewport-appropriate placement while retaining one semantic feedback state.
+- **Synchronization evidence disposition:** The permanent upgraded Desktop reproduction covers initial synchronization, local mutation/push, controller restart, external remote fast-forward and automatic adoption and remains synchronized with idle diagnostics. No ordinary Desktop failing boundary was reproduced; IMP-16 is therefore closed as **NO DEFECT REPRODUCED / NO CAUSAL FIX REQUIRED**, not as a claim that a historical defect was fixed.
+
+### Documentation
+
+- **v1.1.2 corrective authority and certification:** Reconciled the FR/SD/implementation authority, adaptive concern matrix and branch governance around the final corrective architecture. IMP-18 exact-candidate certification retains executable browser/theme/resolver, synchronization and Android hosted evidence while keeping package metadata at v1.1.1 until the separate `release/v1.1.2` transition.
+
 ## [1.1.1] - 2026-11-21
 
 ### Documentation

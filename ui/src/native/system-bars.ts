@@ -15,7 +15,7 @@ const nativeSystemBars = registerPlugin<NativeSystemBarsPort>(
 
 export function NativeSystemBars(): null {
   const { mode, token } = useTheme();
-  const backgroundColor = token("--color-background-body");
+  const backgroundColor = token("--jig-chrome-surface");
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import { apiState, resetCanonicalTasks } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -43,7 +43,7 @@ async function openGlobalAdd(page: Page): Promise<void> {
 
 async function addTitleOnlyTask(page: Page, title: string): Promise<void> {
   await openGlobalAdd(page);
-  const workspace = page.locator('section[aria-label="Add task"]');
+  const workspace = page.getByRole("dialog", { name: "Add task" });
   await expect(workspace).toBeVisible();
   await workspace.getByLabel("Title").fill(title);
   await workspace.getByRole("button", { name: "Add task", exact: true }).click();
@@ -148,19 +148,67 @@ test("stale revisions refetch canonical state and never blindly replay a mutatio
   await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
 });
 
-test("responsive reflow preserves an open workspace draft and appearance remains presentation-only", async ({ page }) => {
-  await openGlobalAdd(page);
-  const desktopWorkspace = page.getByRole("dialog", { name: "Add task" });
-  await desktopWorkspace.getByLabel("Title").fill("Draft survives reflow");
+test("configured presenter replacement preserves controller state and appearance remains presentation-only", async ({ page }) => {
+  await page.setViewportSize({ width: 1168, height: 900 });
+  await expect(
+    page.locator('[data-jig-configured-presentation="desktop"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('[data-jig-configured-presentation="narrow"]'),
+  ).toHaveCount(0);
 
-  await page.setViewportSize({ width: 640, height: 900 });
-  const narrowWorkspace = page.getByRole("dialog", { name: "Add task" });
-  await expect(narrowWorkspace).toBeVisible();
-  await expect(narrowWorkspace.getByLabel("Title")).toHaveValue("Draft survives reflow");
-  await narrowWorkspace.getByRole("button", { name: "Cancel", exact: true }).click();
+  await openGlobalAdd(page);
+  let workspace = page.getByRole("dialog", { name: "Add task" });
+  await workspace.getByLabel("Title").fill("Draft survives presenter replacement");
+
+  let canonicalReadsDuringReflow = 0;
+  let commandsDuringReflow = 0;
+  const observeReflowRequest = (request: Request): void => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/v1/tasks" && request.method() === "GET") {
+      canonicalReadsDuringReflow += 1;
+    }
+    if (url.pathname === "/api/v1/commands" && request.method() === "POST") {
+      commandsDuringReflow += 1;
+    }
+  };
+  page.on("request", observeReflowRequest);
+
+  await page.setViewportSize({ width: 1167, height: 900 });
+  await expect(
+    page.locator('[data-jig-configured-presentation="desktop"]'),
+  ).toHaveCount(0);
+  await expect(
+    page.locator('[data-jig-configured-presentation="narrow"]'),
+  ).toHaveCount(1);
+  workspace = page.getByRole("dialog", { name: "Add task" });
+  await expect(workspace).toBeVisible();
+  await expect(workspace.getByLabel("Title")).toHaveValue(
+    "Draft survives presenter replacement",
+  );
+
+  await page.setViewportSize({ width: 1168, height: 900 });
+  await expect(
+    page.locator('[data-jig-configured-presentation="desktop"]'),
+  ).toHaveCount(1);
+  workspace = page.getByRole("dialog", { name: "Add task" });
+  await expect(workspace.getByLabel("Title")).toHaveValue(
+    "Draft survives presenter replacement",
+  );
+  page.off("request", observeReflowRequest);
+  expect(canonicalReadsDuringReflow).toBe(0);
+  expect(commandsDuringReflow).toBe(0);
+  await workspace.getByRole("button", { name: "Cancel", exact: true }).click();
+
+  await navigateTo(page, "Settings");
+  await page.setViewportSize({ width: 1167, height: 900 });
+  await expect(
+    page
+      .getByRole("navigation", { name: "Primary" })
+      .getByRole("button", { name: "Settings", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
 
   const before = await page.evaluate(async () => fetch("/api/v1/tasks").then((r) => r.json()));
-  await navigateTo(page, "Settings");
   await page.getByText("Dark", { exact: true }).click();
   await expect
     .poll(() =>

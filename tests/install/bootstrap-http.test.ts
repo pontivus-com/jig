@@ -13,7 +13,7 @@ import {
   it,
 } from "vitest";
 import { createBootstrapHttpHandler } from "../../src/shell/bootstrap-http";
-import { runGit } from "../../src/shell/git";
+import { runGit } from "../../src/shell/git/process";
 import type { JigConfig } from "../../src/shell/config";
 
 const roots: string[] = [];

@@ -6,16 +6,16 @@ import type {
   GitHubOnboardingSnapshot,
   GitHubRepository,
   GitHubRepositoryChoice,
-} from "./github";
+} from "./model";
 import {
   GitHubAuthError,
   listGitHubInstallations,
   listGitHubRepositories,
-} from "./github-auth";
+} from "./auth";
 import {
   GitHubDeviceFlowSession,
   GitHubFlowWakeup,
-} from "./github-device-flow";
+} from "./device-flow";
 
 type GitHubOnboardingPhase =
   | "idle"

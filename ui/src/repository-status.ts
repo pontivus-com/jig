@@ -1,5 +1,5 @@
 import type { IconColor, IconName } from "@astryxdesign/core/Icon";
-import type { ServiceStatus } from "../../src/protocol";
+import type { ServiceStatus } from "../../src/protocol/runtime";
 
 export type RepositoryStatusKey =
   | "local-only"

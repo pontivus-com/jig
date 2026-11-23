@@ -11,7 +11,7 @@ import {
   expect,
   it,
 } from "vitest";
-import type { GitHubCredential } from "../../src/github";
+import type { GitHubCredential } from "../../src/github/model";
 import {
   createGitHubAskpassHelper,
 } from "../../src/shell/github-git-auth";
@@ -20,7 +20,7 @@ import {
   createManagedGitHubTransport,
   isManagedGitHubRepositoryPath,
 } from "../../src/shell/github-transport";
-import { runGit } from "../../src/shell/git";
+import { runGit } from "../../src/shell/git/process";
 
 const roots: string[] = [];
 

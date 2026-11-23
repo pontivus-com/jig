@@ -6,17 +6,17 @@ import type {
   GitHubCapabilityStatus,
   GitHubOnboardingSnapshot,
   GitHubReconnectSnapshot,
-} from "../../../src/github";
+} from "../../../src/github/model";
 import {
   listGitHubInstallations,
   listGitHubRepositories,
   pollGitHubDeviceAuthorization,
   startGitHubDeviceAuthorization,
-} from "../../../src/github-auth";
-import { GitHubDeviceFlowSession } from "../../../src/github-device-flow";
-import { GitHubOnboardingController } from "../../../src/github-onboarding";
-import { GitHubReconnectController } from "../../../src/github-reconnect";
-import { GITHUB_APP_REGISTRATION } from "../../../src/github-registration";
+} from "../../../src/github/auth";
+import { GitHubDeviceFlowSession } from "../../../src/github/device-flow";
+import { GitHubOnboardingController } from "../../../src/github/onboarding";
+import { GitHubReconnectController } from "../../../src/github/reconnect";
+import { GITHUB_APP_REGISTRATION } from "../../../src/github/registration";
 import {
   adoptCanonicalSnapshot,
 } from "../../../src/persistence/sqlite";

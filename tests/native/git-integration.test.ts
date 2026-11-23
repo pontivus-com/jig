@@ -1,17 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
   add,
+  checkout,
   commit,
   init,
+  readCommit,
+  writeCommit,
+  writeRef,
 } from "isomorphic-git";
-import type { CanonicalState } from "../../src/protocol";
-import { serializeSnapshot } from "../../src/portable";
+import type { CanonicalState } from "../../src/protocol/runtime";
+import { serializeSnapshot } from "../../src/core/portable";
+import { recoveryCommitSpec } from "../../src/core/synchronization-recovery";
 import type { Task } from "../../src/core/task";
 import {
+  androidPortableHead,
+  androidRecoveryCandidateParents,
+  androidRecoveryCommitterTimestampSeconds,
   commitAndroidPortableSnapshot,
-  cloneAndroidPortableRepository,
+  compareAndSetAndroidPortableHead,
+  deleteAndroidRecoveryCandidate,
   readAndroidPortableSnapshot,
+  readAndroidRecoveryCandidateHead,
+  readAndroidSnapshotAtOid,
   reopenAndroidPortableRepository,
+  uniqueAndroidRecoveryMergeBase,
+  writeAndroidRecoveryCandidate,
+  cloneAndroidPortableRepository,
   type AndroidGitEffects,
 } from "../../ui/src/native/git";
 import {
@@ -161,6 +175,163 @@ describe("Android isomorphic-git integration", () => {
       state.revision,
     );
     expect(unchangedHead).toBe(firstHead);
+  });
+
+  it("constructs and accepts a deterministic isolated Android recovery candidate", async () => {
+    const { effects } = await createLocalEffects();
+    const base = await androidPortableHead(effects);
+    const baseCommit = await readCommit({
+      fs: effects.fs,
+      dir: effects.dir,
+      oid: base,
+    });
+    const parent = (
+      message: string,
+      timestamp: number,
+    ): Promise<string> =>
+      writeCommit({
+        fs: effects.fs,
+        dir: effects.dir,
+        commit: {
+          message: `${message}\n`,
+          tree: baseCommit.commit.tree,
+          parent: [base],
+          author: {
+            ...IDENTITY,
+            timestamp,
+            timezoneOffset: 0,
+          },
+          committer: {
+            ...IDENTITY,
+            timestamp,
+            timezoneOffset: 0,
+          },
+        },
+      });
+    const local = await parent("Local parent", 1_700_000_010);
+    const remote = await parent("Remote parent", 1_700_000_020);
+    await writeRef({
+      fs: effects.fs,
+      dir: effects.dir,
+      ref: "refs/heads/jig-data",
+      value: local,
+      force: true,
+    });
+    await checkout({
+      fs: effects.fs,
+      dir: effects.dir,
+      ref: "jig-data",
+      force: true,
+    });
+
+    expect(
+      await uniqueAndroidRecoveryMergeBase(
+        effects,
+        local,
+        remote,
+      ),
+    ).toBe(base);
+    const localTimestamp =
+      await androidRecoveryCommitterTimestampSeconds(
+        effects,
+        local,
+      );
+    const remoteTimestamp =
+      await androidRecoveryCommitterTimestampSeconds(
+        effects,
+        remote,
+      );
+    const snapshot = serializeSnapshot(
+      [canonicalTask()],
+      DATASET_ID,
+    );
+    const spec = recoveryCommitSpec(
+      "automatic",
+      local,
+      localTimestamp,
+      remote,
+      remoteTimestamp,
+    );
+    const candidate = await writeAndroidRecoveryCandidate(
+      effects,
+      DATASET_ID,
+      snapshot,
+      spec,
+    );
+
+    expect(
+      await readAndroidRecoveryCandidateHead(
+        effects,
+        DATASET_ID,
+      ),
+    ).toBe(candidate);
+    expect(
+      await androidRecoveryCandidateParents(
+        effects,
+        candidate,
+      ),
+    ).toEqual(spec.parents);
+    expect(
+      await readAndroidSnapshotAtOid(
+        effects,
+        candidate,
+        DATASET_ID,
+      ),
+    ).toMatchObject({
+      dataset_id: DATASET_ID,
+      tasks: [{ id: canonicalTask().id }],
+    });
+    const candidateCommit = await readCommit({
+      fs: effects.fs,
+      dir: effects.dir,
+      oid: candidate,
+    });
+    expect(candidateCommit.commit).toMatchObject({
+      message: "Reconcile Jig data\n",
+      parent: spec.parents,
+      author: {
+        name: "Jig",
+        email: "jig@local.invalid",
+        timestamp: 1_700_000_021,
+        timezoneOffset: 0,
+      },
+      committer: {
+        name: "Jig",
+        email: "jig@local.invalid",
+        timestamp: 1_700_000_021,
+        timezoneOffset: 0,
+      },
+    });
+    expect(
+      await writeAndroidRecoveryCandidate(
+        effects,
+        DATASET_ID,
+        snapshot,
+        spec,
+      ),
+    ).toBe(candidate);
+
+    await compareAndSetAndroidPortableHead(
+      effects,
+      local,
+      candidate,
+    );
+    expect(await androidPortableHead(effects)).toBe(candidate);
+    expect(
+      (await readAndroidPortableSnapshot(effects, DATASET_ID))
+        .tasks[0]?.id,
+    ).toBe(canonicalTask().id);
+    await deleteAndroidRecoveryCandidate(
+      effects,
+      DATASET_ID,
+      candidate,
+    );
+    expect(
+      await readAndroidRecoveryCandidateHead(
+        effects,
+        DATASET_ID,
+      ),
+    ).toBeNull();
   });
 
   it("refuses a jig-data branch containing any tracked non-Jig path", async () => {

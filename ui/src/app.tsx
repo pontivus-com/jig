@@ -1,6 +1,5 @@
 import {
   AlertDialog,
-  AppShell,
   Button,
   Icon,
   IconButton,
@@ -13,8 +12,8 @@ import {
   useRef,
   useState,
 } from "react";
-import type { ReactNode } from "react";
 import type { Task, TaskCommand } from "../../src/core/task";
+import type * as recoveryTypes from "../../src/core/synchronization-recovery";
 import {
   clampPlannerHorizonStart,
   movePlannerHorizon,
@@ -25,7 +24,7 @@ import type {
   CommandResult,
   Diagnostics,
   ServiceStatus,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 import {
   draftFor,
   type TaskDraft,
@@ -34,16 +33,20 @@ import { HistoryView } from "./history";
 import { isStaleRevision } from "./http";
 import {
   readCanonicalTasks,
+  readCanonicalTasksAfterActivationRollover,
   readDiagnostics,
   readStatus,
+  readSynchronizationConflict,
+  reconcileRuntimeReminders,
+  resolveSynchronizationConflict,
+  rollForwardRuntimeLocalDay,
   submitTaskCommand,
   triggerSync,
 } from "./runtime";
-import { Planner, type WeekTransitionDirection } from "./planner";
-import {
-  CompactApplicationNavigation,
-  PlannerHeader,
-} from "./planner-header";
+import type {
+  PlannerPresenterProps,
+  WeekTransitionDirection,
+} from "./presentation/shared/planner-date-section";
 import {
   ReminderMonitor,
   useReminderClock,
@@ -65,28 +68,38 @@ import {
   todayCivilDate,
 } from "./dates";
 import {
-  TaskWorkspaceBottomSheet,
-  TaskWorkspaceDrawer,
   type TaskWorkspacePresentation,
   type TaskWorkspaceState,
 } from "./task-workspace";
 import { useLayoutMode, type LayoutMode } from "./use-layout-mode";
+import { DesktopConfiguredApplication } from "./presentation/desktop/configured-application";
+import { NarrowConfiguredApplication } from "./presentation/narrow/configured-application";
+import { TaskDragProvider } from "./drag";
+import { ApplicationShell } from "./presentation/shared/application-shell";
 import { SetupView } from "./setup";
 import { JigLogo } from "./jig-logo";
 import {
-  JigAttentionBanner,
-  JigSuccessConfirmation,
-} from "./attention-banner";
+  AttentionFeedbackContent,
+  SuccessFeedbackContent,
+} from "./presentation/shared/feedback-content";
+import type { SyncConflictWorkspaceProps } from "./presentation/shared/sync-conflict-content";
+import {
+  createSyncConflictDraft,
+  reduceSyncConflictDraft,
+  syncConflictResolution,
+  type SyncConflictDraftAction,
+  type SyncConflictDraftState,
+} from "./sync-conflict-state";
 import {
   installNativeActiveListener,
   installNativeBackButtonListener,
 } from "./native/app-lifecycle";
 import { NativeSystemBars } from "./native/system-bars";
+import type { Destination } from "./destinations";
 import {
   initialDestinationNavigation,
   navigateDestination as navigateDestinationState,
   previousDestination,
-  type Destination,
 } from "./navigation";
 import {
   readGitHubCapabilityStatus,
@@ -94,6 +107,7 @@ import {
   readSetupStatus,
   reconnectGitHub as reconnectGitHubIntent,
   resumeGitHubReconnect,
+  resumeGitHubSetup,
   type GitHubReconnectSnapshot,
   type SetupStatus,
 } from "./setup-http";
@@ -112,38 +126,17 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-interface ApplicationShellProps {
-  readonly topNav: ReactNode;
-  readonly children: ReactNode;
-}
-
-function ApplicationShell({
-  topNav,
-  children,
-}: ApplicationShellProps): React.ReactElement {
-  const [motionReady, setMotionReady] = useState(false);
-
-  useEffect(() => {
-    setMotionReady(true);
-  }, []);
-
+function OnboardingHeader({
+  layoutMode,
+}: Readonly<{ layoutMode: LayoutMode }>): React.ReactElement {
   return (
-    <AppShell
-      className={motionReady ? "jig-app-shell jig-app-shell-motion-ready" : "jig-app-shell"}
-      topNav={topNav}
-      mobileNav={false}
-      contentPadding={0}
-      height="fill"
-      variant="section"
+    <header
+      className={[
+        "jig-app-header",
+        "jig-app-header-onboarding",
+        `jig-app-header-onboarding-${layoutMode}`,
+      ].join(" ")}
     >
-      {children}
-    </AppShell>
-  );
-}
-
-function OnboardingHeader(): React.ReactElement {
-  return (
-    <header className="jig-app-header jig-app-header-onboarding">
       <span className="jig-header-brand">
         <span className="jig-brand-logo-wrap" aria-hidden="true">
           <JigLogo />
@@ -163,6 +156,10 @@ interface ConfiguredAppProps {
   readonly appearanceMode: AppearanceMode;
   readonly onThemePresetChange: (value: ThemePreset) => void;
   readonly onAppearanceModeChange: (value: AppearanceMode) => void;
+  readonly nativeActiveHandlerRef: React.MutableRefObject<
+    () => Promise<void>
+  >;
+  readonly nativeBackHandlerRef: React.MutableRefObject<() => boolean>;
 }
 
 function ConfiguredApp({
@@ -171,6 +168,8 @@ function ConfiguredApp({
   appearanceMode,
   onThemePresetChange,
   onAppearanceModeChange,
+  nativeActiveHandlerRef,
+  nativeBackHandlerRef,
 }: ConfiguredAppProps): React.ReactElement {
   const [, setReminderDeliveryRevision] = useState(0);
   const onReminderNotified = useCallback(() => {
@@ -184,13 +183,24 @@ function ConfiguredApp({
     useState<Destination | null>(null);
   const [plannerState, setPlannerState] =
     useState<PlannerState>(initialPlannerState);
-  const [todayScrollRequest, setTodayScrollRequest] = useState(0);
+  const [todayScrollRequest, setTodayScrollRequest] = useState<number | null>(null);
+  const todayScrollSequenceRef = useRef(0);
+  const [initialTodayFocusPending, setInitialTodayFocusPending] =
+    useState(() => layoutMode === "narrow");
   const [weekTransitionDirection, setWeekTransitionDirection] =
     useState<WeekTransitionDirection | null>(null);
   const [observedToday, setObservedToday] = useState(todayCivilDate);
   const [canonical, setCanonical] = useState<CanonicalState | null>(null);
   const [status, setStatus] = useState<ServiceStatus | null>(null);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
+  const [
+    synchronizationConflict,
+    setSynchronizationConflict,
+  ] = useState<recoveryTypes.JigDataConflictCase | null>(null);
+  const [syncConflictDraft, setSyncConflictDraft] =
+    useState<SyncConflictDraftState | null>(null);
+  const [syncConflictError, setSyncConflictError] =
+    useState<string | null>(null);
   const [githubReconnectAvailable, setGitHubReconnectAvailable] =
     useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -205,6 +215,8 @@ function ConfiguredApp({
   const [isOperating, setIsOperating] = useState(false);
   const [githubReconnect, setGitHubReconnect] =
     useState<GitHubReconnectSnapshot | null>(null);
+  const [showSettingsDiagnostics, setShowSettingsDiagnostics] =
+    useState(false);
   const [workspace, setWorkspace] = useState<TaskWorkspaceState>({
     mode: "closed",
   });
@@ -238,21 +250,25 @@ function ConfiguredApp({
   }, []);
 
   const refreshOperationalState = useCallback(
-    async (): Promise<void> => {
+    async (): Promise<recoveryTypes.JigDataConflictCase | null> => {
       const [
         nextStatus,
         nextDiagnostics,
         githubCapabilities,
+        nextConflict,
       ] = await Promise.all([
         readStatus(),
         readDiagnostics(),
         readGitHubCapabilityStatus(),
+        readSynchronizationConflict(),
       ]);
       setStatus(nextStatus);
       setDiagnostics(nextDiagnostics);
+      setSynchronizationConflict(nextConflict);
       setGitHubReconnectAvailable(
         githubCapabilities.reconnect_available,
       );
+      return nextConflict;
     },
     [],
   );
@@ -269,6 +285,30 @@ function ConfiguredApp({
       );
     },
     [],
+  );
+
+
+  const applyObservedLocalDay = useCallback(
+    (nextToday: string): void => {
+      if (nextToday === observedToday) {
+        return;
+      }
+      setWeekTransitionDirection(null);
+      setPlannerState((current) => {
+        const nextStart =
+          current.displayedHorizonStart === observedToday
+            ? nextToday
+            : clampPlannerHorizonStart(
+                current.displayedHorizonStart,
+                nextToday,
+              );
+        return nextStart === current.displayedHorizonStart
+          ? current
+          : { displayedHorizonStart: nextStart };
+      });
+      setObservedToday(nextToday);
+    },
+    [observedToday],
   );
 
   const load = useCallback(async (): Promise<void> => {
@@ -311,41 +351,70 @@ function ConfiguredApp({
   }, []);
 
 
-  useEffect(() => {
-    let disposed = false;
-    let cleanup: (() => Promise<void>) | null = null;
-
-    void installNativeActiveListener(() => {
-      void Promise.all([
-        resumeGitHubReconnect(),
-        refreshCanonical(),
-        triggerSync().then((next) => {
-          if (!disposed) {
-            updateRepositoryStatus(next);
-          }
-        }),
-      ]).catch((error: unknown) => {
-        if (!disposed) {
-          setOperationError(
-            `Jig could not refresh after Android resumed: ${errorMessage(error)}. Reload the application.`,
-          );
-        }
-      });
-    }).then((remove) => {
-      if (disposed) {
-        void remove();
-        return;
+  const activateConfiguredRuntime = useCallback(
+    async (): Promise<void> => {
+      const nextToday = todayCivilDate();
+      if (nextToday !== observedToday) {
+        await rollForwardRuntimeLocalDay();
+        applyObservedLocalDay(nextToday);
       }
-      cleanup = remove;
-    });
 
+      await resumeGitHubReconnect();
+
+      const preSyncCanonical =
+        await readCanonicalTasksAfterActivationRollover();
+
+      await reconcileRuntimeReminders(
+        preSyncCanonical.tasks,
+        new Date(),
+      );
+
+      await triggerSync();
+
+      const [
+        nextCanonical,
+        nextStatus,
+        nextDiagnostics,
+        githubCapabilities,
+        nextConflict,
+      ] = await Promise.all([
+        readCanonicalTasksAfterActivationRollover(),
+        readStatus(),
+        readDiagnostics(),
+        readGitHubCapabilityStatus(),
+        readSynchronizationConflict(),
+      ]);
+
+      setCanonical(nextCanonical);
+      setStatus(nextStatus);
+      setDiagnostics(nextDiagnostics);
+      setSynchronizationConflict(nextConflict);
+      setGitHubReconnectAvailable(
+        githubCapabilities.reconnect_available,
+      );
+      setInitialSyncSettled(true);
+    },
+    [applyObservedLocalDay, observedToday],
+  );
+
+  const handleNativeActive = useCallback(async (): Promise<void> => {
+    try {
+      await activateConfiguredRuntime();
+    } catch (error) {
+      setOperationError(
+        `Jig could not refresh after Android resumed: ${errorMessage(error)}. Reload the application.`,
+      );
+    }
+  }, [activateConfiguredRuntime]);
+
+  useEffect(() => {
+    nativeActiveHandlerRef.current = handleNativeActive;
     return () => {
-      disposed = true;
-      if (cleanup !== null) {
-        void cleanup();
+      if (nativeActiveHandlerRef.current === handleNativeActive) {
+        nativeActiveHandlerRef.current = async () => undefined;
       }
     };
-  }, [refreshCanonical, updateRepositoryStatus]);
+  }, [handleNativeActive, nativeActiveHandlerRef]);
 
   useEffect(() => {
     let cancelled = false;
@@ -357,20 +426,7 @@ function ConfiguredApp({
         return false;
       }
 
-      setWeekTransitionDirection(null);
-      setPlannerState((current) => {
-        const nextStart =
-          current.displayedHorizonStart === observedToday
-            ? nextToday
-            : clampPlannerHorizonStart(
-                current.displayedHorizonStart,
-                nextToday,
-              );
-        return nextStart === current.displayedHorizonStart
-          ? current
-          : { displayedHorizonStart: nextStart };
-      });
-      setObservedToday(nextToday);
+      applyObservedLocalDay(nextToday);
 
       try {
         await refreshCanonical();
@@ -415,7 +471,7 @@ function ConfiguredApp({
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [observedToday, refreshCanonical]);
+  }, [applyObservedLocalDay, observedToday, refreshCanonical]);
 
   const runCommand = useCallback(
     async (command: TaskCommand): Promise<CommandResult | null> => {
@@ -573,6 +629,21 @@ function ConfiguredApp({
   }, [destinationNavigation]);
 
   const handleBack = useCallback((): boolean => {
+    if (syncConflictDraft !== null) {
+      if (!isOperating) {
+        setSyncConflictDraft(null);
+        setSyncConflictError(null);
+      }
+      return true;
+    }
+
+    if (deleteTaskId !== null) {
+      if (!isOperating) {
+        setDeleteTaskId(null);
+      }
+      return true;
+    }
+
     if (workspace.mode !== "closed") {
       closeWorkspace();
       return true;
@@ -586,32 +657,23 @@ function ConfiguredApp({
     setDestinationTransition(previous.current);
     setDestinationNavigation(previous);
     return true;
-  }, [closeWorkspace, destinationNavigation, workspace.mode]);
-
-  const backHandlerRef = useRef<() => boolean>(() => false);
-  backHandlerRef.current = handleBack;
+  }, [
+    closeWorkspace,
+    deleteTaskId,
+    destinationNavigation,
+    isOperating,
+    syncConflictDraft,
+    workspace.mode,
+  ]);
 
   useEffect(() => {
-    let disposed = false;
-    let cleanup: (() => Promise<void>) | null = null;
-
-    void installNativeBackButtonListener(() => backHandlerRef.current()).then(
-      (remove) => {
-        if (disposed) {
-          void remove();
-          return;
-        }
-        cleanup = remove;
-      },
-    );
-
+    nativeBackHandlerRef.current = handleBack;
     return () => {
-      disposed = true;
-      if (cleanup !== null) {
-        void cleanup();
+      if (nativeBackHandlerRef.current === handleBack) {
+        nativeBackHandlerRef.current = () => false;
       }
     };
-  }, []);
+  }, [handleBack, nativeBackHandlerRef]);
 
   const destination = destinationNavigation.current;
 
@@ -630,6 +692,108 @@ function ConfiguredApp({
       setIsOperating(false);
     }
   }, [isOperating, refreshOperationalState]);
+
+  const openSynchronizationConflict = useCallback(
+    async (): Promise<void> => {
+      if (isOperating) return;
+      setIsOperating(true);
+      setOperationError(null);
+      setSyncConflictError(null);
+      try {
+        const current = await readSynchronizationConflict();
+        setSynchronizationConflict(current);
+        if (current === null) {
+          setOperationError(
+            "No current semantic synchronization conflict is available.",
+          );
+          return;
+        }
+        setWorkspace({ mode: "closed" });
+        setSyncConflictDraft(createSyncConflictDraft(current));
+      } catch (error) {
+        setOperationError(errorMessage(error));
+      } finally {
+        setIsOperating(false);
+      }
+    },
+    [isOperating],
+  );
+
+  const cancelSynchronizationConflict = useCallback((): void => {
+    if (isOperating) return;
+    setSyncConflictDraft(null);
+    setSyncConflictError(null);
+  }, [isOperating]);
+
+  const updateSynchronizationConflictDraft = useCallback(
+    (action: SyncConflictDraftAction): void => {
+      setSyncConflictDraft((current) =>
+        current === null
+          ? current
+          : reduceSyncConflictDraft(current, action),
+      );
+    },
+    [],
+  );
+
+  const copySynchronizationConflictDetails = useCallback(
+    (value: string): void => {
+      void navigator.clipboard.writeText(value).catch((error) => {
+        setSyncConflictError(
+          "Jig could not copy the technical details: " +
+            errorMessage(error),
+        );
+      });
+    },
+    [],
+  );
+
+  const useSynchronizationConflictResolution = useCallback(
+    async (): Promise<void> => {
+      if (syncConflictDraft === null || isOperating) return;
+      const resolution = syncConflictResolution(syncConflictDraft);
+      if (resolution === null) {
+        setSyncConflictError(
+          "Complete every conflict choice and required Task-order review before continuing.",
+        );
+        return;
+      }
+
+      setIsOperating(true);
+      setSyncConflictError(null);
+      setOperationError(null);
+      try {
+        const repositoryStatus =
+          await resolveSynchronizationConflict(resolution);
+        updateRepositoryStatus(repositoryStatus);
+        await refreshCanonical();
+        const nextConflict = await refreshOperationalState();
+        if (nextConflict === null) {
+          setSyncConflictDraft(null);
+          setSynchronizationConflict(null);
+          setOperationConfirmation("Sync conflict resolved");
+          return;
+        }
+
+        setSyncConflictDraft(createSyncConflictDraft(nextConflict));
+        setSyncConflictError(
+          "Synchronization changed while you were resolving it. Review the refreshed conflict before confirming.",
+        );
+      } catch (error) {
+        setSyncConflictError(errorMessage(error));
+        await refreshOperationalState().catch(() => null);
+      } finally {
+        setIsOperating(false);
+      }
+    },
+    [
+      isOperating,
+      refreshCanonical,
+      refreshOperationalState,
+      syncConflictDraft,
+      updateRepositoryStatus,
+    ],
+  );
 
   const reconnectGitHub = useCallback(async (): Promise<void> => {
     if (isOperating) {
@@ -714,17 +878,29 @@ function ConfiguredApp({
 
   const goToToday = useCallback((): void => {
     const today = todayCivilDate();
+    const horizonChanged =
+      plannerState.displayedHorizonStart !== today;
+
     setWeekTransitionDirection(
-      layoutMode === "narrow" ||
-        plannerState.displayedHorizonStart === today
-        ? null
-        : "today",
+      layoutMode === "desktop" && horizonChanged ? "today" : null,
     );
-    setPlannerState({
-      displayedHorizonStart: today,
-    });
-    setTodayScrollRequest((current) => current + 1);
+    if (horizonChanged) {
+      setPlannerState({
+        displayedHorizonStart: today,
+      });
+    }
+    if (layoutMode === "narrow") {
+      todayScrollSequenceRef.current += 1;
+      setTodayScrollRequest(todayScrollSequenceRef.current);
+    }
   }, [layoutMode, plannerState.displayedHorizonStart]);
+  const clearInitialTodayFocus = useCallback((): void => {
+    setInitialTodayFocusPending(false);
+  }, []);
+
+  const clearTodayScrollRequest = useCallback((): void => {
+    setTodayScrollRequest(null);
+  }, []);
 
   const repositoryStatus = repositoryStatusPresentation(status, {
     initialSync: !initialSyncSettled,
@@ -767,23 +943,23 @@ function ConfiguredApp({
 
   const durableBanner =
     operationError !== null && workspace.mode === "closed" ? (
-    <JigAttentionBanner
+    <AttentionFeedbackContent
       status="error"
       title="Jig could not complete the operation"
-      description={operationError}
+      message={operationError}
       container="section"
       onDismiss={() => setOperationError(null)}
     />
   ) : repositoryStatus.key === "sync-issue" &&
     destination !== "settings" &&
     dismissedSyncAttention !== repositoryStatus.message ? (
-    <JigAttentionBanner
+    <AttentionFeedbackContent
       status="warning"
       title="Sync needs attention"
-      description={repositoryStatus.message}
+      message={repositoryStatus.message}
       container="section"
       onDismiss={() => setDismissedSyncAttention(repositoryStatus.message)}
-      endContent={
+      action={
         <Button
           label="Open Settings"
           variant="secondary"
@@ -796,7 +972,7 @@ function ConfiguredApp({
 
   const operationConfirmationView =
     operationConfirmation === null ? null : (
-      <JigSuccessConfirmation
+      <SuccessFeedbackContent
         message={operationConfirmation}
         onDismiss={dismissOperationConfirmation}
       />
@@ -836,6 +1012,29 @@ function ConfiguredApp({
     [closeWorkspace, workspace.mode],
   );
 
+  const planner: PlannerPresenterProps | null =
+    canonical === null
+      ? null
+      : {
+          focusCurrentDayOnMount: initialTodayFocusPending,
+          onInitialTodayFocusHandled: clearInitialTodayFocus,
+          todayScrollRequest,
+          onTodayScrollHandled: clearTodayScrollRequest,
+          weekTransitionDirection,
+          tasks,
+          recurrences: canonical.recurrences,
+          now: reminderNow,
+          displayedDates,
+          selectedTask,
+          onSelectTask: selectTask,
+          onAdd: openCreate,
+          onEdit: selectTask,
+          onToggleComplete: toggleComplete,
+          onSetPriority: setPriority,
+          onDelete: (task) => setDeleteTaskId(task.id),
+          onMove: moveTaskExact,
+        };
+
   const content =
     canonical === null ? (
       <div className="jig-loading">
@@ -844,10 +1043,10 @@ function ConfiguredApp({
           <p>Loading local planning data…</p>
         ) : (
           <>
-            <JigAttentionBanner
+            <AttentionFeedbackContent
               status="error"
               title="Jig could not load local planning data"
-              description={loadError}
+              message={loadError}
                             />
             <Button
               label="Retry"
@@ -859,24 +1058,6 @@ function ConfiguredApp({
           </>
         )}
       </div>
-    ) : destination === "planner" ? (
-      <Planner
-        focusCurrentDayOnMount={layoutMode === "narrow"}
-        todayScrollRequest={todayScrollRequest}
-        weekTransitionDirection={weekTransitionDirection}
-        tasks={tasks}
-        recurrences={canonical.recurrences}
-        now={reminderNow}
-        displayedDates={displayedDates}
-        selectedTask={selectedTask}
-        onSelectTask={selectTask}
-        onAdd={openCreate}
-        onEdit={selectTask}
-        onToggleComplete={toggleComplete}
-        onSetPriority={setPriority}
-        onDelete={(task) => setDeleteTaskId(task.id)}
-        onMove={moveTaskExact}
-      />
     ) : destination === "history" ? (
       <HistoryView
         tasks={tasks}
@@ -892,21 +1073,66 @@ function ConfiguredApp({
         appearanceMode={appearanceMode}
         status={status}
         diagnostics={diagnostics}
-        operationError={operationError}
         isOperating={isOperating}
         githubReconnectAvailable={githubReconnectAvailable}
         githubReconnect={githubReconnect}
+        synchronizationConflictAvailable={
+          synchronizationConflict !== null
+        }
         onThemePresetChange={onThemePresetChange}
         onAppearanceModeChange={onAppearanceModeChange}
         onSync={syncNow}
         onReconnectGitHub={reconnectGitHub}
+        onResolveSynchronizationConflict={
+          openSynchronizationConflict
+        }
+        showDiagnostics={showSettingsDiagnostics}
+        onShowDiagnosticsChange={setShowSettingsDiagnostics}
       />
     );
 
-  const workspaceSurface =
-    destination === "settings" ? null : layoutMode === "narrow" ? (
-      <TaskWorkspaceBottomSheet
+
+  const syncConflictWorkspace: SyncConflictWorkspaceProps | null =
+    syncConflictDraft === null
+      ? null
+      : {
+          isOpen: true,
+          state: syncConflictDraft,
+          error: syncConflictError,
+          isResolving: isOperating,
+          onAction: updateSynchronizationConflictDraft,
+          onCopyTechnicalDetails:
+            copySynchronizationConflictDetails,
+          onCancel: cancelSynchronizationConflict,
+          onResolve: useSynchronizationConflictResolution,
+        };
+
+  const configuredPresentation =
+    layoutMode === "desktop" ? (
+      <DesktopConfiguredApplication
+        destination={destination}
+        weekLabel={formatPlannerHorizonRange(
+          plannerState.displayedHorizonStart,
+        )}
+        canGoPrevious={
+          plannerState.displayedHorizonStart > todayCivilDate()
+        }
+        statusControl={statusControl}
+        compactStatusControl={compactStatusControl}
+        onHome={() => navigateDestination("planner")}
+        onPreviousWeek={requestPreviousWeek}
+        onToday={goToToday}
+        onNextWeek={requestNextWeek}
+        onAdd={() => openCreate(todayCivilDate())}
+        onNavigate={navigateDestination}
+        content={content}
+        planner={planner}
+        durableFeedback={durableBanner}
+        transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
+        syncConflictWorkspace={syncConflictWorkspace}
+        destinationTransition={destinationTransition}
+        onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
         recurrenceSeries={selectedRecurrenceSeries}
@@ -917,8 +1143,30 @@ function ConfiguredApp({
         onClose={closeWorkspace}
       />
     ) : (
-      <TaskWorkspaceDrawer
+      <NarrowConfiguredApplication
+        destination={destination}
+        weekLabel={formatPlannerHorizonRange(
+          plannerState.displayedHorizonStart,
+        )}
+        canGoPrevious={
+          plannerState.displayedHorizonStart > todayCivilDate()
+        }
+        statusControl={statusControl}
+        compactStatusControl={compactStatusControl}
+        onHome={() => navigateDestination("planner")}
+        onPreviousWeek={requestPreviousWeek}
+        onToday={goToToday}
+        onNextWeek={requestNextWeek}
+        onAdd={() => openCreate(todayCivilDate())}
+        onNavigate={navigateDestination}
+        content={content}
+        planner={planner}
+        durableFeedback={durableBanner}
+        transientFeedback={operationConfirmationView}
         workspace={workspacePresentation}
+        syncConflictWorkspace={syncConflictWorkspace}
+        destinationTransition={destinationTransition}
+        onContentPointerDown={dismissWorkspaceFromContent}
         externalError={operationError}
         isSaving={isOperating}
         recurrenceSeries={selectedRecurrenceSeries}
@@ -932,70 +1180,14 @@ function ConfiguredApp({
 
   return (
     <>
-        <ApplicationShell
-          topNav={
-            <PlannerHeader
-              destination={destination}
-              layoutMode={layoutMode}
-              weekLabel={formatPlannerHorizonRange(
-                plannerState.displayedHorizonStart,
-              )}
-              canGoPrevious={
-                plannerState.displayedHorizonStart > todayCivilDate()
-              }
-              statusControl={statusControl}
-              compactStatusControl={compactStatusControl}
-              onHome={() => navigateDestination("planner")}
-              onPreviousWeek={requestPreviousWeek}
-              onToday={goToToday}
-              onNextWeek={requestNextWeek}
-              onAdd={() => openCreate(todayCivilDate())}
-              onNavigate={navigateDestination}
-            />
-          }
-        >
-          {durableBanner}
-          {operationConfirmationView}
-          <div
-            className={[
-              "jig-content-frame",
-              layoutMode === "narrow" && todayScrollRequest > 0
-                ? "jig-content-frame-today-smooth"
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <div
-              key={destination}
-              className={[
-                "jig-content",
-                "jig-content-configured",
-                destination === "planner"
-                  ? "jig-content-configured-planner"
-                  : "",
-                destinationTransition === destination
-                  ? "jig-content-configured-transition"
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              onPointerDown={dismissWorkspaceFromContent}
-            >
-              {content}
-            </div>
-          </div>
-          {workspaceSurface}
-          {layoutMode === "narrow" && workspacePresentation === null ? (
-            <CompactApplicationNavigation
-              destination={destination}
-              showAdd
-              onAdd={() => openCreate(todayCivilDate())}
-              onNavigate={navigateDestination}
-            />
-          ) : null}
-        </ApplicationShell>
-
+      <TaskDragProvider
+        tasks={tasks}
+        recurrences={canonical?.recurrences ?? []}
+        now={reminderNow}
+        onMove={moveTaskExact}
+      >
+        {configuredPresentation}
+      </TaskDragProvider>
         <AlertDialog
           isOpen={deleteTask !== null}
           onOpenChange={(open) => {
@@ -1047,10 +1239,19 @@ export function App(): React.ReactElement {
   const layoutMode = useLayoutMode();
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [
+    setupProviderContinuationRevision,
+    setSetupProviderContinuationRevision,
+  ] = useState(0);
   const [themePreset, setThemePreset] =
     useState<ThemePreset>(readThemePreset);
   const [appearanceMode, setAppearanceMode] =
     useState<AppearanceMode>(readAppearanceMode);
+
+  const nativeActiveHandlerRef = useRef<() => Promise<void>>(
+    async () => undefined,
+  );
+  const nativeBackHandlerRef = useRef<() => boolean>(() => false);
 
   const refreshSetup = useCallback(async (): Promise<void> => {
     setSetupError(null);
@@ -1065,6 +1266,63 @@ export function App(): React.ReactElement {
     void refreshSetup();
   }, [refreshSetup]);
 
+
+  const handleBootstrapNativeActive = useCallback(
+    async (): Promise<void> => {
+      try {
+        await resumeGitHubSetup();
+        await refreshSetup();
+        setSetupProviderContinuationRevision(
+          (revision) => revision + 1,
+        );
+      } catch (error) {
+        setSetupError(errorMessage(error));
+      }
+    },
+    [refreshSetup],
+  );
+
+  useEffect(() => {
+    if (setupStatus?.mode === "configured") {
+      return;
+    }
+    nativeActiveHandlerRef.current = handleBootstrapNativeActive;
+    nativeBackHandlerRef.current = () => false;
+  }, [handleBootstrapNativeActive, setupStatus?.mode]);
+
+  useEffect(() => {
+    let disposed = false;
+    let removeActive: (() => Promise<void>) | null = null;
+    let removeBack: (() => Promise<void>) | null = null;
+
+    void Promise.all([
+      installNativeActiveListener(() => {
+        void nativeActiveHandlerRef.current();
+      }),
+      installNativeBackButtonListener(
+        () => nativeBackHandlerRef.current(),
+      ),
+    ]).then(([nextRemoveActive, nextRemoveBack]) => {
+      if (disposed) {
+        void nextRemoveActive();
+        void nextRemoveBack();
+        return;
+      }
+      removeActive = nextRemoveActive;
+      removeBack = nextRemoveBack;
+    });
+
+    return () => {
+      disposed = true;
+      if (removeActive !== null) {
+        void removeActive();
+      }
+      if (removeBack !== null) {
+        void removeBack();
+      }
+    };
+  }, []);
+
   const changeThemePreset = (value: ThemePreset): void => {
     setThemePreset(value);
     writeThemePreset(value);
@@ -1076,17 +1334,21 @@ export function App(): React.ReactElement {
 
   const bootstrapBody =
     setupStatus?.mode === "bootstrap" ? (
-      <SetupView status={setupStatus} layoutMode={layoutMode} />
+      <SetupView
+        status={setupStatus}
+        layoutMode={layoutMode}
+        providerContinuationRevision={setupProviderContinuationRevision}
+      />
     ) : (
       <div className="jig-loading">
         {setupError === null ? (
           <p>Opening Jig…</p>
         ) : (
           <>
-            <JigAttentionBanner
+            <AttentionFeedbackContent
               status="error"
               title="Jig could not open"
-              description={setupError}
+              message={setupError}
                     />
             <Button
               label="Retry"
@@ -1111,9 +1373,11 @@ export function App(): React.ReactElement {
             appearanceMode={appearanceMode}
             onThemePresetChange={changeThemePreset}
             onAppearanceModeChange={changeAppearanceMode}
+            nativeActiveHandlerRef={nativeActiveHandlerRef}
+            nativeBackHandlerRef={nativeBackHandlerRef}
           />
         ) : (
-          <ApplicationShell topNav={<OnboardingHeader />}>
+          <ApplicationShell topNav={<OnboardingHeader layoutMode={layoutMode} />}>
             <div className="jig-content-frame jig-content-frame-onboarding">
               <div className="jig-content">{bootstrapBody}</div>
             </div>

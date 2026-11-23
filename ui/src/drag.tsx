@@ -1,9 +1,9 @@
 import {
   DragDropProvider,
   DragOverlay,
-  useDraggable,
   useDroppable,
 } from "@dnd-kit/react";
+import { useSortable } from "@dnd-kit/react/sortable";
 import {
   KeyboardSensor,
   PointerActivationConstraints,
@@ -13,10 +13,11 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
-  type Ref,
 } from "react";
+import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Task } from "../../src/core/task";
 import {
   isActiveScheduleDate,
@@ -29,22 +30,22 @@ import {
   type TaskRowProps,
 } from "./task-row";
 
-export interface TaskDropIntent {
-  readonly task_id: string;
-  readonly destination_date: string;
-  readonly destination_index: number;
+export interface TaskProspectivePlacement {
+  readonly activeTaskId: string;
+  readonly destinationDate: string;
+  readonly destinationIndex: number;
 }
 
 interface TaskDragState {
   readonly activeTaskId: string | null;
-  readonly sourceDate: string | null;
-  readonly intent: TaskDropIntent | null;
+  readonly prospective: TaskProspectivePlacement | null;
+  readonly activeBlockSize: number | null;
 }
 
 const EMPTY_DRAG_STATE: TaskDragState = {
   activeTaskId: null,
-  sourceDate: null,
-  intent: null,
+  prospective: null,
+  activeBlockSize: null,
 };
 
 const TaskDragContext = createContext<TaskDragState>(EMPTY_DRAG_STATE);
@@ -55,6 +56,8 @@ export function useTaskDragState(): TaskDragState {
 
 export interface TaskDragProviderProps {
   readonly tasks: readonly Task[];
+  readonly recurrences: readonly RecurrenceSeries[];
+  readonly now: Date;
   readonly children: ReactNode;
   readonly onMove: (
     taskId: string,
@@ -64,83 +67,289 @@ export interface TaskDragProviderProps {
   readonly onDragActiveChange?: ((active: boolean) => void) | undefined;
 }
 
-function destinationIndexForSlot(
-  task: Task,
-  destinationDate: string,
-  slotIndex: number,
-): number {
-  if (
-    destinationDate === task.scheduled_date &&
-    task.position !== null &&
-    slotIndex > task.position
-  ) {
-    return slotIndex - 1;
-  }
-  return slotIndex;
+interface DropTarget {
+  readonly id: string | number;
+  readonly type?: unknown;
+  readonly data?: Readonly<Record<string, unknown>>;
 }
 
-function dropIntent(
+interface DropTargetGeometry extends DropTarget {
+  readonly element?: Element | undefined;
+  readonly shape?: {
+    readonly boundingRectangle: {
+      readonly top: number;
+      readonly right: number;
+      readonly bottom: number;
+      readonly left: number;
+      readonly height: number;
+    };
+  } | undefined;
+}
+
+interface PointerPosition {
+  readonly x: number;
+  readonly y: number;
+}
+
+function pointerPlacement(
   tasks: readonly Task[],
-  taskId: string,
-  currentLocalDate: string,
-  target: {
-    readonly type?: unknown;
-    readonly data?: Readonly<Record<string, unknown>>;
-  } | null,
-): TaskDropIntent | null {
-  if (target === null || target.type !== "jig-insertion-slot") {
-    return null;
-  }
-  const date = target.data?.date;
-  const slotIndex = target.data?.slot_index;
-  if (
-    typeof date !== "string" ||
-    typeof slotIndex !== "number" ||
-    !Number.isInteger(slotIndex) ||
-    slotIndex < 0
-  ) {
-    return null;
-  }
-  const task = tasks.find((candidate) => candidate.id === taskId);
-  if (task === undefined || task.completed_at !== null) {
+  activeTaskId: string,
+  pointer: PointerPosition,
+  droppables: Iterable<DropTargetGeometry>,
+): TaskProspectivePlacement | null {
+  const activeTask = tasks.find((task) => task.id === activeTaskId);
+  if (activeTask === undefined || activeTask.completed_at !== null) {
     return null;
   }
 
-  const destinationIndex = destinationIndexForSlot(
-    task,
-    date,
-    slotIndex,
-  );
+  const registered = Array.from(droppables);
+  const dateTarget = registered.find((target) => {
+    if (target.type !== "jig-date") {
+      return false;
+    }
+    const shapeBounds = target.shape?.boundingRectangle;
+    const liveBounds = target.element?.getBoundingClientRect();
+    const bounds =
+      liveBounds !== undefined && liveBounds.height > 0
+        ? liveBounds
+        : shapeBounds;
+    return (
+      bounds !== undefined &&
+      pointer.x >= bounds.left &&
+      pointer.x <= bounds.right &&
+      pointer.y >= bounds.top &&
+      pointer.y <= bounds.bottom
+    );
+  });
+  const date = dateTarget?.data?.date;
+  if (
+    typeof date !== "string" ||
+    !isActiveScheduleDate(todayCivilDate(), date)
+  ) {
+    return null;
+  }
+
   const available = outstandingForDate(tasks, date).filter(
-    (candidate) => candidate.id !== task.id,
-  ).length;
-  if (destinationIndex < 0 || destinationIndex > available) {
+    (task) => task.id !== activeTaskId,
+  );
+  const tailTarget = registered.find((target) => {
+    if (
+      target.type !== "jig-date-tail-geometry" ||
+      target.data?.date !== date
+    ) {
+      return false;
+    }
+    const shapeBounds = target.shape?.boundingRectangle;
+    const liveBounds = target.element?.getBoundingClientRect();
+    const bounds =
+      liveBounds !== undefined && liveBounds.height > 0
+        ? liveBounds
+        : shapeBounds;
+    return (
+      bounds !== undefined &&
+      pointer.x >= bounds.left &&
+      pointer.x <= bounds.right &&
+      pointer.y >= bounds.top &&
+      pointer.y <= bounds.bottom
+    );
+  });
+  if (tailTarget !== undefined) {
+    return {
+      activeTaskId,
+      destinationDate: date,
+      destinationIndex: available.length,
+    };
+  }
+
+  const taskRects = registered
+    .filter(
+      (target) =>
+        target.type === "jig-task" &&
+        target.data?.date === date &&
+        String(target.id) !== activeTaskId &&
+        (target.shape !== undefined || target.element !== undefined),
+    )
+    .map((target) => {
+      const shapeBounds = target.shape?.boundingRectangle;
+      const liveBounds = target.element?.getBoundingClientRect();
+      const bounds =
+        liveBounds !== undefined && liveBounds.height > 0
+          ? liveBounds
+          : shapeBounds;
+      if (bounds === undefined) {
+        return null;
+      }
+      return {
+        top: bounds.top,
+        bottom: bounds.bottom,
+        midpoint: bounds.top + bounds.height / 2,
+      };
+    })
+    .filter(
+      (
+        bounds,
+      ): bounds is {
+        readonly top: number;
+        readonly bottom: number;
+        readonly midpoint: number;
+      } => bounds !== null,
+    )
+    .sort((left, right) => left.top - right.top);
+
+  const hoveredIndex = taskRects.findIndex(
+    (bounds) =>
+      pointer.y >= bounds.top &&
+      pointer.y <= bounds.bottom,
+  );
+
+  const rawDestinationIndex =
+    hoveredIndex >= 0
+      ? activeTask.scheduled_date === date &&
+        activeTask.position !== null
+        ? activeTask.position <= hoveredIndex
+          ? hoveredIndex + 1
+          : hoveredIndex
+        : hoveredIndex +
+          (pointer.y >= (taskRects[hoveredIndex]?.midpoint ?? pointer.y)
+            ? 1
+            : 0)
+      : taskRects.filter((bounds) => pointer.y >= bounds.midpoint).length;
+
+  const destinationIndex = Math.min(
+    available.length,
+    rawDestinationIndex,
+  );
+
+  return {
+    activeTaskId,
+    destinationDate: date,
+    destinationIndex,
+  };
+}
+
+function targetPlacement(
+  tasks: readonly Task[],
+  activeTaskId: string,
+  target: DropTarget | null,
+): TaskProspectivePlacement | null {
+  if (target === null) {
+    return null;
+  }
+
+  const activeTask = tasks.find((task) => task.id === activeTaskId);
+  if (activeTask === undefined || activeTask.completed_at !== null) {
+    return null;
+  }
+
+  const date = target.data?.date;
+  if (
+    typeof date !== "string" ||
+    !isActiveScheduleDate(todayCivilDate(), date)
+  ) {
+    return null;
+  }
+
+  const available = outstandingForDate(tasks, date).filter(
+    (task) => task.id !== activeTaskId,
+  );
+
+  let destinationIndex: number;
+  if (target.type === "jig-date") {
+    destinationIndex = available.length;
+  } else if (target.type === "jig-task") {
+    const targetId = String(target.id);
+    const targetIndex = available.findIndex(
+      (task) => task.id === targetId,
+    );
+    const canonicalTargetIndex = target.data?.canonical_index;
+    if (
+      targetIndex < 0 ||
+      typeof canonicalTargetIndex !== "number" ||
+      !Number.isInteger(canonicalTargetIndex)
+    ) {
+      return null;
+    }
+
+    const afterTarget =
+      activeTask.scheduled_date === date &&
+      activeTask.position !== null &&
+      activeTask.position < canonicalTargetIndex;
+    destinationIndex = targetIndex + (afterTarget ? 1 : 0);
+  } else {
+    return null;
+  }
+
+  if (
+    destinationIndex < 0 ||
+    destinationIndex > available.length
+  ) {
     return null;
   }
 
   return {
-    task_id: task.id,
-    destination_date: date,
-    destination_index: destinationIndex,
+    activeTaskId,
+    destinationDate: date,
+    destinationIndex,
   };
 }
 
+const TaskPointerSensor = PointerSensor.configure({
+  activationConstraints(event) {
+    return event.pointerType === "touch"
+      ? [
+          new PointerActivationConstraints.Delay({
+            value: 250,
+            tolerance: 8,
+          }),
+        ]
+      : [
+          new PointerActivationConstraints.Distance({
+            value: 6,
+          }),
+        ];
+  },
+  activatorElements(source) {
+    return source.handle == null ? [] : [source.handle];
+  },
+});
+
 export function TaskDragProvider({
   tasks,
+  recurrences,
+  now,
   children,
   onMove,
   onDragActiveChange,
 }: TaskDragProviderProps): React.ReactElement {
   const [state, setState] = useState<TaskDragState>(EMPTY_DRAG_STATE);
+  const prospectiveRef = useRef<TaskProspectivePlacement | null>(null);
+  const pointerRef = useRef<PointerPosition | null>(null);
+  const activeTaskIdRef = useRef<string | null>(null);
+
+  const clearDrag = (): void => {
+    prospectiveRef.current = null;
+    pointerRef.current = null;
+    activeTaskIdRef.current = null;
+    setState(EMPTY_DRAG_STATE);
+    onDragActiveChange?.(false);
+  };
 
   useEffect(
     () => () => onDragActiveChange?.(false),
     [onDragActiveChange],
   );
+
   const activeTask =
     state.activeTaskId === null
       ? null
       : tasks.find((task) => task.id === state.activeTaskId) ?? null;
+  const activeRecurrence =
+    activeTask?.recurrence_series_id === null ||
+    activeTask?.recurrence_series_id === undefined
+      ? null
+      : recurrences.find(
+          (series) => series.id === activeTask.recurrence_series_id,
+        ) ?? null;
 
   return (
     <DragDropProvider
@@ -150,82 +359,133 @@ export function TaskDragProvider({
             sensor !== PointerSensor &&
             sensor !== KeyboardSensor,
         ),
-        PointerSensor.configure({
-          activationConstraints: [
-            new PointerActivationConstraints.Distance({ value: 6 }),
-          ],
-        }),
+        TaskPointerSensor,
         KeyboardSensor.configure({
           offset: 8,
         }),
       ]}
       onDragStart={({ operation }) => {
-        const taskId =
-          operation.source === null
-            ? null
-            : String(operation.source.id);
+        pointerRef.current = null;
+        const source = operation.source;
+        const taskId = source === null ? null : String(source.id);
         const task =
           taskId === null
             ? null
             : tasks.find((candidate) => candidate.id === taskId) ?? null;
-        setState({
-          activeTaskId: taskId,
-          sourceDate: task?.scheduled_date ?? null,
-          intent: null,
-        });
-        onDragActiveChange?.(taskId !== null);
-      }}
-      onDragOver={(event) => {
-        event.preventDefault();
-        const source = event.operation.source;
-        const target = event.operation.target;
-        if (source === null) {
-          setState((current) => ({ ...current, intent: null }));
+        if (task === null || task.completed_at !== null) {
+          clearDrag();
           return;
         }
-        const intent = dropIntent(
+
+        const activeBlockSize =
+          source?.element?.getBoundingClientRect().height ?? null;
+        prospectiveRef.current = null;
+        activeTaskIdRef.current = task.id;
+        setState({
+          activeTaskId: task.id,
+          prospective: null,
+          activeBlockSize,
+        });
+        onDragActiveChange?.(true);
+      }}
+      onDragMove={(event, manager) => {
+        const source = event.operation.source;
+        const { nativeEvent } = event;
+        const sourceId = source === null ? null : String(source.id);
+        if (
+          sourceId === null ||
+          activeTaskIdRef.current !== sourceId ||
+          !(nativeEvent instanceof PointerEvent)
+        ) {
+          if (
+            sourceId !== null &&
+            activeTaskIdRef.current === sourceId &&
+            nativeEvent instanceof KeyboardEvent
+          ) {
+            pointerRef.current = null;
+          }
+          return;
+        }
+
+        const pointer = {
+          x: nativeEvent.clientX,
+          y: nativeEvent.clientY,
+        };
+        pointerRef.current = pointer;
+        const prospective = pointerPlacement(
           tasks,
-          String(source.id),
-          todayCivilDate(),
-          target,
+          sourceId,
+          pointer,
+          manager.registry.droppables,
         );
-        setState((current) => ({ ...current, intent }));
+        prospectiveRef.current = prospective;
+        setState((current) => ({
+          ...current,
+          prospective,
+        }));
+      }}
+      onDragOver={(event, manager) => {
+        event.preventDefault();
+        const source = event.operation.source;
+        const sourceId = source === null ? null : String(source.id);
+        if (
+          sourceId === null ||
+          activeTaskIdRef.current !== sourceId
+        ) {
+          return;
+        }
+
+        const pointer = pointerRef.current;
+        const prospective =
+          pointer === null
+            ? targetPlacement(
+                tasks,
+                sourceId,
+                event.operation.target,
+              )
+            : pointerPlacement(
+                tasks,
+                sourceId,
+                pointer,
+                manager.registry.droppables,
+              );
+        prospectiveRef.current = prospective;
+        setState((current) => ({
+          ...current,
+          prospective,
+        }));
       }}
       onDragEnd={(event) => {
+        const prospective = prospectiveRef.current;
         const source = event.operation.source;
-        const target = event.operation.target;
-        const intent =
-          source === null
-            ? null
-            : dropIntent(
-                tasks,
-                String(source.id),
-                todayCivilDate(),
-                target,
-              );
-        setState(EMPTY_DRAG_STATE);
-        onDragActiveChange?.(false);
+        clearDrag();
 
-        if (event.canceled || source === null || intent === null) {
+        if (
+          event.canceled ||
+          source === null ||
+          prospective === null ||
+          prospective.activeTaskId !== String(source.id)
+        ) {
           return;
         }
 
         const task = tasks.find(
-          (candidate) => candidate.id === intent.task_id,
+          (candidate) =>
+            candidate.id === prospective.activeTaskId,
         );
         if (
           task === undefined ||
           task.completed_at !== null ||
-          (task.scheduled_date === intent.destination_date &&
-            task.position === intent.destination_index)
+          (task.scheduled_date === prospective.destinationDate &&
+            task.position === prospective.destinationIndex)
         ) {
           return;
         }
 
         void onMove(
-          intent.task_id,
-          intent.destination_date,
-          intent.destination_index,
+          prospective.activeTaskId,
+          prospective.destinationDate,
+          prospective.destinationIndex,
         );
       }}
     >
@@ -233,14 +493,18 @@ export function TaskDragProvider({
         <div
           className="jig-task-drag-scope"
           data-jig-drag-active={state.activeTaskId === null ? "false" : "true"}
-          data-jig-drop-date={state.intent?.destination_date ?? ""}
-          data-jig-drop-index={state.intent?.destination_index ?? ""}
+          data-jig-drop-date={state.prospective?.destinationDate ?? ""}
+          data-jig-drop-index={state.prospective?.destinationIndex ?? ""}
         >
           {children}
         </div>
         <DragOverlay>
           {activeTask === null ? null : (
-            <TaskDragOverlayCard task={activeTask} />
+            <TaskDragOverlayCard
+              task={activeTask}
+              recurrenceSeries={activeRecurrence}
+              now={now}
+            />
           )}
         </DragOverlay>
       </TaskDragContext.Provider>
@@ -248,33 +512,42 @@ export function TaskDragProvider({
   );
 }
 
-export interface DraggableTaskRowProps
+export interface SortableTaskRowProps
   extends Omit<
     TaskRowProps,
     "rowRef" | "dragHandleRef" | "isDragging"
   > {
   readonly index: number;
+  readonly canonicalIndex: number;
+  readonly date: string;
 }
 
-export function DraggableTaskRow({
+export function SortableTaskRow({
   task,
   index,
+  canonicalIndex,
+  date,
   ...rowProps
-}: DraggableTaskRowProps): React.ReactElement {
-  const draggable = useDraggable({
+}: SortableTaskRowProps): React.ReactElement {
+  const sortable = useSortable({
     id: task.id,
     type: "jig-task",
+    accept: "jig-task",
+    group: date,
+    index,
     data: {
-      date: task.scheduled_date,
+      date,
       index,
+      canonical_index: canonicalIndex,
     },
+    collisionPriority: 1,
   });
 
   const rowRef = (element: HTMLLIElement | null): void => {
-    draggable.ref(element);
+    sortable.ref(element);
   };
   const dragHandleRef = (element: HTMLSpanElement | null): void => {
-    draggable.handleRef(element);
+    sortable.handleRef(element);
   };
 
   return (
@@ -283,81 +556,37 @@ export function DraggableTaskRow({
       task={task}
       rowRef={rowRef}
       dragHandleRef={dragHandleRef}
-      isDragging={draggable.isDragging}
+      isDragging={sortable.isDragging}
     />
   );
 }
 
-export interface TaskInsertionSlotPresentationProps {
-  readonly slotRef?: Ref<HTMLLIElement> | undefined;
-  readonly slotIndex?: number | undefined;
-  readonly isDropTarget?: boolean | undefined;
-  readonly isPastDate?: boolean | undefined;
+export interface TaskProspectiveFootprintProps {
+  readonly activeTaskId: string;
+  readonly date: string;
+  readonly destinationIndex: number;
+  readonly blockSize: number | null;
 }
 
-export function TaskInsertionSlotPresentation({
-  slotRef,
-  slotIndex,
-  isDropTarget = false,
-  isPastDate = false,
-}: TaskInsertionSlotPresentationProps): React.ReactElement {
+export function TaskProspectiveFootprint({
+  activeTaskId,
+  date,
+  destinationIndex,
+  blockSize,
+}: TaskProspectiveFootprintProps): React.ReactElement {
   return (
     <li
-      {...(slotRef === undefined ? {} : { ref: slotRef })}
-      role="presentation"
-      className={[
-        "jig-task-insertion-slot",
-        isDropTarget ? "jig-task-insertion-slot-active" : "",
-        isPastDate ? "jig-task-insertion-slot-unavailable" : "",
-        isPastDate && isDropTarget
-          ? "jig-task-insertion-slot-unavailable-active"
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      {...(slotIndex === undefined
-        ? {}
-        : {
-            "data-jig-drop-slot": slotIndex,
-            "data-jig-drop-allowed": isPastDate ? "false" : "true",
-          })}
+      className="jig-task-prospective-footprint"
+      data-jig-prospective-footprint="true"
       aria-hidden="true"
-    >
-      <span className="jig-task-drop-indicator" />
-    </li>
-  );
-}
-
-export interface TaskInsertionSlotProps {
-  readonly date: string;
-  readonly slotIndex: number;
-}
-
-export function TaskInsertionSlot({
-  date,
-  slotIndex,
-}: TaskInsertionSlotProps): React.ReactElement {
-  const isPastDate = !isActiveScheduleDate(todayCivilDate(), date);
-  const { ref, isDropTarget } = useDroppable({
-    id: `jig-slot-${date}-${slotIndex}`,
-    type: "jig-insertion-slot",
-    accept: "jig-task",
-    data: {
-      date,
-      slot_index: slotIndex,
-    },
-  });
-
-  const slotRef = (element: HTMLLIElement | null): void => {
-    ref(element);
-  };
-
-  return (
-    <TaskInsertionSlotPresentation
-      slotRef={slotRef}
-      slotIndex={slotIndex}
-      isDropTarget={isDropTarget}
-      isPastDate={isPastDate}
+      style={
+        blockSize === null
+          ? undefined
+          : {
+              blockSize: `${blockSize}px`,
+              minBlockSize: `${blockSize}px`,
+            }
+      }
     />
   );
 }
@@ -374,25 +603,47 @@ export function DateDropZone({
   className,
 }: DateDropZoneProps): React.ReactElement {
   const state = useTaskDragState();
-  const crossDateActive =
-    state.intent?.destination_date === date &&
-    state.sourceDate !== null &&
-    state.sourceDate !== date;
+  const isActiveDate =
+    state.prospective?.destinationDate === date;
   const unavailableActive =
-    crossDateActive && !isActiveScheduleDate(todayCivilDate(), date);
-
+    isActiveDate && !isActiveScheduleDate(todayCivilDate(), date);
+  const { ref, isDropTarget } = useDroppable({
+    id: `jig-date-${date}`,
+    type: "jig-date",
+    accept: "jig-task",
+    data: { date },
+    collisionPriority: -1,
+  });
+  const { ref: tailGeometryRef } = useDroppable({
+    id: `jig-date-tail-geometry-${date}`,
+    type: "jig-date-tail-geometry",
+    accept: "jig-task",
+    data: { date },
+    // Geometry probe only: the date container remains the semantic target.
+    collisionPriority: -2,
+  });
   return (
     <div
+      ref={ref}
       className={[
         className,
         "jig-date-drop-zone",
-        crossDateActive ? "jig-date-drop-zone-active" : "",
+        isActiveDate || isDropTarget
+          ? "jig-date-drop-zone-active"
+          : "",
         unavailableActive ? "jig-date-drop-zone-unavailable" : "",
       ]
         .filter(Boolean)
         .join(" ")}
+      data-jig-drop-date-container={date}
     >
       {children}
+      <div
+        ref={tailGeometryRef}
+        className="jig-date-drop-tail"
+        data-jig-drop-tail={date}
+        aria-hidden="true"
+      />
     </div>
   );
 }

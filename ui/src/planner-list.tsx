@@ -4,8 +4,9 @@ import type { RecurrenceSeries } from "../../src/core/recurrence";
 import type { Priority, Task } from "../../src/core/task";
 import { outstandingForDate } from "../../src/core/planning";
 import {
-  DraggableTaskRow,
-  TaskInsertionSlot,
+  SortableTaskRow,
+  TaskProspectiveFootprint,
+  useTaskDragState,
 } from "./drag";
 
 export interface PlannerTaskListProps {
@@ -34,6 +35,8 @@ interface PlannerSequenceRowProps
   readonly task: Task;
   readonly recurrenceSeries: RecurrenceSeries | null;
   readonly index: number;
+  readonly canonicalIndex: number;
+  readonly sortableIndex: number;
   readonly date: string;
   readonly sequenceLength: number;
   readonly isSelected: boolean;
@@ -43,16 +46,31 @@ interface PlannerTaskPresentationItem {
   readonly task: Task;
   readonly recurrenceSeries: RecurrenceSeries | null;
   readonly index: number;
+  readonly canonicalIndex: number;
   readonly sequenceLength: number;
 }
 
+type PlannerVisibleItem =
+  | {
+      readonly kind: "task";
+      readonly item: PlannerTaskPresentationItem;
+      readonly sortableIndex: number;
+    }
+  | {
+      readonly kind: "prospective";
+      readonly activeTaskId: string;
+      readonly date: string;
+      readonly destinationIndex: number;
+      readonly blockSize: number | null;
+    };
+
 interface PlannerTaskSequenceProps {
-  readonly items: readonly PlannerTaskPresentationItem[];
+  readonly items: readonly PlannerVisibleItem[];
   readonly listRef: Ref<HTMLUListElement>;
   readonly animatedLayout: ReturnType<typeof useAnimatedLayout>;
-  readonly renderInsertionSlot: (slotIndex: number) => React.ReactNode;
   readonly renderTaskRow: (
     item: PlannerTaskPresentationItem,
+    sortableIndex: number,
   ) => React.ReactNode;
 }
 
@@ -71,15 +89,68 @@ function plannerTaskPresentationItems(
             (series) => series.id === task.recurrence_series_id,
           ) ?? null,
     index,
+    canonicalIndex: index,
     sequenceLength: outstanding.length,
   }));
+}
+
+function projectedPlannerItems(
+  items: readonly PlannerTaskPresentationItem[],
+  date: string,
+  drag: ReturnType<typeof useTaskDragState>,
+): readonly PlannerVisibleItem[] {
+  if (drag.prospective === null) {
+    return items.map((item) => ({
+      kind: "task" as const,
+      item,
+      sortableIndex: item.index,
+    }));
+  }
+
+  const remaining = items
+    .filter((item) => item.task.id !== drag.prospective?.activeTaskId)
+    .map((item, index, sequence) => ({
+      ...item,
+      index,
+      sequenceLength: sequence.length,
+    }));
+
+  const visible: PlannerVisibleItem[] = remaining.map((item, index) => ({
+    kind: "task",
+    item,
+    sortableIndex: index,
+  }));
+
+  if (drag.prospective.destinationDate !== date) {
+    return visible;
+  }
+
+  const destinationIndex = Math.min(
+    drag.prospective.destinationIndex,
+    visible.length,
+  );
+  visible.splice(destinationIndex, 0, {
+    kind: "prospective",
+    activeTaskId: drag.prospective.activeTaskId,
+    date,
+    destinationIndex,
+    blockSize: drag.activeBlockSize,
+  });
+
+  return visible.map((item, visualIndex) =>
+    item.kind === "task"
+      ? {
+          ...item,
+          sortableIndex: visualIndex,
+        }
+      : item,
+  );
 }
 
 function PlannerTaskSequence({
   items,
   listRef,
   animatedLayout,
-  renderInsertionSlot,
   renderTaskRow,
 }: PlannerTaskSequenceProps): React.ReactElement {
   return (
@@ -90,13 +161,21 @@ function PlannerTaskSequence({
       edge="padded"
       className="jig-task-card-list"
     >
-      {items.map((item) => (
-        <Fragment key={item.task.id}>
-          {renderInsertionSlot(item.index)}
-          {renderTaskRow(item)}
-        </Fragment>
-      ))}
-      {renderInsertionSlot(items.length)}
+      {items.map((visible) =>
+        visible.kind === "prospective" ? (
+          <TaskProspectiveFootprint
+            key={`prospective-${visible.activeTaskId}`}
+            activeTaskId={visible.activeTaskId}
+            date={visible.date}
+            destinationIndex={visible.destinationIndex}
+            blockSize={visible.blockSize}
+          />
+        ) : (
+          <Fragment key={visible.item.task.id}>
+            {renderTaskRow(visible.item, visible.sortableIndex)}
+          </Fragment>
+        ),
+      )}
     </List>
   );
 }
@@ -106,6 +185,8 @@ function PlannerSequenceRow({
   recurrenceSeries,
   now,
   index,
+  canonicalIndex,
+  sortableIndex,
   date,
   sequenceLength,
   isSelected,
@@ -117,11 +198,13 @@ function PlannerSequenceRow({
   onMove,
 }: PlannerSequenceRowProps): React.ReactElement {
   return (
-    <DraggableTaskRow
+    <SortableTaskRow
       task={task}
       recurrenceSeries={recurrenceSeries}
       now={now}
-      index={index}
+      index={sortableIndex}
+      canonicalIndex={canonicalIndex}
+      date={date}
       isSelected={isSelected}
       onSelect={() => onSelectTask(task)}
       onToggleComplete={() => {
@@ -153,10 +236,16 @@ function PlannerSequenceRow({
 export function PlannerTaskList(
   props: PlannerTaskListProps,
 ): React.ReactElement {
-  const items = plannerTaskPresentationItems(
+  const drag = useTaskDragState();
+  const canonicalItems = plannerTaskPresentationItems(
     props.tasks,
     props.recurrences,
     props.date,
+  );
+  const items = projectedPlannerItems(
+    canonicalItems,
+    props.date,
+    drag,
   );
   const listRef = useRef<HTMLUListElement>(null);
   const animatedLayout = useAnimatedLayout({ containerRef: listRef });
@@ -166,15 +255,14 @@ export function PlannerTaskList(
       items={items}
       listRef={listRef}
       animatedLayout={animatedLayout}
-      renderInsertionSlot={(slotIndex) => (
-        <TaskInsertionSlot date={props.date} slotIndex={slotIndex} />
-      )}
-      renderTaskRow={(item) => (
+      renderTaskRow={(item, sortableIndex) => (
         <PlannerSequenceRow
           task={item.task}
           recurrenceSeries={item.recurrenceSeries}
           now={props.now}
           index={item.index}
+          canonicalIndex={item.canonicalIndex}
+          sortableIndex={sortableIndex}
           date={props.date}
           sequenceLength={item.sequenceLength}
           isSelected={props.selectedTask?.id === item.task.id}

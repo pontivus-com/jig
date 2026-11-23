@@ -11,7 +11,7 @@ import {
   expect,
   it,
 } from "vitest";
-import { runGit } from "../../src/shell/git";
+import { runGit } from "../../src/shell/git/process";
 import { acquireWriterLease } from "../../src/shell/writer";
 
 const roots: string[] = [];

@@ -1,9 +1,9 @@
-import type { GitHubReconnectSnapshot } from "./github";
+import type { GitHubReconnectSnapshot } from "./model";
 import {
   GitHubDeviceFlowSession,
   GitHubFlowWakeup,
-} from "./github-device-flow";
-import { GitHubAuthError } from "./github-auth";
+} from "./device-flow";
+import { GitHubAuthError } from "./auth";
 
 type Sleep = (milliseconds: number) => Promise<void>;
 

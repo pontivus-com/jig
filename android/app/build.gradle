@@ -23,9 +23,24 @@ def jigVersionCode =
     jigVersionParts[1] * 1_000 +
     jigVersionParts[2]
 
+def jigCiKeystorePath = System.getenv("JIG_ANDROID_CI_KEYSTORE")
+def jigCiSigningEnabled =
+    jigCiKeystorePath != null && !jigCiKeystorePath.trim().isEmpty()
+
 android {
     namespace = "com.pontivus.jig"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    signingConfigs {
+        if (jigCiSigningEnabled) {
+            create("jigCiDebug") {
+                storeFile file(jigCiKeystorePath)
+                storePassword "jig-ci-debug"
+                keyAlias "jig-ci-debug"
+                keyPassword "jig-ci-debug"
+            }
+        }
+    }
 
     defaultConfig {
         applicationId "com.pontivus.jig"
@@ -42,6 +57,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            if (jigCiSigningEnabled) {
+                signingConfig signingConfigs.jigCiDebug
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles(

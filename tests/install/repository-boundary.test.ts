@@ -17,7 +17,7 @@ import {
   InstallationError,
   validateSelectedRepository,
 } from "../../src/shell/setup";
-import { runGit } from "../../src/shell/git";
+import { runGit } from "../../src/shell/git/process";
 
 const roots: string[] = [];
 

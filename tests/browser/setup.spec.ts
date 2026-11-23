@@ -55,6 +55,43 @@ function diagnostics(remoteHealthy = true) {
       "/home/example/.local/share/jig-data/repositories/github/pontivus-com/planning",
     portable_format_version: 2,
     repository_adapter_healthy: remoteHealthy,
+    synchronization: remoteHealthy
+      ? {
+          phase: "idle",
+          reason: null,
+          retryable: null,
+          attempt_count: 0,
+          last_attempt_at: null,
+          next_retry_at: null,
+          local_head: null,
+          remote_head: null,
+          last_adopted_head: null,
+          lineage: null,
+          remote_name: "origin",
+          remote_location:
+            "https://github.com/pontivus-com/planning.git",
+          recovery_attempted: false,
+          recovery_outcome: null,
+          error_summary: null,
+        }
+      : {
+          phase: "observe-remote",
+          reason: "authentication",
+          retryable: false,
+          attempt_count: 1,
+          last_attempt_at: "2026-11-22T00:00:00.000Z",
+          next_retry_at: null,
+          local_head: null,
+          remote_head: null,
+          last_adopted_head: null,
+          lineage: null,
+          remote_name: "origin",
+          remote_location:
+            "https://github.com/pontivus-com/planning.git",
+          recovery_attempted: false,
+          recovery_outcome: null,
+          error_summary: "Git authentication is unavailable",
+        },
   };
 }
 
@@ -199,7 +236,10 @@ test("governed onboarding adapts from desktop to narrow touch geometry", async (
   ).toHaveCount(0);
   await expect(page.locator(".jig-setup-benefit")).toHaveCount(3);
   await expect(page.locator(".jig-setup-benefit-icon svg")).toHaveCount(3);
-  await expect(page.locator(".jig-setup-choice-desktop")).toBeVisible();
+  await expect(
+    page.locator('[data-jig-setup-presentation="desktop"]'),
+  ).toBeVisible();
+  await expect(page.locator(".jig-setup-choice")).toBeVisible();
 
   const desktopScrollGeometry = await page
     .locator(".jig-content-frame-onboarding")
@@ -258,7 +298,10 @@ test("governed onboarding adapts from desktop to narrow touch geometry", async (
     expect(narrowColumns.split(" ")).toHaveLength(1);
     await expect(page.locator(".jig-setup-benefit")).toHaveCount(3);
     await expect(page.locator(".jig-setup-benefit-icon svg")).toHaveCount(3);
-    await expect(page.locator(".jig-setup-choice-narrow")).toBeVisible();
+    await expect(
+      page.locator('[data-jig-setup-presentation="narrow"]'),
+    ).toBeVisible();
+    await expect(page.locator(".jig-setup-choice")).toBeVisible();
     await expect(page.locator(".jig-setup-card")).toHaveCount(0);
 
     const connectBottom = connectBox.y + connectBox.height;
@@ -382,7 +425,9 @@ test("Connect GitHub shows the provider-required code without protocol controls"
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(page.locator(".jig-setup-value")).toContainText(
+    "Plan your week. Keep the data yours.",
+  );
   await expect(
     page.getByRole("heading", { name: "Authorize Jig on GitHub" }),
   ).toBeVisible();
@@ -523,7 +568,9 @@ test("GitHub access is observed automatically and stops only for a genuine repos
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(page.locator(".jig-setup-value")).toContainText(
+    "Plan your week. Keep the data yours.",
+  );
   await expect(
     page.getByRole("heading", {
       name: "Choose your planning repository",
@@ -605,7 +652,9 @@ test("finishing and recovery preserve governed desktop and narrow hierarchy", as
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(page.locator(".jig-setup-value")).toContainText(
+    "Plan your week. Keep the data yours.",
+  );
   await page.screenshot({
     path: testInfo.outputPath("v1.1-onboarding-finishing-mobile-390.png"),
     fullPage: true,
@@ -636,7 +685,9 @@ test("finishing and recovery preserve governed desktop and narrow hierarchy", as
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator(".jig-setup-value")).toHaveCount(0);
+  await expect(page.locator(".jig-setup-value")).toContainText(
+    "Plan your week. Keep the data yours.",
+  );
   await expect(
     page.getByText("GitHub hasn’t made a repository available yet.", {
       exact: true,

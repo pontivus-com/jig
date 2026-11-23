@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import {
   apiCommand,
   apiState,
@@ -14,6 +14,11 @@ test.beforeEach(async ({ page }) => {
 
 function activeWeek(page: Page) {
   return page.locator(".jig-planner-surface");
+}
+
+
+function applicationScrollOwner(page: Page) {
+  return page.locator("#astryx-app-shell-main");
 }
 
 function expectNear(actual: number, expected: number, tolerance = 3): void {
@@ -81,13 +86,53 @@ function rgbChannels(value: string): readonly [number, number, number] {
   throw new Error(`Unsupported computed color: ${value}`);
 }
 
+function parsedOklab(
+  value: string,
+): readonly [number, number, number] | null {
+  const match = value.match(
+    /oklab\(\s*([-+\d.]+%?)\s+([-+\d.]+)\s+([-+\d.]+)/,
+  );
+  if (
+    match?.[1] === undefined ||
+    match[2] === undefined ||
+    match[3] === undefined
+  ) {
+    return null;
+  }
+  const lightness = match[1].endsWith("%")
+    ? Number(match[1].slice(0, -1)) / 100
+    : Number(match[1]);
+  return [lightness, Number(match[2]), Number(match[3])];
+}
+
+function linearSrgbFromOklab(
+  value: readonly [number, number, number],
+): readonly [number, number, number] {
+  const [lightness, a, b] = value;
+  const lRoot = lightness + 0.3963377774 * a + 0.2158037573 * b;
+  const mRoot = lightness - 0.1055613458 * a - 0.0638541728 * b;
+  const sRoot = lightness - 0.0894841775 * a - 1.291485548 * b;
+  const l = lRoot ** 3;
+  const m = mRoot ** 3;
+  const s = sRoot ** 3;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+}
+
 function relativeLuminance(value: string): number {
-  const channels = rgbChannels(value).map((channel) => {
-    const normalized = channel / 255;
-    return normalized <= 0.04045
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4;
-  });
+  const directOklab = parsedOklab(value);
+  const channels =
+    directOklab === null
+      ? rgbChannels(value).map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
+        })
+      : linearSrgbFromOklab(directOklab);
   return (
     0.2126 * (channels[0] ?? 0) +
     0.7152 * (channels[1] ?? 0) +
@@ -103,16 +148,64 @@ function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function oklab(value: string): readonly [number, number, number] {
+  const direct = parsedOklab(value);
+  if (direct !== null) {
+    return direct;
+  }
+
+  const [red, green, blue] = rgbChannels(value).map((channel) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045
+      ? normalized / 12.92
+      : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+
+  const l = Math.cbrt(
+    0.4122214708 * (red ?? 0) +
+      0.5363325363 * (green ?? 0) +
+      0.0514459929 * (blue ?? 0),
+  );
+  const m = Math.cbrt(
+    0.2119034982 * (red ?? 0) +
+      0.6806995451 * (green ?? 0) +
+      0.1073969566 * (blue ?? 0),
+  );
+  const s = Math.cbrt(
+    0.0883024619 * (red ?? 0) +
+      0.2817188376 * (green ?? 0) +
+      0.6299787005 * (blue ?? 0),
+  );
+
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function oklabDistance(first: string, second: string): number {
+  const a = oklab(first);
+  const b = oklab(second);
+  return Math.hypot(
+    (a[0] ?? 0) - (b[0] ?? 0),
+    (a[1] ?? 0) - (b[1] ?? 0),
+    (a[2] ?? 0) - (b[2] ?? 0),
+  );
+}
+
 async function themeSnapshot(page: Page): Promise<{
   readonly rootTheme: string | null;
   readonly explicitMode: string | null;
   readonly bodyBackground: string;
   readonly bodyText: string;
   readonly chromeBackground: string;
+  readonly contentBackground: string;
   readonly plannerBackground: string;
   readonly laneBackground: string;
   readonly taskBackground: string;
   readonly taskText: string;
+  readonly taskMetaText: string;
   readonly taskBorder: string;
   readonly todayBorder: string;
   readonly logoPrimary: string;
@@ -121,6 +214,7 @@ async function themeSnapshot(page: Page): Promise<{
     readonly foreground: string;
     readonly background: string;
   }[];
+  readonly motionDurations: readonly string[];
 }> {
   const active = activeWeek(page);
   await expect(active.locator(".jig-task-card").first()).toBeVisible();
@@ -134,6 +228,7 @@ async function themeSnapshot(page: Page): Promise<{
       '.jig-planner-surface',
     );
     const header = document.querySelector<HTMLElement>(".jig-app-header");
+    const content = document.querySelector<HTMLElement>(".jig-content-configured");
     const lane = active?.querySelector<HTMLElement>(".jig-week-column") ?? null;
     const task = active?.querySelector<HTMLElement>(".jig-task-card") ?? null;
     const today =
@@ -144,6 +239,7 @@ async function themeSnapshot(page: Page): Promise<{
     const logoAccent = document.querySelector<SVGElement>(".jig-logo circle");
     if (
       header === null ||
+      content === null ||
       lane === null ||
       task === null ||
       today === null ||
@@ -155,6 +251,10 @@ async function themeSnapshot(page: Page): Promise<{
 
     const bodyStyle = getComputedStyle(document.body);
     const taskStyle = getComputedStyle(task);
+    const taskMeta = task.querySelector<HTMLElement>(".jig-task-meta");
+    if (taskMeta === null) {
+      throw new Error("Task metadata fixture is unavailable");
+    }
     const statusPairs = (["info", "success", "warning", "error"] as const).map(
       (status) => {
         const probe = document.createElement("span");
@@ -178,15 +278,32 @@ async function themeSnapshot(page: Page): Promise<{
       bodyBackground: bodyStyle.backgroundColor,
       bodyText: bodyStyle.color,
       chromeBackground: getComputedStyle(header).backgroundColor,
+      contentBackground: getComputedStyle(content).backgroundColor,
       plannerBackground: getComputedStyle(active ?? document.body).backgroundColor,
       laneBackground: getComputedStyle(lane).backgroundColor,
       taskBackground: taskStyle.backgroundColor,
       taskText: taskStyle.color,
+      taskMetaText: getComputedStyle(taskMeta).color,
       taskBorder: taskStyle.borderColor,
       todayBorder: getComputedStyle(today).borderBottomColor,
       logoPrimary: getComputedStyle(logoPrimary).stroke || getComputedStyle(logoPrimary).fill,
       logoAccent: getComputedStyle(logoAccent).fill,
       statusPairs,
+      motionDurations: [
+        "--duration-fast-min",
+        "--duration-fast",
+        "--duration-fast-max",
+        "--duration-medium-min",
+        "--duration-medium",
+        "--duration-medium-max",
+        "--duration-slow-min",
+        "--duration-slow",
+        "--duration-slow-max",
+      ].map((token) =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue(token)
+          .trim(),
+      ),
     };
   });
 }
@@ -438,13 +555,13 @@ test("retains governed synchronization-attention evidence without exposing techn
     .locator(".jig-attention-banner")
     .evaluate((element) => {
       const icon = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-icon",
+        ".jig-feedback-icon",
       );
       const message = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-message",
+        ".jig-feedback-message",
       );
       const action = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-action",
+        ".jig-feedback-action",
       );
       if (icon === null || message === null || action === null) {
         throw new Error("Attention banner geometry fixture unavailable");
@@ -473,10 +590,20 @@ test("retains governed synchronization-attention evidence without exposing techn
   expect(desktopBannerGeometry.overflow).toBeLessThanOrEqual(1);
   const headerBox = await page.locator(".jig-app-header").boundingBox();
   const bannerBox = await page.locator(".jig-attention-banner").boundingBox();
+  const durableRegionBox = await page
+    .locator(".jig-feedback-durable-desktop")
+    .boundingBox();
   expect(headerBox).not.toBeNull();
   expect(bannerBox).not.toBeNull();
-  if (headerBox !== null && bannerBox !== null) {
+  expect(durableRegionBox).not.toBeNull();
+  if (headerBox !== null && bannerBox !== null && durableRegionBox !== null) {
     expect(bannerBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height);
+    expect(durableRegionBox.width).toBeLessThanOrEqual(800 + 1);
+    expectNear(
+      durableRegionBox.x + durableRegionBox.width / 2,
+      1440 / 2,
+      1,
+    );
   }
   await page.screenshot({
     path: testInfo.outputPath("v1.1-sync-attention-planner-desktop.png"),
@@ -535,13 +662,13 @@ test("retains governed synchronization-attention evidence without exposing techn
     .locator(".jig-attention-banner")
     .evaluate((element) => {
       const icon = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-icon",
+        ".jig-feedback-icon",
       );
       const message = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-message",
+        ".jig-feedback-message",
       );
       const action = element.querySelector<HTMLElement>(
-        ".jig-attention-banner-action",
+        ".jig-feedback-action",
       );
       if (icon === null || message === null || action === null) {
         throw new Error("Mobile attention banner geometry fixture unavailable");
@@ -567,6 +694,14 @@ test("retains governed synchronization-attention evidence without exposing techn
     mobileBannerGeometry.messageBottom - 1,
   );
   expect(mobileBannerGeometry.overflow).toBeLessThanOrEqual(1);
+  const narrowDurableBox = await page
+    .locator(".jig-feedback-durable-narrow")
+    .boundingBox();
+  expect(narrowDurableBox).not.toBeNull();
+  if (narrowDurableBox !== null) {
+    expect(narrowDurableBox.x).toBeGreaterThan(0);
+    expect(narrowDurableBox.x + narrowDurableBox.width).toBeLessThan(320);
+  }
   await page
     .getByRole("button", { name: "Dismiss notification", exact: true })
     .click();
@@ -640,6 +775,68 @@ test("temporal group stays page-centered in one row and navigation has no select
   );
 });
 
+test("narrow Today consumes one governed scroll request and does not replay on reflow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    const calls: string[] = [];
+    Reflect.set(window, "__jigScrollBehaviors", calls);
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function scrollIntoView(
+      options?: boolean | ScrollIntoViewOptions,
+    ): void {
+      if (typeof options === "object" && options !== null) {
+        calls.push(options.behavior ?? "auto");
+      }
+      original.call(this, options);
+    };
+  });
+  await page.reload();
+  await waitForResponsiveHeader(page, 390);
+
+  const scrollBehaviors = async (): Promise<readonly string[]> =>
+    page.evaluate(() => {
+      const value = Reflect.get(window, "__jigScrollBehaviors");
+      return Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === "string")
+        : [];
+    });
+  const clearScrollBehaviors = async (): Promise<void> => {
+    await page.evaluate(() => {
+      const value = Reflect.get(window, "__jigScrollBehaviors");
+      if (Array.isArray(value)) {
+        value.splice(0, value.length);
+      }
+    });
+  };
+
+  await expect.poll(scrollBehaviors).toContain("auto");
+  await clearScrollBehaviors();
+
+  await page.getByRole("button", { name: "Next horizon" }).click();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect.poll(scrollBehaviors).toEqual(["smooth"]);
+
+  await clearScrollBehaviors();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect.poll(scrollBehaviors).toEqual(["smooth"]);
+
+  await clearScrollBehaviors();
+  await page.setViewportSize({ width: 1168, height: 844 });
+  await waitForResponsiveHeader(page, 1168);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  await page.waitForTimeout(100);
+  expect(await scrollBehaviors()).toEqual([]);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Next horizon" }).click();
+  await clearScrollBehaviors();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect.poll(scrollBehaviors).toEqual(["auto"]);
+});
+
 test("desktop lanes keep equal widths but content-driven independent heights", async ({
   page,
 }) => {
@@ -684,52 +881,51 @@ test("narrow Planner opens with the current day at the top", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await waitForResponsiveHeader(page, 390);
 
-  const frame = page.locator(".jig-content-frame");
+  const scrollOwner = applicationScrollOwner(page);
   const today = activeWeek(page).locator(".jig-week-column-today");
   await expect(today).toBeVisible();
+  await expect(scrollOwner).toHaveCount(1);
 
   const initialGeometry = await page.evaluate(() => {
-    const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+    const owner = document.querySelector<HTMLElement>("#astryx-app-shell-main");
     const active = document.querySelector<HTMLElement>(
-      '.jig-planner-surface',
+      ".jig-planner-surface",
     );
     const today =
       active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
-    if (frame === null || today === null) {
+    if (owner === null || today === null) {
       throw new Error("Narrow Planner scroll geometry unavailable");
     }
     return {
-      frameTop: frame.getBoundingClientRect().top,
+      ownerTop: owner.getBoundingClientRect().top,
       todayTop: today.getBoundingClientRect().top,
-      scrollTop: frame.scrollTop,
+      scrollTop: owner.scrollTop,
     };
   });
 
-  expectNear(initialGeometry.todayTop, initialGeometry.frameTop, 1);
+  expectNear(initialGeometry.todayTop, initialGeometry.ownerTop, 1);
   expect(initialGeometry.scrollTop).toBeGreaterThanOrEqual(0);
 
-  await frame.evaluate((element) => {
+  await scrollOwner.evaluate((element) => {
     element.scrollTop = 0;
   });
-  await expect
-    .poll(() => today.boundingBox())
-    .not.toBeNull();
+  await expect.poll(() => today.boundingBox()).not.toBeNull();
   const scrolledUpGeometry = await page.evaluate(() => {
-    const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+    const owner = document.querySelector<HTMLElement>("#astryx-app-shell-main");
     const active = document.querySelector<HTMLElement>(
-      '.jig-planner-surface',
+      ".jig-planner-surface",
     );
     const today =
       active?.querySelector<HTMLElement>(".jig-week-column-today") ?? null;
-    if (frame === null || today === null) {
+    if (owner === null || today === null) {
       throw new Error("Narrow Planner scroll geometry unavailable");
     }
     return {
-      frameTop: frame.getBoundingClientRect().top,
+      ownerTop: owner.getBoundingClientRect().top,
       todayTop: today.getBoundingClientRect().top,
     };
   });
-  expectNear(scrolledUpGeometry.todayTop, scrolledUpGeometry.frameTop, 1);
+  expectNear(scrolledUpGeometry.todayTop, scrolledUpGeometry.ownerTop, 1);
 });
 
 test("global Add exposes the full form and defaults to today", async ({
@@ -875,6 +1071,53 @@ test("adding and editing a Task confirm success and close the workspace", async 
       .getByRole("status")
       .filter({ hasText: "Task added" });
     await expect(addedConfirmation).toBeVisible();
+
+    if (width >= 1168) {
+      const placement = page.locator(".jig-feedback-transient-desktop");
+      await expect(placement).toHaveCSS("position", "absolute");
+      const stackBox = await placement
+        .locator(".jig-feedback-transient-stack")
+        .boundingBox();
+      expect(stackBox).not.toBeNull();
+      if (stackBox !== null) {
+        expect(stackBox.width).toBeLessThanOrEqual(384 + 1);
+      }
+      const beforeScroll = await addedConfirmation.boundingBox();
+      await applicationScrollOwner(page).evaluate((element) => {
+        element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
+      });
+      const afterScroll = await addedConfirmation.boundingBox();
+      expect(beforeScroll).not.toBeNull();
+      expect(afterScroll).not.toBeNull();
+      if (beforeScroll !== null && afterScroll !== null) {
+        expectNear(afterScroll.y, beforeScroll.y, 1);
+      }
+    } else {
+      const placement = page.locator(".jig-feedback-transient-narrow");
+      await expect(placement).toHaveCSS("position", "fixed");
+      const confirmationBox = await addedConfirmation.boundingBox();
+      const navigationBox = await page
+        .getByRole("navigation", { name: "Primary" })
+        .boundingBox();
+      const fabBox = await page.locator(".jig-mobile-add-fab").boundingBox();
+      expect(confirmationBox).not.toBeNull();
+      expect(navigationBox).not.toBeNull();
+      expect(fabBox).not.toBeNull();
+      if (
+        confirmationBox !== null &&
+        navigationBox !== null &&
+        fabBox !== null
+      ) {
+        expect(confirmationBox.y + confirmationBox.height).toBeLessThan(
+          navigationBox.y,
+        );
+        expect(
+          confirmationBox.y + confirmationBox.height,
+          "narrow success feedback must clear the Planner FAB",
+        ).toBeLessThanOrEqual(fabBox.y);
+      }
+    }
+
     await addedConfirmation
       .getByRole("button", { name: "Dismiss confirmation" })
       .click();
@@ -903,11 +1146,21 @@ test("adding and editing a Task confirm success and close the workspace", async 
       scrollRegion.scrollTop = scrollRegion.scrollHeight;
     });
     await editWorkspace.getByLabel("Title").fill(`Edited ${width}`);
+    let saveCommandCount = 0;
+    const observeSaveCommand = (request: Request): void => {
+      const url = new URL(request.url());
+      if (url.pathname === "/api/v1/commands" && request.method() === "POST") {
+        saveCommandCount += 1;
+      }
+    };
+    page.on("request", observeSaveCommand);
     await editWorkspace.getByRole("button", {
       name: "Save",
       exact: true,
     }).click();
     await expect(editWorkspace).toBeHidden();
+    await expect.poll(() => saveCommandCount).toBe(1);
+    page.off("request", observeSaveCommand);
     await expect(
       page.getByRole("status").filter({ hasText: "Task saved" }),
     ).toBeVisible();
@@ -922,6 +1175,16 @@ test("adding and editing a Task confirm success and close the workspace", async 
     if (width < 600) {
       await expect(reopenedTitle).toBeFocused();
     }
+    await expect
+      .poll(() =>
+        reopenedAddWorkspace.evaluate(
+          (dialog) =>
+            dialog
+              .getAnimations({ subtree: true })
+              .filter((animation) => animation.playState === "running").length,
+        ),
+      )
+      .toBe(0);
     const titleBox = await reopenedTitle.boundingBox();
     const workspaceBox = await reopenedAddWorkspace.boundingBox();
     expect(titleBox).not.toBeNull();
@@ -953,6 +1216,33 @@ test("adding and editing a Task confirm success and close the workspace", async 
       page.getByRole("status").filter({ hasText: "Task completed" }),
     ).toBeVisible();
   }
+});
+
+test("reduced motion dismisses transient feedback without an exit-animation wait", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await resetCanonicalTasks(page);
+  await page.reload();
+
+  await page.locator(".jig-mobile-add-fab").click();
+  const workspace = page.getByRole("dialog", { name: "Add task" });
+  await workspace.getByLabel("Title").fill("Reduced feedback");
+  await workspace.getByRole("button", {
+    name: "Add task",
+    exact: true,
+  }).click();
+
+  const confirmation = page
+    .getByRole("status")
+    .filter({ hasText: "Task added" });
+  await expect(confirmation).toBeVisible();
+  await confirmation
+    .getByRole("button", { name: "Dismiss confirmation" })
+    .click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(page.locator(".jig-success-confirmation-exiting")).toHaveCount(0);
 });
 
 test("selecting another Task retargets the open editable workspace", async ({ page }) => {
@@ -1024,7 +1314,7 @@ test("desktop header stays compact while narrow header uses sticky destination-s
     const topBefore = await page.locator(".jig-app-header-narrow").evaluate(
       (element) => element.getBoundingClientRect().top,
     );
-    await page.locator(".jig-content-frame").evaluate((element) => {
+    await applicationScrollOwner(page).evaluate((element) => {
       element.scrollTop = 500;
     });
     const topAfter = await page.locator(".jig-app-header-narrow").evaluate(
@@ -1050,6 +1340,59 @@ test("desktop header stays compact while narrow header uses sticky destination-s
     const narrowPlannerHeight = await headerHeight(page);
     expect(narrowPlannerHeight).toBeGreaterThan(narrowSettingsHeight);
   }
+});
+
+test("narrow Task workspace keeps the Close action readable under a long valid title", async ({
+  page,
+}) => {
+  const today = await browserCivilDate(page);
+  const title =
+    "High priority quarterly planning review with deliberately long but valid title";
+  await createTask(page, title, today, "HIGH");
+  await page.reload();
+  await page.setViewportSize({ width: 320, height: 844 });
+
+  await page.getByText(title, { exact: true }).click();
+  const workspace = page.getByRole("dialog", { name: title });
+  const close = workspace.getByRole("button", {
+    name: "Close",
+    exact: true,
+  });
+  await expect(close).toBeVisible();
+
+  const geometry = await close.evaluate((button) => {
+    const walker = document.createTreeWalker(
+      button,
+      NodeFilter.SHOW_TEXT,
+    );
+    let textNode: Node | null = walker.nextNode();
+    while (
+      textNode !== null &&
+      textNode.textContent?.trim() !== "Close"
+    ) {
+      textNode = walker.nextNode();
+    }
+    if (textNode === null) {
+      throw new Error("Close label text node unavailable");
+    }
+    const range = document.createRange();
+    range.selectNode(textNode);
+    const text = range.getBoundingClientRect();
+    const control = button.getBoundingClientRect();
+    return {
+      controlLeft: control.left,
+      controlRight: control.right,
+      textLeft: text.left,
+      textRight: text.right,
+    };
+  });
+
+  expect(geometry.textLeft).toBeGreaterThanOrEqual(
+    geometry.controlLeft - 1,
+  );
+  expect(geometry.textRight).toBeLessThanOrEqual(
+    geometry.controlRight + 1,
+  );
 });
 
 test("mobile interaction inventory meets the governed geometry and expanded-form contract", async ({
@@ -1253,7 +1596,12 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
       fullPage: true,
     });
 
-    await page.getByText("Mobile geometry inventory", { exact: true }).click();
+    await page
+      .locator(".jig-task-card")
+      .filter({ hasText: "Mobile geometry inventory" })
+      .first()
+      .locator(".jig-task-title")
+      .click();
     const workspace = page.getByRole("dialog", {
       name: "Mobile geometry inventory",
     });
@@ -1336,7 +1684,9 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await repeat.click();
     await page.getByRole("option", { name: "Weekly", exact: true }).click();
 
-    const actionRegion = workspace.locator(".jig-editor-actions");
+    const actionRegion = workspace.locator(
+      ".jig-task-workspace-actions-narrow",
+    );
     const actionBefore = await actionRegion.boundingBox();
     if (actionBefore === null) {
       throw new Error("Task action region geometry unavailable");
@@ -1350,6 +1700,26 @@ test("mobile interaction inventory meets the governed geometry and expanded-form
     await expect(
       workspace.getByRole("button", { name: "Save", exact: true }),
     ).toBeVisible();
+
+    await page.setViewportSize({ width, height: 560 });
+    await expect(notes).toBeFocused();
+    await notes.scrollIntoViewIfNeeded();
+    await expect(notes).toBeVisible();
+    await expect(
+      workspace.getByRole("button", { name: "Cancel", exact: true }),
+    ).toBeVisible();
+    await expect(
+      workspace.getByRole("button", { name: "Save", exact: true }),
+    ).toBeVisible();
+    await expectTarget(
+      workspace.getByRole("button", { name: "Mark complete", exact: true }),
+      "Task lifecycle action under IME",
+    );
+    await expectTarget(
+      workspace.getByRole("button", { name: "Delete…", exact: true }),
+      "Task delete action under IME",
+    );
+    await page.setViewportSize({ width, height: 844 });
 
     const actionAfter = await actionRegion.boundingBox();
     if (actionAfter === null) {
@@ -1912,6 +2282,22 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
             ".jig-settings-section:not(.jig-settings-diagnostics) .jig-settings-card",
           ),
         ).toHaveCount(0);
+        const notifications = settings.locator(
+          '.jig-settings-section[aria-labelledby="notifications-heading"]',
+        );
+        await expect(
+          notifications.getByText("Browser notifications", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          notifications.getByText("Android notifications", { exact: true }),
+        ).toHaveCount(0);
+        await expect(
+          notifications.getByRole("button", {
+            name: "Exact timing settings",
+            exact: true,
+          }),
+        ).toHaveCount(0);
+        await expect(notifications).not.toContainText("exact alarms");
       }
     }
 
@@ -1934,15 +2320,30 @@ test("History and Settings keep one continuous 50rem measure across the Planner 
   }
 });
 
-test("application frame is full-bleed and switches at the 73rem boundary", async ({
+test("AppShell main is the sole configured scroller across governed widths", async ({
   page,
 }) => {
-  for (const viewport of [
+  const viewports = [
     { width: 1440, height: 900 },
+    { width: 1168, height: 900 },
+    { width: 1167, height: 900 },
     { width: 390, height: 844 },
-  ]) {
+    { width: 320, height: 720 },
+  ] as const;
+
+  for (const viewport of viewports) {
     await page.setViewportSize(viewport);
     await waitForResponsiveHeader(page, viewport.width);
+
+    const expectedPresentation =
+      viewport.width >= 1168 ? "desktop" : "narrow";
+    await expect(
+      page.locator(
+        `[data-jig-configured-presentation="${expectedPresentation}"]`,
+      ),
+    ).toHaveCount(1);
+    await expect(applicationScrollOwner(page)).toHaveCount(1);
+
     for (const selector of [
       ".jig-app-shell",
       ".jig-app-header",
@@ -1957,21 +2358,38 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
       }
     }
 
-    const frame = await page.locator(".jig-content-frame").evaluate((element) => {
-      const style = getComputedStyle(element);
+    const geometry = await page.evaluate(() => {
+      const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+      const owner = document.querySelector<HTMLElement>("#astryx-app-shell-main");
+      const planner = document.querySelector<HTMLElement>(".jig-planner-surface");
+      if (frame === null || owner === null || planner === null) {
+        throw new Error("Configured viewport geometry unavailable");
+      }
+      const frameStyle = getComputedStyle(frame);
       return {
-        margin: style.margin,
-        padding: style.padding,
-        border: style.borderWidth,
-        radius: style.borderRadius,
-        shadow: style.boxShadow,
+        frameOverflowX: frameStyle.overflowX,
+        frameOverflowY: frameStyle.overflowY,
+        ownerOverflowY: getComputedStyle(owner).overflowY,
+        ownerBottom: owner.getBoundingClientRect().bottom,
+        plannerBottom: planner.getBoundingClientRect().bottom,
+        margin: frameStyle.margin,
+        padding: frameStyle.padding,
+        border: frameStyle.borderWidth,
+        radius: frameStyle.borderRadius,
+        shadow: frameStyle.boxShadow,
       };
     });
-    expect(frame.margin).toBe("0px");
-    expect(frame.padding).toBe("0px");
-    expect(frame.border).toBe("0px");
-    expect(frame.radius).toBe("0px");
-    expect(frame.shadow).toBe("none");
+    expect(["visible", "clip"]).toContain(geometry.frameOverflowY);
+    expect(["visible", "clip"]).toContain(geometry.frameOverflowX);
+    expect(["auto", "scroll"]).toContain(geometry.ownerOverflowY);
+    expect(geometry.plannerBottom).toBeGreaterThanOrEqual(
+      geometry.ownerBottom - 1,
+    );
+    expect(geometry.margin).toBe("0px");
+    expect(geometry.padding).toBe("0px");
+    expect(geometry.border).toBe("0px");
+    expect(geometry.radius).toBe("0px");
+    expect(geometry.shadow).toBe("none");
 
     if (viewport.width < 1168) {
       const bottomNavigation = page.getByRole("navigation", {
@@ -1980,6 +2398,14 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
       const navigationBox = await bottomNavigation.boundingBox();
       if (navigationBox === null) {
         throw new Error("Compact bottom-navigation geometry unavailable");
+      }
+      expectNear(navigationBox.height, 64, 1);
+      const fab = page.getByRole("button", { name: "Add task", exact: true });
+      const fabBox = await fab.boundingBox();
+      expect(fabBox).not.toBeNull();
+      if (fabBox !== null) {
+        expectNear(fabBox.width, 56, 1);
+        expectNear(fabBox.height, 56, 1);
       }
       const contentPaddingBottom = await page
         .locator(".jig-content-configured-planner .jig-planner-surface")
@@ -1992,16 +2418,45 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
     }
   }
 
+  const today = await browserCivilDate(page);
+  for (let index = 0; index < 18; index += 1) {
+    await createTask(page, `Viewport overflow ${index + 1}`, today);
+  }
+  await page.reload();
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await waitForResponsiveHeader(page, viewport.width);
+    const overflow = await page.evaluate(() => {
+      const frame = document.querySelector<HTMLElement>(".jig-content-frame");
+      const owner = document.querySelector<HTMLElement>("#astryx-app-shell-main");
+      if (frame === null || owner === null) {
+        throw new Error("Configured scroll owner unavailable");
+      }
+      owner.scrollTop = 120;
+      return {
+        frameOverflowY: getComputedStyle(frame).overflowY,
+        frameScrollTop: frame.scrollTop,
+        ownerScrollable: owner.scrollHeight > owner.clientHeight,
+        ownerScrollTop: owner.scrollTop,
+      };
+    });
+    expect(["visible", "clip"]).toContain(overflow.frameOverflowY);
+    expect(overflow.frameScrollTop).toBe(0);
+    expect(overflow.ownerScrollable).toBe(true);
+    expect(overflow.ownerScrollTop).toBeGreaterThan(0);
+  }
+
   await page.setViewportSize({ width: 1168, height: 900 });
   await waitForResponsiveHeader(page, 1168);
   const desktopGeometry = await activeWeek(page)
     .locator(".jig-week-column")
-    .evaluateAll(
-    (elements) => elements.slice(0, 2).map((element) => {
-      const box = element.getBoundingClientRect();
-      return { x: box.x, y: box.y, width: box.width };
-    }),
-  );
+    .evaluateAll((elements) =>
+      elements.slice(0, 2).map((element) => {
+        const box = element.getBoundingClientRect();
+        return { x: box.x, y: box.y, width: box.width };
+      }),
+    );
   expect(desktopGeometry).toHaveLength(2);
   expectNear(desktopGeometry[0]?.y ?? 0, desktopGeometry[1]?.y ?? 0, 1);
   expect(desktopGeometry[0]?.width ?? 0).toBeGreaterThanOrEqual(160);
@@ -2010,20 +2465,87 @@ test("application frame is full-bleed and switches at the 73rem boundary", async
   await waitForResponsiveHeader(page, 1167);
   const narrowGeometry = await activeWeek(page)
     .locator(".jig-week-column")
-    .evaluateAll(
-    (elements) => elements.slice(0, 2).map((element) => {
-      const box = element.getBoundingClientRect();
-      return { y: box.y };
-    }),
-  );
+    .evaluateAll((elements) =>
+      elements.slice(0, 2).map((element) => ({
+        y: element.getBoundingClientRect().y,
+      })),
+    );
   expect(narrowGeometry).toHaveLength(2);
   expect(narrowGeometry[1]?.y ?? 0).toBeGreaterThan(narrowGeometry[0]?.y ?? 0);
+});
+
+test("configured Planner History and Settings share the Planner surface while chrome remains distinct", async ({
+  page,
+}) => {
+  const readSurfaces = async (): Promise<{
+    readonly content: string;
+    readonly header: string;
+    readonly planner: string | null;
+    readonly bottomNavigation: string | null;
+  }> =>
+    page.evaluate(() => {
+      const content = document.querySelector<HTMLElement>(
+        ".jig-content-configured",
+      );
+      const header = document.querySelector<HTMLElement>(".jig-app-header");
+      const planner = document.querySelector<HTMLElement>(
+        ".jig-planner-surface",
+      );
+      const bottomNavigation = document.querySelector<HTMLElement>(
+        ".jig-mobile-bottom-navigation",
+      );
+      if (content === null || header === null) {
+        throw new Error("Configured surface fixture is unavailable");
+      }
+      return {
+        content: getComputedStyle(content).backgroundColor,
+        header: getComputedStyle(header).backgroundColor,
+        planner:
+          planner === null ? null : getComputedStyle(planner).backgroundColor,
+        bottomNavigation:
+          bottomNavigation === null
+            ? null
+            : getComputedStyle(bottomNavigation).backgroundColor,
+      };
+    });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await waitForResponsiveHeader(page, 1440);
+
+  const plannerDesktop = await readSurfaces();
+  expect(plannerDesktop.planner).not.toBeNull();
+  expect(plannerDesktop.content).toBe(plannerDesktop.planner);
+  expect(plannerDesktop.content).not.toBe(plannerDesktop.header);
+
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  const historyDesktop = await readSurfaces();
+  expect(historyDesktop.content).toBe(plannerDesktop.content);
+  expect(historyDesktop.content).not.toBe(historyDesktop.header);
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const settingsDesktop = await readSurfaces();
+  expect(settingsDesktop.content).toBe(plannerDesktop.content);
+  expect(settingsDesktop.content).not.toBe(settingsDesktop.header);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForResponsiveHeader(page, 390);
+  const primaryNavigation = page.getByRole("navigation", { name: "Primary" });
+
+  for (const destination of ["Settings", "History", "Planner"] as const) {
+    await primaryNavigation
+      .getByRole("button", { name: destination, exact: true })
+      .click();
+    const surfaces = await readSurfaces();
+    expect(surfaces.content, destination).toBe(plannerDesktop.content);
+    expect(surfaces.content, destination).not.toBe(surfaces.header);
+    expect(surfaces.bottomNavigation, destination).toBe(surfaces.header);
+  }
 });
 
 test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System mode", async ({
   page,
 }, testInfo) => {
-  test.setTimeout(120_000);
+  test.setTimeout(300_000);
   const today = await browserCivilDate(page);
   await createTask(page, "Theme matrix contract", today);
   await page.reload();
@@ -2033,34 +2555,52 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
     for (const mode of ["light", "dark"] as const) {
       await setAppearance(page, preset, mode);
       const snapshot = await themeSnapshot(page);
-      if (preset === "jig") {
-        await page.screenshot({
-          path: testInfo.outputPath(
-            `v1.1-theme-jig-${mode}-desktop.png`,
-          ),
-          fullPage: true,
-        });
-        await page.setViewportSize({ width: 390, height: 844 });
-        await waitForResponsiveHeader(page, 390);
-        await page.screenshot({
-          path: testInfo.outputPath(
-            `v1.1-theme-jig-${mode}-mobile-390.png`,
-          ),
-          fullPage: true,
-        });
-        await page.setViewportSize({ width: 1440, height: 900 });
-        await waitForResponsiveHeader(page, 1440);
-      }
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `v1.1-theme-${preset}-${mode}-desktop.png`,
+        ),
+        fullPage: true,
+      });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await waitForResponsiveHeader(page, 390);
+      await page.screenshot({
+        path: testInfo.outputPath(
+          `v1.1-theme-${preset}-${mode}-mobile-390.png`,
+        ),
+        fullPage: true,
+      });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await waitForResponsiveHeader(page, 1440);
       expect(snapshot.rootTheme).toBe(preset);
       expect(snapshot.explicitMode).toBe(mode);
       expect(snapshot.chromeBackground, `${preset}/${mode} chrome matches body`)
         .toBe(snapshot.bodyBackground);
-      expect(snapshot.plannerBackground, `${preset}/${mode} Planner separates from chrome`)
-        .not.toBe(snapshot.chromeBackground);
+      expect(
+        snapshot.contentBackground,
+        `${preset}/${mode} configured content uses Planner surface`,
+      ).toBe(snapshot.plannerBackground);
+      expect(
+        new Set([
+          snapshot.chromeBackground,
+          snapshot.plannerBackground,
+          snapshot.taskBackground,
+        ]).size,
+        `${preset}/${mode} surface colors must resolve distinctly`,
+      ).toBe(3);
+      expect(
+        oklabDistance(snapshot.chromeBackground, snapshot.plannerBackground),
+        `${preset}/${mode} chrome↔Planner OKLab distance`,
+      ).toBeGreaterThanOrEqual(0.018);
+      expect(
+        oklabDistance(snapshot.chromeBackground, snapshot.taskBackground),
+        `${preset}/${mode} chrome↔Task OKLab distance`,
+      ).toBeGreaterThanOrEqual(0.018);
+      expect(
+        oklabDistance(snapshot.plannerBackground, snapshot.taskBackground),
+        `${preset}/${mode} Planner↔Task OKLab distance`,
+      ).toBeGreaterThanOrEqual(0.025);
       expect(snapshot.laneBackground, `${preset}/${mode} lane remains open`)
         .toBe("rgba(0, 0, 0, 0)");
-      expect(snapshot.taskBackground, `${preset}/${mode} task vs canvas`)
-        .not.toBe(snapshot.plannerBackground);
       expect(snapshot.taskBorder).not.toBe("rgba(0, 0, 0, 0)");
       expect(
         contrastRatio(snapshot.bodyText, snapshot.bodyBackground),
@@ -2070,7 +2610,27 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
         contrastRatio(snapshot.taskText, snapshot.taskBackground),
         `${preset}/${mode} Task text contrast`,
       ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(snapshot.taskMetaText, snapshot.taskBackground),
+        `${preset}/${mode} Task metadata contrast`,
+      ).toBeGreaterThanOrEqual(4.5);
       expect(snapshot.todayBorder).not.toBe(snapshot.taskBorder);
+      expect(
+        snapshot.motionDurations.map((value) => {
+          const parsed = Number.parseFloat(value);
+          return value.endsWith("ms") ? parsed : parsed * 1000;
+        }),
+      ).toEqual([
+        190,
+        250,
+        330,
+        450,
+        600,
+        800,
+        1050,
+        1400,
+        1870,
+      ]);
       expect(
         contrastRatio(snapshot.logoPrimary, snapshot.chromeBackground),
         `${preset}/${mode} logo primary contrast on chrome`,
@@ -2107,6 +2667,7 @@ test("all v1.0.6 themes preserve semantic surfaces in Light Dark and live System
     expect(systemDark.rootTheme).toBe(preset);
     expect(systemDark.explicitMode).toBeNull();
     expect(systemDark.chromeBackground).toBe(systemDark.bodyBackground);
+    expect(systemDark.contentBackground).toBe(systemDark.plannerBackground);
     expect(systemDark.plannerBackground).not.toBe(systemDark.chromeBackground);
     expect(systemDark.laneBackground).toBe("rgba(0, 0, 0, 0)");
     expect(systemDark.taskBackground).not.toBe(systemDark.plannerBackground);

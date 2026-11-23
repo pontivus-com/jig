@@ -63,7 +63,10 @@ describe("synchronization decision core", () => {
   });
 
   it("stops on rewritten, divergent, unknown or otherwise unsafe remote state", () => {
-    expect(decide({ kind: "unsafe-remote" })).toBe("attention");
+    expect(decide({
+      kind: "unsafe-remote",
+      reason: "invalid-snapshot",
+    })).toBe("attention");
     expect(decide({
       kind: "remote-present",
       local_pending: false,
@@ -83,4 +86,61 @@ describe("synchronization decision core", () => {
       lineage: "unknown",
     })).toBe("attention");
   });
+  it("classifies attention reasons in the functional core", () => {
+    expect(decideSynchronization({ kind: "remote-ambiguous" })).toStrictEqual({
+      kind: "attention",
+      reason: "remote-ambiguous",
+    });
+    expect(decideSynchronization({
+      kind: "remote-absent",
+      previously_synchronized: true,
+    })).toStrictEqual({
+      kind: "attention",
+      reason: "remote-absent-after-sync",
+    });
+    expect(decideSynchronization({
+      kind: "unsafe-remote",
+      reason: "dataset-mismatch",
+    })).toStrictEqual({
+      kind: "attention",
+      reason: "dataset-mismatch",
+    });
+    expect(decideSynchronization({
+      kind: "remote-present",
+      local_pending: false,
+      remote_rewritten: true,
+      lineage: "equal",
+    })).toStrictEqual({
+      kind: "attention",
+      reason: "remote-rewritten",
+    });
+    expect(decideSynchronization({
+      kind: "remote-present",
+      local_pending: true,
+      remote_rewritten: false,
+      lineage: "remote-ahead",
+    })).toStrictEqual({
+      kind: "attention",
+      reason: "diverged",
+    });
+    expect(decideSynchronization({
+      kind: "remote-present",
+      local_pending: false,
+      remote_rewritten: false,
+      lineage: "diverged",
+    })).toStrictEqual({
+      kind: "attention",
+      reason: "diverged",
+    });
+    expect(decideSynchronization({
+      kind: "remote-present",
+      local_pending: false,
+      remote_rewritten: false,
+      lineage: "unknown",
+    })).toStrictEqual({
+      kind: "attention",
+      reason: "ancestry-unknown",
+    });
+  });
+
 });

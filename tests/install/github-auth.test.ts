@@ -3,7 +3,7 @@ import {
   expect,
   it,
 } from "vitest";
-import type { GitHubAppRegistration } from "../../src/github";
+import type { GitHubAppRegistration } from "../../src/github/model";
 import {
   listGitHubInstallations,
   listGitHubRepositories,
@@ -11,7 +11,7 @@ import {
   refreshGitHubCredential,
   startGitHubDeviceAuthorization,
   type GitHubFetch,
-} from "../../src/github-auth";
+} from "../../src/github/auth";
 
 const REGISTRATION: GitHubAppRegistration = {
   app_slug: "jig-desktop-mobile",

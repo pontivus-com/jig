@@ -2,13 +2,13 @@ import {
   assertUuid,
   type Task,
   validateTask,
-} from "./core/task";
+} from "./task";
 import {
   validateRecurrenceSeries,
   type RecurrencePattern,
   type RecurrenceSeries,
-} from "./core/recurrence";
-import { assertRecurrenceState } from "./core/recurrence-planning";
+} from "./recurrence";
+import { assertRecurrenceState } from "./recurrence-planning";
 
 export const PORTABLE_FORMAT_VERSION = 2;
 
@@ -23,6 +23,13 @@ export class SnapshotValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SnapshotValidationError";
+  }
+}
+
+export class SnapshotDatasetMismatchError extends SnapshotValidationError {
+  constructor() {
+    super("Snapshot dataset identity does not match the configured dataset");
+    this.name = "SnapshotDatasetMismatchError";
   }
 }
 
@@ -62,6 +69,18 @@ function stableJson(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+export function canonicalTaskRecordJson(task: Task): string {
+  return stableJson(canonicalTaskRecord(validateTask(task)));
+}
+
+export function canonicalRecurrenceRecordJson(
+  series: RecurrenceSeries,
+): string {
+  return stableJson(
+    canonicalRecurrenceRecord(validateRecurrenceSeries(series)),
+  );
+}
+
 export function portableSnapshotsEqual(
   left: PortableSnapshot,
   right: PortableSnapshot,
@@ -99,7 +118,7 @@ export function serializeSnapshot(
   )) {
     files.set(
       `tasks/${task.id}.json`,
-      stableJson(canonicalTaskRecord(task)),
+      canonicalTaskRecordJson(task),
     );
   }
 
@@ -108,7 +127,7 @@ export function serializeSnapshot(
   )) {
     files.set(
       `recurrences/${series.id}.json`,
-      stableJson(canonicalRecurrenceRecord(series)),
+      canonicalRecurrenceRecordJson(series),
     );
   }
 
@@ -361,9 +380,7 @@ export function validateSnapshot(
     expectedDatasetId !== undefined &&
     format.dataset_id !== expectedDatasetId
   ) {
-    throw new SnapshotValidationError(
-      "Snapshot dataset identity does not match the configured dataset",
-    );
+    throw new SnapshotDatasetMismatchError();
   }
 
   const tasks: Task[] = [];

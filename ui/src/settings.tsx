@@ -7,12 +7,12 @@ import {
   VStack,
 } from "@astryxdesign/core";
 
-import { JigAttentionBanner } from "./attention-banner";
 import { useEffect, useState } from "react";
-import type {
-  Diagnostics,
-  ServiceStatus,
-} from "../../src/protocol";
+import {
+  formatSynchronizationDiagnostics,
+  type Diagnostics,
+  type ServiceStatus,
+} from "../../src/protocol/runtime";
 import {
   localGitStatusPresentation,
   planningDataHomePresentation,
@@ -27,6 +27,8 @@ import {
   requestNotificationPermission,
   type NotificationSettingsState,
 } from "./notification-settings";
+import { NotificationSettingsContent } from "./notification-settings-content";
+import { copyText } from "./native/clipboard";
 import {
   THEME_DEFINITIONS,
   THEME_GROUPS,
@@ -52,45 +54,17 @@ export interface SettingsViewProps {
   readonly appearanceMode: AppearanceMode;
   readonly status: ServiceStatus | null;
   readonly diagnostics: Diagnostics | null;
-  readonly operationError: string | null;
   readonly isOperating: boolean;
   readonly githubReconnectAvailable: boolean;
   readonly githubReconnect: GitHubReconnectSnapshot | null;
+  readonly synchronizationConflictAvailable: boolean;
   readonly onThemePresetChange: (value: ThemePreset) => void;
   readonly onAppearanceModeChange: (value: AppearanceMode) => void;
   readonly onSync: () => Promise<void>;
   readonly onReconnectGitHub: () => Promise<void>;
-}
-
-function notificationStatusMessage(
-  state: NotificationSettingsState | null,
-): string {
-  if (state === null) {
-    return "Checking notification settings";
-  }
-  if (state.platform === "android") {
-    switch (state.permission) {
-      case "granted":
-        return state.exact_alarm === "granted"
-          ? "Enabled · exact timing available"
-          : "Enabled · exact timing unavailable";
-      case "permission-required":
-        return "Notification permission required";
-      case "denied":
-        return "Blocked in Android settings";
-    }
-  }
-
-  switch (state.permission) {
-    case "unsupported":
-      return "Not supported by this browser";
-    case "default":
-      return "Not enabled";
-    case "granted":
-      return "Enabled";
-    case "denied":
-      return "Blocked in browser settings";
-  }
+  readonly onResolveSynchronizationConflict: () => Promise<void>;
+  readonly showDiagnostics: boolean;
+  readonly onShowDiagnosticsChange: (value: boolean) => void;
 }
 
 export function SettingsView({
@@ -98,18 +72,20 @@ export function SettingsView({
   appearanceMode,
   status,
   diagnostics,
-  operationError,
   isOperating,
   githubReconnectAvailable,
   githubReconnect,
+  synchronizationConflictAvailable,
   onThemePresetChange,
   onAppearanceModeChange,
   onSync,
   onReconnectGitHub,
+  onResolveSynchronizationConflict,
+  showDiagnostics,
+  onShowDiagnosticsChange,
 }: SettingsViewProps): React.ReactElement {
   const [notificationState, setNotificationState] =
     useState<NotificationSettingsState | null>(null);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const repositoryStatus = repositoryStatusPresentation(status);
   const planningDataHome = planningDataHomePresentation(status);
   const localGitStatus = localGitStatusPresentation(status);
@@ -142,14 +118,6 @@ export function SettingsView({
 
   return (
     <div className="jig-settings-view">
-      {operationError === null ? null : (
-        <JigAttentionBanner
-          status="error"
-          title="Operation failed"
-          description={operationError}
-        />
-      )}
-
       <div className="jig-settings-sections">
         <section
           className="jig-settings-section"
@@ -181,7 +149,16 @@ export function SettingsView({
                 <p>{repositoryStatus.label}</p>
                 <small>{repositoryStatus.message}</small>
               </div>
-              {synchronizationNeedsAttention &&
+              {synchronizationConflictAvailable ? (
+                <Button
+                  label="Resolve sync conflict"
+                  variant="primary"
+                  isLoading={isOperating}
+                  onClick={() => {
+                    void onResolveSynchronizationConflict();
+                  }}
+                />
+              ) : synchronizationNeedsAttention &&
               githubReconnectAvailable &&
               githubReconnect === null ? (
                 <Button
@@ -283,54 +260,19 @@ export function SettingsView({
         >
           <h2 id="notifications-heading">Notifications</h2>
           <div className="jig-settings-group">
-            <div className="jig-settings-notifications">
-              <div>
-                <strong>
-                  {notificationState?.platform === "android"
-                    ? "Android notifications"
-                    : "Browser notifications"}
-                </strong>
-                <p>{notificationStatusMessage(notificationState)}</p>
-                {notificationState?.platform === "android" &&
-                notificationState.permission === "granted" &&
-                notificationState.exact_alarm === "unavailable" ? (
-                  <small>
-                    Future reminders are scheduled inexactly until exact
-                    alarms are enabled in Android settings.
-                  </small>
-                ) : null}
-              </div>
-
-              <div className="jig-settings-row-actions">
-                {notificationState?.permission === "default" ||
-                (notificationState?.platform === "android" &&
-                  notificationState.permission ===
-                    "permission-required") ? (
-                  <Button
-                    label="Enable"
-                    variant="secondary"
-                    onClick={() => {
-                      void requestNotificationPermission().then(
-                        setNotificationState,
-                      );
-                    }}
-                  />
-                ) : null}
-                {notificationState?.platform === "android" &&
-                notificationState.permission === "granted" &&
-                notificationState.exact_alarm === "unavailable" ? (
-                  <Button
-                    label="Exact timing settings"
-                    variant="secondary"
-                    onClick={() => {
-                      void openExactReminderSettings().then(
-                        setNotificationState,
-                      );
-                    }}
-                  />
-                ) : null}
-              </div>
-            </div>
+            <NotificationSettingsContent
+              state={notificationState}
+              onEnable={() => {
+                void requestNotificationPermission().then(
+                  setNotificationState,
+                );
+              }}
+              onOpenExactTimingSettings={() => {
+                void openExactReminderSettings().then(
+                  setNotificationState,
+                );
+              }}
+            />
           </div>
         </section>
 
@@ -346,7 +288,7 @@ export function SettingsView({
             <Button
               label={showDiagnostics ? "Hide diagnostics" : "Show diagnostics"}
               variant="ghost"
-              onClick={() => setShowDiagnostics((current) => !current)}
+              onClick={() => onShowDiagnosticsChange(!showDiagnostics)}
             />
           </div>
 
@@ -405,8 +347,81 @@ export function SettingsView({
                       </dd>
                     </div>
                   )}
+                  <div>
+                    <dt>Synchronization phase</dt>
+                    <dd>{diagnostics?.synchronization.phase ?? "Unavailable"}</dd>
+                  </div>
+                  <div>
+                    <dt>Failure reason</dt>
+                    <dd>{diagnostics?.synchronization.reason ?? "None"}</dd>
+                  </div>
+                  <div>
+                    <dt>Retryable</dt>
+                    <dd>
+                      {diagnostics?.synchronization.retryable === null ||
+                      diagnostics === null
+                        ? "—"
+                        : diagnostics.synchronization.retryable
+                          ? "Yes"
+                          : "No"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Attempt count</dt>
+                    <dd>{diagnostics?.synchronization.attempt_count ?? 0}</dd>
+                  </div>
+                  <div>
+                    <dt>Last attempt</dt>
+                    <dd>{diagnostics?.synchronization.last_attempt_at ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Next retry</dt>
+                    <dd>{diagnostics?.synchronization.next_retry_at ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Local Jig head</dt>
+                    <dd>{diagnostics?.synchronization.local_head ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Remote Jig head</dt>
+                    <dd>{diagnostics?.synchronization.remote_head ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Last adopted head</dt>
+                    <dd>{diagnostics?.synchronization.last_adopted_head ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Lineage</dt>
+                    <dd>{diagnostics?.synchronization.lineage ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Recovery</dt>
+                    <dd>
+                      {diagnostics?.synchronization.recovery_attempted
+                        ? diagnostics.synchronization.recovery_outcome ??
+                          "In progress"
+                        : "Not attempted"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Adapter summary</dt>
+                    <dd>{diagnostics?.synchronization.error_summary ?? "—"}</dd>
+                  </div>
                 </dl>
                 <div className="jig-settings-diagnostics-actions">
+                  <Button
+                    label="Copy diagnostics"
+                    variant="secondary"
+                    isDisabled={diagnostics === null}
+                    onClick={() => {
+                      if (diagnostics === null) return;
+                      void copyText(
+                        formatSynchronizationDiagnostics(
+                          diagnostics.synchronization,
+                        ),
+                      );
+                    }}
+                  />
                   <Button
                     label="Sync now"
                     variant="secondary"

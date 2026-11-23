@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type {
   RepositorySynchronizationStatus,
   ServiceStatus,
-} from "../../src/protocol";
+} from "../../src/protocol/runtime";
 import {
   localGitStatusPresentation,
   planningDataHomePresentation,

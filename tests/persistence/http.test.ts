@@ -2,7 +2,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createHttpHandler } from "../../src/shell/http";
+import {
+  createHttpHandler,
+  type HttpDependencies,
+} from "../../src/shell/http";
 import {
   applyTaskCommand,
   readCanonicalState,
@@ -50,7 +53,9 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-function handler() {
+function handler(
+  overrides: Partial<HttpDependencies> = {},
+) {
   return createHttpHandler({
     db,
     write_token: TOKEN,
@@ -72,10 +77,30 @@ function handler() {
       repository_path: root,
       portable_format_version: 1,
       repository_adapter_healthy: true,
+      synchronization: {
+                phase: "idle",
+                reason: null,
+                retryable: null,
+                attempt_count: 0,
+                last_attempt_at: null,
+                next_retry_at: null,
+                local_head: null,
+                remote_head: null,
+                last_adopted_head: null,
+                lineage: null,
+                remote_name: null,
+                remote_location: null,
+                recovery_attempted: false,
+                recovery_outcome: null,
+                error_summary: null,
+              },
     }),
+    read_synchronization_conflict: () => null,
+    resolve_synchronization_conflict: async () => LOCAL_ONLY_STATUS,
     trigger_sync: async () => LOCAL_ONLY_STATUS,
     ensure_current_day_rollover: async () => undefined,
     on_task_mutation: () => undefined,
+    ...overrides,
   });
 }
 
@@ -146,6 +171,84 @@ describe("loopback HTTP admission", () => {
       ),
     );
     expect(response.status).toBe(403);
+  });
+
+  it("reads the current synchronization conflict without mutation authorization", async () => {
+    const response = await handler({
+      read_synchronization_conflict: () => null,
+    })(
+      new Request(
+        "http://127.0.0.1:47831/api/v1/sync/conflict",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toBeNull();
+  });
+
+  it("protects and centrally validates synchronization conflict resolution", async () => {
+    let resolveCalls = 0;
+    const handle = handler({
+      resolve_synchronization_conflict: async (resolution) => {
+        resolveCalls += 1;
+        expect(resolution).toStrictEqual({
+          ancestor_head: "a".repeat(40),
+          local_head: "b".repeat(40),
+          remote_head: "c".repeat(40),
+          expected_revision: 7,
+          choices: [],
+          date_orders: [],
+        });
+        return SYNCHRONIZED_STATUS;
+      },
+    });
+
+    const unauthorized = await handle(
+      postRequest(
+        "/api/v1/sync/conflict/resolve",
+        {
+          ancestor_head: "a".repeat(40),
+          local_head: "b".repeat(40),
+          remote_head: "c".repeat(40),
+          expected_revision: 7,
+          choices: [],
+          date_orders: [],
+        },
+        null,
+      ),
+    );
+    expect(unauthorized.status).toBe(403);
+    expect(resolveCalls).toBe(0);
+
+    const invalid = await handle(
+      postRequest("/api/v1/sync/conflict/resolve", {
+        ancestor_head: "a".repeat(40),
+        local_head: "b".repeat(40),
+        remote_head: "c".repeat(40),
+        expected_revision: 7,
+        choices: [],
+        date_orders: [],
+        command: "git reset --hard",
+      }),
+    );
+    expect(invalid.status).toBe(400);
+    expect(resolveCalls).toBe(0);
+
+    const accepted = await handle(
+      postRequest("/api/v1/sync/conflict/resolve", {
+        ancestor_head: "a".repeat(40),
+        local_head: "b".repeat(40),
+        remote_head: "c".repeat(40),
+        expected_revision: 7,
+        choices: [],
+        date_orders: [],
+      }),
+    );
+    expect(accepted.status).toBe(202);
+    expect(resolveCalls).toBe(1);
+    expect(await accepted.json()).toStrictEqual({
+      repository_status: SYNCHRONIZED_STATUS,
+    });
   });
 
   it("commits a canonical command only after matching expected revision", async () => {
@@ -287,8 +390,27 @@ describe("loopback HTTP admission", () => {
         repository_path: root,
         portable_format_version: 1,
         repository_adapter_healthy: true,
+        synchronization: {
+                  phase: "idle",
+                  reason: null,
+                  retryable: null,
+                  attempt_count: 0,
+                  last_attempt_at: null,
+                  next_retry_at: null,
+                  local_head: null,
+                  remote_head: null,
+                  last_adopted_head: null,
+                  lineage: null,
+                  remote_name: null,
+                  remote_location: null,
+                  recovery_attempted: false,
+                  recovery_outcome: null,
+                  error_summary: null,
+                },
       }),
-      trigger_sync: async () => PENDING_STATUS,
+      read_synchronization_conflict: () => null,
+    resolve_synchronization_conflict: async () => LOCAL_ONLY_STATUS,
+    trigger_sync: async () => PENDING_STATUS,
       ensure_current_day_rollover: async () => {
         rolloverCalls += 1;
         await rollForwardOutstandingInDatabase(
@@ -358,8 +480,27 @@ describe("loopback HTTP admission", () => {
         repository_path: root,
         portable_format_version: 2,
         repository_adapter_healthy: true,
+        synchronization: {
+                  phase: "idle",
+                  reason: null,
+                  retryable: null,
+                  attempt_count: 0,
+                  last_attempt_at: null,
+                  next_retry_at: null,
+                  local_head: null,
+                  remote_head: null,
+                  last_adopted_head: null,
+                  lineage: null,
+                  remote_name: null,
+                  remote_location: null,
+                  recovery_attempted: false,
+                  recovery_outcome: null,
+                  error_summary: null,
+                },
       }),
-      trigger_sync: async () => LOCAL_ONLY_STATUS,
+      read_synchronization_conflict: () => null,
+    resolve_synchronization_conflict: async () => LOCAL_ONLY_STATUS,
+    trigger_sync: async () => LOCAL_ONLY_STATUS,
       ensure_current_day_rollover: async () => undefined,
       on_task_mutation: () => undefined,
     });
@@ -466,8 +607,27 @@ describe("loopback HTTP admission", () => {
         repository_path: root,
           portable_format_version: 1,
           repository_adapter_healthy: true,
+          synchronization: {
+                    phase: "idle",
+                    reason: null,
+                    retryable: null,
+                    attempt_count: 0,
+                    last_attempt_at: null,
+                    next_retry_at: null,
+                    local_head: null,
+                    remote_head: null,
+                    last_adopted_head: null,
+                    lineage: null,
+                    remote_name: null,
+                    remote_location: null,
+                    recovery_attempted: false,
+                    recovery_outcome: null,
+                    error_summary: null,
+                  },
       }),
-      trigger_sync: async () => {
+      read_synchronization_conflict: () => null,
+    resolve_synchronization_conflict: async () => LOCAL_ONLY_STATUS,
+    trigger_sync: async () => {
         syncCalls += 1;
         return SYNCHRONIZED_STATUS;
       },

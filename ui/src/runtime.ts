@@ -1,4 +1,6 @@
 import { Capacitor } from "@capacitor/core";
+import type { Task } from "../../src/core/task";
+import type { CanonicalState } from "../../src/protocol/runtime";
 import * as webRuntime from "./http";
 
 async function androidRuntime() {
@@ -37,6 +39,24 @@ export const submitTaskCommand: typeof webRuntime.submitTaskCommand =
         )
       : webRuntime.submitTaskCommand(...args);
 
+export const readSynchronizationConflict:
+typeof webRuntime.readSynchronizationConflict =
+  (...args) =>
+    Capacitor.isNativePlatform()
+      ? androidRuntime().then((runtime) =>
+          runtime.readSynchronizationConflict(...args),
+        )
+      : webRuntime.readSynchronizationConflict(...args);
+
+export const resolveSynchronizationConflict:
+typeof webRuntime.resolveSynchronizationConflict =
+  (...args) =>
+    Capacitor.isNativePlatform()
+      ? androidRuntime().then((runtime) =>
+          runtime.resolveSynchronizationConflict(...args),
+        )
+      : webRuntime.resolveSynchronizationConflict(...args);
+
 export const triggerSync: typeof webRuntime.triggerSync =
   (...args) =>
     Capacitor.isNativePlatform()
@@ -44,3 +64,55 @@ export const triggerSync: typeof webRuntime.triggerSync =
           runtime.triggerSync(...args),
         )
       : webRuntime.triggerSync(...args);
+
+
+export function usesNativeReminderDelivery(): boolean {
+  return Capacitor.isNativePlatform();
+}
+
+export async function installRuntimeReminderDisplayObserver(
+  onReceived: (taskId: string, fingerprint: string) => void,
+): Promise<(() => Promise<void>) | null> {
+  if (!Capacitor.isNativePlatform()) {
+    return null;
+  }
+  const capability = await import("./native/reminder-capability");
+  return capability.installAndroidReminderDisplayObserver(onReceived);
+}
+
+export async function requestRuntimeDueReminderDisplay(
+  task: Task,
+): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    return false;
+  }
+  const capability = await import("./native/reminder-capability");
+  return (
+    await capability.requestAndroidDueReminderDisplay(task)
+  ) === "display-requested";
+}
+
+export async function rollForwardRuntimeLocalDay(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) {
+    return false;
+  }
+  return (await androidRuntime()).rollForwardRuntimeLocalDay();
+}
+
+export async function readCanonicalTasksAfterActivationRollover():
+Promise<CanonicalState> {
+  if (!Capacitor.isNativePlatform()) {
+    return webRuntime.readCanonicalTasks();
+  }
+  return (await androidRuntime()).readCanonicalTasksAfterActivationRollover();
+}
+
+export async function reconcileRuntimeReminders(
+  tasks: CanonicalState["tasks"],
+  now: Date,
+): Promise<void> {
+  if (!Capacitor.isNativePlatform()) {
+    return;
+  }
+  await (await androidRuntime()).reconcileRuntimeReminders(tasks, now);
+}

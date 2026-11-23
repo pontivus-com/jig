@@ -7,6 +7,8 @@ import {
   type TaskCommand,
 } from "../core/task";
 import { PlanningError } from "../core/planning";
+import { validateJigDataResolution } from "../core/synchronization-recovery";
+import type * as recovery from "../core/synchronization-recovery";
 import {
   isWeekday,
   validateRecurrencePattern,
@@ -17,8 +19,8 @@ import type {
   Diagnostics,
   RepositorySynchronizationStatus,
   ServiceStatus,
-} from "../protocol";
-export type { Diagnostics, ServiceStatus } from "../protocol";
+} from "../protocol/runtime";
+export type { Diagnostics, ServiceStatus } from "../protocol/runtime";
 import {
   applyTaskCommand,
   readCanonicalState,
@@ -40,6 +42,10 @@ export interface HttpDependencies {
   readonly create_id: () => string;
   readonly get_status: () => ServiceStatus;
   readonly get_diagnostics: () => Diagnostics;
+  readonly read_synchronization_conflict: () => recovery.JigDataConflictCase | null;
+  readonly resolve_synchronization_conflict: (
+    resolution: recovery.JigDataResolution,
+  ) => Promise<RepositorySynchronizationStatus>;
   readonly trigger_sync: () => Promise<RepositorySynchronizationStatus>;
   readonly ensure_current_day_rollover: () => Promise<void>;
   readonly on_task_mutation: () => void;
@@ -485,12 +491,22 @@ export function createHttpHandler(
     ) {
       return jsonResponse(dependencies.get_diagnostics());
     }
+    if (
+      request.method === "GET" &&
+      pathname === "/api/v1/sync/conflict"
+    ) {
+      return jsonResponse(
+        dependencies.read_synchronization_conflict(),
+      );
+    }
 
     if (
       request.method === "POST" &&
-      ["/api/v1/commands", "/api/v1/sync"].includes(
-        pathname,
-      )
+      [
+        "/api/v1/commands",
+        "/api/v1/sync",
+        "/api/v1/sync/conflict/resolve",
+      ].includes(pathname)
     ) {
       const unauthorized = authorizeMutation(
         request,
@@ -544,6 +560,27 @@ export function createHttpHandler(
           );
         }
 
+        if (pathname === "/api/v1/sync/conflict/resolve") {
+          let resolution: recovery.JigDataResolution;
+          try {
+            resolution = validateJigDataResolution(
+              await parseJsonRequest(request),
+            );
+          } catch (error) {
+            if (error instanceof TypeError) {
+              throw new TaskValidationError(error.message);
+            }
+            throw error;
+          }
+          const repositoryStatus =
+            await dependencies.resolve_synchronization_conflict(
+              resolution,
+            );
+          return jsonResponse(
+            { repository_status: repositoryStatus },
+            202,
+          );
+        }
 
       } catch (error) {
         return errorResponse(error);

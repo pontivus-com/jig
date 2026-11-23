@@ -1,0 +1,726 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+function source(path: string): string {
+  return readFileSync(path, "utf8");
+}
+
+function sourceFiles(
+  directory: string,
+): readonly [string, string][] {
+  if (!existsSync(directory)) {
+    return [];
+  }
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name).replaceAll("\\", "/");
+    if (entry.isDirectory()) {
+      return sourceFiles(path);
+    }
+    if (
+      !entry.isFile() ||
+      !/\.(?:ts|tsx)$/.test(entry.name) ||
+      entry.name.endsWith(".d.ts")
+    ) {
+      return [];
+    }
+    return [[path, source(path)] as const];
+  });
+}
+
+const production = [
+  ...sourceFiles("src"),
+  ...sourceFiles("ui/src"),
+];
+
+function declarationOwners(pattern: RegExp): readonly string[] {
+  return production.flatMap(([path, content]) =>
+    pattern.test(content) ? [path] : [],
+  );
+}
+
+describe("v1.1.2 corrective architecture boundaries", () => {
+  it("keeps one width-only 73rem LayoutMode owner", () => {
+    const owners = declarationOwners(/export type LayoutMode\s*=/);
+    expect(owners).toEqual(["ui/src/use-layout-mode.ts"]);
+
+    const queryOwners = production.flatMap(([path, content]) =>
+      content.includes('"(min-width: 73rem)"') ? [path] : [],
+    );
+    expect(queryOwners).toEqual(["ui/src/use-layout-mode.ts"]);
+
+    const layoutMode = source("ui/src/use-layout-mode.ts");
+    expect(layoutMode).not.toMatch(/Capacitor|Android|isNativePlatform|pointer|coarse/);
+  });
+
+  it("contains raw native-platform detection to the governed runtime boundaries", () => {
+    const allowed = new Set([
+      "ui/src/runtime.ts",
+      "ui/src/setup-http.ts",
+      "ui/src/notification-settings.ts",
+    ]);
+    const violations = production.flatMap(([path, content]) => {
+      if (!content.includes("Capacitor.isNativePlatform()")) {
+        return [];
+      }
+      if (allowed.has(path) || path.startsWith("ui/src/native/")) {
+        return [];
+      }
+      return [path];
+    });
+    expect(violations).toEqual([]);
+  });
+
+  it("keeps one native lifecycle registration owner and exact activation ordering", () => {
+    const app = source("ui/src/app.tsx");
+    const lifecycle = source("ui/src/native/app-lifecycle.ts");
+    const reminder = source("ui/src/reminder.tsx");
+    const setup = source("ui/src/setup.tsx");
+    const systemBars = source("ui/src/native/system-bars.ts");
+
+    expect((app.match(/installNativeActiveListener\(/g) ?? [])).toHaveLength(1);
+    expect((app.match(/installNativeBackButtonListener\(/g) ?? [])).toHaveLength(1);
+    expect(setup).not.toContain("installNativeActiveListener");
+    expect(reminder).not.toContain("@capacitor/core");
+    expect(reminder).not.toMatch(/from\s+["']\.\/native\//);
+
+    const activationStart = app.indexOf(
+      "const activateConfiguredRuntime = useCallback",
+    );
+    const activationEnd = app.indexOf(
+      "const handleNativeActive = useCallback",
+      activationStart,
+    );
+    expect(activationStart).toBeGreaterThanOrEqual(0);
+    expect(activationEnd).toBeGreaterThan(activationStart);
+    const activation = app.slice(activationStart, activationEnd);
+    const orderedCalls = [
+      "rollForwardRuntimeLocalDay()",
+      "resumeGitHubReconnect()",
+      "readCanonicalTasksAfterActivationRollover()",
+      "reconcileRuntimeReminders(",
+      "triggerSync()",
+      "readStatus()",
+    ];
+    let previousIndex = -1;
+    for (const call of orderedCalls) {
+      const index = activation.indexOf(call);
+      expect(index, call).toBeGreaterThan(previousIndex);
+      previousIndex = index;
+    }
+    expect((activation.match(/reconcileRuntimeReminders\(/g) ?? [])).toHaveLength(1);
+    expect((activation.match(/triggerSync\(\)/g) ?? [])).toHaveLength(1);
+    expect(
+      (activation.match(/readCanonicalTasksAfterActivationRollover\(\)/g) ?? []),
+    ).toHaveLength(2);
+    const triggerIndex = activation.indexOf("triggerSync()");
+    const postSyncCanonicalIndex = activation.indexOf(
+      "readCanonicalTasksAfterActivationRollover()",
+      triggerIndex + "triggerSync()".length,
+    );
+    expect(postSyncCanonicalIndex).toBeGreaterThan(triggerIndex);
+
+    const backStart = app.indexOf("const handleBack = useCallback");
+    const backEnd = app.indexOf("useEffect(() => {", backStart);
+    expect(backStart).toBeGreaterThanOrEqual(0);
+    expect(backEnd).toBeGreaterThan(backStart);
+    const back = app.slice(backStart, backEnd);
+    const deleteIndex = back.indexOf("deleteTaskId !== null");
+    const workspaceIndex = back.indexOf('workspace.mode !== "closed"');
+    const destinationIndex = back.indexOf("previousDestination");
+    expect(deleteIndex).toBeGreaterThanOrEqual(0);
+    expect(workspaceIndex).toBeGreaterThan(deleteIndex);
+    expect(destinationIndex).toBeGreaterThan(workspaceIndex);
+
+    expect(lifecycle).toContain('"appStateChange"');
+    expect(lifecycle).toContain('"backButton"');
+    expect(lifecycle.indexOf("window.history.back()")).toBeLessThan(
+      lifecycle.indexOf("App.exitApp()"),
+    );
+    expect(systemBars).toContain('token("--jig-chrome-surface")');
+    expect(systemBars).not.toContain('token("--color-background-body")');
+
+    const listenerOwners = production.flatMap(([path, sourceText]) =>
+      sourceText.includes("App.addListener(") ? [path] : [],
+    );
+    expect(listenerOwners).toEqual(["ui/src/native/app-lifecycle.ts"]);
+  });
+
+  it("keeps LayoutMode out of platform, persistence, Git and transport adapters", () => {
+    const adapterPaths = production.filter(([path]) =>
+      path.startsWith("src/persistence/") ||
+      path.startsWith("src/shell/") ||
+      path.startsWith("src/github/") ||
+      path.startsWith("ui/src/native/") ||
+      path === "ui/src/browser-notifications.ts" ||
+      path === "ui/src/notification-settings.ts" ||
+      path === "ui/src/runtime.ts" ||
+      path === "ui/src/setup-http.ts",
+    );
+
+    for (const [path, content] of adapterPaths) {
+      expect(content, path).not.toMatch(/\bLayoutMode\b|use-layout-mode/);
+    }
+  });
+
+  it("keeps setup state shared while LayoutMode and runtime capability remain orthogonal", () => {
+    const setup = source("ui/src/setup.tsx");
+    const setupHttp = source("ui/src/setup-http.ts");
+    const nativeSetup = source("ui/src/native/github-setup.ts");
+    const desktop = source("ui/src/presentation/desktop/setup.tsx");
+    const narrow = source("ui/src/presentation/narrow/setup.tsx");
+
+    expect((setup.match(/layoutMode === "desktop"/g) ?? [])).toHaveLength(1);
+    expect(setup).not.toContain('layoutMode === "narrow"');
+    expect(setup).toContain("<DesktopSetupPresentation");
+    expect(setup).toContain("<NarrowSetupPresentation");
+
+    expect(setup).toContain("status.github_available ?");
+    expect(setup).toContain("status.local_repository_available ?");
+    expect(setup).toContain("BROWSER_PROVIDER_RETRY_MS");
+    expect(setup).toContain("nativeProviderContinuation");
+    expect(setup).toContain("providerContinuationRevision");
+    expect(setup).not.toMatch(/Capacitor|isNativePlatform/);
+
+    expect(setupHttp).toContain(
+      "usesNativeSetupProviderContinuation(): boolean",
+    );
+    expect(nativeSetup).toContain("local_repository_available: false");
+
+    for (const presenter of [desktop, narrow]) {
+      expect(presenter).not.toMatch(
+        /SetupStatus|GitHubOnboarding|setup-http|runtime|native|LayoutMode/,
+      );
+    }
+  });
+
+  it("keeps notification Settings capability-driven and platform branches out of SettingsView", () => {
+    const settings = source("ui/src/settings.tsx");
+    const state = source("ui/src/notification-settings.ts");
+    const content = source("ui/src/notification-settings-content.tsx");
+    const taskRow = source("ui/src/task-row.tsx");
+
+    expect(settings).toContain("<NotificationSettingsContent");
+    expect(settings).not.toMatch(
+      /notificationState(?:\?|)\.platform|exact_alarm|permission-required|Android notifications|Browser notifications/,
+    );
+
+    expect(state).toContain('readonly platform: "browser"');
+    expect(state).toContain('readonly platform: "android"');
+    expect(state).toContain('readonly exact_alarm: null');
+    expect(state).toContain('"permission-required"');
+    expect(state).toContain('"unavailable"');
+
+    for (const copy of [
+      "Not supported by this browser",
+      "Not enabled",
+      "Blocked in browser settings",
+      "Notification permission required",
+      "Blocked in Android settings",
+      "Enabled · exact timing available",
+      "Enabled · exact timing unavailable",
+      "Exact timing settings",
+    ]) {
+      expect(content).toContain(copy);
+    }
+    expect(content).toContain('presentation.action === "enable"');
+    expect(content).toContain('presentation.action === "exact-settings"');
+    expect(taskRow).not.toMatch(
+      /NotificationSettingsState|exact_alarm|requestNotificationPermission/,
+    );
+  });
+
+  it("prevents desktop/narrow presenter cross-imports and outward imports from shared leaves", () => {
+    for (const [path, content] of sourceFiles("ui/src/presentation/desktop")) {
+      expect(content, path).not.toMatch(/from\s+["'][^"']*(?:\/|\.\.)narrow(?:\/|["'])/);
+    }
+    for (const [path, content] of sourceFiles("ui/src/presentation/narrow")) {
+      expect(content, path).not.toMatch(/from\s+["'][^"']*(?:\/|\.\.)desktop(?:\/|["'])/);
+    }
+    for (const [path, content] of sourceFiles("ui/src/presentation/shared")) {
+      expect(content, path).not.toMatch(/from\s+["'][^"']*(?:desktop|narrow)\//);
+    }
+  });
+
+  it("keeps destination, Task sequence projection and workspace state single-owner", () => {
+    expect(
+      declarationOwners(/\b(?:const|export const)\s+DESTINATIONS\s*=\s*\[/),
+    ).toEqual(["ui/src/destinations.ts"]);
+    expect(
+      declarationOwners(/export type Destination\s*=/),
+    ).toEqual(["ui/src/destinations.ts"]);
+    expect(
+      declarationOwners(/export type TaskWorkspaceState\s*=/),
+    ).toEqual(["ui/src/task-workspace.tsx"]);
+    expect(
+      declarationOwners(/function plannerTaskPresentationItems\s*\(/),
+    ).toEqual(["ui/src/planner-list.tsx"]);
+  });
+
+  it("keeps Planner semantics shared while desktop and narrow own composition", () => {
+    expect(existsSync("ui/src/planner.tsx")).toBe(false);
+    expect(existsSync("ui/src/week.tsx")).toBe(false);
+
+    const shared = source(
+      "ui/src/presentation/shared/planner-date-section.tsx",
+    );
+    const desktop = source("ui/src/presentation/desktop/planner.tsx");
+    const narrow = source("ui/src/presentation/narrow/planner.tsx");
+    const taskList = source("ui/src/planner-list.tsx");
+
+    expect(shared).toContain("PlannerDateSection");
+    expect(shared).toContain("<PlannerTaskList");
+    expect(shared).toContain("<DateDropZone");
+    expect(shared).toContain("isFutureAddDate");
+    expect(shared).not.toContain("LayoutMode");
+    expect(shared).not.toContain("scrollIntoView");
+
+    expect(desktop).toContain("jig-planner-board-desktop");
+    expect(desktop).toContain("<PlannerDateSection");
+    expect(desktop).not.toContain("scrollIntoView");
+    expect(narrow).toContain("jig-planner-board-narrow");
+    expect(narrow).toContain("<PlannerDateSection");
+    expect(narrow).toContain("scrollIntoView");
+
+    expect(
+      (desktop.match(/props\.displayedDates\.map\(/g) ?? []).length,
+    ).toBe(1);
+    expect(
+      (narrow.match(/props\.displayedDates\.map\(/g) ?? []).length,
+    ).toBe(1);
+    expect(taskList).toContain("function plannerTaskPresentationItems");
+  });
+
+  it("keeps drag projection ephemeral, sortable and React-owned", () => {
+    const drag = source("ui/src/drag.tsx");
+    const list = source("ui/src/planner-list.tsx");
+    const taskRow = source("ui/src/task-row.tsx");
+
+    expect(drag).toContain("TaskProspectivePlacement");
+    expect(drag).toContain("useSortable({");
+    expect(drag).toContain("event.preventDefault()");
+    expect(drag).toContain('type: "jig-date"');
+    expect(drag).toContain("TaskProspectiveFootprint");
+    expect(drag).not.toContain("useDraggable");
+    expect(drag).not.toContain("TaskInsertionSlot");
+    expect(list).toContain("function projectedPlannerItems");
+    expect(list).toContain("<TaskProspectiveFootprint");
+    expect(list).not.toContain("TaskInsertionSlot");
+    expect(taskRow).toContain("<TaskCardPresentation");
+  });
+
+  it("keeps Task workspace state shared while host primitives stay presentation-owned", () => {
+    const shared = source("ui/src/task-workspace.tsx");
+    const desktop = source("ui/src/presentation/desktop/task-workspace.tsx");
+    const narrow = source("ui/src/presentation/narrow/task-workspace.tsx");
+
+    expect(shared).not.toContain("<Drawer");
+    expect(shared).not.toContain("<BottomSheet");
+    expect(shared).not.toContain("LayoutFooter");
+    expect(desktop).toContain("<Drawer");
+    expect(desktop).toContain("<TaskWorkspaceContent");
+    expect(desktop).toContain("<TaskWorkspaceActions");
+    expect(desktop).not.toContain("<BottomSheet");
+    expect(narrow).toContain("<BottomSheet");
+    expect(narrow).toContain("<TaskWorkspaceContent");
+    expect(narrow).toContain("<TaskWorkspaceActions");
+    expect(narrow).not.toContain("<Drawer");
+    expect(desktop).not.toMatch(/from\s+["'][^"']*(?:runtime|native|shell|persistence)/);
+    expect(narrow).not.toMatch(/from\s+["'][^"']*(?:runtime|native|shell|persistence)/);
+  });
+
+  it("keeps sync-conflict presenters presentation-only when they arrive", () => {
+    for (const path of [
+      "ui/src/presentation/desktop/sync-conflict-workspace.tsx",
+      "ui/src/presentation/narrow/sync-conflict-workspace.tsx",
+      "ui/src/presentation/shared/sync-conflict-content.tsx",
+    ]) {
+      if (!existsSync(path)) {
+        continue;
+      }
+      const content = source(path);
+      expect(content, path).not.toMatch(
+        /from\s+["'][^"']*(?:src\/shell|src\/persistence|\.\.\/\.\.\/runtime|\/native\/|\.\.\/\.\.\/native)/,
+      );
+      expect(content, path).not.toMatch(
+        /\b(?:interface|type)\s+JigData(?:Conflict|Resolution)\w*/,
+      );
+    }
+  });
+
+  it("reserves one pure recovery-policy owner and one UI-only resolver-draft owner", () => {
+    const recoveryPath = "src/core/synchronization-recovery.ts";
+    const recoveryViolations = existsSync(recoveryPath)
+      ? []
+      : [`missing:${recoveryPath}`];
+    expect(recoveryViolations).toEqual([]);
+
+    if (existsSync(recoveryPath)) {
+      const recovery = source(recoveryPath);
+      expect(recovery).not.toMatch(
+        /from\s+["'][^"']*(?:shell|persistence|protocol|github|ui)\/|node:|bun:|Bun\.|@capacitor|isomorphic-git|\bfetch\(/,
+      );
+      for (const entryPoint of [
+        "reconcileRelatedPortableSnapshots",
+        "buildJigDataConflictCase",
+        "jigDataConflictKey",
+        "deriveJigDataDateOrders",
+        "applyJigDataResolution",
+        "validateJigDataConflictCase",
+        "validateOptionalJigDataConflictCase",
+        "validateJigDataResolution",
+        "recoveryCommitSpec",
+        "recoveryPrivateRef",
+      ]) {
+        expect(recovery).toContain(`export function ${entryPoint}`);
+      }
+      expect(recovery).not.toMatch(
+        /\bas\s+unknown\s+as\b|\bas\s+any\b|:\s*any\b|<any>|\bArray<any>\b/,
+      );
+      expect(recovery).not.toMatch(
+        /\b[A-Za-z_$][\w$]*!\s*(?:\.|[;,)}\]])/,
+      );
+    }
+
+    const draftPath = "ui/src/sync-conflict-state.ts";
+    const draftViolations = existsSync(draftPath)
+      ? []
+      : [`missing:${draftPath}`];
+    expect(draftViolations).toEqual([]);
+
+    if (existsSync(draftPath)) {
+      const draft = source(draftPath);
+      expect(draft).not.toMatch(
+        /from\s+["'][^"']*(?:src\/shell|src\/persistence|\.\/native|\/native\/|isomorphic-git)/,
+      );
+      expect(draft).not.toMatch(
+        /\b(?:localStorage|sessionStorage|indexedDB)\b/,
+      );
+    }
+
+    const recoveryDeclarations = production.flatMap(([path, content]) =>
+      /\b(?:interface|type)\s+JigData(?:Conflict|Resolution)\w*/.test(content)
+        ? [path]
+        : [],
+    );
+    for (const path of recoveryDeclarations) {
+      expect(path).toBe(recoveryPath);
+    }
+  });
+
+  it("exposes exactly the two governed synchronization-conflict runtime operations", () => {
+    const browserRuntime = source("ui/src/http.ts");
+    const nativeRuntime = source("ui/src/runtime-native.ts");
+    const runtimeDispatch = source("ui/src/runtime.ts");
+    const shellHttp = source("src/shell/http.ts");
+
+    const operationPattern =
+      /\b(?:export\s+(?:async\s+function|const)\s+)([A-Za-z_$][\w$]*SynchronizationConflict[\w$]*)/g;
+    const configuredOperations = [
+      ...browserRuntime.matchAll(operationPattern),
+      ...nativeRuntime.matchAll(operationPattern),
+      ...runtimeDispatch.matchAll(operationPattern),
+    ].map((match) => match[1]);
+
+    expect([...new Set(configuredOperations)].sort()).toEqual([
+      "readSynchronizationConflict",
+      "resolveSynchronizationConflict",
+    ]);
+    expect(runtimeDispatch).toContain(
+      "typeof webRuntime.readSynchronizationConflict",
+    );
+    expect(runtimeDispatch).toContain(
+      "typeof webRuntime.resolveSynchronizationConflict",
+    );
+    expect(runtimeDispatch).toContain(
+      "runtime.readSynchronizationConflict(...args)",
+    );
+    expect(runtimeDispatch).toContain(
+      "runtime.resolveSynchronizationConflict(...args)",
+    );
+
+    const conflictRoutes = [
+      ...shellHttp.matchAll(
+        /["'](\/api\/v1\/sync\/conflict(?:\/resolve)?)["']/g,
+      ),
+    ].map((match) => match[1]);
+    expect([...new Set(conflictRoutes)].sort()).toEqual([
+      "/api/v1/sync/conflict",
+      "/api/v1/sync/conflict/resolve",
+    ]);
+
+    for (const content of [
+      browserRuntime,
+      nativeRuntime,
+      runtimeDispatch,
+      shellHttp,
+    ]) {
+      expect(content).not.toMatch(
+        /\b(?:create|update|delete|list|start|finish|open|close)SynchronizationConflict\b|\/api\/v1\/sync\/conflict\/(?:create|update|delete|list|session|draft)/,
+      );
+    }
+  });
+
+  it("keeps resolver Back cancellation ephemeral and ahead of other shared Back owners", () => {
+    const app = source("ui/src/app.tsx");
+    const handleStart = app.indexOf(
+      "const handleBack = useCallback",
+    );
+    const resolverStart = app.indexOf(
+      "if (syncConflictDraft !== null)",
+      handleStart,
+    );
+    const deleteStart = app.indexOf(
+      "if (deleteTaskId !== null)",
+      handleStart,
+    );
+
+    expect(handleStart).toBeGreaterThanOrEqual(0);
+    expect(resolverStart).toBeGreaterThan(handleStart);
+    expect(deleteStart).toBeGreaterThan(resolverStart);
+
+    const resolverBackBlock = app.slice(
+      resolverStart,
+      deleteStart,
+    );
+    expect(resolverBackBlock).toContain(
+      "setSyncConflictDraft(null)",
+    );
+    expect(resolverBackBlock).toContain(
+      "setSyncConflictError(null)",
+    );
+    expect(resolverBackBlock).toContain("return true");
+    expect(resolverBackBlock).not.toMatch(
+      /resolveSynchronizationConflict|triggerSync|applyTaskCommand/,
+    );
+    expect(app).toContain(
+      "nativeBackHandlerRef.current = handleBack",
+    );
+
+    const nativeLifecycle = source(
+      "ui/src/native/app-lifecycle.ts",
+    );
+    expect(nativeLifecycle).toContain(
+      'App.addListener(\n    "backButton"',
+    );
+    expect(nativeLifecycle).toContain("if (onBack())");
+  });
+
+  it("freezes the SD-17 source-ownership cutover without compatibility barrels", () => {
+    const legacyPaths = [
+      "src/portable.ts",
+      "src/protocol.ts",
+      "src/github.ts",
+      "src/github-auth.ts",
+      "src/github-device-flow.ts",
+      "src/github-onboarding.ts",
+      "src/github-reconnect.ts",
+      "src/github-registration.ts",
+      "src/shell/git.ts",
+    ] as const;
+    const imp14Targets = [
+      "src/core/portable.ts",
+      "src/protocol/runtime.ts",
+      "src/github/model.ts",
+      "src/github/parsing.ts",
+      "src/github/auth.ts",
+      "src/github/device-flow.ts",
+      "src/github/onboarding.ts",
+      "src/github/reconnect.ts",
+      "src/github/registration.ts",
+      "src/shell/git/process.ts",
+      "src/shell/git/repository.ts",
+      "src/shell/git/portable-store.ts",
+      "src/shell/git/remote.ts",
+    ] as const;
+
+    const violations = [
+      ...legacyPaths.flatMap((path) =>
+        existsSync(path) ? [`legacy:${path}`] : [],
+      ),
+      ...imp14Targets.flatMap((path) =>
+        existsSync(path) ? [] : [`missing:${path}`],
+      ),
+    ];
+    expect(violations).toEqual([]);
+
+    const portableStore = source("src/shell/git/portable-store.ts");
+    const remote = source("src/shell/git/remote.ts");
+    expect(portableStore).not.toMatch(/from\s+["']\.\/remote["']/);
+    expect(remote).toMatch(/from\s+["']\.\/portable-store["']/);
+
+    const recoveryEffects = "src/shell/git/recovery.ts";
+    expect(existsSync(recoveryEffects)).toBe(true);
+    if (existsSync(recoveryEffects)) {
+      const recovery = source(recoveryEffects);
+      expect(recovery).toContain(
+        'from "../../core/synchronization-recovery"',
+      );
+      expect(recovery).toContain("type RecoveryCommitSpec");
+      expect(recovery).toContain("recoveryPrivateRef");
+      for (const policyName of [
+        "reconcileRelatedPortableSnapshots",
+        "buildJigDataConflictCase",
+        "deriveJigDataDateOrders",
+        "applyJigDataResolution",
+      ]) {
+        expect(recovery).not.toContain(policyName);
+      }
+      expect(recovery).not.toMatch(
+        /SYNC_HEALTHY_POLL_MS|SYNC_RETRY_SECONDS|SYNCHRONIZATION_MUTATION_DEBOUNCE_MS/,
+      );
+    }
+
+    if (existsSync("src/github")) {
+      for (const [path, content] of sourceFiles("src/github")) {
+        expect(content, path).not.toMatch(
+          /from\s+["'][^"']*(?:shell|persistence|ui)\/|@capacitor|bun:sqlite|Bun\.spawn|node:fs/,
+        );
+      }
+    }
+    if (existsSync("src/protocol/runtime.ts")) {
+      expect(source("src/protocol/runtime.ts")).not.toMatch(
+        /Bun\.|bun:|node:fs|@capacitor|isomorphic-git|\bfetch\(|localStorage|sessionStorage/,
+      );
+    }
+    if (existsSync("src/shell/git")) {
+      for (const [path, content] of sourceFiles("src/shell/git")) {
+        expect(content, path).not.toMatch(/from\s+["'][^"']*ui\/src\/native/);
+      }
+    }
+    for (const [path, content] of sourceFiles("ui/src/native")) {
+      expect(content, path).not.toMatch(/from\s+["'][^"']*src\/shell\//);
+    }
+  });
+
+  it("locks the approved dependency stack and rejects recovery-specific escape hatches", () => {
+    const packageJson = JSON.parse(source("package.json")) as {
+      readonly dependencies: Readonly<Record<string, string>>;
+      readonly devDependencies: Readonly<Record<string, string>>;
+    };
+    expect(Object.keys(packageJson.dependencies).sort()).toEqual([
+      "@astryxdesign/core",
+      "@astryxdesign/theme-butter",
+      "@astryxdesign/theme-chocolate",
+      "@astryxdesign/theme-matcha",
+      "@astryxdesign/theme-neutral",
+      "@astryxdesign/theme-stone",
+      "@astryxdesign/theme-y2k",
+      "@capacitor/android",
+      "@capacitor/app",
+      "@capacitor/core",
+      "@capacitor/filesystem",
+      "@capacitor/local-notifications",
+      "@dnd-kit/dom",
+      "@dnd-kit/react",
+      "@stylexjs/stylex",
+      "buffer",
+      "isomorphic-git",
+      "react",
+      "react-dom",
+    ].sort());
+    expect(Object.keys(packageJson.devDependencies).sort()).toEqual([
+      "@astryxdesign/cli",
+      "@capacitor/cli",
+      "@playwright/test",
+      "@types/bun",
+      "@types/react",
+      "@types/react-dom",
+      "typescript",
+      "vite",
+      "vitest",
+    ].sort());
+
+    const resolverSources = production.filter(([path]) =>
+      path.includes("synchronization-recovery") ||
+      path.includes("sync-conflict") ||
+      path === "src/shell/git/recovery.ts",
+    );
+    for (const [path, content] of resolverSources) {
+      expect(content, path).not.toMatch(/\bas\s+unknown\s+as\b|\bas\s+any\b|:\s*any\b|<any>|\bArray<any>\b/);
+      expect(content, path).not.toMatch(/\b[A-Za-z_$][\w$]*!\s*(?:\.|[;,)}\]])/);
+      expect(content, path).not.toMatch(/JSON\.parse\([^;\n]+\)\s+as\s+/);
+    }
+  });
+
+  it("keeps explicit browser-profile and Android/native acceptance hooks", () => {
+    const helpers = source("tests/browser/helpers.ts");
+    for (const profile of [
+      "expanded-fine",
+      "narrow-fine",
+      "narrow-coarse",
+      "expanded-reduced-motion",
+      "narrow-reduced-motion",
+    ]) {
+      expect(helpers).toContain(`"${profile}"`);
+    }
+    expect(helpers).toContain("withBrowserAcceptanceProfile");
+    expect(helpers).toContain("hasTouch: true");
+    expect(helpers).toContain('reducedMotion: "reduce"');
+
+    const workflow = source(".github/workflows/verify.yml");
+    expect(workflow).toContain("android-build-certification:");
+    expect(workflow).toContain("android-api-24:");
+    expect(workflow).toContain(":app:testDebugUnitTest :app:lintDebug");
+    expect(workflow).toContain("Git synchronization and recovery gate");
+    expect(workflow).toContain(
+      "scripts/verify-android-reinstall-preservation.sh",
+    );
+    expect(workflow).toContain("Verify stable certification APK signature");
+
+    const reinstallProof = source(
+      "scripts/verify-android-reinstall-preservation.sh",
+    );
+    expect(reinstallProof).toContain(":app:connectedDebugAndroidTest");
+    expect(
+      reinstallProof.match(/adb install -r/g)?.length ?? 0,
+    ).toBeGreaterThanOrEqual(2);
+    expect(reinstallProof).toContain(
+      "files/repository/.jig/local/reinstall-sentinel",
+    );
+    expect(reinstallProof).toContain(
+      "files/repository/.jig/git/reinstall-sentinel",
+    );
+    expect(reinstallProof).not.toMatch(
+      /\badb\s+uninstall\b|\bpm\s+clear\b/,
+    );
+
+    const ciSigning = source("scripts/prepare-android-ci-signing.sh");
+    expect(ciSigning).toContain(
+      "045a3d6a3e359633a14853a5a5e1e4f2a11cbdae",
+    );
+    expect(ciSigning).toContain(
+      "586c1bd5cf96f9358f36b37ea98fef93f4d0a8e3",
+    );
+    expect(ciSigning).toContain(
+      "e242d83e2bf72169ab0abd5280d4d455caef71eb",
+    );
+    const androidGradle = source("android/app/build.gradle");
+    expect(androidGradle).toContain("JIG_ANDROID_CI_KEYSTORE");
+    expect(androidGradle).toContain("jigCiDebug");
+
+    const nativeHooks = source(
+      "tests/certification/v1.1.2-native-acceptance.md",
+    );
+    for (const hook of [
+      "J112-NA-01",
+      "J112-NA-02",
+      "J112-NA-03",
+      "J112-NA-04",
+      "J112-NA-05",
+      "J112-NA-06",
+      "J112-NA-07",
+      "J112-NA-08",
+    ]) {
+      expect(nativeHooks).toContain(hook);
+    }
+    expect(nativeHooks).toContain("FINAL / CERTIFIED");
+    expect(nativeHooks).not.toContain("HOOK_ONLY");
+    expect(nativeHooks).toContain(
+      "J112-NA-08 (Git/recovery semantics)",
+    );
+    expect(nativeHooks).toContain(
+      "J112-NA-08 (resolver host / Back closure)",
+    );
+  });
+});

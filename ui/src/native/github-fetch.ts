@@ -1,4 +1,4 @@
-import type { GitHubFetch } from "../../../src/github-auth";
+import type { GitHubFetch } from "../../../src/github/auth";
 import {
   androidNativeHttp,
   type NativeHttpPort,

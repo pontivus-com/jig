@@ -3,6 +3,7 @@ import {
   test,
   type Locator,
   type Page,
+  type Request,
 } from "@playwright/test";
 
 test.use({ hasTouch: true });
@@ -41,6 +42,53 @@ async function dragHandle(page: Page, title: string): Promise<Locator> {
   return card.getByLabel(`Move ${title}`, { exact: true });
 }
 
+function dateDropZone(page: Page, date: string): Locator {
+  return page.locator(
+    `[data-jig-drop-date-container="${date}"]`,
+  );
+}
+
+async function taskDropTarget(
+  page: Page,
+  date: string,
+  destinationIndex: number,
+  sourceTitle: string,
+): Promise<{
+  readonly target: Locator;
+  readonly targetYRatio: number;
+}> {
+  const cards = page.locator(
+    `[data-date="${date}"] .jig-task-card`,
+  );
+  const titles = (await cards.locator(".jig-task-title").allTextContents())
+    .map((title) => title.trim());
+  const sourceIndex = titles.indexOf(sourceTitle);
+  const available = titles.filter((title) => title !== sourceTitle);
+
+  if (available.length === 0 || destinationIndex >= available.length) {
+    return {
+      target: page.locator(`[data-jig-drop-tail="${date}"]`),
+      targetYRatio: 0.5,
+    };
+  }
+
+  const targetTitle =
+    sourceIndex >= 0 && destinationIndex >= sourceIndex
+      ? available[Math.max(0, destinationIndex - 1)]
+      : available[destinationIndex];
+  if (targetTitle === undefined) {
+    throw new Error(
+      `No sortable Task target for ${date} index ${destinationIndex}`,
+    );
+  }
+
+  return {
+    target: await taskCard(page, targetTitle),
+    targetYRatio:
+      sourceIndex >= 0 && destinationIndex >= sourceIndex ? 0.75 : 0.25,
+  };
+}
+
 async function runTaskAction(
   page: Page,
   title: string,
@@ -60,6 +108,21 @@ async function runTaskAction(
   const card = await taskCard(page, title);
   await card.getByRole("button", { name: `Actions for ${title}` }).click();
   await page.getByRole("menuitem", { name: action, exact: true }).click();
+}
+
+async function waitForPlannerMotionToSettle(
+  page: Page,
+): Promise<void> {
+  await expect
+    .poll(() =>
+      activeWeek(page).evaluate(
+        (element) =>
+          element
+            .getAnimations({ subtree: true })
+            .filter((animation) => animation.playState === "running").length,
+      ),
+    )
+    .toBe(0);
 }
 
 async function createTask(
@@ -89,6 +152,7 @@ async function mouseDrag(
   target: Locator,
   targetYRatio = 0.5,
 ): Promise<{ readonly date: string; readonly index: number }> {
+  await waitForPlannerMotionToSettle(page);
   const sourceBox = await source.boundingBox();
   if (sourceBox === null) {
     throw new Error("Drag source geometry unavailable");
@@ -118,8 +182,8 @@ async function mouseDrag(
   const dragScope = page.locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
   await expect(
-    page.locator(".jig-task-insertion-slot-active .jig-task-drop-indicator"),
-  ).toBeVisible();
+    page.locator(".jig-task-prospective-footprint"),
+  ).toHaveCount(1);
 
   const intent = await dragScope.evaluate((element) => ({
     date: element.getAttribute("data-jig-drop-date") ?? "",
@@ -136,6 +200,7 @@ async function touchDrag(
   targetYRatio = 0.5,
   beforeRelease?: () => Promise<void>,
 ): Promise<{ readonly date: string; readonly index: number }> {
+  await waitForPlannerMotionToSettle(page);
   const sourceBox = await source.boundingBox();
   if (sourceBox === null) {
     throw new Error("Touch drag source geometry unavailable");
@@ -164,8 +229,8 @@ async function touchDrag(
     type: "touchMove",
     touchPoints: [
       {
-        x: startPoint.x + 8,
-        y: startPoint.y + 8,
+        x: startPoint.x + 4,
+        y: startPoint.y + 4,
         radiusX: 1,
         radiusY: 1,
         force: 1,
@@ -173,6 +238,8 @@ async function touchDrag(
       },
     ],
   });
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await page.waitForTimeout(275);
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
   const targetBox = await target.boundingBox();
@@ -203,7 +270,7 @@ async function touchDrag(
 
   const dragScope = page.locator(".jig-task-drag-scope");
   await expect(dragScope).not.toHaveAttribute("data-jig-drop-date", "");
-  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(1);
 
   const intent = await dragScope.evaluate((element) => ({
     date: element.getAttribute("data-jig-drop-date") ?? "",
@@ -372,16 +439,31 @@ test("dedicated-handle desktop drag moves exactly once without runtime errors or
   });
 
   const today = await browserCivilDate(page);
-  const dayOfWeek = await page.evaluate(() => new Date().getDay());
-  const offset = dayOfWeek === 0 ? -1 : 1;
-  const destinationDate = await browserCivilDate(page, offset);
+  const destinationDate = await browserCivilDate(page, 1);
 
   await createTask(page, "Pointer drag contract", today);
   await page.reload();
 
+  let moveCommands = 0;
+  const observeMove = (request: Request): void => {
+    if (
+      request.method() !== "POST" ||
+      new URL(request.url()).pathname !== "/api/v1/commands"
+    ) {
+      return;
+    }
+    const body = request.postDataJSON() as {
+      readonly command?: { readonly type?: string };
+    };
+    if (body.command?.type === "move") {
+      moveCommands += 1;
+    }
+  };
+  page.on("request", observeMove);
+
   const card = await taskCard(page, "Pointer drag contract");
   const sourceHandle = await dragHandle(page, "Pointer drag contract");
-  const destination = page.locator(`[data-date="${destinationDate}"] [data-jig-drop-slot="0"]`);
+  const destination = dateDropZone(page, destinationDate);
   await expect(card).toBeVisible();
   await expect(destination).toBeVisible();
 
@@ -401,6 +483,8 @@ test("dedicated-handle desktop drag moves exactly once without runtime errors or
   expect(
     (await taskByTitle(page, "Pointer drag contract")).scheduled_date,
   ).toBe(destinationDate);
+  await expect.poll(() => moveCommands).toBe(1);
+  page.off("request", observeMove);
   expect(runtimeErrors).toEqual([]);
 });
 
@@ -475,9 +559,13 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
   await page.locator(".jig-content").click({ position: { x: 2, y: 2 } });
   await expect(page.getByRole("dialog", { name: "Combined semantic source" })).toBeHidden();
 
-  const target = page.locator(
-    `[data-date="${today}"] [data-jig-drop-slot="2"]`,
+  const combinedTarget = await taskDropTarget(
+    page,
+    today,
+    1,
+    "Combined semantic source",
   );
+  const target = combinedTarget.target;
   const sourceHandle = await dragHandle(page, "Combined semantic source");
   const sourceBox = await sourceHandle.boundingBox();
   const targetBox = await target.boundingBox();
@@ -496,7 +584,7 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
     { steps: 3 },
   );
 
-  const overlay = page.locator(".jig-drag-card-overlay");
+  const overlay = page.locator(".jig-drag-card-overlay .jig-task-card");
   await expect(overlay).toBeVisible();
   const dragColors = await overlay.evaluate((element) => {
     const probe = document.createElement("span");
@@ -513,10 +601,10 @@ test("selection focus and drag preserve the High-priority semantic cue", async (
 
   await page.mouse.move(
     targetBox.x + targetBox.width / 2,
-    targetBox.y + targetBox.height / 2,
+    targetBox.y + targetBox.height * combinedTarget.targetYRatio,
     { steps: 8 },
   );
-  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(1);
   await page.screenshot({
     path: testInfo.outputPath("v1.1-drag-active-desktop.png"),
     fullPage: true,
@@ -535,10 +623,13 @@ test("dedicated-handle desktop drag reorders within a date at the exact target i
   await page.reload();
 
   const source = await dragHandle(page, "Desktop reorder first");
-  const target = page.locator(
-    `[data-date="${today}"] [data-jig-drop-slot="3"]`,
+  const { target, targetYRatio } = await taskDropTarget(
+    page,
+    today,
+    2,
+    "Desktop reorder first",
   );
-  const intent = await mouseDrag(page, source, target);
+  const intent = await mouseDrag(page, source, target, targetYRatio);
   expect(intent).toEqual({ date: today, index: 2 });
 
   await expect
@@ -590,14 +681,17 @@ test("narrow touch drag reorders within a date and does not open the workspace",
   await page.reload();
 
   const source = await dragHandle(page, "Touch first");
-  const target = page.locator(
-    `[data-date="${today}"] [data-jig-drop-slot="2"]`,
+  const { target, targetYRatio } = await taskDropTarget(
+    page,
+    today,
+    1,
+    "Touch first",
   );
   const intent = await touchDrag(
     page,
     source,
     target,
-    0.5,
+    targetYRatio,
     async () => {
       await page.screenshot({
         path: testInfo.outputPath("v1.1-drag-active-mobile-390.png"),
@@ -652,10 +746,18 @@ test("narrow touch drag moves to the exact index in a non-empty adjacent date", 
   await page.reload();
 
   const source = await dragHandle(page, "Touch cross source");
-  const target = page.locator(
-    `[data-date="${destinationDate}"] [data-jig-drop-slot="0"]`,
+  const { target, targetYRatio } = await taskDropTarget(
+    page,
+    destinationDate,
+    0,
+    "Touch cross source",
   );
-  const intent = await touchDrag(page, source, target);
+  const intent = await touchDrag(
+    page,
+    source,
+    target,
+    targetYRatio,
+  );
   expect(intent).toEqual({ date: destinationDate, index: 0 });
 
   await expect
@@ -709,8 +811,8 @@ test("narrow touch drag moves into an empty adjacent date and persists", async (
   await page.reload();
 
   const source = await dragHandle(page, "Touch cross-date");
-  const target = page.locator(`[data-date="${destinationDate}"] [data-jig-drop-slot="0"]`);
-  const intent = await touchDrag(page, source, target);
+  const target = dateDropZone(page, destinationDate);
+  const intent = await touchDrag(page, source, target, 0.9);
   expect(intent).toEqual({ date: destinationDate, index: 0 });
 
   await expect
@@ -726,24 +828,35 @@ test("narrow touch drag moves into an empty adjacent date and persists", async (
 });
 
 
-test("desktop drag keeps a stable insertion intent through inter-card whitespace", async ({
+test("desktop drag projects one measured card footprint without pre-release mutation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
   await createTask(page, "Gap source", today);
   await createTask(page, "Gap target one", today);
-  await createTask(page, "Gap target two with a deliberately longer title for height", today);
+  await createTask(
+    page,
+    "Gap target two with a deliberately longer title for height",
+    today,
+  );
   await page.reload();
 
-  const source = await dragHandle(page, "Gap source");
-  const slot = page.locator(
-    `[data-date="${today}"] [data-jig-drop-slot="2"]`,
+  const sourceCard = await taskCard(page, "Gap source");
+  const sourceHeight = await sourceCard.evaluate(
+    (element) => element.getBoundingClientRect().height,
   );
+  const source = await dragHandle(page, "Gap source");
   const sourceBox = await source.boundingBox();
   if (sourceBox === null) {
     throw new Error("Gap drag source geometry unavailable");
   }
+  const { target } = await taskDropTarget(
+    page,
+    today,
+    1,
+    "Gap source",
+  );
 
   await page.mouse.move(
     sourceBox.x + sourceBox.width / 2,
@@ -757,29 +870,34 @@ test("desktop drag keeps a stable insertion intent through inter-card whitespace
   );
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
-  const slotBox = await slot.boundingBox();
-  if (slotBox === null) {
-    throw new Error("Explicit insertion-slot geometry unavailable");
+  const targetBox = await target.boundingBox();
+  if (targetBox === null) {
+    throw new Error("Sortable target geometry unavailable");
   }
-  const x = slotBox.x + slotBox.width / 2;
-  await page.mouse.move(x, slotBox.y + slotBox.height * 0.25, { steps: 8 });
-  const firstIntent = await page.locator(".jig-task-drag-scope").evaluate(
-    (element) => ({
-      date: element.getAttribute("data-jig-drop-date"),
-      index: element.getAttribute("data-jig-drop-index"),
-    }),
-  );
-  await page.mouse.move(x, slotBox.y + slotBox.height * 0.75, { steps: 2 });
-  const secondIntent = await page.locator(".jig-task-drag-scope").evaluate(
-    (element) => ({
-      date: element.getAttribute("data-jig-drop-date"),
-      index: element.getAttribute("data-jig-drop-index"),
-    }),
-  );
+  const x = targetBox.x + targetBox.width / 2;
+  for (const ratio of [0.2, 0.35] as const) {
+    await page.mouse.move(
+      x,
+      targetBox.y + targetBox.height * ratio,
+      { steps: 6 },
+    );
+    await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
+      "data-jig-drop-index",
+      "1",
+    );
+    await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(1);
+    const footprintHeight = await page
+      .locator(".jig-task-prospective-footprint")
+      .evaluate((element) => element.getBoundingClientRect().height);
+    expect(Math.abs(footprintHeight - sourceHeight)).toBeLessThanOrEqual(1);
+    expect((await taskByTitle(page, "Gap source")).position).toBe(0);
+  }
 
-  expect(firstIntent).toEqual(secondIntent);
-  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
   await page.mouse.up();
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
+  await expect
+    .poll(async () => (await taskByTitle(page, "Gap source")).position)
+    .toBe(1);
 });
 
 
@@ -809,14 +927,22 @@ test("dedicated-handle drag survives twenty sequential cycles without stranded s
   for (let cycle = 0; cycle < 20; cycle += 1) {
     const moveToEnd = cycle % 2 === 0;
     const source = await dragHandle(page, "Repeated drag source");
-    const targetSlot = moveToEnd ? 2 : 0;
-    const target = page.locator(
-      `[data-date="${today}"] [data-jig-drop-slot="${targetSlot}"]`,
+    const destinationIndex = moveToEnd ? 1 : 0;
+    const { target, targetYRatio } = await taskDropTarget(
+      page,
+      today,
+      destinationIndex,
+      "Repeated drag source",
     );
-    const intent = await mouseDrag(page, source, target);
+    const intent = await mouseDrag(
+      page,
+      source,
+      target,
+      targetYRatio,
+    );
     expect(intent).toEqual({
       date: today,
-      index: moveToEnd ? 1 : 0,
+      index: destinationIndex,
     });
 
     await expect
@@ -828,7 +954,7 @@ test("dedicated-handle drag survives twenty sequential cycles without stranded s
       );
 
     await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-    await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+    await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
     await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
       "data-jig-drag-active",
       "false",
@@ -871,7 +997,7 @@ test("outside drop restores exactly without mutation", async ({
   await page.mouse.up();
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
   await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drag-active",
     "false",
@@ -920,8 +1046,10 @@ test("pointer cancellation clears touch drag without mutation", async ({
   });
   await client.send("Input.dispatchTouchEvent", {
     type: "touchMove",
-    touchPoints: [point(x + 8, y + 8)],
+    touchPoints: [point(x + 4, y + 4)],
   });
+  await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await page.waitForTimeout(275);
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
   await client.send("Input.dispatchTouchEvent", {
@@ -931,7 +1059,7 @@ test("pointer cancellation clears touch drag without mutation", async ({
   await client.detach();
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
   await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drag-active",
     "false",
@@ -1008,9 +1136,9 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
   if (sourceBox === null) {
     throw new Error("Auto-scroll source geometry unavailable");
   }
-  const frame = page.locator(".jig-content-frame");
+  const scrollOwner = page.locator("#astryx-app-shell-main");
   await expect.poll(
-    async () => frame.evaluate((element) => element.scrollTop),
+    async () => scrollOwner.evaluate((element) => element.scrollTop),
   ).toBe(0);
 
   await page.mouse.move(
@@ -1032,36 +1160,32 @@ test("long Planner drag auto-scroll preserves a valid explicit insertion target"
       { steps: 4 },
     );
     await page.waitForTimeout(100);
-    const scrollTop = await frame.evaluate((element) => element.scrollTop);
+    const scrollTop = await scrollOwner.evaluate((element) => element.scrollTop);
     if (scrollTop > 0) {
       break;
     }
   }
 
-  const scrollTop = await frame.evaluate((element) => element.scrollTop);
+  const scrollTop = await scrollOwner.evaluate((element) => element.scrollTop);
   expect(scrollTop).toBeGreaterThan(0);
   await expect(page.locator(".jig-task-drag-scope")).toHaveAttribute(
     "data-jig-drop-date",
     today,
   );
-  await expect(page.locator(".jig-task-insertion-slot-active")).toBeVisible();
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(1);
   await page.mouse.up();
 
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
-  await expect(page.locator(".jig-task-insertion-slot-active")).toHaveCount(0);
+  await expect(page.locator(".jig-task-prospective-footprint")).toHaveCount(0);
 });
 
 
-test("explicit insertion slots cover every gap without pre-release mutation", async ({
+test("prospective projection covers first middle and last positions without pre-release mutation", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
-  const dayOfWeek = await page.evaluate(() => new Date().getDay());
-  const destinationDate = await browserCivilDate(
-    page,
-    dayOfWeek === 0 ? -1 : 1,
-  );
+  const destinationDate = await browserCivilDate(page, 1);
 
   await createTask(page, "Gap-matrix source", today);
   await createTask(page, "Gap-matrix destination 1", destinationDate);
@@ -1088,17 +1212,22 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
   await expect(page.locator(".jig-drag-card-overlay")).toBeVisible();
 
   const scope = page.locator(".jig-task-drag-scope");
-  for (let slotIndex = 0; slotIndex <= 3; slotIndex += 1) {
-    const slot = page.locator(
-      `[data-date="${destinationDate}"] [data-jig-drop-slot="${slotIndex}"]`,
+  for (const destinationIndex of [0, 1, 2, 3] as const) {
+    const { target, targetYRatio } = await taskDropTarget(
+      page,
+      destinationDate,
+      destinationIndex,
+      "Gap-matrix source",
     );
-    const box = await slot.boundingBox();
+    const box = await target.boundingBox();
     if (box === null) {
-      throw new Error(`Gap-matrix slot ${slotIndex} geometry unavailable`);
+      throw new Error(
+        `Gap-matrix target ${destinationIndex} geometry unavailable`,
+      );
     }
     await page.mouse.move(
       box.x + box.width / 2,
-      box.y + box.height / 2,
+      box.y + box.height * targetYRatio,
       { steps: 6 },
     );
     await expect(scope).toHaveAttribute(
@@ -1107,8 +1236,11 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
     );
     await expect(scope).toHaveAttribute(
       "data-jig-drop-index",
-      String(slotIndex),
+      String(destinationIndex),
     );
+    await expect(
+      page.locator(".jig-task-prospective-footprint"),
+    ).toHaveCount(1);
     expect(
       (await taskByTitle(page, "Gap-matrix source")).scheduled_date,
     ).toBe(today);
@@ -1117,6 +1249,9 @@ test("explicit insertion slots cover every gap without pre-release mutation", as
   await page.mouse.move(4, 4, { steps: 6 });
   await page.mouse.up();
   await expect(page.locator(".jig-drag-card-overlay")).toHaveCount(0);
+  await expect(
+    page.locator(".jig-task-prospective-footprint"),
+  ).toHaveCount(0);
   expect(
     (await taskByTitle(page, "Gap-matrix source")).scheduled_date,
   ).toBe(today);
@@ -1128,11 +1263,7 @@ test("drag persists first middle and last positions within and across dates", as
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   const today = await browserCivilDate(page);
-  const dayOfWeek = await page.evaluate(() => new Date().getDay());
-  const destinationDate = await browserCivilDate(
-    page,
-    dayOfWeek === 0 ? -1 : 1,
-  );
+  const destinationDate = await browserCivilDate(page, 1);
 
   const orderedTitles = async (date: string): Promise<readonly string[]> =>
     (await apiState(page)).tasks
@@ -1148,9 +1279,9 @@ test("drag persists first middle and last positions within and across dates", as
       .map((task) => task.title);
 
   const sameDateCases = [
-    { label: "first", sourceFirst: false, slot: 0, index: 0 },
-    { label: "middle", sourceFirst: true, slot: 2, index: 1 },
-    { label: "last", sourceFirst: true, slot: 3, index: 2 },
+    { label: "first", sourceFirst: false, index: 0 },
+    { label: "middle", sourceFirst: true, index: 1 },
+    { label: "last", sourceFirst: true, index: 2 },
   ] as const;
 
   for (const scenario of sameDateCases) {
@@ -1166,12 +1297,17 @@ test("drag persists first middle and last positions within and across dates", as
     await page.reload();
 
     const sourceTitle = `Same ${scenario.label} source`;
+    const { target, targetYRatio } = await taskDropTarget(
+      page,
+      today,
+      scenario.index,
+      sourceTitle,
+    );
     const intent = await mouseDrag(
       page,
       await dragHandle(page, sourceTitle),
-      page.locator(
-        `[data-date="${today}"] [data-jig-drop-slot="${scenario.slot}"]`,
-      ),
+      target,
+      targetYRatio,
     );
     expect(intent).toEqual({ date: today, index: scenario.index });
     await expect
@@ -1180,9 +1316,9 @@ test("drag persists first middle and last positions within and across dates", as
   }
 
   const crossDateCases = [
-    { label: "first", slot: 0, index: 0 },
-    { label: "middle", slot: 1, index: 1 },
-    { label: "last", slot: 3, index: 3 },
+    { label: "first", index: 0 },
+    { label: "middle", index: 1 },
+    { label: "last", index: 3 },
   ] as const;
 
   for (const scenario of crossDateCases) {
@@ -1194,12 +1330,17 @@ test("drag persists first middle and last positions within and across dates", as
     await createTask(page, `Cross ${scenario.label} peer 3`, destinationDate);
     await page.reload();
 
+    const { target, targetYRatio } = await taskDropTarget(
+      page,
+      destinationDate,
+      scenario.index,
+      sourceTitle,
+    );
     const intent = await mouseDrag(
       page,
       await dragHandle(page, sourceTitle),
-      page.locator(
-        `[data-date="${destinationDate}"] [data-jig-drop-slot="${scenario.slot}"]`,
-      ),
+      target,
+      targetYRatio,
     );
     expect(intent).toEqual({
       date: destinationDate,
@@ -1223,13 +1364,13 @@ test("Task-body touch scroll never activates drag", async ({ page }) => {
   }
   await page.reload();
 
-  const frame = page.locator(".jig-content-frame");
-  const frameGeometry = await frame.evaluate((element) => ({
+  const scrollOwner = page.locator("#astryx-app-shell-main");
+  const scrollGeometry = await scrollOwner.evaluate((element) => ({
     clientHeight: element.clientHeight,
     scrollHeight: element.scrollHeight,
   }));
-  expect(frameGeometry.scrollHeight).toBeGreaterThan(
-    frameGeometry.clientHeight,
+  expect(scrollGeometry.scrollHeight).toBeGreaterThan(
+    scrollGeometry.clientHeight,
   );
 
   const body = (await taskCard(page, "Body-scroll task 2")).locator(
@@ -1288,7 +1429,9 @@ test("Task-body touch scroll never activates drag", async ({ page }) => {
     page.getByRole("dialog", { name: "Body-scroll task 2" }),
   ).toHaveCount(0);
   await expect
-    .poll(async () => frame.evaluate((element) => element.scrollTop))
+    .poll(async () =>
+      scrollOwner.evaluate((element) => element.scrollTop),
+    )
     .toBeGreaterThan(0);
 });
 
