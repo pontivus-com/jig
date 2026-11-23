@@ -400,7 +400,8 @@
   position: fixed;
   z-index: 5;
   inset-block-end: calc(
-    64px + env(safe-area-inset-bottom, 0px) + var(--spacing-3)
+    var(--jig-narrow-bottom-total) + 56px +
+      var(--spacing-3) + var(--spacing-2)
   );
   inset-inline-start: max(
     var(--spacing-3),

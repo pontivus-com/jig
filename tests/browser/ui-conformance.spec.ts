@@ -1099,12 +1099,22 @@ test("adding and editing a Task confirm success and close the workspace", async 
       const navigationBox = await page
         .getByRole("navigation", { name: "Primary" })
         .boundingBox();
+      const fabBox = await page.locator(".jig-mobile-add-fab").boundingBox();
       expect(confirmationBox).not.toBeNull();
       expect(navigationBox).not.toBeNull();
-      if (confirmationBox !== null && navigationBox !== null) {
+      expect(fabBox).not.toBeNull();
+      if (
+        confirmationBox !== null &&
+        navigationBox !== null &&
+        fabBox !== null
+      ) {
         expect(confirmationBox.y + confirmationBox.height).toBeLessThan(
           navigationBox.y,
         );
+        expect(
+          confirmationBox.y + confirmationBox.height,
+          "narrow success feedback must clear the Planner FAB",
+        ).toBeLessThanOrEqual(fabBox.y);
       }
     }
 
