@@ -136,7 +136,7 @@ The public release channel is preferred for normal use.
 
 ## Android distribution
 
-Jig v1.1 provides the independently installable Android application `com.pontivus.jig`. From v1.1.2 onward, the matching GitHub Release is the supported direct APK channel and contains the production-signed asset:
+Jig v1.1 provides the independently installable Android application `com.pontivus.jig`. From v1.1.2 onward, the matching GitHub Release is the supported direct APK channel and contains the GitHub-Actions-signed asset:
 
 ```text
 jig-android.apk
