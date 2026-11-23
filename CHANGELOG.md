@@ -31,6 +31,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 - **Release-tail governance:** Added a mandatory version-specific release-state audit, explicit ordinary-PR release handoff (`continue-development` vs `create-release-pr-after-merge`), verifier enforcement, and unmistakable Release-workflow no-op summaries so implementation completion cannot be mistaken for completion of the separate release ceremony.
 
 - **v1.1.2 corrective authority and certification:** Reconciled the FR/SD/implementation authority, adaptive concern matrix and branch governance around the final corrective architecture. IMP-18 exact-candidate certification retains executable browser/theme/resolver, synchronization and Android hosted evidence while keeping package metadata at v1.1.1 until the separate `release/v1.1.2` transition.
+
 ## [1.1.1] - 2026-11-21
 
 ### Documentation
