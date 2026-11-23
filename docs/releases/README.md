@@ -122,6 +122,30 @@ Published tags are never moved or rebuilt. A correction after publication requir
 
 **Bounded v1.1.2 Android distribution-completion exception:** v1.1.2 was published before the direct Android APK requirement was corrected. The permanent Release workflow may therefore append only `jig-android.apk` and `jig-android.apk.sha256` to the existing v1.1.2 GitHub Release. That APK must be rebuilt from the unchanged immutable `v1.1.2` tag/commit `ef9aa1847209d651cb8d01fefd23506b0afdd807`, signed by the governed stable production Android signer and fully identity/signature verified. The tag, release commit, existing Linux assets and existing `SHA256SUMS` must not be moved, replaced or rewritten. If either completion asset already exists, a retry may reuse it only when byte-identical. This exception does not authorize general post-publication asset mutation and does not create a second v1.1.2 source release.
 
+### v1.1.2 Android APK completion pipeline
+
+After the workflow correction is merged to `master`, complete the v1.1.2 Android release by manually dispatching the canonical **Release** workflow with:
+
+```text
+android_v1_1_2_completion = true
+commit                     = leave empty
+```
+
+That dispatch has one fixed path:
+
+1. resolve `v1.1.2` to exactly `ef9aa1847209d651cb8d01fefd23506b0afdd807`;
+2. verify that commit remains an ancestor of `master` and that the immutable tag has not moved;
+3. run Android source/version/dependency certification for that exact source;
+4. build the release APK with `:app:assembleRelease`;
+5. sign it with the protected stable Jig Android release key;
+6. verify `com.pontivus.jig`, `versionName=1.1.2`, `versionCode=1001002` and the governed signing-certificate fingerprint;
+7. retain `jig-android.apk` as the workflow artifact;
+8. verify the existing published GitHub Release still targets the same v1.1.2 commit and still contains the original Linux assets;
+9. append only `jig-android.apk` and `jig-android.apk.sha256`;
+10. on retry, accept existing completion assets only when byte-identical.
+
+The v1.1.2 completion path does **not** run the Linux arm64 release job, does not rebuild or replace existing Linux assets, does not create or move a tag, does not create another GitHub Release, and does not publish to any Android app store/repository.
+
 ## Release completion and status checklist
 
 For any version-specific question about whether a release is complete, why it is not released, or what remains, walk this checklist from top to bottom and report the first false item(s). Do not stop at implementation/certification evidence, and inspect the Release workflow's jobs rather than treating an overall green no-op as publication.
