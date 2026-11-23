@@ -60,6 +60,8 @@ jobs:
 
   android-build-certification:
     runs-on: ubuntu-latest
+    env:
+      JIG_ANDROID_CI_KEYSTORE: ${{ runner.temp }}/jig-ci-debug.p12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,6 +87,8 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
+      - name: Prepare stable Android certification signing identity
+        run: bash scripts/prepare-android-ci-signing.sh "$JIG_ANDROID_CI_KEYSTORE"
       - name: Ensure Android SDK 36
         run: |
           yes | sdkmanager --licenses >/dev/null || true
@@ -114,6 +118,21 @@ jobs:
         run: bun run android:version:check
       - name: Compile Android development APK and native bridge
         run: cd android && ./gradlew :app:assembleDebug
+      - name: Verify stable certification APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          EXPECTED="$(
+            bash scripts/prepare-android-ci-signing.sh "$JIG_ANDROID_CI_KEYSTORE" |
+              sed -n 's/^JIG_ANDROID_CI_CERT_SHA256=//p'
+          )"
+          ACTUAL="$(
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$APK" |
+              sed -n 's/^Signer #1 certificate SHA-256 digest: //p'
+          )"
+          test -n "$ACTUAL"
+          test "${ACTUAL,,}" = "${EXPECTED,,}"
       - name: Verify v1.1.0 release metadata transition
         if: github.event_name == 'pull_request' && github.head_ref == 'release/v1.1.0'
         shell: bash
@@ -168,6 +187,8 @@ jobs:
     needs: android-build-certification
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      JIG_ANDROID_CI_KEYSTORE: ${{ runner.temp }}/jig-ci-debug.p12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -183,6 +204,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      - name: Prepare stable Android certification signing identity
+        run: bash scripts/prepare-android-ci-signing.sh "$JIG_ANDROID_CI_KEYSTORE"
       - name: Prepare Android web/native project
         run: bun run android:sync
       - name: Run Android instrumentation on minSdk runtime
@@ -196,5 +219,22 @@ jobs:
           arch: x86_64
           target: default
           disable-animations: true
-          script: cd android && ./gradlew :app:connectedDebugAndroidTest
+          script: |
+            set -euo pipefail
+            cd android
+            ./gradlew :app:assembleDebug
+            APK="app/build/outputs/apk/debug/app-debug.apk"
+
+            adb install -r "$APK"
+            adb shell run-as com.pontivus.jig mkdir -p files/repository/.jig/local
+            adb shell run-as com.pontivus.jig mkdir -p files/repository/.jig/git
+            adb shell run-as com.pontivus.jig sh -c 'printf sqlite-state > files/repository/.jig/local/reinstall-sentinel'
+            adb shell run-as com.pontivus.jig sh -c 'printf git-state > files/repository/.jig/git/reinstall-sentinel'
+
+            adb install -r "$APK"
+
+            test "$(adb shell run-as com.pontivus.jig cat files/repository/.jig/local/reinstall-sentinel | tr -d '\r')" = "sqlite-state"
+            test "$(adb shell run-as com.pontivus.jig cat files/repository/.jig/git/reinstall-sentinel | tr -d '\r')" = "git-state"
+
+            ./gradlew :app:connectedDebugAndroidTest
 
