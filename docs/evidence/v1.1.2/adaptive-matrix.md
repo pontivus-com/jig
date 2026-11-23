@@ -37,7 +37,7 @@ Exact executable candidate: `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; Verify r
 | History | PASS — UI + VIS; single adaptive max-50rem hierarchy. |
 | Settings | PASS — UI + VIS; one adaptive hierarchy. |
 | Diagnostics | PASS — ARCH + UI + SYNC + VIS; one sanitized projection. |
-| Sync conflict resolver | PASS for semantic/Git implementation — ARCH + RESOLVER + SYNC + XPLAT + GITCI + VIS; permanent CI proves Android conflict entry/resolution/synchronization. Only native resolver-host/Back interaction remains under J112-NA-08 if retained. |
+| Sync conflict resolver | PASS for semantic/Git implementation — ARCH + RESOLVER + SYNC + XPLAT + GITCI + VIS; permanent CI proves Android conflict entry/resolution/synchronization. NA-08 host/Back closure is PASS through the shared native Back-owner + resolver-host + NA-02 evidence chain. |
 | Appearance controls | PASS — UI + VIS; one Theme/appearance owner. |
 | Notification Settings layout | PASS — ARCH + UI + J112-NA-06 Android permission/exact-alarm evidence. |
 | References/actions | PASS — UI + DRAG; shared safe reference behavior and adaptive geometry. |
@@ -63,7 +63,7 @@ Exact executable candidate: `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; Verify r
 | Reconnect GitHub | PASS — orchestration/unit/browser + NA-05 Android activation continuation. |
 | Provider return continuation | PASS — browser + NA-05 Android native evidence. |
 | Sync opportunities | PASS — controller/scheduler tests + NA-01 activation/resume native observation. |
-| Guided semantic-conflict resolution | PASS core/controller/Linux/Android real-Git integration + browser UI — GITCI proves pending-local export, conflict entry, stale refusal, refreshed resolution and accepted synchronization. OPEN only for native resolver-host/Back interaction under NA-08 if retained. |
+| Guided semantic-conflict resolution | PASS core/controller/Linux/Android real-Git integration + browser UI — GITCI proves pending-local export, conflict entry, stale refusal, refreshed resolution and accepted synchronization. PASS; NA-08 native host/Back closure is satisfied by the shared Back-owner + resolver-host + NA-02 evidence chain. |
 | Offline Task mutation | PASS — persistence and sync-failure tests prove SQLite-first durability. |
 | Browser/native activation | PASS — unit architecture + NA-01 exact Android activation evidence. |
 | Daily rollover on activation | PASS — shared semantics/unit + NA-01 exact Android activation-order evidence. |
@@ -97,7 +97,7 @@ Exact executable candidate: `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; Verify r
 
 ## 6. Adaptive matrix §D — architecture rules
 
-Rules 1–16 are PASS through ARCH/browser/integration evidence plus the recorded NA-01..07 native observations. Git/recovery correctness required by rule 17 is PASS through the dedicated permanent GITCI gate; only direct native resolver-host/Back interaction remains open under J112-NA-08 if retained. No architecture exception or alternate owner was found.
+Rules 1–16 are PASS through ARCH/browser/integration evidence plus the recorded NA-01..07 native observations. Git/recovery correctness required by rule 17 is PASS through the dedicated permanent GITCI gate; NA-08 host/Back closure is also PASS through the shared Back-owner + resolver-host + NA-02 evidence chain. No architecture exception or alternate owner was found.
 
 ## 7. Adaptive matrix §E — required combinations
 
@@ -106,6 +106,6 @@ Rules 1–16 are PASS through ARCH/browser/integration evidence plus the recorde
 | Expanded Linux/browser + fine pointer | PASS — UI/SETUP/RESOLVER/VIS. |
 | Narrow Linux/browser + fine pointer | PASS — UI/SETUP/RESOLVER/VIS; browser capability remains browser. |
 | Narrow browser + coarse-pointer emulation | PASS — DRAG/UI; touch geometry and activation without Android capability leakage. |
-| Android/native narrow | **OPEN only for J112-NA-08 native host interaction if retained** — implementation/build/API-24/update-preservation/controller evidence is green, J112-NA-01..07 are recorded PASS, and semantic-conflict Git/recovery correctness is PASS in GITCI. |
+| Android/native narrow | **PASS** — implementation/build/API-24/update-preservation/controller evidence is green, J112-NA-01..07 are recorded physical PASS, semantic-conflict Git/recovery correctness is PASS in GITCI, and NA-08 resolver-host/Back closure is satisfied by the shared Back-owner + resolver-host + NA-02 evidence chain. |
 
 Expanded Android remains outside the release-gate combinations exactly as governed; ARCH proves Android identity does not force narrow LayoutMode.
