@@ -135,7 +135,7 @@ The application presentation was also corrected across the governed desktop/narr
 
 Release governance now explicitly carries the implementation-to-publication handoff. A merged implementation candidate is not treated as a release; the dedicated `release/vX.Y.Z` transition and permanent Release workflow remain the only publication path.
 
-The governed public asset matrix now includes Linux x64/arm64 plus a separately production-signed `jig-android.apk`. v1.1.2 is the first version covered by this rule and its Android asset is completed through the bounded immutable-tag completion path in the permanent Release workflow. External F-Droid submission/publication remains deferred until Jig is considered stable and the required marketing/store material is ready.
+The governed public asset matrix now includes Linux x64/arm64 plus a separately production-signed `jig-android.apk`. v1.1.2 is the first version covered by this rule and its Android asset is completed through the bounded immutable-tag completion path in the permanent Release workflow. No Android app-store/repository publication is part of the release path.
 
 - [v1.1.2 release notes](docs/releases/v1.1.2.md)
 - [v1.1.2 implementation evidence](docs/evidence/v1.1.2/README.md)
