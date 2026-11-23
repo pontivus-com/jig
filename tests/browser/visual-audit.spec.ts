@@ -431,6 +431,9 @@ test("canonical configured surfaces and constrained stress states", async ({
   await capturePair(page, testInfo, entries, "settings-diagnostics");
 
   await page.setViewportSize(VIEWPORTS.desktop);
+  await assertPresentation(page, "desktop");
+  await settleVisualState(page);
+  await expect(page.locator(".jig-diagnostics")).toBeVisible();
   await page.locator(".jig-diagnostics").scrollIntoViewIfNeeded();
   await capture(
     page,
@@ -441,6 +444,9 @@ test("canonical configured surfaces and constrained stress states", async ({
     VIEWPORTS.desktop,
   );
   await page.setViewportSize(VIEWPORTS.narrow);
+  await assertPresentation(page, "narrow");
+  await settleVisualState(page);
+  await expect(page.locator(".jig-diagnostics")).toBeVisible();
   await page.locator(".jig-diagnostics").scrollIntoViewIfNeeded();
   await capture(
     page,
@@ -452,6 +458,9 @@ test("canonical configured surfaces and constrained stress states", async ({
   );
 
   await page.setViewportSize(VIEWPORTS.desktopStress);
+  await assertPresentation(page, "desktop");
+  await settleVisualState(page);
+  await expect(page.locator(".jig-diagnostics")).toBeVisible();
   await page.locator(".jig-diagnostics").scrollIntoViewIfNeeded();
   await capture(
     page,
@@ -462,6 +471,9 @@ test("canonical configured surfaces and constrained stress states", async ({
     VIEWPORTS.desktopStress,
   );
   await page.setViewportSize(VIEWPORTS.narrowStress);
+  await assertPresentation(page, "narrow");
+  await settleVisualState(page);
+  await expect(page.locator(".jig-diagnostics")).toBeVisible();
   await page.locator(".jig-diagnostics").scrollIntoViewIfNeeded();
   await capture(
     page,
@@ -492,6 +504,9 @@ test("canonical configured surfaces and constrained stress states", async ({
   await capturePair(page, testInfo, entries, "task-edit-weekly");
 
   await page.setViewportSize(VIEWPORTS.desktop);
+  await assertPresentation(page, "desktop");
+  await settleVisualState(page);
+  await expect(page.getByRole("dialog").getByLabel("Notes")).toBeVisible();
   await page.getByRole("dialog").getByLabel("Notes").scrollIntoViewIfNeeded();
   await capture(
     page,
@@ -502,6 +517,9 @@ test("canonical configured surfaces and constrained stress states", async ({
     VIEWPORTS.desktop,
   );
   await page.setViewportSize(VIEWPORTS.narrow);
+  await assertPresentation(page, "narrow");
+  await settleVisualState(page);
+  await expect(page.getByRole("dialog").getByLabel("Notes")).toBeVisible();
   await page.getByRole("dialog").getByLabel("Notes").scrollIntoViewIfNeeded();
   await capture(
     page,
