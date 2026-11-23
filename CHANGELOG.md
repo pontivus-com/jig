@@ -14,7 +14,7 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Changed
 
-- **Android release distribution:** Added a governed production-signed `jig-android.apk` to the GitHub Release contract. Release signing uses a stable protected production identity separate from the non-production certification signer, verifies package/version/certificate before publication, and includes the APK in normal release checksums. The already-published v1.1.2 release has one narrowly bounded immutable-tag completion path that may append only `jig-android.apk` and its companion checksum without moving the tag or replacing existing assets. No Android app-store/repository publication is part of this path.
+- **Android release distribution:** Added a governed GitHub-Actions-signed `jig-android.apk` to the GitHub Release contract. The Release workflow prepares the stable signing identity inside the runner, verifies package/version/certificate before publication, and includes the APK in normal release checksums. The already-published v1.1.2 release has one narrowly bounded immutable-tag completion path that may append only `jig-android.apk` and its companion checksum without moving the tag or replacing existing assets. No Android app-store/repository publication is part of this path.
 
 ## [1.1.2] - 2026-11-23
 
