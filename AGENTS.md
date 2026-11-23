@@ -168,6 +168,30 @@ v1.1 adds one independently installable **Android** application while preserving
 
 A merged implementation PR is **not** a release. Release publication is a separate governed transition.
 
+### Mandatory release-state audit
+
+Any request that names a version and asks whether it is released, why it is not released, whether it is release-ready, what remains before release, whether the release ceremony/finalization is complete, or asks to finish/review release work is a **release-state task**. Agents must not answer such a task from implementation evidence alone.
+
+Before answering or declaring the work complete, inspect the canonical release authority and establish all of these facts for the named target version, in this order:
+
+1. the intended target version from the governing PR/issue and `CHANGELOG.md` `[Unreleased]`;
+2. whether the intended implementation candidate has landed on `master`;
+3. the latest governing implementation PR's explicit **Release handoff** disposition;
+4. whether `release/vX.Y.Z` exists and whether a release PR is open/merged;
+5. `master:package.json.version`;
+6. the matching dated changelog section, empty/non-empty `[Unreleased]`, and `docs/releases/vX.Y.Z.md`;
+7. whether the permanent Release workflow actually executed its certification/publication jobs rather than completing as a no-op;
+8. the immutable `vX.Y.Z` tag, published non-draft GitHub Release, required asset matrix and checksums.
+
+Classify the target release explicitly as one of: **ACCUMULATING**, **READY_FOR_RELEASE_PR**, **RELEASE_PR_OPEN**, **CERTIFYING**, **PUBLISHED**, or **BLOCKED**. A green no-op Release workflow is never `PUBLISHED`.
+
+Ordinary PR bodies must declare exactly one release handoff:
+
+- `Release handoff: **continue-development**` — more ordinary work is expected before the target release ceremony starts.
+- `Release handoff: **create-release-pr-after-merge**` — this PR completes the intended candidate; once merged, the next required work is the dedicated `release/vX.Y.Z` metadata PR.
+
+If a PR marked `create-release-pr-after-merge` has merged and no release branch/PR exists, the target is **READY_FOR_RELEASE_PR**. Do not stop at “implementation complete,” “release-ready,” or “no implementation blocker”; identify the missing ceremonial tail as the current required work. If the user explicitly asks about end-release/ceremonial work, omitting this audit is an incomplete evaluation.
+
 The canonical release contract is `docs/releases/README.md`. Agents preparing or evaluating a release must enforce all of the following:
 
 1. Ordinary implementation/documentation PRs accumulate release notes under `CHANGELOG.md` `[Unreleased]` and **must not** change `package.json.version`.
