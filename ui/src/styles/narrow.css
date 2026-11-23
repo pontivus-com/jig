@@ -509,6 +509,10 @@
   gap: var(--spacing-0-5);
 }
 
+.jig-configured-narrow .jig-sync-conflict-sheet-header > button {
+  flex: 0 0 auto;
+}
+
 .jig-configured-narrow .jig-sync-conflict-sheet-header span {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);

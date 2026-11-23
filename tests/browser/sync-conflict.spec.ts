@@ -322,6 +322,46 @@ test("eligible sync conflict keeps one draft across responsive hosts and Cancel 
     fullPage: true,
   });
 
+  await page.setViewportSize({ width: 320, height: 844 });
+  const resolverClose = narrowResolver.getByRole("button", {
+    name: "Close",
+    exact: true,
+  });
+  await expect(resolverClose).toBeVisible();
+  const closeGeometry = await resolverClose.evaluate((button) => {
+    const walker = document.createTreeWalker(
+      button,
+      NodeFilter.SHOW_TEXT,
+    );
+    let textNode: Node | null = walker.nextNode();
+    while (
+      textNode !== null &&
+      textNode.textContent?.trim() !== "Close"
+    ) {
+      textNode = walker.nextNode();
+    }
+    if (textNode === null) {
+      throw new Error("Resolver Close label text node unavailable");
+    }
+    const range = document.createRange();
+    range.selectNode(textNode);
+    const text = range.getBoundingClientRect();
+    const control = button.getBoundingClientRect();
+    return {
+      controlLeft: control.left,
+      controlRight: control.right,
+      textLeft: text.left,
+      textRight: text.right,
+    };
+  });
+  expect(closeGeometry.textLeft).toBeGreaterThanOrEqual(
+    closeGeometry.controlLeft - 1,
+  );
+  expect(closeGeometry.textRight).toBeLessThanOrEqual(
+    closeGeometry.controlRight + 1,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+
   await narrowResolver
     .getByRole("button", { name: "Cancel", exact: true })
     .click();
