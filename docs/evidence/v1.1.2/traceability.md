@@ -1,6 +1,6 @@
 # Jig v1.1.2 IMP-18 FR/SD traceability ledger
 
-Exact executable candidate: `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; Verify run `2213` / `45094008515`. Evidence keys are defined in [`README.md`](README.md).
+Exact executable candidate: `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; product-content baseline Verify run `2213` / `45094008515` PASS. Final exact PR-head/evidence-head verification is recorded on issue #66. Evidence keys are defined in [`README.md`](README.md).
 
 ## 8. FR closure ledger
 
@@ -12,7 +12,7 @@ Exact executable candidate: `4343738b2b08901c1c57d16f276a1d0b31ab09fa`; Verify r
 | FR-04 touch drag | IMP-11 | PASS — DRAG narrow/coarse acceptance. |
 | FR-05 synchronization diagnostics | IMP-15 | PASS — SYNC + UI Diagnostics. |
 | FR-06 evidence-driven root cause + bounded recovery | IMP-15, IMP-16, IMP-17 | PASS hosted/repository evidence — IMP-16 no-defect-reproduced disposition + SYNC/XPLAT. |
-| FR-07 recovery safety | IMP-17 | PASS — core/controller + dedicated real-Git CI prove pending-local export, divergence recovery, stale refusal, interruption safety and accepted non-force synchronization. Native resolver-host/Back interaction is separately tracked by NA-08. |
+| FR-07 recovery safety | IMP-17 | PASS — core/controller + dedicated real-Git CI prove pending-local export, divergence recovery, stale refusal, interruption safety and accepted non-force synchronization; NA-08 resolver-host/Back closure is satisfied by the shared Back-owner + resolver-host + NA-02 evidence chain. |
 | FR-08 corrective release audit | IMP-01..17 | PASS — Git/recovery, Android update-preservation and NA-08 resolver-host/Back evidence chain are complete. |
 | FR-09 perceptible motion | IMP-13 | PASS — ARCH + UI/reduced-motion evidence. |
 | FR-10 desktop/narrow compositions | IMP-02..07, IMP-09 | PASS — ARCH + UI/SETUP/VIS. |
