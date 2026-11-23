@@ -156,10 +156,4 @@ adb install -r jig-android.apk
 
 The production signer is stable so later supported Jig APKs can update the same `com.pontivus.jig` installation in place without clearing app-private planning data. Development/debug APKs produced by `bun run android:build:debug` use the separate non-production certification lineage and are certification artifacts only; they must never be substituted for the public GitHub APK.
 
-F-Droid remains the intended Android application-repository channel, but external F-Droid submission/publication is deferred until the app is stable and the required marketing/store material is ready. The in-repository F-Droid candidate recipe remains at:
-
-```text
-distribution/fdroid/metadata/com.pontivus.jig.yml
-```
-
-When F-Droid distribution is activated, the submission must be derived from the applicable immutable public source tag, remain source-build/FLOSS compatible and preserve package/signing update compatibility for existing `com.pontivus.jig` installations. F-Droid availability must not be claimed until F-Droid actually publishes the package.
+No Android app-store/repository publication is part of the supported v1.1 installation path. The GitHub Release APK is the complete public Android installation artifact.
