@@ -136,14 +136,30 @@ The public release channel is preferred for normal use.
 
 ## Android distribution
 
-Jig v1.1 adds the independently installable Android application `com.pontivus.jig`. The first intended public Android distribution target is **F-Droid**, but F-Droid submission/publication is deferred until the app is stable and the required marketing/store material is ready.
+Jig v1.1 provides the independently installable Android application `com.pontivus.jig`. From v1.1.2 onward, the matching GitHub Release is the supported direct APK channel and contains the production-signed asset:
 
-Development/debug APKs produced by `bun run android:build:debug` are certification artifacts only. They are not supported GitHub Release assets and are not the public Android installation channel.
+```text
+jig-android.apk
+```
 
-The in-repository F-Droid candidate recipe is maintained at:
+For v1.1.2 the immutable pinned download is:
+
+```text
+https://github.com/pontivus-com/jig/releases/download/v1.1.2/jig-android.apk
+```
+
+Download the APK on Android and install it through the normal Android package installer, or install/update a downloaded APK from an authorized development workstation with:
+
+```bash
+adb install -r jig-android.apk
+```
+
+The production signer is stable so later supported Jig APKs can update the same `com.pontivus.jig` installation in place without clearing app-private planning data. Development/debug APKs produced by `bun run android:build:debug` use the separate non-production certification lineage and are certification artifacts only; they must never be substituted for the public GitHub APK.
+
+F-Droid remains the intended Android application-repository channel, but external F-Droid submission/publication is deferred until the app is stable and the required marketing/store material is ready. The in-repository F-Droid candidate recipe remains at:
 
 ```text
 distribution/fdroid/metadata/com.pontivus.jig.yml
 ```
 
-External F-Droid submission/publication is deferred until Jig is considered stable and the required marketing/store material is ready. When that distribution activity begins, the submission must be derived from the applicable immutable public source tag and use that tag's exact 40-character release commit SHA in `Builds.commit`. Until F-Droid actually publishes `com.pontivus.jig`, the project must describe Android as implementation/certification complete or publication deferred/pending as appropriate, not publicly available.
+When F-Droid distribution is activated, the submission must be derived from the applicable immutable public source tag, remain source-build/FLOSS compatible and preserve package/signing update compatibility for existing `com.pontivus.jig` installations. F-Droid availability must not be claimed until F-Droid actually publishes the package.
