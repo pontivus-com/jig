@@ -56,7 +56,7 @@ sits in the day, whether it is complete, and whether a reminder is due.**
 ## Quick start
 
 Jig v1 supports Linux x86_64/amd64 and aarch64/arm64, plus Android through the
-production-signed APK published on the matching GitHub Release. The Linux stable
+GitHub-Actions-signed APK published on the matching GitHub Release. The Linux stable
 release bundle contains the pinned Bun runtime and production UI.
 
 ### Phase 1 — install Jig
@@ -92,7 +92,7 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
   | bash -s -- --repo /absolute/path/to/your/planning-repo
 ```
 
-Android users install the production-signed `jig-android.apk` from the matching
+Android users install the GitHub-Actions-signed `jig-android.apk` from the matching
 GitHub Release. Development/debug APKs are certification artifacts and are not
 supported public installation assets.
 
@@ -135,7 +135,7 @@ The application presentation was also corrected across the governed desktop/narr
 
 Release governance now explicitly carries the implementation-to-publication handoff. A merged implementation candidate is not treated as a release; the dedicated `release/vX.Y.Z` transition and permanent Release workflow remain the only publication path.
 
-The governed public asset matrix now includes Linux x64/arm64 plus a separately production-signed `jig-android.apk`. v1.1.2 is the first version covered by this rule and its Android asset is completed through the bounded immutable-tag completion path in the permanent Release workflow. No Android app-store/repository publication is part of the release path.
+The governed public asset matrix now includes Linux x64/arm64 plus a GitHub-Actions-signed `jig-android.apk`. v1.1.2 is the first version covered by this rule and its Android asset is completed through the bounded immutable-tag completion path in the permanent Release workflow. No Android app-store/repository publication is part of the release path.
 
 - [v1.1.2 release notes](docs/releases/v1.1.2.md)
 - [v1.1.2 implementation evidence](docs/evidence/v1.1.2/README.md)

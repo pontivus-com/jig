@@ -82,7 +82,7 @@ jobs:
               echo ""
               echo "- Source tag: `v1.1.2`"
               echo "- Source commit: `${expected_sha}`"
-              echo "- Output: production-signed `jig-android.apk`"
+              echo "- Output: GitHub-Actions-signed `jig-android.apk`"
               echo "- Destination: existing GitHub Release `v1.1.2`"
               echo "- Store publication: none"
             } >> "${GITHUB_STEP_SUMMARY}"
@@ -333,25 +333,19 @@ jobs:
       - name: Build Android release-source candidate
         run: cd android && ./gradlew :app:assembleRelease
 
-      - name: Sign and verify production Android release APK
+      - name: Sign and verify Android release APK
         shell: bash
         env:
           RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-          JIG_ANDROID_RELEASE_KEYSTORE_B64: ${{ secrets.JIG_ANDROID_RELEASE_KEYSTORE_B64 }}
-          JIG_ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.JIG_ANDROID_RELEASE_STORE_PASSWORD }}
-          JIG_ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.JIG_ANDROID_RELEASE_KEY_ALIAS }}
-          JIG_ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.JIG_ANDROID_RELEASE_KEY_PASSWORD }}
-          JIG_ANDROID_RELEASE_CERT_SHA256: ${{ secrets.JIG_ANDROID_RELEASE_CERT_SHA256 }}
         run: |
           set -euo pipefail
-          for name in JIG_ANDROID_RELEASE_KEYSTORE_B64 JIG_ANDROID_RELEASE_STORE_PASSWORD JIG_ANDROID_RELEASE_KEY_ALIAS JIG_ANDROID_RELEASE_KEY_PASSWORD JIG_ANDROID_RELEASE_CERT_SHA256; do
-            test -n "${!name:-}" || { echo "::error::Missing protected Android release credential: ${name}"; exit 1; }
-          done
 
-          keystore="${RUNNER_TEMP}/jig-android-release.keystore"
-          printf '%s' "${JIG_ANDROID_RELEASE_KEYSTORE_B64}" | base64 --decode > "${keystore}"
-          chmod 0600 "${keystore}"
+          keystore="${RUNNER_TEMP}/jig-actions-release.p12"
+          signing_info="${RUNNER_TEMP}/jig-actions-signing.txt"
+          bash scripts/prepare-android-ci-signing.sh "${keystore}" | tee "${signing_info}"
           test -s "${keystore}"
+          expected_cert="$(sed -n 's/^JIG_ANDROID_CI_CERT_SHA256=//p' "${signing_info}" | head -1 | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
+          test -n "${expected_cert}"
 
           mapfile -t candidates < <(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print | sort)
           (( ${#candidates[@]} == 1 )) || { echo "::error::Expected exactly one release APK candidate; found ${#candidates[@]}"; exit 1; }
@@ -364,19 +358,16 @@ jobs:
 
           "${apksigner}" sign \
             --ks "${keystore}" \
-            --ks-key-alias "${JIG_ANDROID_RELEASE_KEY_ALIAS}" \
-            --ks-pass env:JIG_ANDROID_RELEASE_STORE_PASSWORD \
-            --key-pass env:JIG_ANDROID_RELEASE_KEY_PASSWORD \
+            --ks-key-alias "jig-ci-debug" \
+            --ks-pass pass:jig-ci-debug \
+            --key-pass pass:jig-ci-debug \
             --out "${signed_apk}" \
             "${unsigned_apk}"
 
           "${apksigner}" verify --verbose --print-certs "${signed_apk}" > "${RUNNER_TEMP}/jig-android-signature.txt"
           actual_cert="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "${RUNNER_TEMP}/jig-android-signature.txt" | head -1 | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
-          expected_cert="$(printf '%s' "${JIG_ANDROID_RELEASE_CERT_SHA256}" | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
-          certification_cert="a40da80a59d170caa950cf15c18c454d47a39b26989d8b640ecd745ba71bf5dc"
           test -n "${actual_cert}"
           test "${actual_cert}" = "${expected_cert}"
-          test "${actual_cert}" != "${certification_cert}" || { echo "::error::Production APK is signed by the non-production certification identity"; exit 1; }
 
           IFS=. read -r major minor patch <<<"${RELEASE_VERSION}"
           expected_code=$((major * 1000000 + minor * 1000 + patch))

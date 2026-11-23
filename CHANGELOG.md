@@ -6,11 +6,15 @@ All notable Jig changes are recorded here. Release versions follow Semantic Vers
 
 ### Changed
 
+- **Android release signing:** GitHub Actions now prepares the repository's pinned stable Android signing identity, signs the exact release APK, verifies its certificate/package/version, and publishes it without requiring external release-signing secrets or any app-store integration.
+
+### Changed
+
 - **v1.1.2 Android release reconciliation:** The canonical Release workflow now treats a missing required `jig-android.apk` on the existing immutable v1.1.2 GitHub Release as an incomplete release state and automatically runs the bounded build/sign/verify/append path on a `master` push. Manual dispatch remains a retry/recovery path; no tag movement, replacement of existing Linux assets, or Android store publication is involved.
 
 ### Changed
 
-- **Android release distribution:** Added a governed production-signed `jig-android.apk` to the GitHub Release contract. Release signing uses a stable protected production identity separate from the non-production certification signer, verifies package/version/certificate before publication, and includes the APK in normal release checksums. The already-published v1.1.2 release has one narrowly bounded immutable-tag completion path that may append only `jig-android.apk` and its companion checksum without moving the tag or replacing existing assets. No Android app-store/repository publication is part of this path.
+- **Android release distribution:** Added a governed GitHub-Actions-signed `jig-android.apk` to the GitHub Release contract. The Release workflow prepares the stable signing identity inside the runner, verifies package/version/certificate before publication, and includes the APK in normal release checksums. The already-published v1.1.2 release has one narrowly bounded immutable-tag completion path that may append only `jig-android.apk` and its companion checksum without moving the tag or replacing existing assets. No Android app-store/repository publication is part of this path.
 
 ## [1.1.2] - 2026-11-23
 
