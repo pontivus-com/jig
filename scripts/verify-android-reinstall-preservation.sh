@@ -17,21 +17,18 @@ command -v adb >/dev/null 2>&1 || {
 )
 
 adb install -r "$APK"
-adb shell run-as "$PACKAGE" mkdir -p files/repository/.jig/local
-adb shell run-as "$PACKAGE" mkdir -p files/repository/.jig/git
-adb shell run-as "$PACKAGE" sh -c   'printf sqlite-state > files/repository/.jig/local/reinstall-sentinel'
-adb shell run-as "$PACKAGE" sh -c   'printf git-state > files/repository/.jig/git/reinstall-sentinel'
+adb shell "run-as $PACKAGE sh -c 'mkdir -p files/repository/.jig/local files/repository/.jig/git && printf sqlite-state > files/repository/.jig/local/reinstall-sentinel && printf git-state > files/repository/.jig/git/reinstall-sentinel'"
 
 # The second installation is deliberately an update install. Never uninstall or
 # clear package data to make a certification artifact fit.
 adb install -r "$APK"
 
 SQLITE_SENTINEL="$(
-  adb shell run-as "$PACKAGE"     cat files/repository/.jig/local/reinstall-sentinel |
+  adb shell "run-as $PACKAGE cat files/repository/.jig/local/reinstall-sentinel" |
     tr -d '\r'
 )"
 GIT_SENTINEL="$(
-  adb shell run-as "$PACKAGE"     cat files/repository/.jig/git/reinstall-sentinel |
+  adb shell "run-as $PACKAGE cat files/repository/.jig/git/reinstall-sentinel" |
     tr -d '\r'
 )"
 [[ "$SQLITE_SENTINEL" == "sqlite-state" ]] || {
