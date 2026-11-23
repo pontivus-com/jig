@@ -72,8 +72,23 @@ jobs:
           else
             tag="v${current}"
             if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+              current_unreleased="$(python3 -c 'from pathlib import Path; t=Path("CHANGELOG.md").read_text(); print(t.split("## [Unreleased]\\n",1)[1].split("\\n## [",1)[0].strip())')"
+              target_release="$(printf '%s' "${current_unreleased}" | python3 -c 'import re,sys; m=re.search(r"Target release:\\s*v?([0-9]+\\.[0-9]+\\.[0-9]+)", sys.stdin.read(), re.I); print(m.group(1) if m else "")')"
               echo "should_release=false" >> "${GITHUB_OUTPUT}"
-              echo "Release ${tag} is already tagged; no publication is needed."
+              echo "NO RELEASE: ${tag} is already tagged; this workflow run did not certify or publish a new version."
+              {
+                echo "## Release disposition: NO RELEASE"
+                echo ""
+                echo "- Current package version: \`${current}\`"
+                echo "- Existing immutable tag: \`${tag}\`"
+                echo "- Trigger commit: \`${trigger_sha}\`"
+                if [[ -n "${target_release}" && "${target_release}" != "${current}" ]]; then
+                  echo "- Pending target from \`[Unreleased]\`: \`v${target_release}\`"
+                  echo "- Required ceremonial transition: create/merge \`release/v${target_release}\`; this run is not release success for that target."
+                else
+                  echo "- No new package-version transition was detected."
+                fi
+              } >> "${GITHUB_STEP_SUMMARY}"
               exit 0
             fi
 
@@ -92,8 +107,21 @@ jobs:
               echo "::error::Target commit is neither a version transition nor a release finalization."
               exit 1
             else
+              target_release="$(printf '%s' "${current_unreleased}" | python3 -c 'import re,sys; m=re.search(r"Target release:\\s*v?([0-9]+\\.[0-9]+\\.[0-9]+)", sys.stdin.read(), re.I); print(m.group(1) if m else "")')"
               echo "should_release=false" >> "${GITHUB_OUTPUT}"
-              echo "No release transition/finalization detected."
+              echo "NO RELEASE: no release transition/finalization detected; certification/publication jobs will be skipped."
+              {
+                echo "## Release disposition: NO RELEASE"
+                echo ""
+                echo "- Current package version: \`${current}\`"
+                echo "- Trigger commit: \`${trigger_sha}\`"
+                if [[ -n "${target_release}" && "${target_release}" != "${current}" ]]; then
+                  echo "- Pending target from \`[Unreleased]\`: \`v${target_release}\`"
+                  echo "- Required ceremonial transition: create/merge \`release/v${target_release}\`."
+                else
+                  echo "- No package-version transition or same-version release finalization was detected."
+                fi
+              } >> "${GITHUB_STEP_SUMMARY}"
               exit 0
             fi
           fi
