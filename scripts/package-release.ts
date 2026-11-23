@@ -95,6 +95,17 @@ if (releaseBody.length === 0) {
 }
 
 const outputRoot = resolve(process.argv[2] ?? "release");
+const androidReleaseApk = process.env.JIG_ANDROID_RELEASE_APK?.trim() ?? "";
+if (androidReleaseApk !== "") {
+  if (!existsSync(androidReleaseApk)) {
+    throw new TypeError(
+      `JIG_ANDROID_RELEASE_APK does not exist: ${androidReleaseApk}`,
+    );
+  }
+  if (readFileSync(androidReleaseApk).byteLength === 0) {
+    throw new TypeError("JIG_ANDROID_RELEASE_APK must not be empty");
+  }
+}
 rmSync(outputRoot, { recursive: true, force: true });
 mkdirSync(outputRoot, { recursive: true });
 
@@ -113,6 +124,10 @@ try {
   const bootstrap = join(outputRoot, "jig-install.sh");
   cpSync("scripts/install-release.sh", bootstrap);
   chmodSync(bootstrap, 0o755);
+
+  if (androidReleaseApk !== "") {
+    cpSync(androidReleaseApk, join(outputRoot, "jig-android.apk"));
+  }
 
   for (const arch of ARCHES) {
     const archRoot = join(staging, arch.name);
@@ -209,6 +224,7 @@ try {
 
   const checksumPaths = [
     ...ARCHES.map((arch) => arch.asset),
+    ...(androidReleaseApk === "" ? [] : ["jig-android.apk"]),
     "jig-install.sh",
   ];
   writeFileSync(
@@ -226,6 +242,9 @@ try {
   process.stdout.write(
     [
       ...ARCHES.map((arch) => join(outputRoot, arch.asset)),
+      ...(androidReleaseApk === ""
+        ? []
+        : [join(outputRoot, "jig-android.apk")]),
       join(outputRoot, "SHA256SUMS"),
       bootstrap,
     ].join("\n") + "\n",
