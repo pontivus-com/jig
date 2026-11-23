@@ -25,7 +25,7 @@ Functional requirements define *what* users can observe. Technical solution owns
 - [Install Jig](install.md)
 - [Release process, validity contract and asset matrix](releases/README.md) — canonical authority; an implementation merge is not a release, and every release requires an explicit package-version transition on `release/vX.Y.Z`.
 - [v1.0.0 release notes draft](releases/v1.0.0.md)
-- [v1.0.0 release-preparation task set](releases/v1.0.0-preparation.md)
+- [v1.0.0 release-preparation task set](releases/v1.0.0-preparation.md) — historical bootstrap task set for v1.0.0; it is not a second release-process authority.
 - [Changelog](../CHANGELOG.md)
 - [Support](../SUPPORT.md)
 - [Security](../SECURITY.md)
