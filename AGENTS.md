@@ -168,29 +168,18 @@ v1.1 adds one independently installable **Android** application while preserving
 
 A merged implementation PR is **not** a release. Release publication is a separate governed transition.
 
-### Mandatory release-state audit
+### Mandatory release-status evaluation
 
-Any request that names a version and asks whether it is released, why it is not released, whether it is release-ready, what remains before release, whether the release ceremony/finalization is complete, or asks to finish/review release work is a **release-state task**. Agents must not answer such a task from implementation evidence alone.
+Any request that names a version and asks whether it is released, why it is not released, whether it is release-ready, what remains before release, whether finalization/ceremonial work is complete, or asks to finish/review release work is a **release-status task**.
 
-Before answering or declaring the work complete, inspect the canonical release authority and establish all of these facts for the named target version, in this order:
+For such a task, read the canonical release authority at `docs/releases/README.md` before drawing a conclusion. Do **not** invent or maintain a parallel release state model in AGENTS, implementation plans or evidence documents. Evaluate the canonical release sequence and completion/status checklist in that document from implementation promotion through release branch/PR, metadata transition, actual Release-workflow jobs, tag, published release and assets. A green Release workflow whose publication jobs were skipped is not release success.
 
-1. the intended target version from the governing PR/issue and `CHANGELOG.md` `[Unreleased]`;
-2. whether the intended implementation candidate has landed on `master`;
-3. the latest governing implementation PR's explicit **Release handoff** disposition;
-4. whether `release/vX.Y.Z` exists and whether a release PR is open/merged;
-5. `master:package.json.version`;
-6. the matching dated changelog section, empty/non-empty `[Unreleased]`, and `docs/releases/vX.Y.Z.md`;
-7. whether the permanent Release workflow actually executed its certification/publication jobs rather than completing as a no-op;
-8. the immutable `vX.Y.Z` tag, published non-draft GitHub Release, required asset matrix and checksums.
+Ordinary PR bodies must declare exactly one machine-checked handoff:
 
-Classify the target release explicitly as one of: **ACCUMULATING**, **READY_FOR_RELEASE_PR**, **RELEASE_PR_OPEN**, **CERTIFYING**, **PUBLISHED**, or **BLOCKED**. A green no-op Release workflow is never `PUBLISHED`.
+- `Release handoff: **continue-development**` — more ordinary work is expected before the target release ceremony.
+- `Release handoff: **create-release-pr-after-merge**` — this PR completes the intended implementation candidate; after it merges, the next required work is the dedicated `release/vX.Y.Z` metadata PR.
 
-Ordinary PR bodies must declare exactly one release handoff:
-
-- `Release handoff: **continue-development**` — more ordinary work is expected before the target release ceremony starts.
-- `Release handoff: **create-release-pr-after-merge**` — this PR completes the intended candidate; once merged, the next required work is the dedicated `release/vX.Y.Z` metadata PR.
-
-If a PR marked `create-release-pr-after-merge` has merged and no release branch/PR exists, the target is **READY_FOR_RELEASE_PR**. Do not stop at “implementation complete,” “release-ready,” or “no implementation blocker”; identify the missing ceremonial tail as the current required work. If the user explicitly asks about end-release/ceremonial work, omitting this audit is an incomplete evaluation.
+When a merged final implementation PR carries `create-release-pr-after-merge`, do not stop at “implementation complete” or “release-ready.” Verify whether the required release PR exists and identify its absence as the current unfinished release work. Omitting this check when the user asks about end-release/ceremonial work is an incomplete evaluation.
 
 The canonical release contract is `docs/releases/README.md`. Agents preparing or evaluating a release must enforce all of the following:
 
