@@ -4,45 +4,6 @@ Jig uses a PR-bound, immutable release process modeled on the Pontivus public-re
 
 This document is the **canonical release authority** for Jig. A merged implementation PR is not itself a release. Release validity requires a separate, explicit metadata transition and successful publication of the certified artifacts described below.
 
-## Mandatory release-state audit and handoff
-
-Release work has an explicit state; “implementation complete” and “released” are different states.
-
-For any version-specific release-status, release-readiness, release-blocker, finalization or ceremonial-work evaluation, determine the state from repository evidence before drawing a conclusion:
-
-| State | Required evidence |
-| --- | --- |
-| **ACCUMULATING** | Target version is named under `[Unreleased]`, but the latest governing implementation PR says `Release handoff: **continue-development**` or the intended candidate has not landed on `master`. |
-| **READY_FOR_RELEASE_PR** | Intended candidate is on `master`, the final governing PR says `Release handoff: **create-release-pr-after-merge**`, and no valid `release/vX.Y.Z` PR exists yet. |
-| **RELEASE_PR_OPEN** | The dedicated metadata-only `release/vX.Y.Z` PR exists and has not merged. |
-| **CERTIFYING** | The release PR has merged and the permanent Release workflow is executing the release path for the exact merged release commit. |
-| **PUBLISHED** | Every release-validity requirement below is true: workflow release jobs executed successfully, immutable tag is exact, non-draft GitHub Release exists, and required assets/checksums are present. |
-| **BLOCKED** | A concrete required gate failed or evidence proves the next transition cannot proceed. Record the exact failed gate; absence of the release PR after a ready handoff is not an implementation defect, it is `READY_FOR_RELEASE_PR`. |
-
-The audit order is mandatory:
-
-1. read the target version from the governing PR/issue and `CHANGELOG.md` `[Unreleased]`;
-2. inspect the latest governing implementation PR and its **Release handoff** field;
-3. verify candidate promotion to `master`;
-4. inspect the `release/vX.Y.Z` branch/PR state;
-5. inspect package version, changelog finalization and release-note file;
-6. inspect the Release workflow **jobs**, not only its overall green/red conclusion;
-7. inspect tag, GitHub Release publication state and exact asset matrix.
-
-A release-status report that stops after implementation/certification evidence, or treats a green no-op Release run as release success, is invalid.
-
-### Release handoff field
-
-Every ordinary PR must declare one of:
-
-`Release handoff: **continue-development**`
-
-or
-
-`Release handoff: **create-release-pr-after-merge**`
-
-The permanent PR metadata verifier enforces the field. The second value is a binding post-merge handoff: once that PR is merged, the repository has entered **READY_FOR_RELEASE_PR** and the next task is the dedicated release metadata transition. It must not be silently treated as “done” merely because the implementation PR and its certification are green.
-
 ## Release validity contract
 
 A Jig release `X.Y.Z` is valid only when **all** of these statements are true:
@@ -96,8 +57,11 @@ Ordinary PRs:
 
 - must leave `package.json.version` unchanged;
 - declare SemVer impact and target release in the PR body;
+- declare exactly one machine-checked release handoff: `Release handoff: **continue-development**` while more ordinary work remains, or `Release handoff: **create-release-pr-after-merge**` when that PR completes the intended implementation candidate;
 - keep `[Unreleased]` non-empty when they add release-visible work;
 - pass the permanent implementation verification suite.
+
+The handoff is not a second release authority. It records whether the existing canonical release sequence must begin immediately after that PR merges.
 
 ### 2. Create the dedicated release branch
 
@@ -107,7 +71,7 @@ After the intended candidate is on `master`:
 release/vX.Y.Z
 ```
 
-must be created from that candidate.
+must be created from that candidate. When the final ordinary PR declared `Release handoff: **create-release-pr-after-merge**`, this branch/PR is the immediate next required work; implementation completion is not an endpoint in the release process.
 
 The release branch is metadata-only. Its required work is:
 
@@ -156,7 +120,9 @@ Only after certification succeeds may the workflow:
 
 Published tags are never moved or rebuilt. A correction after publication requires a new version.
 
-## Release completion checklist
+## Release completion and status checklist
+
+For any version-specific question about whether a release is complete, why it is not released, or what remains, walk this checklist from top to bottom and report the first false item(s). Do not stop at implementation/certification evidence, and inspect the Release workflow's jobs rather than treating an overall green no-op as publication.
 
 Before stating that `X.Y.Z` is released, verify all of the following directly:
 
