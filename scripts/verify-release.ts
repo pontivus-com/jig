@@ -225,6 +225,31 @@ if (mode === "pr") {
       fail("PR body must declare Target release: **X.Y.Z**");
     }
 
+    const handoff =
+      /Release handoff:\s*\*\*(continue-development|create-release-pr-after-merge)\*\*/i.exec(
+        body,
+      )?.[1]?.toLowerCase();
+    if (
+      handoff !== "continue-development" &&
+      handoff !== "create-release-pr-after-merge"
+    ) {
+      fail(
+        "PR body must declare Release handoff: **continue-development|create-release-pr-after-merge**",
+      );
+    }
+
+    if (handoff === "create-release-pr-after-merge") {
+      const changelogTarget =
+        /Target release:\s*v?([0-9]+\.[0-9]+\.[0-9]+)/i.exec(
+          currentUnreleased,
+        )?.[1];
+      if (changelogTarget !== target) {
+        fail(
+          "create-release-pr-after-merge requires CHANGELOG [Unreleased] Target release to match the PR target",
+        );
+      }
+    }
+
     const minimum = minimumTargetForImpact(
       parseVersion(baseVersion),
       impactValue,
