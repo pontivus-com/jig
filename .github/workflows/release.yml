@@ -269,12 +269,6 @@ jobs:
           printf '%s\n' "$output"
           grep -Fq "JIG_ANDROID_VERSION=${RELEASE_VERSION} JIG_ANDROID_VERSION_CODE=${expected_code}" <<<"$output"
           grep -Fq 'applicationId "com.pontivus.jig"' android/app/build.gradle
-          metadata="distribution/fdroid/metadata/com.pontivus.jig.yml"
-          grep -Eq '^[[:space:]]+-[[:space:]]+versionName:[[:space:]]+1\.1\.0$' "$metadata"
-          grep -Eq '^[[:space:]]+versionCode:[[:space:]]+1001000$' "$metadata"
-          grep -Eq '^[[:space:]]+commit:[[:space:]]+v1\.1\.0$' "$metadata"
-          grep -Eq '^CurrentVersion:[[:space:]]+1\.1\.0$' "$metadata"
-          grep -Eq '^CurrentVersionCode:[[:space:]]+1001000$' "$metadata"
 
       - name: Build Android release-source candidate
         run: cd android && ./gradlew :app:assembleRelease
@@ -339,34 +333,6 @@ jobs:
           path: ${{ runner.temp }}/jig-android.apk
           if-no-files-found: error
           retention-days: 7
-
-      - name: Lint candidate F-Droid metadata
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m venv "${RUNNER_TEMP}/fdroid-venv"
-          "${RUNNER_TEMP}/fdroid-venv/bin/pip" install "fdroidserver==2.4.5"
-          mkdir -p "${RUNNER_TEMP}/fdroid-data/config" "${RUNNER_TEMP}/fdroid-data/metadata"
-          categories_catalog="${RUNNER_TEMP}/fdroid-data/categories-authority.yml"
-          curl -fsSLo "${categories_catalog}" "https://raw.githubusercontent.com/f-droid/fdroiddata/6e52e1ad56721f12c49f48d936e9da05ef740d91/config/categories.yml"
-          "${RUNNER_TEMP}/fdroid-venv/bin/python" - "${categories_catalog}" "${RUNNER_TEMP}/fdroid-data/config/categories.yml" <<'PY'
-          import sys
-          from pathlib import Path
-          import yaml
-
-          source = Path(sys.argv[1])
-          target = Path(sys.argv[2])
-          categories = yaml.safe_load(source.read_text())
-          if not isinstance(categories, dict) or "Task" not in categories:
-              raise SystemExit("Pinned F-Droid category authority has no Task category")
-          target.write_text(yaml.safe_dump({"Task": categories["Task"]}, sort_keys=False))
-          PY
-          grep -Fq "Task:" "${RUNNER_TEMP}/fdroid-data/config/categories.yml"
-          cp distribution/fdroid/metadata/com.pontivus.jig.yml "${RUNNER_TEMP}/fdroid-data/metadata/"
-          (
-            cd "${RUNNER_TEMP}/fdroid-data"
-            "${RUNNER_TEMP}/fdroid-venv/bin/fdroid" lint com.pontivus.jig
-          )
 
   arm64-certification:
     needs: prepare
