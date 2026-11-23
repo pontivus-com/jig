@@ -1097,7 +1097,10 @@ describe("UI ownership architecture", () => {
     expect(narrowCss).toContain(".jig-feedback-transient-narrow");
     expect(narrowCss).toContain("position: fixed");
     expect(narrowCss).toContain(
-      "64px + env(safe-area-inset-bottom, 0px) + var(--spacing-3)",
+      "var(--jig-narrow-bottom-total) + 56px +",
+    );
+    expect(narrowCss).toContain(
+      "var(--spacing-3) + var(--spacing-2)",
     );
     expect(narrowCss).toContain("max-inline-size: 32rem");
     expect(narrowCss).toContain(
