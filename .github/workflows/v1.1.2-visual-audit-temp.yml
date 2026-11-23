@@ -41,7 +41,11 @@ jobs:
       - name: Generate constrained desktop + narrow visual audit
         env:
           GITHUB_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bunx playwright test tests/browser/visual-audit.spec.ts --workers=1
+          JIG_VISUAL_AUDIT: "1"
+        run: >-
+          bunx playwright test tests/browser/visual-audit.spec.ts
+          --workers=1
+          --grep-invert "Dark"
       - name: Retain exact visual audit package
         if: always()
         uses: actions/upload-artifact@v4

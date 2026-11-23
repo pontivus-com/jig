@@ -14,6 +14,11 @@ import {
   taskByTitle,
 } from "./helpers";
 
+test.skip(
+  process.env.JIG_VISUAL_AUDIT !== "1",
+  "visual audit is opt-in and not part of ordinary browser verification",
+);
+
 const VIEWPORTS = {
   desktop: { width: 1440, height: 900 },
   narrow: { width: 390, height: 844 },

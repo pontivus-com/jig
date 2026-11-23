@@ -456,6 +456,12 @@ The GitHub Actions artifact must contain:
 
 Desktop and narrow evidence must be generated in the **same browser job from the same exact commit and application build**.
 
+### 12.1 Execution cost boundary
+
+The dedicated visual-audit suite is **opt-in**. Ordinary `test:browser` / `playwright test` verification must skip `tests/browser/visual-audit.spec.ts`; lightweight permanent visual regressions belong in the ordinary conformance suite instead.
+
+The governed release/remediation audit is executed explicitly with `JIG_VISUAL_AUDIT=1` and the constrained acceptance selection. Optional diagnostic corpora may exist for investigation, but they are not acceptance requirements and must not be added to the governed run merely because they are available. In particular, a complete duplicate Dark corpus is not required: §7 owns the bounded appearance/theme evidence.
+
 ## 13. Release acceptance
 
 UX/UI visual certification is complete only when:
