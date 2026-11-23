@@ -124,7 +124,9 @@ Published tags are never moved or rebuilt. A correction after publication requir
 
 ### v1.1.2 Android APK completion pipeline
 
-After the workflow correction is merged to `master`, complete the v1.1.2 Android release by manually dispatching the canonical **Release** workflow with:
+The canonical **Release** workflow treats the missing v1.1.2 Android APK as an incomplete required-asset state. On a `master` push, while the immutable `v1.1.2` GitHub Release exists but lacks `jig-android.apk`, the workflow automatically selects the bounded Android completion path. This makes completion part of release reconciliation rather than dependent on a human remembering a separate publication step.
+
+A manual dispatch remains available as an explicit retry/recovery path:
 
 ```text
 android_v1_1_2_completion = true
