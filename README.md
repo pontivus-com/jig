@@ -17,7 +17,7 @@
   <a href="https://github.com/pontivus-com/jig/actions/workflows/verify.yml"><img src="https://github.com/pontivus-com/jig/actions/workflows/verify.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/pontivus-com/jig/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0"></a>
   <img src="https://img.shields.io/badge/Bun-1.4.4-blue?style=flat-square" alt="Bun 1.4.4">
-  <img src="https://img.shields.io/badge/platform-Linux%20x64%20%2B%20arm64-lightgrey?style=flat-square" alt="Linux x64 and arm64">
+  <img src="https://img.shields.io/badge/platform-Linux%20x64%20%2B%20arm64%20%2B%20Android-lightgrey?style=flat-square" alt="Linux x64, Linux arm64 and Android">
   <a href="https://github.com/pontivus-com/jig/releases/latest"><img src="https://img.shields.io/github/v/release/pontivus-com/jig?style=flat-square&label=release" alt="Latest release"></a>
   <a href="https://github.com/pontivus-com/jig/stargazers"><img src="https://img.shields.io/github/stars/pontivus-com/jig?style=flat-square" alt="GitHub stars"></a>
 </p>
@@ -55,8 +55,9 @@ sits in the day, whether it is complete, and whether a reminder is due.**
 
 ## Quick start
 
-Jig v1 supports Linux x86_64/amd64 and aarch64/arm64. The stable release bundle
-contains the pinned Bun runtime and production UI.
+Jig v1 supports Linux x86_64/amd64 and aarch64/arm64, plus Android through the
+production-signed APK published on the matching GitHub Release. The Linux stable
+release bundle contains the pinned Bun runtime and production UI.
 
 ### Phase 1 — install Jig
 
@@ -91,9 +92,13 @@ curl -fsSL https://github.com/pontivus-com/jig/releases/latest/download/jig-inst
   | bash -s -- --repo /absolute/path/to/your/planning-repo
 ```
 
-See [Install Jig](docs/install.md) for the two-phase setup, automation modes,
-repository-URL acquisition, pinned versions, upgrade, Git-native continuity,
-foreground fallback and uninstall.
+Android users install the production-signed `jig-android.apk` from the matching
+GitHub Release. Development/debug APKs are certification artifacts and are not
+supported public installation assets.
+
+See [Install Jig](docs/install.md) for Linux setup and automation, Android APK
+installation/update, pinned versions, upgrade, Git-native continuity, foreground
+fallback and uninstall.
 
 ## What stays where
 
@@ -130,7 +135,7 @@ The application presentation was also corrected across the governed desktop/narr
 
 Release governance now explicitly carries the implementation-to-publication handoff. A merged implementation candidate is not treated as a release; the dedicated `release/vX.Y.Z` transition and permanent Release workflow remain the only publication path.
 
-The public GitHub Release remains Linux x64/arm64. Android source/build/runtime compatibility is certified as part of the exact release commit, while external F-Droid submission/publication remains deferred until Jig is considered stable and the required marketing/store material is ready.
+The governed public asset matrix now includes Linux x64/arm64 plus a separately production-signed `jig-android.apk`. v1.1.2 is the first version covered by this rule and its Android asset is completed through the bounded immutable-tag completion path in the permanent Release workflow. No Android app-store/repository publication is part of the release path.
 
 - [v1.1.2 release notes](docs/releases/v1.1.2.md)
 - [v1.1.2 implementation evidence](docs/evidence/v1.1.2/README.md)
