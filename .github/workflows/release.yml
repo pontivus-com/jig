@@ -16,7 +16,7 @@ on:
         default: ""
         type: string
       android_v1_1_2_completion:
-        description: Append the governed signed Android APK to the existing immutable v1.1.2 release
+        description: Build, sign, verify and append jig-android.apk to the existing v1.1.2 GitHub Release
         required: false
         default: false
         type: boolean
