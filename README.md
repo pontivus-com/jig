@@ -122,23 +122,18 @@ jig uninstall       # remove runtime/configuration; preserve repo planning data
 
 ## Release status
 
-Jig **1.1.1** is a patch release over v1.1.0. Product/runtime behavior is unchanged; this patch corrects the public installation path and hardens the release ceremony documentation.
+Jig **1.1.2** is the current corrective patch release over v1.1.1.
 
-The public Quick start now follows the governed two-phase flow:
+The release strengthens synchronization continuity and diagnostics, adds bounded recovery for provably related Jig-owned portable-history divergence and the governed in-app semantic-conflict resolver, and keeps unsafe or ambiguous repository states non-destructive. The historical ordinary Desktop synchronization concern was not reproduced by the permanent upgraded reproduction, so this release does not claim or introduce a speculative causal Desktop sync fix.
 
-1. install the certified release bundle with `curl …/jig-install.sh | bash`;
-2. run `jig` and choose/connect the planning repository inside the application.
+The application presentation was also corrected across the governed desktop/narrow surfaces: distinct chrome/Planner/Task theme roles, full-height Planner ownership, real Task-card drag placement with projected reflow, viewport-appropriate operational feedback, and the shared slower motion scale are now certified across the supported presentation matrix.
 
-The exact public release-channel command was exercised end to end in hosted smoke run `44915232912`: installation, bootstrap status, the installed `jig` launcher, the real bootstrap UI, local-repository setup, generated configuration and SQLite initialization all passed.
+Release governance now explicitly carries the implementation-to-publication handoff. A merged implementation candidate is not treated as a release; the dedicated `release/vX.Y.Z` transition and permanent Release workflow remain the only publication path.
 
-The release process also now explicitly requires the final release/finalization commit to have the pre-release `master` candidate as its first parent, preventing a multi-commit release branch fast-forward from being misclassified as a no-op publication.
+The public GitHub Release remains Linux x64/arm64. Android source/build/runtime compatibility is certified as part of the exact release commit, while external F-Droid submission/publication remains deferred until Jig is considered stable and the required marketing/store material is ready.
 
-The v1.1 runtime remains the independently installable Linux/Desktop + Android implementation introduced in v1.1.0. The public GitHub Release remains Linux x64/arm64 only. F-Droid compatibility/readiness remains maintained, while external F-Droid submission/publication remains deferred until Jig is stable and the required marketing/store material is ready.
-
-Release publication remains PR-bound and immutable. The dedicated `release/v1.1.1` metadata transition must be verified before merge, and the exact merged release commit must be re-certified by the permanent Release workflow before the `v1.1.1` tag and Linux x64/arm64 assets are valid.
-
-- [v1.1.1 release notes](docs/releases/v1.1.1.md)
-- [v1.1.0 implementation evidence](docs/evidence/v1.1.0/README.md)
+- [v1.1.2 release notes](docs/releases/v1.1.2.md)
+- [v1.1.2 implementation evidence](docs/evidence/v1.1.2/README.md)
 - [release process, validity contract and asset matrix](docs/releases/README.md)
 - [changelog](CHANGELOG.md)
 
