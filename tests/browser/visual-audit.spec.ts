@@ -53,10 +53,10 @@ async function settleVisualState(page: Page): Promise<void> {
     await document.fonts.ready;
     const finiteAnimations = document.getAnimations().filter((animation) => {
       const timing = animation.effect?.getComputedTiming();
+      const endTime = Number(timing?.endTime ?? 0);
       return (
-        timing !== undefined &&
-        Number.isFinite(timing.endTime) &&
-        timing.endTime > 0 &&
+        Number.isFinite(endTime) &&
+        endTime > 0 &&
         animation.playState !== "finished"
       );
     });
