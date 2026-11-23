@@ -157,6 +157,13 @@ v1.1 adds one independently installable **Android** application while preserving
 - Recurring series use the same canonical rollover owner as one-off Tasks. Rollover must prevent automatic accumulation without adding a recurrence daemon, carry-over flag, Task status or platform branch: preserve the latest due outstanding occurrence per series, supersede older **overdue** outstanding siblings, preserve future-scheduled/completed occurrences, then perform ordinary rollover. This is planning-core maintenance, not a third recurrence user mutation scope.
 - Linux and Android must consume that same pure rollover result through the shared persistence semantics. Do not implement recurrence cleanup in React, Kotlin, reminders or Git synchronization.
 
+## v1.1.2 Git and Android update certification correction
+
+- Git synchronization/recovery correctness is a permanent repository-capable GitHub Actions responsibility. The governed gate must exercise real Git smart HTTP plus the actual Desktop and Android synchronization controllers, including the local-SQLite-pending + remote-advance topology that caused the NA-08 failure. Physical-device observation is neither required for Git semantics nor a substitute for this gate. Native-only evidence is reserved for OS/host interaction that cannot be established by the permanent repository/browser/native-unit suites.
+- Android debug/certification APKs must use the governed stable **non-production** certification signing identity. Certification/update installation is in-place package replacement only (`adb install -r` or an equivalent update operation). Never uninstall or clear `com.pontivus.jig` merely to overcome a signing mismatch; fail closed and preserve the existing installation and its data.
+- An ordinary in-place Android update must preserve Jig's app-private managed repository, local/SQLite state, setup continuity and secure credential storage. Permanent API-minimum certification must prove app-private repository/local state survives an in-place reinstall before native instrumentation runs. Linux reinstall similarly preserves the selected repository, `.jig/local` state and existing configuration.
+- The public CI certification identity is not release signing authority. Production/release signing remains a separate distribution concern and must never be inferred from the test-signing lineage.
+
 ## Release governance
 
 A merged implementation PR is **not** a release. Release publication is a separate governed transition.
